@@ -15,7 +15,54 @@ export default function Header() {
             </h2>
           </Link>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Desktop Navigation - Hidden on mobile */}
+        <nav className="hidden lg:flex items-center gap-6">
+          <Link
+            to="/"
+            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+          >
+            Home
+          </Link>
+          <Link
+            to="/services"
+            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+          >
+            Services
+          </Link>
+          <Link
+            to="/tools"
+            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+          >
+            Tools We Repair
+          </Link>
+          <Link
+            to="/industries"
+            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+          >
+            Industries
+          </Link>
+          <Link
+            to="/about"
+            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+          >
+            About
+          </Link>
+          <Link
+            to="/contact"
+            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+          >
+            Contact
+          </Link>
+          <Link to="/quote">
+            <button className="bg-primary text-white text-sm font-black px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
+              Get Quote
+            </button>
+          </Link>
+        </nav>
+
+        {/* Mobile Navigation Toggle - Hidden on desktop */}
+        <div className="flex lg:hidden items-center gap-2">
           <Link to="/quote">
             <button className="bg-primary text-white text-[10px] font-black px-3 py-2 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
               Quote

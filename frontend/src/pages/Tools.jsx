@@ -21,12 +21,12 @@ export default function Tools() {
   }, []);
 
   return (
-    <main className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
+    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+      <div className="max-w-screen-xl mx-auto">
+        <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Tools We Repair</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools We Repair</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
             Professional repair services for all major pneumatic tool categories and brands.
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function Tools() {
             <p className="mt-4 text-slate-500">Loading tools...</p>
           </div>
         ) : tools.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
             {tools.map((tool) => (
               <div
                 key={tool.id}

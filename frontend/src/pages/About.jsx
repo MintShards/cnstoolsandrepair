@@ -1,10 +1,10 @@
 export default function About() {
   return (
-    <main className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
+    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Story</h2>
-          <h1 className="text-4xl font-black tracking-tight uppercase">About CNS Tools and Repair</h1>
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">About CNS Tools and Repair</h1>
         </div>
 
         <div className="prose prose-lg dark:prose-invert max-w-none">
@@ -55,9 +55,9 @@ export default function About() {
           </div>
         </div>
 
-        <div className="mt-12 text-center">
+        <div className="mt-12 lg:mt-16 text-center">
           <a href="/quote">
-            <button className="bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 active:scale-95 transition-transform uppercase">
+            <button className="bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
               Request a Quote
             </button>
           </a>

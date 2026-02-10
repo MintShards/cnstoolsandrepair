@@ -1,16 +1,16 @@
 export default function Contact() {
   return (
-    <main className="relative min-h-screen px-6 py-16 bg-slate-50 dark:bg-slate-950">
+    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get In Touch</h2>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Contact Us</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-4">
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Contact Us</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-4 text-base lg:text-lg">
             Have questions about our services? Need a quote? We're here to help!
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8 mb-12 lg:mb-16">
           <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
             <div className="flex gap-4 mb-6">
               <div className="shrink-0">

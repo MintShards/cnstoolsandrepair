@@ -24,16 +24,17 @@ export default function Services() {
 
   return (
     <main className="relative min-h-screen">
-      <div className="px-6 py-16 bg-white dark:bg-slate-900">
-        <div className="text-center mb-12">
-          <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</h2>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Our Services</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto">
-            Comprehensive pneumatic tool solutions for automotive, railway, construction, and industrial businesses across Surrey, BC.
-          </p>
-        </div>
+      <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="text-center mb-12 lg:mb-16">
+            <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</h2>
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Our Services</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
+              Comprehensive pneumatic tool solutions for automotive, railway, construction, and industrial businesses across Surrey, BC.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto">
           {services.map((service, index) => (
             <div
               key={index}
@@ -55,14 +56,15 @@ export default function Services() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
 
-        <div className="mt-16 text-center">
-          <a href="/quote">
-            <button className="bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 active:scale-95 transition-transform uppercase">
-              Request a Quote
-            </button>
-          </a>
+          <div className="mt-16 lg:mt-20 text-center">
+            <a href="/quote">
+              <button className="bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
+                Request a Quote
+              </button>
+            </a>
+          </div>
         </div>
       </div>
     </main>

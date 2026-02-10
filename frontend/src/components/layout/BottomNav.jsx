@@ -6,7 +6,7 @@ export default function BottomNav() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-8 py-3 pb-8 z-50">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-8 py-3 pb-8 z-50">
       <div className="flex items-center justify-between max-w-md mx-auto">
         <Link
           to="/"

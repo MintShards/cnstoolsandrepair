@@ -21,12 +21,12 @@ export default function Industries() {
   }, []);
 
   return (
-    <main className="relative min-h-screen px-6 py-16 bg-slate-50 dark:bg-slate-950">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
+    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-screen-xl mx-auto">
+        <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Who We Serve</h2>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Industries We Support</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Industries We Support</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
             Trusted pneumatic tool repair partner for major industrial sectors across Surrey, BC.
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function Industries() {
             <p className="mt-4 text-slate-500">Loading industries...</p>
           </div>
         ) : industries.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 lg:gap-10">
             {industries.map((industry) => (
               <div
                 key={industry.id}
