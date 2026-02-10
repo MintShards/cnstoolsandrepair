@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ Security Notice
+
+**IMPORTANT:** This file is committed to git. Never include:
+- Real MongoDB credentials or connection strings
+- SendGrid API keys
+- Passwords or access tokens
+- Any sensitive configuration values
+
+All credentials are stored in `backend/.env` which is gitignored.
+
 ## Project Overview
 
 **CNS Tools and Repair** - B2B industrial pneumatic tool repair website for Surrey, BC
@@ -9,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Architecture**: Separated backend API + frontend SPA
 - **Business Model**: Local on-site service (customers bring tools for diagnosis, no shipping)
 - **Target**: Mid to large industrial businesses in automotive, railway, construction
-- **Current Phase**: Local development (MongoDB local, production will use MongoDB Atlas)
+- **Current Phase**: Development using MongoDB Atlas (cloud database for both dev and production)
 
 ## Development Commands
 
@@ -42,19 +52,13 @@ npm run build    # Production build
 npm run preview  # Preview production build
 ```
 
-### MongoDB (Local Development)
+### MongoDB (Atlas - Cloud Database)
 ```bash
-# Start MongoDB
-sudo systemctl start mongod
+# No local MongoDB service needed - using Atlas cloud database
 
-# Check status
-sudo systemctl status mongod
-
-# Enable on boot
-sudo systemctl enable mongod
-
-# Access with MongoDB Compass
-mongodb://localhost:27017
+# MongoDB Compass Connection String:
+# Copy from backend/.env file (contains credentials - not in git)
+# Format: mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority&tls=true
 
 # Database: cnstoolsandrepair_db_dev
 ```
@@ -65,8 +69,8 @@ mongodb://localhost:27017
 1. **Client** → React SPA (port 5173/80)
 2. **Frontend** → Axios API client (`frontend/src/services/api.js`)
 3. **Backend** → FastAPI routers (`backend/app/routers/`)
-4. **Database** → MongoDB Atlas (cloud-hosted)
-5. **Email** → SMTP service (quote notifications)
+4. **Database** → MongoDB (local dev: localhost:27017, production: MongoDB Atlas)
+5. **Email** → SendGrid API (quote notifications)
 6. **Files** → Local `backend/uploads/` directory
 
 ### Backend Architecture (FastAPI)
@@ -181,8 +185,8 @@ mongodb://localhost:27017
 
 **Backend** (`backend/.env`):
 ```env
-# MongoDB - Local Development
-MONGODB_URL=mongodb://localhost:27017/
+# MongoDB - Atlas Development
+MONGODB_URL=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority&tls=true
 DATABASE_NAME=cnstoolsandrepair_db_dev
 
 # CORS - Allow local frontend
@@ -213,10 +217,27 @@ Backend CORS is configured in `app/main.py`:
 
 ### MongoDB Connection
 
+**Development (MongoDB Atlas):**
+- Cloud-hosted MongoDB cluster (see `backend/.env` for connection details)
+- Database: `cnstoolsandrepair_db_dev`
+- Connection string format: `mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority&tls=true`
+- Access via MongoDB Compass: Copy `MONGODB_URL` from `backend/.env` file
+
+**Production (MongoDB Atlas):**
+- Same Atlas cluster, different database
+- Database: `cnstoolsandrepair_db_prod`
+- Connection string: Update database name in connection string
+- Configure via `.env.production` template
+
+**Technical Details:**
 - Uses async Motor driver (not sync PyMongo)
 - Connection established on FastAPI app startup via lifespan context manager
 - Database instance accessed via `get_database()` function (singleton pattern)
 - All queries must use `await`
+
+**Setup Files:**
+- Development: Copy `backend/.env.example` to `backend/.env`
+- Production: Use `backend/.env.production` template with Atlas credentials
 
 ## Data Management
 
@@ -335,7 +356,7 @@ async def send_quote_notification(quote: Quote) -> bool
 
 ## Testing Quote Workflow
 
-1. Start MongoDB: `sudo systemctl start mongod`
+1. Verify MongoDB Atlas connection (no local MongoDB needed)
 2. Start backend: `cd backend && python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 3. Start frontend: `cd frontend && npm run dev`
 4. Navigate to http://localhost:5173/quote
@@ -355,9 +376,11 @@ async def send_quote_notification(quote: Quote) -> bool
 ## Troubleshooting
 
 **MongoDB connection failed:**
-- Local: Verify MongoDB is running (`sudo systemctl status mongod`)
-- Check `MONGODB_URL` in `.env` matches local connection string
+- Atlas: Verify connection string includes credentials and cluster address
+- Check network connectivity (Atlas requires internet access)
+- Verify MongoDB Atlas cluster is not paused (free tier auto-pauses after inactivity)
 - Confirm database name is correct (`cnstoolsandrepair_db_dev`)
+- Alternative: Use local MongoDB (`mongodb://localhost:27017/`) if Atlas is unavailable
 
 **ERR_CONNECTION_RESET on API requests (WSL):**
 - **Root cause**: Backend bound to 127.0.0.1 instead of 0.0.0.0

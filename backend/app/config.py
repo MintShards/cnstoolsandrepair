@@ -5,7 +5,7 @@ from typing import List
 class Settings(BaseSettings):
     # MongoDB
     mongodb_url: str
-    database_name: str = "cns_tools"
+    database_name: str = "cnstoolsandrepair_db_dev"
 
     # CORS
     cors_origins: str = "http://localhost:5173"
