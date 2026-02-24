@@ -4,7 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import quotes, tools, brands, industries, contact
+from app.routers import quotes, tools, brands, industries, contact, gallery
+from app.routers import settings as settings_router, auth
 import os
 
 
@@ -64,6 +65,9 @@ app.include_router(tools.router)
 app.include_router(brands.router)
 app.include_router(industries.router)
 app.include_router(contact.router)
+app.include_router(gallery.router)
+app.include_router(settings_router.router)
+app.include_router(auth.router)
 
 
 @app.get("/")

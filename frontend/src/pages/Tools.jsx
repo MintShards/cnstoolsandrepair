@@ -41,7 +41,7 @@ export default function Tools() {
             {tools.map((tool) => (
               <div
                 key={tool.id}
-                className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+                className="p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700"
               >
                 <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                   <span

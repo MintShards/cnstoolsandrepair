@@ -1,0 +1,107 @@
+/* Brands Carousel - Swiper Implementation */
+
+.brands-swiper {
+  width: 100%;
+  padding: 1rem 0;
+}
+
+.brands-swiper-slide {
+  width: 200px !important;
+}
+
+.brands-carousel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: var(--color-white, #fff);
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 1rem;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.dark .brands-carousel-card {
+  background: var(--color-slate-800, #1e293b);
+  border-color: var(--color-slate-700, #334155);
+}
+
+.brands-carousel-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.brands-logo-container {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.brands-logo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: grayscale(20%);
+  transition: filter 0.3s ease;
+}
+
+.brands-carousel-card:hover .brands-logo {
+  filter: grayscale(0%);
+}
+
+.brands-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-slate-700, #334155);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.dark .brands-name {
+  color: var(--color-slate-300, #cbd5e1);
+}
+
+.brands-authorized-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--color-primary, #1152d4);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .brands-swiper-slide {
+    width: 160px !important;
+  }
+
+  .brands-carousel-card {
+    padding: 1rem;
+  }
+
+  .brands-logo-container {
+    height: 60px;
+  }
+
+  .brands-name {
+    font-size: 0.75rem;
+  }
+
+  .brands-authorized-badge {
+    font-size: 0.5rem;
+    padding: 0.25rem 0.5rem;
+  }
+}

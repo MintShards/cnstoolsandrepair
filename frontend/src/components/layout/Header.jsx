@@ -9,9 +9,9 @@ export default function Header() {
       <div className="flex items-center justify-between p-4 max-w-screen-xl mx-auto">
         <div className="flex items-center">
           <Link to="/">
-            <h2 className="logo-font text-xl font-extrabold leading-none tracking-tight">
-              <span className="font-black text-accent-orange">CNS</span>{' '}
-              <span className="text-slate-900 dark:text-white uppercase">Tools and Repair</span>
+            <h2 className="font-logo text-xl md:text-2xl font-bold leading-none tracking-wide uppercase">
+              <span className="text-accent-orange">CNS</span>{' '}
+              <span className="text-slate-900 dark:text-white">Tools and Repair</span>
             </h2>
           </Link>
         </div>
@@ -20,42 +20,48 @@ export default function Header() {
         <nav className="hidden lg:flex items-center gap-6">
           <Link
             to="/"
-            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
             Home
           </Link>
           <Link
             to="/services"
-            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
             Services
           </Link>
           <Link
             to="/tools"
-            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
             Tools We Repair
           </Link>
           <Link
             to="/industries"
-            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
             Industries
           </Link>
           <Link
+            to="/gallery"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+          >
+            Gallery
+          </Link>
+          <Link
             to="/about"
-            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
             About
           </Link>
           <Link
             to="/contact"
-            className="font-bold uppercase text-sm hover:text-primary transition-colors"
+            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
             Contact
           </Link>
           <Link to="/quote">
-            <button className="bg-primary text-white text-sm font-black px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
+            <button className="bg-primary text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
               Get Quote
             </button>
           </Link>
@@ -64,7 +70,7 @@ export default function Header() {
         {/* Mobile Navigation Toggle - Hidden on desktop */}
         <div className="flex lg:hidden items-center gap-2">
           <Link to="/quote">
-            <button className="bg-primary text-white text-[10px] font-black px-3 py-2 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
+            <button className="bg-primary text-white text-[10px] font-bold px-3 py-2 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
               Quote
             </button>
           </Link>
@@ -83,42 +89,49 @@ export default function Header() {
           <nav className="flex flex-col p-4 gap-2">
             <Link
               to="/"
-              className="px-4 py-3 font-bold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/services"
-              className="px-4 py-3 font-bold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Services
             </Link>
             <Link
               to="/tools"
-              className="px-4 py-3 font-bold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Tools We Repair
             </Link>
             <Link
               to="/industries"
-              className="px-4 py-3 font-bold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Industries
             </Link>
             <Link
+              to="/gallery"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Gallery
+            </Link>
+            <Link
               to="/about"
-              className="px-4 py-3 font-bold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="px-4 py-3 font-bold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Contact

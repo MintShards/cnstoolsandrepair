@@ -7,9 +7,9 @@ export default function Footer() {
         <div className="flex flex-col lg:flex-row lg:justify-between gap-10 lg:gap-16">
           <div className="flex flex-col gap-4 lg:max-w-md">
             <div className="flex items-center">
-              <h2 className="logo-font text-xl font-extrabold tracking-tight">
-                <span className="font-black text-accent-orange">CNS</span>{' '}
-                <span className="text-slate-900 dark:text-white uppercase">Tools and Repair</span>
+              <h2 className="font-logo text-xl md:text-2xl font-bold tracking-wide uppercase">
+                <span className="text-accent-orange">CNS</span>{' '}
+                <span className="text-slate-900 dark:text-white">Tools and Repair</span>
               </h2>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">

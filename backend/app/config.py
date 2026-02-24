@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
 
+    # Admin Authentication
+    admin_password: str
+
     @property
     def cors_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]

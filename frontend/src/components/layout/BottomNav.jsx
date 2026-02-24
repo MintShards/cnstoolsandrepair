@@ -6,8 +6,8 @@ export default function BottomNav() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-8 py-3 pb-8 z-50">
-      <div className="flex items-center justify-between max-w-md mx-auto">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3 pb-8 z-50">
+      <div className="flex items-center justify-between max-w-md sm:max-w-3xl mx-auto">
         <Link
           to="/"
           className={`flex flex-col items-center gap-1 ${
@@ -23,9 +23,10 @@ export default function BottomNav() {
           <span className="text-[9px] font-black uppercase tracking-tighter">Home</span>
         </Link>
 
+        {/* Tablet only - Services */}
         <Link
           to="/services"
-          className={`flex flex-col items-center gap-1 ${
+          className={`hidden sm:flex flex-col items-center gap-1 ${
             isActive('/services') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -36,6 +37,37 @@ export default function BottomNav() {
             handyman
           </span>
           <span className="text-[9px] font-black uppercase tracking-tighter">Services</span>
+        </Link>
+
+        <Link
+          to="/tools"
+          className={`flex flex-col items-center gap-1 ${
+            isActive('/tools') ? 'text-primary' : 'text-slate-400'
+          }`}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{ fontVariationSettings: isActive('/tools') ? "'FILL' 1" : "'FILL' 0" }}
+          >
+            construction
+          </span>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Tools</span>
+        </Link>
+
+        {/* Tablet only - Industries */}
+        <Link
+          to="/industries"
+          className={`hidden sm:flex flex-col items-center gap-1 ${
+            isActive('/industries') ? 'text-primary' : 'text-slate-400'
+          }`}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{ fontVariationSettings: isActive('/industries') ? "'FILL' 1" : "'FILL' 0" }}
+          >
+            factory
+          </span>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Industries</span>
         </Link>
 
         <div className="relative -mt-12">
@@ -52,8 +84,24 @@ export default function BottomNav() {
         </div>
 
         <Link
-          to="/about"
+          to="/gallery"
           className={`flex flex-col items-center gap-1 ${
+            isActive('/gallery') ? 'text-primary' : 'text-slate-400'
+          }`}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{ fontVariationSettings: isActive('/gallery') ? "'FILL' 1" : "'FILL' 0" }}
+          >
+            photo_library
+          </span>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Gallery</span>
+        </Link>
+
+        {/* Tablet only - About */}
+        <Link
+          to="/about"
+          className={`hidden sm:flex flex-col items-center gap-1 ${
             isActive('/about') ? 'text-primary' : 'text-slate-400'
           }`}
         >

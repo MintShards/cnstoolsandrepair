@@ -58,7 +58,7 @@ export default function Quote() {
   };
 
   return (
-    <main className="relative min-h-screen px-6 py-16 bg-slate-50 dark:bg-slate-950">
+    <main className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get Started</h2>

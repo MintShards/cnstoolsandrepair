@@ -15,7 +15,8 @@ export default {
         "slate-gray": "#334155",
       },
       fontFamily: {
-        "display": ["Montserrat", "sans-serif"]
+        "display": ["Montserrat", "sans-serif"],
+        "logo": ["League Spartan", "Montserrat", "sans-serif"]
       },
       borderRadius: {
         "DEFAULT": "0.25rem",

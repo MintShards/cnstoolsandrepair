@@ -21,7 +21,7 @@ export default function Industries() {
   }, []);
 
   return (
-    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Who We Serve</h2>

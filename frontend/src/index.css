@@ -9,11 +9,6 @@
 }
 
 @layer utilities {
-  .logo-font {
-    font-family: 'Montserrat', sans-serif;
-    letter-spacing: -0.02em;
-  }
-
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }

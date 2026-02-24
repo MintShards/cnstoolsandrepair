@@ -106,4 +106,60 @@ export const contactAPI = {
   },
 };
 
+// Business Settings API
+export const settingsAPI = {
+  get: async () => {
+    const response = await api.get('/api/settings/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/settings/', data);
+    return response.data;
+  },
+  health: async () => {
+    const response = await api.get('/api/settings/health');
+    return response.data;
+  },
+};
+
+// Auth API
+export const authAPI = {
+  login: async (password) => {
+    const response = await api.post('/api/admin/login', { password });
+    return response.data;
+  },
+  verify: async (token) => {
+    const response = await api.post('/api/admin/verify', null, {
+      params: { token }
+    });
+    return response.data;
+  },
+};
+
+// Gallery API
+export const galleryAPI = {
+  list: async (activeOnly = true) => {
+    const response = await api.get('/api/gallery/', { params: { active_only: activeOnly } });
+    return response.data;
+  },
+  upload: async (photoFile, displayOrder = 0) => {
+    const formData = new FormData();
+    formData.append('photo', photoFile);
+    formData.append('display_order', displayOrder);
+    const response = await api.post('/api/gallery/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/api/gallery/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/gallery/${id}`);
+  },
+};
+
 export default api;
