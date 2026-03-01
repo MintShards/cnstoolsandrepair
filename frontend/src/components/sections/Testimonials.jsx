@@ -21,8 +21,69 @@ import { useState } from 'react';
  * UX ENHANCEMENT: Added industry filter tabs for better engagement (+10-15%)
  */
 
-export default function Testimonials() {
+export default function Testimonials({ loading = false }) {
   const [selectedIndustry, setSelectedIndustry] = useState('all');
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="text-center mb-8 lg:mb-12">
+            <div className="h-3 w-40 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
+            <div className="h-10 w-48 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-3 animate-pulse"></div>
+            <div className="h-4 w-96 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Filter Tabs Skeleton */}
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 lg:mb-12">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-10 w-32 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"
+              />
+            ))}
+          </div>
+
+          {/* Testimonial Cards Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+              >
+                {/* Quote Icon Skeleton */}
+                <div className="mb-4 size-10 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+
+                {/* Quote Text Skeleton */}
+                <div className="space-y-2 mb-6 flex-grow">
+                  <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                </div>
+
+                {/* Client Info Skeleton */}
+                <div className="flex items-start gap-4 pt-6 border-t border-slate-200 dark:border-slate-700">
+                  <div className="shrink-0 size-12 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+                  <div className="flex-grow space-y-2">
+                    <div className="h-5 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                    <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                    <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust Badge Skeleton */}
+          <div className="mt-12 lg:mt-16 p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="h-6 w-64 bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const testimonials = [
     {
@@ -74,10 +135,10 @@ export default function Testimonials() {
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 lg:mb-12">
-          <h2 className="text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-[0.25em] mb-2">
+          <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             What Our Clients Say
           </h2>
-          <h3 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Success Stories</h3>
+          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase">Success Stories</h3>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
             Trusted by industrial and commercial businesses across Surrey and the Greater Vancouver area.
           </p>

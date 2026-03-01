@@ -33,7 +33,7 @@ DEFAULT_SETTINGS = {
         "timezone": "PST"
     },
     "hero": {
-        "headline": "Expert Pneumatic Tool Repair & Calibration",
+        "headline": "Expert Pneumatic Tool Repair & Maintenance",
         "subheadline": "B2B industrial repair services in Surrey, BC. Minimize downtime with professional diagnostics, OEM parts, and 3-7 day turnaround.",
         "industries": ["Automotive", "Railway", "Construction"]
     },
@@ -44,8 +44,8 @@ DEFAULT_SETTINGS = {
             "icon": "build"
         },
         {
-            "title": "Tool Calibration",
-            "description": "Precision calibration services for specialty pneumatic tools.",
+            "title": "Tool Maintenance",
+            "description": "Comprehensive maintenance services for specialty pneumatic tools.",
             "icon": "tune"
         },
         {

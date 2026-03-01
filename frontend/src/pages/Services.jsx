@@ -8,8 +8,8 @@ export default function Services() {
       icon: 'build',
     },
     {
-      title: 'Tool Calibration',
-      description: 'Precision calibration services for specialty pneumatic tools to ensure optimal performance and accuracy.',
+      title: 'Tool Maintenance',
+      description: 'Comprehensive maintenance services for specialty pneumatic tools to ensure optimal performance and longevity.',
       icon: 'tune',
     },
     {
@@ -27,29 +27,29 @@ export default function Services() {
   return (
     <>
       <Helmet>
-        <title>Pneumatic Tool Services | Repair, Calibration & Rental | CNS Tools Surrey</title>
+        <title>Pneumatic Tool Services | Repair, Maintenance & Rental | CNS Tools Surrey</title>
         <meta
           name="description"
-          content="Expert pneumatic tool repair, precision calibration, equipment rental, and used tool sales in Surrey, BC. Comprehensive services for automotive, fleet, manufacturing, construction, and industrial sectors."
+          content="Expert pneumatic tool repair, maintenance, equipment rental, and used tool sales in Surrey, BC. Comprehensive services for automotive, fleet, manufacturing, construction, and industrial sectors."
         />
         <meta
           name="keywords"
-          content="pneumatic tool repair services, air tool calibration, tool rental Surrey, industrial equipment repair, used pneumatic tools, tool service Surrey BC"
+          content="pneumatic tool repair services, air tool maintenance, tool rental Surrey, industrial equipment repair, used pneumatic tools, tool service Surrey BC"
         />
         <link rel="canonical" href="https://cnstoolsandrepair.com/services" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolsandrepair.com/services" />
-        <meta property="og:title" content="Pneumatic Tool Services | Repair, Calibration & Rental | CNS Tools Surrey" />
-        <meta property="og:description" content="Expert pneumatic tool repair, precision calibration, equipment rental, and used tool sales in Surrey, BC." />
+        <meta property="og:title" content="Pneumatic Tool Services | Repair, Maintenance & Rental | CNS Tools Surrey" />
+        <meta property="og:description" content="Expert pneumatic tool repair, maintenance, equipment rental, and used tool sales in Surrey, BC." />
         <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolsandrepair.com/services" />
-        <meta name="twitter:title" content="Pneumatic Tool Services | Repair, Calibration & Rental | CNS Tools Surrey" />
-        <meta name="twitter:description" content="Expert pneumatic tool repair, precision calibration, equipment rental, and used tool sales in Surrey, BC." />
+        <meta name="twitter:title" content="Pneumatic Tool Services | Repair, Maintenance & Rental | CNS Tools Surrey" />
+        <meta name="twitter:description" content="Expert pneumatic tool repair, maintenance, equipment rental, and used tool sales in Surrey, BC." />
         <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
       </Helmet>
       <main className="relative min-h-screen">

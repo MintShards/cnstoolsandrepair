@@ -60,7 +60,7 @@ export function SettingsProvider({ children }) {
         timezone: BUSINESS_INFO.hours.timezone,
       },
       hero: {
-        headline: BUSINESS_INFO.tagline || 'Expert Pneumatic Tool Repair & Calibration',
+        headline: BUSINESS_INFO.tagline || 'Expert Pneumatic Tool Repair & Maintenance',
         subheadline: 'B2B industrial repair services in Surrey, BC.',
         industries: BUSINESS_INFO.industries || [],
       },
@@ -71,8 +71,8 @@ export function SettingsProvider({ children }) {
           icon: 'build',
         },
         {
-          title: 'Tool Calibration',
-          description: 'Precision calibration services for specialty pneumatic tools.',
+          title: 'Tool Maintenance',
+          description: 'Comprehensive maintenance services for specialty pneumatic tools.',
           icon: 'tune',
         },
         {

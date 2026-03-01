@@ -15,13 +15,29 @@ export default function QuickFacts() {
     return (
       <section className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 bg-slate-900">
         <div className="max-w-screen-xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          {/* Quick Facts Grid Skeleton */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex flex-col items-center text-center gap-2">
-                <div className="size-12 rounded-full bg-white/5 animate-pulse"></div>
+                <div className="size-10 lg:size-12 rounded-full bg-white/5 animate-pulse"></div>
                 <div className="h-4 w-20 bg-white/5 rounded animate-pulse"></div>
                 <div className="h-3 w-16 bg-white/5 rounded animate-pulse"></div>
               </div>
+            ))}
+          </div>
+
+          {/* SEO Text Skeleton */}
+          <div className="text-center mt-6">
+            <div className="h-4 w-96 max-w-full bg-white/5 rounded mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Trust Badges Row Skeleton */}
+          <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 pt-6 border-t border-slate-800">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-9 w-28 bg-white/5 rounded-lg animate-pulse"
+              />
             ))}
           </div>
         </div>

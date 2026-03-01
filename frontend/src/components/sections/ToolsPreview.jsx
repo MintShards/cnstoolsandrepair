@@ -1,6 +1,41 @@
 import { Link } from 'react-router-dom';
 
-export default function ToolsPreview() {
+export default function ToolsPreview({ loading = false }) {
+  // Loading skeleton
+  if (loading) {
+    return (
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="text-center mb-8 sm:mb-10 lg:mb-16">
+            <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
+            <div className="h-8 w-56 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-3 animate-pulse"></div>
+            <div className="h-4 w-80 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Tool Cards Grid Skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+              >
+                <div className="size-12 sm:size-14 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+                <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Description & Button Skeleton */}
+          <div className="mt-8 sm:mt-10 lg:mt-12 text-center">
+            <div className="h-4 w-96 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-4 sm:mb-5 lg:mb-6 animate-pulse"></div>
+            <div className="h-12 sm:h-14 w-40 bg-slate-200 dark:bg-slate-800 rounded-xl mx-auto animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const toolCategories = [
     { name: 'Impact Wrenches', icon: 'construction' },
     { name: 'Grinders', icon: 'auto_fix_high' },
@@ -23,7 +58,7 @@ export default function ToolsPreview() {
             Which Tools We Service
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
-            Expert repair and calibration for all major pneumatic tool types
+            Expert repair and maintenance for all major pneumatic tool types
           </p>
         </div>
 

@@ -1,6 +1,59 @@
 import { Link } from 'react-router-dom';
 
-export default function IndustriesServed() {
+export default function IndustriesServed({ loading = false }) {
+  // Loading skeleton
+  if (loading) {
+    return (
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="text-center mb-8 sm:mb-10 lg:mb-16">
+            {/* "Who We Serve" label */}
+            <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
+
+            {/* Description paragraph (2 lines) */}
+            <div className="mb-3 sm:mb-4 max-w-2xl mx-auto px-4 space-y-2">
+              <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              <div className="h-4 w-4/5 mx-auto bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+            </div>
+
+            {/* "Industries We Support" main heading */}
+            <div className="h-8 sm:h-9 lg:h-10 w-72 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Industry Cards Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800"
+              >
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="size-12 sm:size-14 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+                  <div className="h-6 w-40 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-6 w-20 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Button Skeleton */}
+          <div className="mt-8 sm:mt-10 lg:mt-16 text-center">
+            <div className="h-12 sm:h-14 w-48 bg-slate-200 dark:bg-slate-800 rounded-xl mx-auto animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const industries = [
     {
       name: 'Automotive Repair & Body Shops',

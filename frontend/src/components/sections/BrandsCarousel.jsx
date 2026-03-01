@@ -9,8 +9,34 @@ import './BrandsCarousel.css';
 export default function BrandsCarousel() {
   const { settings, loading } = useSettings();
 
-  // Don't render if loading or no brands
-  if (loading || !settings || !settings.brands || settings.brands.length === 0) {
+  // Loading skeleton
+  if (loading || !settings || !settings.brands) {
+    return (
+      <section className="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 bg-white dark:bg-slate-900">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Section Header Skeleton */}
+          <div className="text-center mb-6 sm:mb-8 lg:mb-12">
+            <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
+            <div className="h-8 w-48 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-3 animate-pulse"></div>
+            <div className="h-4 w-96 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Carousel Skeleton */}
+          <div className="flex gap-8 overflow-hidden">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="shrink-0 w-[200px] h-[120px] bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Don't render if no brands after loading
+  if (!settings.brands || settings.brands.length === 0) {
     return null;
   }
 

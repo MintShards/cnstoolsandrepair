@@ -1,4 +1,38 @@
-export default function HowItWorks() {
+export default function HowItWorks({ loading = false }) {
+  // Loading skeleton
+  if (loading) {
+    return (
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="text-center mb-8 sm:mb-10 lg:mb-16">
+            <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
+            <div className="h-8 w-64 bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+          </div>
+
+          {/* Steps Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex lg:flex-col gap-4 sm:gap-5 lg:gap-4 items-start lg:items-center lg:text-center">
+                <div className="shrink-0 size-12 sm:size-14 lg:size-16 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+                <div className="flex-grow lg:w-full">
+                  <div className="h-6 w-32 bg-slate-200 dark:bg-slate-800 rounded mb-2 animate-pulse"></div>
+                  <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded mb-1 animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Note Skeleton */}
+          <div className="mt-8 sm:mt-10 lg:mt-16 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const steps = [
     {
       number: 1,

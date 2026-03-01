@@ -132,7 +132,7 @@ class BusinessSettings(BusinessSettingsUpdate):
                     "timezone": "PST"
                 },
                 "hero": {
-                    "headline": "Expert Pneumatic Tool Repair & Calibration",
+                    "headline": "Expert Pneumatic Tool Repair & Maintenance",
                     "subheadline": "B2B industrial repair services in Surrey, BC.",
                     "industries": ["Automotive", "Railway", "Construction"]
                 },

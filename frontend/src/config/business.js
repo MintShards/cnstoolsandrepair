@@ -8,7 +8,7 @@
 export const BUSINESS_INFO = {
   // Company Details
   name: 'CNS Tools and Repair',
-  tagline: 'Expert Pneumatic Tool Repair & Calibration',
+  tagline: 'Expert Pneumatic Tool Repair & Maintenance',
 
   // Contact Information (fallback values)
   phone: '(604) 555-0123',
