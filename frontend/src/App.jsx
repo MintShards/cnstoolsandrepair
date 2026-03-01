@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -27,8 +28,9 @@ function App() {
           content="Industrial pneumatic tool repair services in Surrey, BC. Professional diagnostics, OEM parts, and expert service for automotive, fleet, manufacturing, and construction industries."
         />
       </Helmet>
-      <SettingsProvider>
-        <Router>
+      <ThemeProvider>
+        <SettingsProvider>
+          <Router>
           <div className="min-h-screen flex flex-col">
             <Header />
             <Routes>
@@ -55,8 +57,9 @@ function App() {
             <Footer />
             <BottomNav />
           </div>
-        </Router>
-      </SettingsProvider>
+          </Router>
+        </SettingsProvider>
+      </ThemeProvider>
     </HelmetProvider>
   );
 }

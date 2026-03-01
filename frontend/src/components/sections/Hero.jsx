@@ -12,7 +12,9 @@ export default function Hero() {
   const getBackgroundImage = () => {
     // Modern browsers support WebP, use optimized WebP version
     // Fallback to optimized JPG for older browsers (handled by CSS)
-    // Stronger gradient for better text contrast on white pegboard background
+
+    // Strong gradient overlay for both themes to ensure text contrast
+    // Same gradient strength for both light and dark mode
     const gradient = 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 40%, rgba(15, 23, 42, 0.75) 70%, rgba(15, 23, 42, 0.65) 100%)';
 
     // Use image-set for automatic WebP/JPG selection based on browser support
@@ -94,7 +96,7 @@ export default function Hero() {
               <p className="text-slate-300 text-base lg:text-lg font-medium leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 CNS Tools and Repair provides industrial pneumatic tool repair and maintenance services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.
               </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs lg:text-sm font-bold w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/15 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 text-white text-xs lg:text-sm font-bold w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="material-symbols-outlined text-sm lg:text-base">location_on</span>
                 {contact.address.city}, {contact.address.province} | On-Site Service (No Shipping)
               </div>
@@ -108,7 +110,7 @@ export default function Hero() {
                 </button>
               </Link>
               <Link to="/services" className="w-full sm:w-auto order-2">
-                <button className="flex items-center justify-center gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white text-sm sm:text-base font-bold hover:bg-white/20 active:scale-95 transition-all w-full touch-manipulation">
+                <button className="flex items-center justify-center gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-white/15 dark:bg-white/10 backdrop-blur-md border-2 border-white/40 dark:border-white/30 text-white text-sm sm:text-base font-bold hover:bg-white/25 dark:hover:bg-white/20 active:scale-95 transition-all w-full touch-manipulation">
                   <span className="material-symbols-outlined text-lg sm:text-xl">construction</span>
                   <span>View Pneumatic Tool Repair Services</span>
                 </button>

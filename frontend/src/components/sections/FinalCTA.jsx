@@ -2,8 +2,7 @@ export default function FinalCTA({ loading = false }) {
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-slate-900 dark:bg-slate-900 relative overflow-hidden text-center">
-        <div className="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary via-transparent to-transparent"></div>
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-white dark:bg-slate-900 relative overflow-hidden text-center">
         <div className="max-w-screen-xl mx-auto">
           <div className="flex flex-col items-center gap-4 sm:gap-6 relative z-10">
             {/* Icon Skeleton */}
@@ -33,17 +32,16 @@ export default function FinalCTA({ loading = false }) {
   }
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-slate-900 dark:bg-slate-900 relative overflow-hidden text-center">
-      <div className="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary via-transparent to-transparent"></div>
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-white dark:bg-slate-900 relative overflow-hidden text-center">
       <div className="max-w-screen-xl mx-auto">
         <div className="flex flex-col items-center gap-4 sm:gap-6 relative z-10">
           <div className="bg-accent-orange size-12 sm:size-14 rounded-full flex items-center justify-center shadow-lg shadow-accent-orange/20">
             <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">mail</span>
           </div>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight uppercase tracking-tight px-4">
+          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tight px-4">
             Request Professional Pneumatic Tool Repair Services
           </h3>
-          <p className="text-slate-300 max-w-sm lg:max-w-2xl font-medium mx-auto text-sm sm:text-base lg:text-lg leading-relaxed px-4">
+          <p className="text-slate-600 dark:text-slate-300 max-w-sm lg:max-w-2xl font-medium mx-auto text-sm sm:text-base lg:text-lg leading-relaxed px-4">
             Start the CNS diagnostic process today. Our specialists provide detailed repair assessments for industrial pneumatic tools.
           </p>
           {/* Mobile-First CTA Buttons */}
@@ -55,7 +53,7 @@ export default function FinalCTA({ loading = false }) {
               </button>
             </a>
             <a href="/contact" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto sm:px-8 h-12 sm:h-16 bg-white/5 text-white font-black rounded-xl border-2 border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
+              <button className="w-full sm:w-auto sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
                 <span className="material-symbols-outlined text-lg sm:text-xl">call</span>
                 <span>Call Support</span>
               </button>

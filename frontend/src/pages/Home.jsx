@@ -83,10 +83,8 @@ export default function Home() {
       <MapLocation />
 
       {/* Mini Divider */}
-      <div className="bg-slate-50 dark:bg-slate-950">
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-slate-700 to-transparent"></div>
-        </div>
+      <div className="bg-white dark:bg-slate-900">
+        <div className="h-px bg-slate-200 dark:bg-slate-800 w-full"></div>
       </div>
 
       {/* CTA Section - Mobile-Optimized */}

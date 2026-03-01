@@ -159,6 +159,11 @@ python scripts/update_industries.py
 - Industrial aesthetic: uppercase headings, bold typography, strong contrast
 
 **State Management:**
+- **ThemeContext** (`contexts/ThemeContext.jsx`): Global theme state (light/dark mode)
+  - Persists theme preference to localStorage
+  - Applies `dark` class to document root for Tailwind dark mode
+  - Provides `{ theme, setTheme, toggleTheme }` via `useTheme()` hook
+  - Used by: ThemeToggle component
 - **SettingsContext** (`contexts/SettingsContext.jsx`): Global business settings state
   - Fetches from backend `/api/settings/` on mount
   - Falls back to `config/business.js` when API unavailable
@@ -202,8 +207,9 @@ python scripts/update_industries.py
 - Original images optimized via `scripts/optimize-images.js` (Sharp library)
 - Generates WebP (modern browsers) + JPG (fallback) versions
 - Component uses `image-set()` CSS for automatic format selection
-- Strong gradient overlay for text contrast: `rgba(15, 23, 42, 0.95)` → `rgba(15, 23, 42, 0.65)`
-- All text elements have drop-shadow for readability on light backgrounds
+- Unified gradient overlay for both themes: `rgba(15, 23, 42, 0.95)` → `rgba(15, 23, 42, 0.65)`
+- Strong gradient ensures white text contrast in both light and dark themes
+- All text elements have drop-shadow for readability: `drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]`
 - Industries badge hardcoded: "Automotive • Fleet • Manufacturing • Construction"
 
 ### Database Schema
@@ -572,7 +578,10 @@ async def send_quote_notification(quote: Quote) -> bool
 - Primary (#1152d4): CTAs, active states, interactive icons
 - Accent Orange (#f97316): Logo "CNS" text, highlights, badges, section labels
 - Slate grays: Body text, borders, backgrounds
-- Background patterns: `bg-white dark:bg-slate-900` alternating with `bg-slate-50 dark:bg-slate-950`
+- Background patterns (alternating for visual separation):
+  - Light theme: `bg-white` alternates with `bg-slate-100` (6% brightness difference)
+  - Dark theme: `bg-slate-900` alternates with `bg-slate-950`
+  - Footer: `bg-slate-100` (light) / `bg-slate-950` (dark)
 
 **Responsive breakpoints:**
 - Mobile-first approach (base styles for mobile)
