@@ -324,7 +324,7 @@ export default function AdminSettings() {
               label="Industries (comma-separated)"
               value={formData.hero.industries.join(', ')}
               onChange={(v) => updateField('hero.industries', v.split(',').map((s) => s.trim()))}
-              helperText="Example: Automotive, Railway, Construction"
+              helperText="Example: Automotive, Fleet, Manufacturing, Construction"
             />
           </div>
         )}
@@ -443,7 +443,7 @@ export default function AdminSettings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {formData.brands
                 .sort((a, b) => a.displayOrder - b.displayOrder)
-                .map((brand, index) => {
+                .map((brand) => {
                   const actualIndex = formData.brands.findIndex(b => b === brand);
                   const hasLogo = brand.logoUrl && brand.logoUrl.trim() !== '';
                   const isActive = brand.active !== false; // Default to true if undefined

@@ -4,6 +4,21 @@ import { useSettings } from '../../contexts/SettingsContext';
 export default function Hero() {
   const { settings, loading } = useSettings();
 
+  // Progressive image loading: WebP with JPG fallback
+  const heroImageWebP = '/images/hero/workshop-tools-pegboard-optimized.webp';
+  const heroImageJPG = '/images/hero/workshop-tools-pegboard-optimized.jpg';
+
+  // Check WebP support and build background image URL
+  const getBackgroundImage = () => {
+    // Modern browsers support WebP, use optimized WebP version
+    // Fallback to optimized JPG for older browsers (handled by CSS)
+    // Stronger gradient for better text contrast on white pegboard background
+    const gradient = 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 40%, rgba(15, 23, 42, 0.75) 70%, rgba(15, 23, 42, 0.65) 100%)';
+
+    // Use image-set for automatic WebP/JPG selection based on browser support
+    return `${gradient}, image-set(url("${heroImageWebP}") 1x, url("${heroImageJPG}") 1x)`;
+  };
+
   // Show loading skeleton or use fallback data
   if (loading || !settings) {
     return (
@@ -12,7 +27,7 @@ export default function Hero() {
           <div
             className="flex min-h-[580px] lg:min-h-[680px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-16 sm:pb-20 lg:pb-24 pt-24"
             style={{
-              backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 1) 15%, rgba(15, 23, 42, 0.4) 50%, rgba(15, 23, 42, 0.2) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBVY9oVlYHk3YDP8F5ZqhKSCI-d438S7Ad75AX_nQVjQG0shXjjlF6tubzdIqLsaHbfOpXOzhwmoxZ8Cn6Scjj0JJbJnSOVM8-5NBC_W4ylLgXV6Z9NzL12nd4iMChHk-p_4JZLYXzOmsHEudtY2uqg9EE3MVHZeAWOVf09g5kdMFk5oPH677r68aBDNi_JCjqyOZ9aZav4xM1f1k_u5AjSh5uUINhMprEYnMdJVh6jh9dkEPAUmOuK9qxoAFlWF-SoFGiXe4LxVpk")`,
+              backgroundImage: getBackgroundImage(),
             }}
           >
             <div className="max-w-screen-xl mx-auto w-full">
@@ -28,8 +43,10 @@ export default function Hero() {
     );
   }
 
-  const { hero, contact } = settings;
-  const industriesBadge = hero.industries?.join(' • ') || 'Industrial Services';
+  const { contact } = settings;
+
+  // Hardcoded industries badge for hero section (B2B industrial focus)
+  const industriesBadge = 'Automotive • Fleet • Manufacturing • Construction';
 
   return (
     <section className="@container">
@@ -37,22 +54,22 @@ export default function Hero() {
         <div
           className="flex min-h-[580px] lg:min-h-[680px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-16 sm:pb-20 lg:pb-24 pt-24"
           style={{
-            backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 1) 15%, rgba(15, 23, 42, 0.4) 50%, rgba(15, 23, 42, 0.2) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBVY9oVlYHk3YDP8F5ZqhKSCI-d438S7Ad75AX_nQVjQG0shXjjlF6tubzdIqLsaHbfOpXOzhwmoxZ8Cn6Scjj0JJbJnSOVM8-5NBC_W4ylLgXV6Z9NzL12nd4iMChHk-p_4JZLYXzOmsHEudtY2uqg9EE3MVHZeAWOVf09g5kdMFk5oPH677r68aBDNi_JCjqyOZ9aZav4xM1f1k_u5AjSh5uUINhMprEYnMdJVh6jh9dkEPAUmOuK9qxoAFlWF-SoFGiXe4LxVpk")`,
+            backgroundImage: getBackgroundImage(),
           }}
         >
           <div className="max-w-screen-xl mx-auto w-full">
             <div className="flex flex-col gap-4 lg:gap-6 max-w-lg lg:max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-orange/20 border border-accent-orange/30 text-accent-orange text-[10px] lg:text-xs font-black uppercase tracking-widest w-fit">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-orange/20 border border-accent-orange/30 text-accent-orange text-[10px] lg:text-xs font-black uppercase tracking-widest w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="size-2 rounded-full bg-accent-orange animate-pulse"></span>
                 {industriesBadge}
               </div>
-              <h1 className="text-white text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight uppercase">
+              <h1 className="text-white text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
                 Industrial Pneumatic Tool Repair & Calibration in Surrey, BC
               </h1>
-              <p className="text-slate-300 text-base lg:text-lg font-medium leading-relaxed">
+              <p className="text-slate-300 text-base lg:text-lg font-medium leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 CNS Tools and Repair provides industrial pneumatic tool repair and calibration services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.
               </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs lg:text-sm font-bold w-fit">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs lg:text-sm font-bold w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="material-symbols-outlined text-sm lg:text-base">location_on</span>
                 {contact.address.city}, {contact.address.province} | On-Site Service (No Shipping)
               </div>

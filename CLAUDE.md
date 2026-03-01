@@ -52,6 +52,17 @@ npm run build    # Production build to dist/
 npm run preview  # Preview production build on :4173
 ```
 
+### Frontend Image Optimization
+```bash
+# Optimize new hero images (generates WebP + optimized JPG)
+cd frontend
+node scripts/optimize-images.js
+
+# Images are optimized to <400KB with 80% quality
+# Script outputs: [name]-optimized.jpg and [name]-optimized.webp
+# Always use -optimized versions in components
+```
+
 ### MongoDB (Atlas - Cloud Database)
 ```bash
 # No local MongoDB service needed - using Atlas cloud database
@@ -88,6 +99,9 @@ python scripts/update_industries.py
 - **app/config.py**: Pydantic Settings for environment variables
 - **app/models/**: Pydantic schemas for validation (Quote, Tool, Brand, Industry, Settings, Gallery, Auth)
 - **app/routers/**: API endpoints grouped by resource (quotes, tools, brands, industries, contact, gallery, settings, auth)
+  - All routers use `/api/{resource}` prefix pattern (e.g., `/api/quotes/`, `/api/tools/`)
+  - Routers included in main.py via `app.include_router()`
+  - Each router handles CRUD operations for its resource
 - **app/services/**: Business logic (email_service.py, file_service.py)
 - **app/utils/**: Helpers (ObjectId → string conversion for JSON serialization)
 - **scripts/**: Database migration scripts (update_industries.py)
@@ -110,6 +124,19 @@ python scripts/update_industries.py
 - File uploads handled as `multipart/form-data` with `UploadFile` type
 - Uploaded files saved to `uploads/` with UUID filenames
 - Email notifications are non-blocking with error handling (don't block quote creation on email failure)
+- **Middleware stack** (app/main.py):
+  - Request logging middleware: Logs all incoming requests and response status codes
+  - CORS middleware: Configures allowed origins from environment variables
+  - Static file serving: `/uploads` directory mounted for file access
+  ```python
+  # Request logging pattern
+  @app.middleware("http")
+  async def log_requests(request: Request, call_next):
+      print(f"Incoming request: {request.method} {request.url}")
+      response = await call_next(request)
+      print(f"Response status: {response.status_code}")
+      return response
+  ```
 
 ### Frontend Architecture (React)
 
@@ -120,6 +147,7 @@ python scripts/update_industries.py
 - **src/pages/**: Full page components (Home, About, Services, Quote, Contact, etc.)
 - **src/services/api.js**: Centralized Axios client with API methods
 - **src/config/business.js**: Business configuration fallback (contact info, hours, map links, service claims)
+- **scripts/optimize-images.js**: Hero image optimization script (Sharp-based, generates WebP + JPG)
 
 **Design system:**
 - Tailwind CSS with custom config (primary: #1152d4 blue, accent: #f97316 orange)
@@ -129,6 +157,26 @@ python scripts/update_industries.py
 - Mobile-first responsive design with bottom navigation bar
 - Consistent spacing: `px-6 sm:px-8 lg:px-12` for sections, `py-16 sm:py-20 lg:py-24` for vertical spacing
 - Industrial aesthetic: uppercase headings, bold typography, strong contrast
+
+**State Management:**
+- **SettingsContext** (`contexts/SettingsContext.jsx`): Global business settings state
+  - Fetches from backend `/api/settings/` on mount
+  - Falls back to `config/business.js` when API unavailable
+  - Provides `{ settings, loading, error, refreshSettings }` via `useSettings()` hook
+  - Used by: Hero, Header, Footer, Contact, MapLocation, QuickFacts, BrandsCarousel
+- **Local state**: React Hook Form (Quote page), localStorage (admin auth), useState (UI toggles)
+
+**Vite Development Server:**
+- Port 5173 with HMR (Hot Module Replacement)
+- Proxies `/api/*` and `/uploads/*` to backend (http://localhost:8000)
+- Configuration in `vite.config.js`:
+  ```javascript
+  proxy: {
+    '/api': { target: 'http://localhost:8000', changeOrigin: true },
+    '/uploads': { target: 'http://localhost:8000', changeOrigin: true }
+  }
+  ```
+- No CORS issues in development due to proxy
 
 **SEO implementation:**
 - `react-helmet-async` for page-specific meta tags (installed and configured)
@@ -149,6 +197,14 @@ python scripts/update_industries.py
 - FormData submission for multipart/form-data
 - Photo previews with remove functionality
 - Success/error status display after submission
+
+**Hero section image handling:**
+- Original images optimized via `scripts/optimize-images.js` (Sharp library)
+- Generates WebP (modern browsers) + JPG (fallback) versions
+- Component uses `image-set()` CSS for automatic format selection
+- Strong gradient overlay for text contrast: `rgba(15, 23, 42, 0.95)` → `rgba(15, 23, 42, 0.65)`
+- All text elements have drop-shadow for readability on light backgrounds
+- Industries badge hardcoded: "Automotive • Fleet • Manufacturing • Construction"
 
 ### Database Schema
 
@@ -239,7 +295,7 @@ DATABASE_NAME=cnstoolsandrepair_db_dev
 # CORS - Allow local frontend
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 
-# Email Configuration - SendGrid
+# Email Configuration - SendGrid (see "Email Configuration" section below for setup details)
 SENDGRID_API_KEY=<your_sendgrid_api_key>
 SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
 NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
@@ -288,7 +344,7 @@ Backend CORS is configured in `app/main.py`:
 
 ## Data Management
 
-**No Admin UI** - Content management is API-only. Use FastAPI Swagger docs at `/docs`:
+**Limited Admin UI** - Basic admin interface exists at `/admin/settings` (see Admin Interface section below), but most content management is API-only via FastAPI Swagger docs at `/docs`:
 
 ### Adding Initial Data
 ```bash
@@ -327,9 +383,15 @@ Backend CORS is configured in `app/main.py`:
 
 ## Email Configuration
 
-**Current Implementation**: SendGrid API (configured)
+**Current Implementation**: SendGrid API (configured, replaces SMTP)
 
-Email service in `app/services/email_service.py` uses SendGrid Python SDK:
+Email service uses SendGrid Python SDK (not SMTP):
+- Install: `pip install sendgrid` (already in requirements.txt)
+- Configuration in `backend/.env`: `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `NOTIFICATION_EMAIL`
+- Free tier: 100 emails/day
+- Service file: `app/services/email_service.py`
+
+Email service in `app/services/email_service.py`:
 ```python
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -341,7 +403,10 @@ async def send_quote_notification(quote: Quote) -> bool
 **Setup**:
 1. Sign up at https://sendgrid.com (free tier: 100 emails/day)
 2. Get API key from SendGrid dashboard
-3. Add to `backend/.env` as `SENDGRID_API_KEY`
+3. Add to `backend/.env`:
+   - `SENDGRID_API_KEY=<your_key>`
+   - `SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com`
+   - `NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com`
 4. Verify domain at Hostinger (DNS records for SPF/DKIM)
 
 ## File Upload Handling
@@ -410,14 +475,22 @@ async def send_quote_notification(quote: Quote) -> bool
 - **Async everywhere**: All database operations use `await` with Motor driver
 - **File uploads**: Multipart form data with `UploadFile` type, saved with UUID filenames
 
+### Admin Interface
+- **Hidden routes** (no navigation links): `/admin/login`, `/admin/settings`
+- **Authentication**: Basic localStorage token (⚠️ demonstration-only, replace with JWT for production)
+- **Protected routes**: `ProtectedAdminRoute` component checks `localStorage.getItem('adminToken')`
+- **Settings management**: Update business info, contact details, hours, social media via UI
+- **Current token**: `temp-admin-token` (hardcoded in AdminLogin component)
+- **Security note**: No backend session validation - strengthen auth before production deployment
+
 ## Known Limitations
 
 1. **Basic authentication** - Auth router exists but endpoints are mostly public (strengthen for production)
 2. **No rate limiting** - Can be added with FastAPI middleware (e.g., slowapi)
 3. **Local file storage** - Photos stored in `backend/uploads/` (consider cloud storage like Digital Ocean Spaces/AWS S3 for production)
 4. **No pagination** - Quote list returns all quotes (add pagination for scale beyond ~1000 quotes)
-5. **No admin UI** - Content management requires API/Swagger docs access or manual database operations
-6. **No image optimization** - Uploaded photos stored as-is without compression/resizing (consider Pillow processing or cloud image service)
+5. **Limited admin UI** - Only business settings editable via `/admin/settings`; tools/brands/industries require API/Swagger docs access
+6. **Quote photo upload optimization** - User-uploaded quote photos stored as-is without compression/resizing (hero images ARE optimized via frontend/scripts/optimize-images.js; consider adding client-side compression for quote uploads)
 7. **Client-side SEO only** - Meta tags injected via react-helmet-async (works for Google crawlers, but SSR/SSG would be ideal for first-pass indexing)
 8. **OG image placeholder** - Social media preview image URL configured but file not created yet (1200x630px needed at `frontend/public/og-image.jpg`)
 

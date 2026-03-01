@@ -63,7 +63,7 @@ export default function StickyQuoteCTA() {
           </button>
         </Link>
       </div>
-      <style jsx>{`
+      <style>{`
         @keyframes slideUp {
           from {
             transform: translateY(100%);

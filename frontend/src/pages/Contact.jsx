@@ -55,7 +55,7 @@ export default function Contact() {
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get In Touch</h2>
           <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Contact Us</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-4 text-base lg:text-lg">
-            Have questions about our services? Need a quote? We're here to help!
+            Have questions about our services? Need a quote? We&apos;re here to help!
           </p>
         </div>
 

@@ -17,8 +17,6 @@ export default function MapLocation() {
   }
 
   const { contact, hours, map } = settings;
-  const fullAddress = `${contact.address.street}, ${contact.address.city}, ${contact.address.province} ${contact.address.postalCode}`;
-  const formattedHours = `${hours.weekdays} • ${hours.weekend}`;
 
   return (
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">

@@ -40,7 +40,7 @@ export default function About() {
           <div className="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 mb-8">
             <h3 className="text-2xl font-black mb-4 uppercase tracking-tight">Who We Are</h3>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-              CNS Tools and Repair is Surrey, BC's premier industrial pneumatic tool repair specialist. We provide comprehensive repair,
+              CNS Tools and Repair is Surrey, BC&apos;s premier industrial pneumatic tool repair specialist. We provide comprehensive repair,
               calibration, rental, and sales services for businesses across automotive, fleet maintenance, manufacturing, metal fabrication, construction, oil & gas, aerospace, marine, mining, and MRO sectors.
             </p>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
