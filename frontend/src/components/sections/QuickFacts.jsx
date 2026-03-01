@@ -38,9 +38,9 @@ export default function QuickFacts() {
       description: 'Serviced',
     },
     {
-      icon: 'schedule',
+      icon: 'precision_manufacturing',
       label: claims.averageTurnaround,
-      description: 'Average Turnaround',
+      description: 'Workmanship',
     },
     {
       icon: 'verified',
@@ -91,6 +91,11 @@ export default function QuickFacts() {
             </div>
           ))}
         </div>
+
+        {/* SEO Context Text */}
+        <p className="text-slate-400 text-xs sm:text-sm text-center mt-6 font-medium">
+          Serving Surrey and Metro Vancouver businesses with industrial pneumatic tool repair services.
+        </p>
 
         {/* Trust Badges Row - Fully Responsive */}
         <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 pt-6 border-t border-slate-800">

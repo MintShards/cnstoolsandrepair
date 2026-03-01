@@ -53,7 +53,7 @@ export default function MapLocation() {
 
           {/* Contact Info & Directions */}
           <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5 lg:gap-6">
-            {/* Address Card */}
+            {/* Address Card with Plain-Text NAP for SEO */}
             <div className="p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
               <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div className="shrink-0">
@@ -67,10 +67,13 @@ export default function MapLocation() {
                   </div>
                 </div>
                 <div className="flex-grow">
-                  <h4 className="text-base sm:text-lg lg:text-xl font-black uppercase tracking-tight mb-1 sm:mb-2">Address</h4>
-                  <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 font-medium">
-                    {fullAddress}
-                  </p>
+                  <h4 className="text-base sm:text-lg lg:text-xl font-black uppercase tracking-tight mb-1 sm:mb-2">CNS Tools and Repair</h4>
+                  {/* Plain-text NAP format for Google Maps SEO */}
+                  <div className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 font-medium space-y-0.5">
+                    <p>{contact.address.street}</p>
+                    <p>{contact.address.city}, {contact.address.province} {contact.address.postalCode}</p>
+                    <p>Canada</p>
+                  </div>
                 </div>
               </div>
 

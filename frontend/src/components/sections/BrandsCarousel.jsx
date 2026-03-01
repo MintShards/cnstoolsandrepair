@@ -40,7 +40,7 @@ export default function BrandsCarousel() {
             Brands We Service
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mt-2 sm:mt-3 text-xs sm:text-sm lg:text-base px-4">
-            Authorized service and repair for industry-leading pneumatic tool manufacturers
+            We service pneumatic tools commonly used in industrial environments, supporting a wide range of professional-grade manufacturers.
           </p>
         </div>
 

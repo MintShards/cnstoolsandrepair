@@ -1,3 +1,5 @@
+import { Helmet } from 'react-helmet-async';
+
 export default function Services() {
   const services = [
     {
@@ -23,14 +25,41 @@ export default function Services() {
   ];
 
   return (
-    <main className="relative min-h-screen">
+    <>
+      <Helmet>
+        <title>Pneumatic Tool Services | Repair, Calibration & Rental | CNS Tools Surrey</title>
+        <meta
+          name="description"
+          content="Expert pneumatic tool repair, precision calibration, equipment rental, and used tool sales in Surrey, BC. Comprehensive services for automotive, fleet, manufacturing, construction, and industrial sectors."
+        />
+        <meta
+          name="keywords"
+          content="pneumatic tool repair services, air tool calibration, tool rental Surrey, industrial equipment repair, used pneumatic tools, tool service Surrey BC"
+        />
+        <link rel="canonical" href="https://cnstoolsandrepair.com/services" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://cnstoolsandrepair.com/services" />
+        <meta property="og:title" content="Pneumatic Tool Services | Repair, Calibration & Rental | CNS Tools Surrey" />
+        <meta property="og:description" content="Expert pneumatic tool repair, precision calibration, equipment rental, and used tool sales in Surrey, BC." />
+        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://cnstoolsandrepair.com/services" />
+        <meta name="twitter:title" content="Pneumatic Tool Services | Repair, Calibration & Rental | CNS Tools Surrey" />
+        <meta name="twitter:description" content="Expert pneumatic tool repair, precision calibration, equipment rental, and used tool sales in Surrey, BC." />
+        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+      </Helmet>
+      <main className="relative min-h-screen">
       <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
         <div className="max-w-screen-xl mx-auto">
           <div className="text-center mb-12 lg:mb-16">
             <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</h2>
             <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Our Services</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
-              Comprehensive pneumatic tool solutions for automotive, railway, construction, and industrial businesses across Surrey, BC.
+              Comprehensive pneumatic tool solutions for automotive, fleet maintenance, manufacturing, metal fabrication, construction, oil & gas, aerospace, marine, mining, and MRO operations across Surrey, BC.
             </p>
           </div>
 
@@ -68,5 +97,6 @@ export default function Services() {
         </div>
       </div>
     </main>
+    </>
   );
 }

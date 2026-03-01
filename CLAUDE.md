@@ -18,7 +18,7 @@ All credentials are stored in `backend/.env` which is gitignored.
 - **Stack**: FARM (FastAPI + React + MongoDB)
 - **Architecture**: Separated backend API + frontend SPA
 - **Business Model**: Local on-site service (customers bring tools for diagnosis, no shipping)
-- **Target**: Mid to large industrial businesses in automotive, railway, construction
+- **Target**: Mid to large industrial businesses across 10 sectors: Automotive, Fleet Maintenance, Manufacturing, Metal Fabrication, Construction, Oil & Gas, Aerospace, Marine, Mining, MRO
 - **Current Phase**: Development using MongoDB Atlas (cloud database for both dev and production)
 
 ## Development Commands
@@ -46,10 +46,10 @@ http://localhost:8000/docs
 ```bash
 cd frontend
 npm install
-cp .env.example .env  # Configure VITE_API_URL
+cp .env.example .env  # Optional: Configure VITE_API_URL (defaults to http://localhost:8000)
 npm run dev      # Dev server on :5173
-npm run build    # Production build
-npm run preview  # Preview production build
+npm run build    # Production build to dist/
+npm run preview  # Preview production build on :4173
 ```
 
 ### MongoDB (Atlas - Cloud Database)
@@ -63,26 +63,34 @@ npm run preview  # Preview production build
 # Database: cnstoolsandrepair_db_dev
 ```
 
+### Database Migrations
+```bash
+# Run industry data migration script
+cd backend
+python scripts/update_industries.py
+```
+
 ## Architecture Overview
 
 ### Request Flow
 1. **Client** → React SPA (port 5173/80)
 2. **Frontend** → Axios API client (`frontend/src/services/api.js`)
 3. **Backend** → FastAPI routers (`backend/app/routers/`)
-4. **Database** → MongoDB (local dev: localhost:27017, production: MongoDB Atlas)
+4. **Database** → MongoDB Atlas (cloud database)
 5. **Email** → SendGrid API (quote notifications)
 6. **Files** → Local `backend/uploads/` directory
 
 ### Backend Architecture (FastAPI)
 
 **Async-first design** using Motor (async MongoDB driver):
-- **app/main.py**: FastAPI app with lifespan context manager for DB connection
-- **app/database.py**: MongoDB connection singleton (connect on startup, close on shutdown)
+- **app/main.py**: FastAPI app with lifespan context manager for DB connection, CORS middleware, request logging
+- **app/database.py**: MongoDB connection singleton (global `client` and `database` variables)
 - **app/config.py**: Pydantic Settings for environment variables
-- **app/models/**: Pydantic schemas for validation (Quote, Tool, Brand, Industry)
-- **app/routers/**: API endpoints grouped by resource
+- **app/models/**: Pydantic schemas for validation (Quote, Tool, Brand, Industry, Settings, Gallery, Auth)
+- **app/routers/**: API endpoints grouped by resource (quotes, tools, brands, industries, contact, gallery, settings, auth)
 - **app/services/**: Business logic (email_service.py, file_service.py)
 - **app/utils/**: Helpers (ObjectId → string conversion for JSON serialization)
+- **scripts/**: Database migration scripts (update_industries.py)
 
 **Critical patterns:**
 - All MongoDB operations use `await` (Motor is async)
@@ -105,19 +113,35 @@ npm run preview  # Preview production build
 
 ### Frontend Architecture (React)
 
-**Google Stitch template** converted to React components:
-- **src/App.jsx**: React Router setup with all routes
+**React SPA with component-based architecture**:
+- **src/App.jsx**: React Router v6 setup with all routes
 - **src/components/layout/**: Header, Footer, BottomNav (mobile-first navigation)
-- **src/components/sections/**: Reusable page sections (Hero, HowItWorks, etc.)
-- **src/pages/**: Full page components (Home, Quote, Tools, Industries, etc.)
+- **src/components/sections/**: Reusable page sections (Hero, HowItWorks, IndustriesServed, Testimonials, BrandsCarousel, ToolsPreview, QuickFacts, MapLocation, StickyQuoteCTA)
+- **src/pages/**: Full page components (Home, About, Services, Quote, Contact, etc.)
 - **src/services/api.js**: Centralized Axios client with API methods
+- **src/config/business.js**: Business configuration fallback (contact info, hours, map links, service claims)
 
 **Design system:**
-- Tailwind CSS with custom config (primary: #1152d4, accent: #f97316)
-- Montserrat font (bold/black weights for industrial feel)
-- Material Symbols Outlined icons
+- Tailwind CSS with custom config (primary: #1152d4 blue, accent: #f97316 orange)
+- Russo One font for logo (industrial branding), Montserrat for body text
+- Material Symbols Outlined icons (fontVariationSettings: 'wght' 600)
 - Dark mode support via Tailwind's `dark:` classes
-- Mobile-first with bottom navigation bar
+- Mobile-first responsive design with bottom navigation bar
+- Consistent spacing: `px-6 sm:px-8 lg:px-12` for sections, `py-16 sm:py-20 lg:py-24` for vertical spacing
+- Industrial aesthetic: uppercase headings, bold typography, strong contrast
+
+**SEO implementation:**
+- `react-helmet-async` for page-specific meta tags (installed and configured)
+- Each page has unique title, description, keywords, and canonical URL
+- HelmetProvider wraps entire app in `App.jsx` with default fallback meta tags
+- `index.html` contains only static tags (charset, viewport) - all SEO tags managed by Helmet
+- Meta tags are JS-injected (Google can read, but SSR/SSG would be better for first-pass indexing)
+- Schema.org LocalBusiness structured data in `index.html` for local SEO
+- **Open Graph tags** for Facebook/LinkedIn sharing (7 pages)
+- **Twitter Card tags** for Twitter sharing (7 pages)
+- **Sitemap.xml** in `public/` for search engine discovery
+- **Robots.txt** for crawler guidance
+- **OG Image**: Placeholder URL configured (`og-image.jpg`), actual 1200x630px image needed before production (see `OG_IMAGE_GUIDE.md`)
 
 **Quote form specifics:**
 - React Hook Form for validation
@@ -169,12 +193,35 @@ npm run preview  # Preview production build
   active: Boolean
 }
 
-// industries - Industries served (dynamic content)
+// industries - Industries served (dynamic content, soft-delete pattern)
 {
   _id: ObjectId,
-  name: String,
+  name: String,  // e.g., "Automotive Repair & Body Shops"
+  description: String,  // SEO-friendly description
+  icon: String,  // Material Symbol icon name (e.g., "directions_car")
+  active: Boolean  // false = soft-deleted, true = visible
+}
+
+// settings - Business settings (singleton document)
+{
+  _id: ObjectId,
+  phone: String,
+  email: String,
+  address: Object,  // {street, city, province, postalCode, country}
+  hours: Object,  // {weekdays, weekend, timezone}
+  map: Object,  // {embedUrl, directionsUrl}
+  social: Object,  // {facebook, linkedin, instagram}
+  updated_at: DateTime
+}
+
+// gallery - Photo gallery (for homepage/about page)
+{
+  _id: ObjectId,
+  title: String,
   description: String,
-  icon: String,  // Material Symbol icon name
+  image_url: String,
+  category: String,
+  display_order: Number,
   active: Boolean
 }
 ```
@@ -339,20 +386,40 @@ async def send_quote_notification(quote: Quote) -> bool
 
 **Production checklist:**
 1. MongoDB Atlas production cluster (separate from dev)
-2. Set `CORS_ORIGINS` to production domain only
-3. Configure DNS (Hostinger → Digital Ocean nameservers)
-4. Set up SSL certificate
-5. Add initial tools/brands/industries data
-6. Test quote submission and email notification end-to-end
+2. Set `CORS_ORIGINS` to production domain only (`https://cnstoolsandrepair.com`)
+3. **SEO URLs**: Current domain is `cnstoolsandrepair.com` (production-ready, no changes needed unless using different domain)
+   - If different domain needed: Update 7 pages (canonical + og:url + twitter:url), `public/sitemap.xml`, `public/robots.txt`
+4. Configure DNS (Hostinger → hosting provider nameservers)
+5. Set up SSL certificate (Let's Encrypt or hosting provider managed SSL)
+6. Add initial tools/brands/industries data via `/docs` API endpoints
+7. Test quote submission and email notification end-to-end
+8. Submit `sitemap.xml` to Google Search Console: `https://cnstoolsandrepair.com/sitemap.xml`
+9. **Optional**: Create custom OG image (1200x630px image at `frontend/public/og-image.jpg` - site works without it, shows title/description only)
+
+## Important Patterns & Conventions
+
+### Frontend Content Strategy
+- **Homepage IndustriesServed component**: Shows 6 featured industries (hardcoded in component)
+- **Backend industries API**: Returns all 10 active industries for full Industries page
+- **Frontend fallback config**: `frontend/src/config/business.js` provides fallback data when Settings API unavailable
+- **Testimonials**: Production warnings in place - replace with real client testimonials before launch
+
+### Backend Data Patterns
+- **Soft delete**: CRUD endpoints set `active: false` instead of removing documents
+- **ObjectId conversion**: Always convert `_id` to string and rename to `id` before returning to frontend
+- **Async everywhere**: All database operations use `await` with Motor driver
+- **File uploads**: Multipart form data with `UploadFile` type, saved with UUID filenames
 
 ## Known Limitations
 
-1. **No authentication** - API endpoints are public (add auth for production CRUD operations)
-2. **No rate limiting** - Can be added with FastAPI middleware
-3. **Local file storage** - Photos not in cloud storage
-4. **No pagination** - Quote list returns all quotes (add pagination for scale)
-5. **No admin UI** - Content management requires API/Swagger docs access
-6. **No image optimization** - Uploaded photos stored as-is
+1. **Basic authentication** - Auth router exists but endpoints are mostly public (strengthen for production)
+2. **No rate limiting** - Can be added with FastAPI middleware (e.g., slowapi)
+3. **Local file storage** - Photos stored in `backend/uploads/` (consider cloud storage like Digital Ocean Spaces/AWS S3 for production)
+4. **No pagination** - Quote list returns all quotes (add pagination for scale beyond ~1000 quotes)
+5. **No admin UI** - Content management requires API/Swagger docs access or manual database operations
+6. **No image optimization** - Uploaded photos stored as-is without compression/resizing (consider Pillow processing or cloud image service)
+7. **Client-side SEO only** - Meta tags injected via react-helmet-async (works for Google crawlers, but SSR/SSG would be ideal for first-pass indexing)
+8. **OG image placeholder** - Social media preview image URL configured but file not created yet (1200x630px needed at `frontend/public/og-image.jpg`)
 
 ## Testing Quote Workflow
 
@@ -415,17 +482,27 @@ async def send_quote_notification(quote: Quote) -> bool
 
 ## Design System Guidelines
 
-**Logo:** "CNS" (orange #f97316) + "TOOLS AND REPAIR" (uppercase, default text color)
+**Logo:**
+- "CNS" text in Russo One font, accent orange (#f97316)
+- "TOOLS AND REPAIR" in default text color, uppercase, smaller size
+- Logo component in `frontend/src/components/layout/Header.jsx`
 
 **Component patterns:**
-- Use Material Symbols Outlined for icons
-- Button styles: `bg-primary` with `shadow-xl shadow-primary/30`
-- Cards: `rounded-2xl` with `border` and subtle `shadow-sm`
-- Mobile-first spacing: `px-6 py-16` for sections
-- Font weights: `font-black` for headings, `font-bold` for subheadings
+- Icons: Material Symbols Outlined with `fontVariationSettings: "'wght' 600"`
+- Buttons: `bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 uppercase`
+- Cards: `rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm`
+- Sections: `px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24`
+- Typography: `font-black` for headings, `font-bold` for subheadings, `uppercase` for emphasis
+- Section headers: Small orange label (text-accent-orange text-xs uppercase tracking-[0.25em]) above large heading
 
-**Color usage:**
-- Primary (#1152d4): CTAs, active states, icons
-- Accent Orange (#f97316): Logo, highlights, badges
-- Slate grays: Text, borders, backgrounds
-- Dark mode: All components support `dark:` variants
+**Color palette:**
+- Primary (#1152d4): CTAs, active states, interactive icons
+- Accent Orange (#f97316): Logo "CNS" text, highlights, badges, section labels
+- Slate grays: Body text, borders, backgrounds
+- Background patterns: `bg-white dark:bg-slate-900` alternating with `bg-slate-50 dark:bg-slate-950`
+
+**Responsive breakpoints:**
+- Mobile-first approach (base styles for mobile)
+- `sm:` tablet (640px+)
+- `lg:` desktop (1024px+)
+- Bottom nav visible on mobile, hidden on desktop

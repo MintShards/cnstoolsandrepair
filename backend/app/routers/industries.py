@@ -19,6 +19,7 @@ async def create_industry(industry: IndustryCreate):
 
     created_industry = await db.industries.find_one({"_id": result.inserted_id})
     created_industry = convert_objectid_to_str(created_industry)
+    created_industry["id"] = created_industry.pop("_id")
 
     return IndustryResponse(**created_industry)
 
@@ -33,7 +34,11 @@ async def list_industries(active_only: bool = True):
     cursor = db.industries.find(query).sort("name", 1)
     industries = await cursor.to_list(length=None)
 
+    # Convert ObjectId to string and rename _id to id for Pydantic
     industries = [convert_objectid_to_str(industry) for industry in industries]
+    for industry in industries:
+        industry["id"] = industry.pop("_id")
+
     return [IndustryResponse(**industry) for industry in industries]
 
 
@@ -52,6 +57,7 @@ async def get_industry(industry_id: str):
         raise HTTPException(status_code=404, detail="Industry not found")
 
     industry = convert_objectid_to_str(industry)
+    industry["id"] = industry.pop("_id")
     return IndustryResponse(**industry)
 
 
@@ -78,6 +84,7 @@ async def update_industry(industry_id: str, industry: IndustryUpdate):
 
     updated_industry = await db.industries.find_one({"_id": ObjectId(industry_id)})
     updated_industry = convert_objectid_to_str(updated_industry)
+    updated_industry["id"] = updated_industry.pop("_id")
 
     return IndustryResponse(**updated_industry)
 

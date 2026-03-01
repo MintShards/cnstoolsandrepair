@@ -13,7 +13,7 @@ export default function Footer() {
               </h2>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">
-              Setting the gold standard for industrial pneumatic tool maintenance. Precision, speed, and CNS reliability.
+              Industrial pneumatic tool repair services in Surrey, British Columbia.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-8 lg:gap-12">
@@ -47,7 +47,7 @@ export default function Footer() {
               <ul className="flex flex-col gap-3 text-sm font-bold uppercase tracking-tight">
                 <li>
                   <Link className="hover:text-primary transition-colors" to="/quote">
-                    Request Quote
+                    Pneumatic Tool Repair Assessment
                   </Link>
                 </li>
                 <li>
@@ -57,7 +57,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link className="hover:text-primary transition-colors" to="/industries">
-                    Industries
+                    Industries Served
                   </Link>
                 </li>
               </ul>
@@ -65,14 +65,18 @@ export default function Footer() {
             <div className="flex flex-col gap-4">
               <h5 className="font-black text-xs uppercase text-slate-400 tracking-widest">Contact</h5>
               <ul className="flex flex-col gap-3 text-sm font-bold">
-                <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-primary">location_on</span>
-                  <span className="text-slate-600 dark:text-slate-300">Surrey, BC</span>
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base text-primary shrink-0">location_on</span>
+                  <div className="text-slate-600 dark:text-slate-300">
+                    <p>Unit 65, 13335 115 Ave</p>
+                    <p>Surrey, BC V3R 2X1</p>
+                    <p>Canada</p>
+                  </div>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-base text-primary">mail</span>
                   <a href="mailto:cnstoolsandrepair@gmail.com" className="hover:text-primary transition-colors text-slate-600 dark:text-slate-300">
-                    Email Us
+                    cnstoolsandrepair@gmail.com
                   </a>
                 </li>
                 <li className="flex items-center gap-2">

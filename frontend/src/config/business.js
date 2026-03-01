@@ -17,10 +17,10 @@ export const BUSINESS_INFO = {
 
   // Location (fallback values)
   address: {
-    street: 'Surrey, BC, Canada',
+    street: 'Unit 65, 13335 115 Ave',
     city: 'Surrey',
     province: 'BC',
-    postalCode: '',
+    postalCode: 'V3R 2X1',
     country: 'Canada',
   },
 
@@ -36,21 +36,21 @@ export const BUSINESS_INFO = {
 
   // Map Configuration
   map: {
-    embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d83327.28123825047!2d-122.90733839999999!3d49.1913462!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x5485d9c5644e2a21%3A0x9a1b6a0c0c5e5e5e!2sSurrey%2C%20BC!5e0!3m2!1sen!2sca!4v1234567890',
-    directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=Surrey,BC,Canada',
+    embedUrl: 'https://maps.app.goo.gl/kaFxXdqKxd5fBmSn7',
+    directionsUrl: 'https://maps.app.goo.gl/zm4yDK4ZPMYStw6X7',
   },
 
   // Business Claims
   claims: {
     toolTypesServiced: '20+',
-    averageTurnaround: '3-7 Day',
-    responseTime: 'Same-day',
+    averageTurnaround: 'Quality',
+    responseTime: 'Professional',
     technicians: 'Factory-Trained',
     clientCount: '100+',
   },
 
   // Industries Served
-  industries: ['Automotive', 'Railway', 'Construction', 'Manufacturing'],
+  industries: ['Automotive', 'Fleet Maintenance', 'Manufacturing', 'Metal Fabrication', 'Construction', 'Oil & Gas'],
 
   // Social Media (optional)
   social: {

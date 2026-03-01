@@ -47,10 +47,10 @@ export default function Hero() {
                 {industriesBadge}
               </div>
               <h1 className="text-white text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight uppercase">
-                {hero.headline}
+                Industrial Pneumatic Tool Repair & Calibration in Surrey, BC
               </h1>
               <p className="text-slate-300 text-base lg:text-lg font-medium leading-relaxed">
-                {hero.subheadline}
+                CNS Tools and Repair provides industrial pneumatic tool repair and calibration services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs lg:text-sm font-bold w-fit">
                 <span className="material-symbols-outlined text-sm lg:text-base">location_on</span>
@@ -62,13 +62,13 @@ export default function Hero() {
               <Link to="/quote" className="w-full sm:w-auto order-1">
                 <button className="flex items-center justify-center gap-2 sm:gap-3 rounded-xl h-14 sm:h-14 px-6 sm:px-8 bg-primary text-white text-base sm:text-base font-black shadow-2xl shadow-primary/40 active:scale-95 transition-all border-2 border-primary/50 w-full touch-manipulation">
                   <span className="material-symbols-outlined text-xl sm:text-2xl">request_quote</span>
-                  <span className="tracking-tight">Request a Quote</span>
+                  <span className="tracking-tight">Request a Repair Assessment</span>
                 </button>
               </Link>
               <Link to="/services" className="w-full sm:w-auto order-2">
                 <button className="flex items-center justify-center gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white text-sm sm:text-base font-bold hover:bg-white/20 active:scale-95 transition-all w-full touch-manipulation">
                   <span className="material-symbols-outlined text-lg sm:text-xl">construction</span>
-                  <span>Our Services</span>
+                  <span>View Pneumatic Tool Repair Services</span>
                 </button>
               </Link>
             </div>

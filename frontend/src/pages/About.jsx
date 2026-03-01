@@ -1,6 +1,35 @@
+import { Helmet } from 'react-helmet-async';
+
 export default function About() {
   return (
-    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+    <>
+      <Helmet>
+        <title>About CNS Tools and Repair | Industrial Pneumatic Tool Repair Surrey BC</title>
+        <meta
+          name="description"
+          content="CNS Tools and Repair is Surrey BC's premier industrial pneumatic tool repair specialist. Certified technicians, OEM parts sourcing, and professional service for automotive, fleet, manufacturing, construction, oil & gas, aerospace, marine, mining, and MRO sectors."
+        />
+        <meta
+          name="keywords"
+          content="about CNS Tools, pneumatic tool repair company Surrey, industrial tool repair specialist, certified technicians BC, OEM parts Surrey"
+        />
+        <link rel="canonical" href="https://cnstoolsandrepair.com/about" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://cnstoolsandrepair.com/about" />
+        <meta property="og:title" content="About CNS Tools and Repair | Industrial Pneumatic Tool Repair Surrey BC" />
+        <meta property="og:description" content="Surrey BC's premier industrial pneumatic tool repair specialist. Certified technicians, OEM parts sourcing, and professional service." />
+        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://cnstoolsandrepair.com/about" />
+        <meta name="twitter:title" content="About CNS Tools and Repair | Industrial Pneumatic Tool Repair Surrey BC" />
+        <meta name="twitter:description" content="Surrey BC's premier industrial pneumatic tool repair specialist. Certified technicians, OEM parts sourcing, and professional service." />
+        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+      </Helmet>
+      <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Story</h2>
@@ -12,7 +41,7 @@ export default function About() {
             <h3 className="text-2xl font-black mb-4 uppercase tracking-tight">Who We Are</h3>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
               CNS Tools and Repair is Surrey, BC's premier industrial pneumatic tool repair specialist. We provide comprehensive repair,
-              calibration, rental, and sales services for businesses across automotive, railway, construction, and industrial sectors.
+              calibration, rental, and sales services for businesses across automotive, fleet maintenance, manufacturing, metal fabrication, construction, oil & gas, aerospace, marine, mining, and MRO sectors.
             </p>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
               Our on-site facility is equipped with state-of-the-art diagnostic tools and staffed by certified technicians with
@@ -37,7 +66,7 @@ export default function About() {
               </li>
               <li className="flex gap-3">
                 <span className="material-symbols-outlined text-primary">check_circle</span>
-                <span className="text-slate-600 dark:text-slate-300">Fast turnaround times to minimize downtime</span>
+                <span className="text-slate-600 dark:text-slate-300">Quality workmanship to minimize repeat failures</span>
               </li>
             </ul>
           </div>
@@ -64,5 +93,6 @@ export default function About() {
         </div>
       </div>
     </main>
+    </>
   );
 }

@@ -3,28 +3,40 @@ import { Link } from 'react-router-dom';
 export default function IndustriesServed() {
   const industries = [
     {
-      name: 'Automotive',
+      name: 'Automotive Repair & Body Shops',
       icon: 'directions_car',
-      description: 'Auto repair shops and manufacturing facilities rely on pneumatic tools for precision work.',
-      useCases: ['Impact wrenches', 'Air ratchets', 'Spray guns'],
+      description: 'Auto repair shops and body shops rely on pneumatic tools for precision work, from impact wrenches to spray guns.',
+      useCases: ['Impact wrenches', 'Air ratchets', 'Spray guns', 'Sanders'],
     },
     {
-      name: 'Railway',
-      icon: 'train',
-      description: 'Railway maintenance operations require reliable pneumatic equipment for heavy-duty applications.',
-      useCases: ['Grinders', 'Impact tools', 'Air hammers'],
+      name: 'Fleet & Truck Maintenance',
+      icon: 'local_shipping',
+      description: 'Fleet maintenance operations depend on reliable pneumatic equipment for heavy-duty truck and trailer repairs.',
+      useCases: ['Impact tools', 'Grinders', 'Air hammers', 'Drills'],
     },
     {
-      name: 'Construction',
-      icon: 'apartment',
-      description: 'Construction sites depend on pneumatic tools for framing, finishing, and fabrication work.',
-      useCases: ['Nail guns', 'Drills', 'Sanders'],
-    },
-    {
-      name: 'Manufacturing',
+      name: 'Manufacturing & Assembly',
       icon: 'precision_manufacturing',
-      description: 'Industrial manufacturing plants use pneumatic tools for assembly, fabrication, and quality control.',
-      useCases: ['Assembly tools', 'Grinders', 'Specialty tools'],
+      description: 'Industrial manufacturing plants use pneumatic tools for assembly lines, fabrication, and quality control.',
+      useCases: ['Assembly tools', 'Grinders', 'Specialty tools', 'Torque tools'],
+    },
+    {
+      name: 'Metal Fabrication & Welding',
+      icon: 'manufacturing',
+      description: 'Metal fabrication shops require precision pneumatic tools for cutting, grinding, and finishing metalwork.',
+      useCases: ['Cut-off tools', 'Die grinders', 'Needle scalers', 'Sanders'],
+    },
+    {
+      name: 'Construction & Concrete',
+      icon: 'apartment',
+      description: 'Construction sites depend on pneumatic tools for framing, finishing, concrete work, and heavy-duty applications.',
+      useCases: ['Nail guns', 'Drills', 'Breakers', 'Chipping hammers'],
+    },
+    {
+      name: 'Oil, Gas & Energy',
+      icon: 'oil_barrel',
+      description: 'Energy sector operations in hazardous environments require certified pneumatic tools for safe, spark-free operation.',
+      useCases: ['Hazloc tools', 'Impact wrenches', 'Grinders', 'Drills'],
     },
   ];
 
@@ -35,15 +47,15 @@ export default function IndustriesServed() {
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             Who We Serve
           </h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-3 sm:mb-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
+            We provide industrial pneumatic tool repair services for businesses operating in demanding environments across Surrey and Metro Vancouver.
+          </p>
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
             Industries We Support
           </h3>
-          <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
-            B2B industrial pneumatic tool repair for businesses across Metro Vancouver
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {industries.map((industry, index) => (
             <div
               key={index}

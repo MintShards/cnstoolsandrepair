@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { toolsAPI } from '../services/api';
 
 export default function Tools() {
@@ -21,7 +22,34 @@ export default function Tools() {
   }, []);
 
   return (
-    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+    <>
+      <Helmet>
+        <title>Pneumatic Tools We Repair | Impact Wrenches, Grinders, Drills | CNS Tools Surrey</title>
+        <meta
+          name="description"
+          content="Professional repair for all pneumatic tool types: impact wrenches, grinders, drills, sanders, ratchets, spray guns, nail guns, and air hammers. Expert service for all major brands in Surrey, BC."
+        />
+        <meta
+          name="keywords"
+          content="impact wrench repair, pneumatic grinder repair, air drill service, tool repair types, industrial air tools Surrey, pneumatic tool brands BC"
+        />
+        <link rel="canonical" href="https://cnstoolsandrepair.com/tools" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://cnstoolsandrepair.com/tools" />
+        <meta property="og:title" content="Pneumatic Tools We Repair | Impact Wrenches, Grinders, Drills | CNS Tools Surrey" />
+        <meta property="og:description" content="Professional repair for all pneumatic tool types: impact wrenches, grinders, drills, sanders, ratchets, spray guns, nail guns, and air hammers." />
+        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://cnstoolsandrepair.com/tools" />
+        <meta name="twitter:title" content="Pneumatic Tools We Repair | Impact Wrenches, Grinders, Drills | CNS Tools Surrey" />
+        <meta name="twitter:description" content="Professional repair for all pneumatic tool types: impact wrenches, grinders, drills, sanders, ratchets, spray guns, nail guns, and air hammers." />
+        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+      </Helmet>
+      <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
@@ -64,5 +92,6 @@ export default function Tools() {
         )}
       </div>
     </main>
+    </>
   );
 }

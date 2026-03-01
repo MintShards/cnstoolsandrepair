@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { useDropzone } from 'react-dropzone';
 import { quotesAPI } from '../services/api';
@@ -58,7 +59,34 @@ export default function Quote() {
   };
 
   return (
-    <main className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
+    <>
+      <Helmet>
+        <title>Request Free Pneumatic Tool Repair Quote | CNS Tools Surrey BC</title>
+        <meta
+          name="description"
+          content="Request a free quote for industrial pneumatic tool repair in Surrey, BC. Upload photos, describe your tool issue, and get professional repair assessment. Fast turnaround for automotive, fleet, manufacturing, and construction industries."
+        />
+        <meta
+          name="keywords"
+          content="free tool repair quote, pneumatic tool quote Surrey, industrial tool repair estimate, air tool repair quote BC, tool repair assessment"
+        />
+        <link rel="canonical" href="https://cnstoolsandrepair.com/quote" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://cnstoolsandrepair.com/quote" />
+        <meta property="og:title" content="Request Free Pneumatic Tool Repair Quote | CNS Tools Surrey BC" />
+        <meta property="og:description" content="Get a free quote for industrial pneumatic tool repair in Surrey, BC. Upload photos, describe your tool issue, and get professional assessment." />
+        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://cnstoolsandrepair.com/quote" />
+        <meta name="twitter:title" content="Request Free Pneumatic Tool Repair Quote | CNS Tools Surrey BC" />
+        <meta name="twitter:description" content="Get a free quote for industrial pneumatic tool repair in Surrey, BC. Upload photos, describe your tool issue, and get professional assessment." />
+        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+      </Helmet>
+      <main className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get Started</h2>
@@ -266,5 +294,6 @@ export default function Quote() {
         </form>
       </div>
     </main>
+    </>
   );
 }

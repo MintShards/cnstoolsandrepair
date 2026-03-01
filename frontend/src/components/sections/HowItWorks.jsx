@@ -1,17 +1,9 @@
-/**
- * HowItWorks Component
- *
- * ⚠️ PRODUCTION NOTE:
- * Step 1 promises "same-day response" - ensure business operations
- * can consistently deliver this service level before launch.
- */
-
 export default function HowItWorks() {
   const steps = [
     {
       number: 1,
-      title: 'Request a Quote',
-      description: 'Submit tool details online—same-day response to get your repair started fast.',
+      title: 'Request an Assessment',
+      description: 'Submit tool details online to begin the professional diagnostic process.',
     },
     {
       number: 2,
@@ -26,7 +18,7 @@ export default function HowItWorks() {
     {
       number: 4,
       title: 'Repair & Testing',
-      description: 'OEM parts installation and rigorous quality testing—tools returned ready for production.',
+      description: 'OEM-compatible parts installation and rigorous quality testing—tools returned ready for production.',
     },
   ];
 
@@ -35,7 +27,7 @@ export default function HowItWorks() {
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">Our Workflow</h2>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">How It Works</h3>
+          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">Repair Request Workflow</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
         {steps.map((step) => (

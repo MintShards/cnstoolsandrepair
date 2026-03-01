@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { industriesAPI } from '../services/api';
 
 export default function Industries() {
@@ -21,7 +22,34 @@ export default function Industries() {
   }, []);
 
   return (
-    <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+    <>
+      <Helmet>
+        <title>Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey</title>
+        <meta
+          name="description"
+          content="Pneumatic tool repair for 10 major industrial sectors: Automotive, Fleet Maintenance, Manufacturing, Metal Fabrication, Construction, Oil & Gas, Aerospace, Marine, Mining, and MRO. Serving Surrey and Metro Vancouver businesses."
+        />
+        <meta
+          name="keywords"
+          content="automotive tool repair, fleet maintenance pneumatic tools, manufacturing tool service, construction air tools, oil gas industrial tools, aerospace tool repair Surrey BC"
+        />
+        <link rel="canonical" href="https://cnstoolsandrepair.com/industries" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://cnstoolsandrepair.com/industries" />
+        <meta property="og:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey" />
+        <meta property="og:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
+        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://cnstoolsandrepair.com/industries" />
+        <meta name="twitter:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey" />
+        <meta name="twitter:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
+        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+      </Helmet>
+      <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Who We Serve</h2>
@@ -68,5 +96,6 @@ export default function Industries() {
         )}
       </div>
     </main>
+    </>
   );
 }

@@ -37,13 +37,13 @@ export default function Testimonials() {
     },
     {
       id: 2,
-      company: 'Pacific Rail Systems',
-      person: 'Jennifer Morrison',
-      title: 'Operations Manager',
-      industry: 'train',
-      industryName: 'railway',
-      quote: 'We rely on CNS for all pneumatic tool repairs across our maintenance facilities. Their turnaround time and certified technician expertise keeps our railway operations on schedule.',
-      location: 'Vancouver, BC',
+      company: 'Metro Fleet Services',
+      person: 'Sarah Rodriguez',
+      title: 'Maintenance Supervisor',
+      industry: 'local_shipping',
+      industryName: 'fleet',
+      quote: 'We depend on CNS for pneumatic tool repairs across our truck and trailer maintenance operations. Their professional diagnostics and quality workmanship keep our fleet running reliably.',
+      location: 'Delta, BC',
     },
     {
       id: 3,
@@ -61,7 +61,7 @@ export default function Testimonials() {
   const industries = [
     { id: 'all', label: 'All Industries', icon: 'business' },
     { id: 'automotive', label: 'Automotive', icon: 'directions_car' },
-    { id: 'railway', label: 'Railway', icon: 'train' },
+    { id: 'fleet', label: 'Fleet Maintenance', icon: 'local_shipping' },
     { id: 'construction', label: 'Construction', icon: 'construction' },
   ];
 
@@ -78,6 +78,9 @@ export default function Testimonials() {
             What Our Clients Say
           </h2>
           <h3 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Success Stories</h3>
+          <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
+            Trusted by industrial and commercial businesses across Surrey and the Greater Vancouver area.
+          </p>
         </div>
 
         {/* Industry Filter Tabs - Fully Responsive */}

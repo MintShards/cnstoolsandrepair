@@ -50,7 +50,7 @@ export default function ToolsPreview() {
 
         <div className="mt-8 sm:mt-10 lg:mt-12 text-center">
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mb-4 sm:mb-5 lg:mb-6 px-4">
-            And 12+ more specialized pneumatic tool types
+            Our pneumatic tool repair services cover a wide range of industrial air-powered tools used in manufacturing, construction, and maintenance operations.
           </p>
           <Link to="/services" className="inline-block w-full sm:w-auto">
             <button className="w-full sm:w-auto bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black px-6 sm:px-8 h-12 sm:h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary active:scale-95 transition-all uppercase text-sm touch-manipulation">
