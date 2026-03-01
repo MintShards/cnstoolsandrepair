@@ -16,7 +16,7 @@ export default {
       },
       fontFamily: {
         "display": ["Montserrat", "sans-serif"],
-        "logo": ["League Spartan", "Montserrat", "sans-serif"]
+        "logo": ["Russo One", "Montserrat", "sans-serif"]
       },
       borderRadius: {
         "DEFAULT": "0.25rem",
