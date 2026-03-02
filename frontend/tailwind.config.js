@@ -9,7 +9,7 @@ export default {
     extend: {
       colors: {
         "primary": "#1152d4",
-        "accent-orange": "#f97316",
+        "accent-orange": "#FF2400",
         "background-light": "#f6f6f8",
         "background-dark": "#0f172a",
         "slate-gray": "#334155",
