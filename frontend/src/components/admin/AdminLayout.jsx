@@ -1,7 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 export default function AdminLayout({ children, title = "Admin Settings" }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     // Clear session data
@@ -11,6 +12,11 @@ export default function AdminLayout({ children, title = "Admin Settings" }) {
     // Redirect to login
     navigate('/admin/login');
   };
+
+  const navItems = [
+    { path: '/admin/settings', label: 'Business Settings', icon: 'settings' },
+    { path: '/admin/tools', label: 'Tools Management', icon: 'build' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -22,7 +28,7 @@ export default function AdminLayout({ children, title = "Admin Settings" }) {
               <h1 className="text-xl font-black text-white uppercase tracking-tight">
                 CNS Tools - {title}
               </h1>
-              <p className="text-xs text-slate-400 mt-1">Business Settings Management</p>
+              <p className="text-xs text-slate-400 mt-1">Admin Dashboard</p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -43,6 +49,28 @@ export default function AdminLayout({ children, title = "Admin Settings" }) {
           </div>
         </div>
       </header>
+
+      {/* Navigation Tabs */}
+      <nav className="bg-slate-900 border-b border-slate-800">
+        <div className="max-w-screen-2xl mx-auto px-6">
+          <div className="flex gap-2 overflow-x-auto">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-2 px-4 py-3 font-bold text-sm uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
+                  location.pathname === item.path
+                    ? 'border-primary text-white'
+                    : 'border-transparent text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-base">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </nav>
 
       {/* Main Content */}
       <main className="max-w-screen-2xl mx-auto px-6 py-8">

@@ -15,6 +15,7 @@ import Contact from './pages/Contact';
 import Gallery from './pages/Gallery';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminTools from './pages/admin/AdminTools';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
 
 function App() {
@@ -50,6 +51,14 @@ function App() {
                 element={
                   <ProtectedAdminRoute>
                     <AdminSettings />
+                  </ProtectedAdminRoute>
+                }
+              />
+              <Route
+                path="/admin/tools"
+                element={
+                  <ProtectedAdminRoute>
+                    <AdminTools />
                   </ProtectedAdminRoute>
                 }
               />

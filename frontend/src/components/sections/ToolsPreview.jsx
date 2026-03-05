@@ -1,6 +1,26 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { toolsAPI } from '../../services/api';
 
-export default function ToolsPreview({ loading = false }) {
+export default function ToolsPreview() {
+  const [tools, setTools] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        const data = await toolsAPI.list();
+        setTools(data);
+      } catch (error) {
+        console.error('Failed to fetch tools:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTools();
+  }, []);
+
   // Loading skeleton
   if (loading) {
     return (
@@ -36,17 +56,6 @@ export default function ToolsPreview({ loading = false }) {
     );
   }
 
-  const toolCategories = [
-    { name: 'Impact Wrenches', icon: 'construction' },
-    { name: 'Grinders', icon: 'auto_fix_high' },
-    { name: 'Drills', icon: 'handyman' },
-    { name: 'Sanders', icon: 'hardware' },
-    { name: 'Ratchets', icon: 'settings' },
-    { name: 'Spray Guns', icon: 'air' },
-    { name: 'Nail Guns', icon: 'push_pin' },
-    { name: 'Air Hammers', icon: 'gavel' },
-  ];
-
   return (
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
@@ -63,24 +72,31 @@ export default function ToolsPreview({ loading = false }) {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {toolCategories.map((tool, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
-            >
-              <div className="size-12 sm:size-14 rounded-xl bg-primary/10 flex items-center justify-center">
-                <span
-                  className="material-symbols-outlined text-primary text-2xl sm:text-3xl"
-                  style={{ fontVariationSettings: "'wght' 600" }}
-                >
-                  {tool.icon}
-                </span>
+          {tools.length > 0 ? (
+            tools.map((tool) => (
+              <div
+                key={tool.id}
+                className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
+              >
+                <div className="size-12 sm:size-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <span
+                    className="material-symbols-outlined text-primary text-2xl sm:text-3xl"
+                    style={{ fontVariationSettings: "'wght' 600" }}
+                  >
+                    {tool.icon}
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-tight text-center leading-tight">
+                  {tool.name}
+                </h4>
               </div>
-              <h4 className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-tight text-center leading-tight">
-                {tool.name}
-              </h4>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <span className="material-symbols-outlined text-6xl text-slate-400 mb-4">inventory_2</span>
+              <p className="text-slate-500">No tools available yet.</p>
             </div>
-          ))}
+          )}
         </div>
 
         <div className="mt-8 sm:mt-10 lg:mt-12 text-center">

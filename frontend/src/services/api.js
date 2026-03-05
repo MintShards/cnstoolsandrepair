@@ -47,8 +47,8 @@ export const toolsAPI = {
     const response = await api.put(`/api/tools/${id}`, data);
     return response.data;
   },
-  delete: async (id) => {
-    await api.delete(`/api/tools/${id}`);
+  delete: async (id, permanent = false) => {
+    await api.delete(`/api/tools/${id}`, { params: { permanent } });
   },
 };
 
