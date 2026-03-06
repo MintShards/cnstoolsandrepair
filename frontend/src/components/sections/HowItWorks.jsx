@@ -2,7 +2,7 @@ export default function HowItWorks({ loading = false }) {
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
         <div className="max-w-screen-xl mx-auto">
           {/* Header Skeleton */}
           <div className="text-center mb-8 sm:mb-10 lg:mb-16">
@@ -25,7 +25,7 @@ export default function HowItWorks({ loading = false }) {
           </div>
 
           {/* Note Skeleton */}
-          <div className="mt-8 sm:mt-10 lg:mt-16 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="mt-8 sm:mt-10 lg:mt-16 p-4 sm:p-5 lg:p-6 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
             <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
           </div>
         </div>
@@ -57,7 +57,7 @@ export default function HowItWorks({ loading = false }) {
   ];
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">Our Workflow</h2>
@@ -76,7 +76,7 @@ export default function HowItWorks({ loading = false }) {
           </div>
         ))}
         </div>
-        <div className="mt-8 sm:mt-10 lg:mt-16 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <div className="mt-8 sm:mt-10 lg:mt-16 p-4 sm:p-5 lg:p-6 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
           <div className="flex gap-2 sm:gap-3">
             <span className="material-symbols-outlined text-accent-orange text-lg sm:text-xl shrink-0">info</span>
             <p className="text-[10px] sm:text-[11px] lg:text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider leading-relaxed">

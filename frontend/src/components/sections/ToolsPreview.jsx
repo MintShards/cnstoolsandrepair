@@ -4,7 +4,7 @@ export default function ToolsPreview({ loading = false }) {
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
           {/* Header Skeleton */}
           <div className="text-center mb-8 sm:mb-10 lg:mb-16">
@@ -18,7 +18,7 @@ export default function ToolsPreview({ loading = false }) {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div
                 key={i}
-                className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+                className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
               >
                 <div className="size-12 sm:size-14 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
                 <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -48,7 +48,7 @@ export default function ToolsPreview({ loading = false }) {
   ];
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
@@ -66,7 +66,7 @@ export default function ToolsPreview({ loading = false }) {
           {toolCategories.map((tool, index) => (
             <div
               key={index}
-              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
+              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
             >
               <div className="size-12 sm:size-14 rounded-xl bg-primary/10 flex items-center justify-center">
                 <span
@@ -88,7 +88,7 @@ export default function ToolsPreview({ loading = false }) {
             Our pneumatic tool repair services cover a wide range of industrial air-powered tools used in manufacturing, construction, and maintenance operations.
           </p>
           <Link to="/services" className="inline-block w-full sm:w-auto">
-            <button className="w-full sm:w-auto bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black px-6 sm:px-8 h-12 sm:h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary active:scale-95 transition-all uppercase text-sm touch-manipulation">
+            <button className="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black px-6 sm:px-8 h-12 sm:h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary active:scale-95 transition-all uppercase text-sm touch-manipulation">
               See All Services
             </button>
           </Link>

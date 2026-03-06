@@ -13,7 +13,7 @@ export default function QuickFacts() {
   // Loading state
   if (loading || !settings) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 bg-slate-100 dark:bg-slate-950">
+      <section className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
           {/* Quick Facts Grid Skeleton */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-6">
@@ -79,7 +79,7 @@ export default function QuickFacts() {
   ];
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 bg-slate-100 dark:bg-slate-950">
+    <section className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         {/* Quick Facts Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-6">

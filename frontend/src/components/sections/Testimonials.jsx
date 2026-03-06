@@ -27,7 +27,7 @@ export default function Testimonials({ loading = false }) {
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
           {/* Header Skeleton */}
           <div className="text-center mb-8 lg:mb-12">
@@ -51,7 +51,7 @@ export default function Testimonials({ loading = false }) {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="flex flex-col p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+                className="flex flex-col p-4 sm:p-6 lg:p-8 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
               >
                 {/* Quote Icon Skeleton */}
                 <div className="mb-4 size-10 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -77,7 +77,7 @@ export default function Testimonials({ loading = false }) {
           </div>
 
           {/* Trust Badge Skeleton */}
-          <div className="mt-12 lg:mt-16 p-5 lg:p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="mt-12 lg:mt-16 p-5 lg:p-6 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
             <div className="h-6 w-64 bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function Testimonials({ loading = false }) {
     : testimonials.filter(t => t.industryName === selectedIndustry);
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 lg:mb-12">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
@@ -171,7 +171,7 @@ export default function Testimonials({ loading = false }) {
           {filteredTestimonials.map((testimonial) => (
             <div
               key={testimonial.id}
-              className="flex flex-col p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
+              className="flex flex-col p-4 sm:p-6 lg:p-8 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
             >
               {/* Quote Icon */}
               <div className="mb-4">

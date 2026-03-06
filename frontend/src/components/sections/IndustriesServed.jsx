@@ -4,7 +4,7 @@ export default function IndustriesServed({ loading = false }) {
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
         <div className="max-w-screen-xl mx-auto">
           {/* Header Skeleton */}
           <div className="text-center mb-8 sm:mb-10 lg:mb-16">
@@ -94,7 +94,7 @@ export default function IndustriesServed({ loading = false }) {
   ];
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
@@ -132,7 +132,7 @@ export default function IndustriesServed({ loading = false }) {
                 {industry.useCases.map((useCase, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 sm:px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
+                    className="px-2.5 sm:px-3 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
                   >
                     {useCase}
                   </span>

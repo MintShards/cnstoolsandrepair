@@ -5,7 +5,7 @@ export default function MapLocation() {
 
   if (loading || !settings) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
           <div className="text-center mb-12">
             <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
@@ -19,7 +19,7 @@ export default function MapLocation() {
   const { contact, hours, map } = settings;
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
@@ -52,7 +52,7 @@ export default function MapLocation() {
           {/* Contact Info & Directions */}
           <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5 lg:gap-6">
             {/* Address Card with Plain-Text NAP for SEO */}
-            <div className="p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <div className="p-4 sm:p-6 lg:p-8 bg-slate-100 dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
               <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div className="shrink-0">
                   <div className="size-12 sm:size-14 rounded-xl bg-accent-orange/10 flex items-center justify-center">

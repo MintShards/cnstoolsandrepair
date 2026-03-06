@@ -2,7 +2,7 @@ export default function FinalCTA({ loading = false }) {
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-white dark:bg-slate-900 relative overflow-hidden text-center">
+      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-slate-100 dark:bg-slate-900 relative overflow-hidden text-center">
         <div className="max-w-screen-xl mx-auto">
           <div className="flex flex-col items-center gap-4 sm:gap-6 relative z-10">
             {/* Icon Skeleton */}
@@ -32,7 +32,7 @@ export default function FinalCTA({ loading = false }) {
   }
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-white dark:bg-slate-900 relative overflow-hidden text-center">
+    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-28 bg-slate-100 dark:bg-slate-900 relative overflow-hidden text-center">
       <div className="max-w-screen-xl mx-auto">
         <div className="flex flex-col items-center gap-4 sm:gap-6 relative z-10">
           <div className="bg-accent-orange size-12 sm:size-14 rounded-full flex items-center justify-center shadow-lg shadow-accent-orange/20">
