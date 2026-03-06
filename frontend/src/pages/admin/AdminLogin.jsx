@@ -4,7 +4,9 @@ import { authAPI } from '../../services/api';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,18 +16,16 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await authAPI.login(password);
+      const response = await authAPI.login({ email, password });
 
-      if (response.success) {
-        // Store session token and timestamp
-        localStorage.setItem('admin_token', response.token);
-        localStorage.setItem('admin_login_time', Date.now().toString());
+      // Store JWT token and timestamp
+      localStorage.setItem('admin_token', response.access_token);
+      localStorage.setItem('admin_login_time', Date.now().toString());
 
-        // Redirect to admin settings
-        navigate('/admin/settings');
-      }
+      // Redirect to admin settings
+      navigate('/admin/settings');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid password');
+      setError(err.response?.data?.detail || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function AdminLogin() {
             Admin Login
           </h1>
           <p className="text-slate-400">
-            Enter password to access business settings
+            Enter your credentials to access business settings
           </p>
         </div>
 
@@ -54,17 +54,43 @@ export default function AdminLogin() {
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
               <label className="block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wider">
-                Password
+                Email
               </label>
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors"
-                placeholder="Enter admin password"
+                placeholder="admin@example.com"
                 required
                 autoFocus
               />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wider">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors"
+                  placeholder="Enter password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Error Message */}
@@ -82,7 +108,7 @@ export default function AdminLogin() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !password}
+              disabled={loading || !email || !password}
               className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 disabled:bg-slate-700 disabled:text-slate-500 text-white font-black rounded-xl transition-colors uppercase"
             >
               {loading ? (

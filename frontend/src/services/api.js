@@ -9,6 +9,36 @@ const api = axios.create({
   },
 });
 
+// Request interceptor to add Authorization header
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid, clear storage
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_login_time');
+
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/admin/login')) {
+        window.location.href = '/admin/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Quotes API
 export const quotesAPI = {
   create: async (formData) => {
@@ -124,14 +154,12 @@ export const settingsAPI = {
 
 // Auth API
 export const authAPI = {
-  login: async (password) => {
-    const response = await api.post('/api/admin/login', { password });
+  login: async ({ email, password }) => {
+    const response = await api.post('/api/auth/login', { email, password });
     return response.data;
   },
-  verify: async (token) => {
-    const response = await api.post('/api/admin/verify', null, {
-      params: { token }
-    });
+  getMe: async () => {
+    const response = await api.get('/api/auth/me');
     return response.data;
   },
 };

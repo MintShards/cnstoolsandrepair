@@ -1,63 +1,68 @@
-import secrets
-import hashlib
-from fastapi import APIRouter, HTTPException, status
-from app.models.auth import LoginRequest, LoginResponse
-from app.config import settings
+from fastapi import APIRouter, HTTPException, status, Depends
 
+from app.models.auth import LoginRequest, LoginResponse, User
+from app.core.security import verify_password, create_access_token
+from app.database import get_database
+from app.dependencies.auth import get_current_user
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
-
-
-def hash_password(password: str) -> str:
-    """Simple SHA-256 hash for password comparison"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-def generate_session_token() -> str:
-    """Generate a secure random session token"""
-    return secrets.token_urlsafe(32)
+router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
 @router.post("/login", response_model=LoginResponse)
-async def admin_login(credentials: LoginRequest):
+async def login(credentials: LoginRequest):
     """
-    Admin login endpoint - validates password and returns session token
+    User login endpoint - validates email and password, returns JWT token.
 
-    Password is stored in environment variable ADMIN_PASSWORD
-    For production, consider using bcrypt instead of SHA-256
+    Args:
+        credentials: LoginRequest with email and password
+
+    Returns:
+        LoginResponse with JWT access token
+
+    Raises:
+        HTTPException: 401 if credentials are invalid
     """
-    # Compare hashed passwords
-    provided_hash = hash_password(credentials.password)
-    stored_hash = hash_password(settings.admin_password)
+    db = get_database()
 
-    if provided_hash != stored_hash:
+    # Find user by email
+    user = await db.users.find_one({"email": credentials.email})
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid password"
+            detail="Invalid email or password"
         )
 
-    # Generate session token
-    token = generate_session_token()
+    # Verify password
+    if not verify_password(credentials.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
 
-    return LoginResponse(
-        success=True,
-        token=token,
-        message="Login successful"
+    # Check if user is active
+    if not user.get("is_active", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled"
+        )
+
+    # Create JWT token with user email and role
+    access_token = create_access_token(
+        data={"sub": user["email"], "role": user["role"]}
     )
 
+    return LoginResponse(access_token=access_token)
 
-@router.post("/verify")
-async def verify_token(token: str):
+
+@router.get("/me", response_model=User)
+async def get_me(current_user: User = Depends(get_current_user)):
     """
-    Verify session token is valid
+    Get current authenticated user information.
 
-    For simplicity, we accept any non-empty token
-    In production, store tokens in Redis/database with expiration
+    Args:
+        current_user: Current user from JWT token (dependency)
+
+    Returns:
+        User object with current user information
     """
-    if not token or len(token) < 10:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
-
-    return {"valid": True}
+    return current_user

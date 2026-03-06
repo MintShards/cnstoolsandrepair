@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 
 export default function ProtectedAdminRoute({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(null);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = () => {
+  const checkAuth = async () => {
     const token = localStorage.getItem('admin_token');
     const loginTime = localStorage.getItem('admin_login_time');
 
@@ -17,8 +14,8 @@ export default function ProtectedAdminRoute({ children }) {
       return;
     }
 
-    // Check if session is expired (24 hours = 86400000 ms)
-    const SESSION_DURATION = 24 * 60 * 60 * 1000;
+    // Check if session is expired (8 hours = 28800000 ms)
+    const SESSION_DURATION = 8 * 60 * 60 * 1000;
     const currentTime = Date.now();
     const elapsedTime = currentTime - parseInt(loginTime, 10);
 
@@ -30,9 +27,21 @@ export default function ProtectedAdminRoute({ children }) {
       return;
     }
 
-    // Valid session
-    setIsAuthorized(true);
+    // Verify token with backend
+    try {
+      await authAPI.getMe();
+      setIsAuthorized(true);
+    } catch (error) {
+      // Token is invalid or expired
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_login_time');
+      setIsAuthorized(false);
+    }
   };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   // Loading state
   if (isAuthorized === null) {

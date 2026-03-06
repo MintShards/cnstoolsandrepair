@@ -286,6 +286,16 @@ python scripts/update_industries.py
   display_order: Number,
   active: Boolean
 }
+
+// users - Admin users (authentication)
+{
+  _id: ObjectId,
+  email: String,  // Unique email address (indexed)
+  password_hash: String,  // Bcrypt hashed password
+  role: String,  // "admin" for admin users
+  is_active: Boolean,  // true = active, false = disabled
+  created_at: DateTime
+}
 ```
 
 ## Critical Configuration
@@ -313,6 +323,12 @@ UPLOAD_DIR=uploads
 
 # Environment
 ENVIRONMENT=development
+
+# JWT Authentication (NEW - see AUTH_SETUP_GUIDE.md)
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+JWT_SECRET_KEY=<your_jwt_secret_key_here>
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=8
 ```
 
 **Frontend** (optional `.env`):
@@ -483,16 +499,22 @@ async def send_quote_notification(quote: Quote) -> bool
 
 ### Admin Interface
 - **Hidden routes** (no navigation links): `/admin/login`, `/admin/settings`
-- **Authentication**: Basic localStorage token (⚠️ demonstration-only, replace with JWT for production)
-- **Protected routes**: `ProtectedAdminRoute` component checks `localStorage.getItem('adminToken')`
+- **Authentication**: JWT-based authentication with email + password (production-ready)
+- **Protected routes**: `ProtectedAdminRoute` component validates JWT token with backend
 - **Settings management**: Update business info, contact details, hours, social media via UI
-- **Current token**: `temp-admin-token` (hardcoded in AdminLogin component)
-- **Security note**: No backend session validation - strengthen auth before production deployment
+- **User creation**: Run `python scripts/create_admin.py` to create admin users
+- **Security features**:
+  - Bcrypt password hashing
+  - JWT tokens with 8-hour expiration
+  - Bearer token authentication
+  - Automatic token refresh on 401 errors
+  - Role-based access control (admin role required)
+- **Setup guide**: See `AUTH_SETUP_GUIDE.md` for complete setup instructions
 
 ## Known Limitations
 
-1. **Basic authentication** - Auth router exists but endpoints are mostly public (strengthen for production)
-2. **No rate limiting** - Can be added with FastAPI middleware (e.g., slowapi)
+1. **No rate limiting** - Can be added with FastAPI middleware (e.g., slowapi) to prevent brute-force login attempts
+2. **No password reset** - Manual password reset requires MongoDB access (see AUTH_SETUP_GUIDE.md)
 3. **Local file storage** - Photos stored in `backend/uploads/` (consider cloud storage like Digital Ocean Spaces/AWS S3 for production)
 4. **No pagination** - Quote list returns all quotes (add pagination for scale beyond ~1000 quotes)
 5. **Limited admin UI** - Only business settings editable via `/admin/settings`; tools/brands/industries require API/Swagger docs access

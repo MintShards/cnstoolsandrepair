@@ -31,19 +31,8 @@ function App() {
       <ThemeProvider>
         <SettingsProvider>
           <Router>
-          <div className="min-h-screen flex flex-col">
-            <Header />
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/tools" element={<Tools />} />
-              <Route path="/industries" element={<Industries />} />
-              <Route path="/quote" element={<Quote />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/gallery" element={<Gallery />} />
-
-              {/* Hidden Admin Routes - Not linked in navigation */}
+              {/* Admin Routes - No header/footer */}
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route
                 path="/admin/settings"
@@ -53,10 +42,29 @@ function App() {
                   </ProtectedAdminRoute>
                 }
               />
+
+              {/* Public Routes - With header/footer */}
+              <Route
+                path="*"
+                element={
+                  <div className="min-h-screen flex flex-col">
+                    <Header />
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/services" element={<Services />} />
+                      <Route path="/tools" element={<Tools />} />
+                      <Route path="/industries" element={<Industries />} />
+                      <Route path="/quote" element={<Quote />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/gallery" element={<Gallery />} />
+                    </Routes>
+                    <Footer />
+                    <BottomNav />
+                  </div>
+                }
+              />
             </Routes>
-            <Footer />
-            <BottomNav />
-          </div>
           </Router>
         </SettingsProvider>
       </ThemeProvider>

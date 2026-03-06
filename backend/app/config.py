@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
 from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -23,8 +24,10 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
 
-    # Admin Authentication
-    admin_password: str
+    # JWT Authentication
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_hours: int = 8
 
     @property
     def cors_origins_list(self) -> List[str]:

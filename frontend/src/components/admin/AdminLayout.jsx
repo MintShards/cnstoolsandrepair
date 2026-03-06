@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 
-export default function AdminLayout({ children, title = "Admin Settings" }) {
+export default function AdminLayout({ children, title = 'Admin Settings' }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -18,12 +18,22 @@ export default function AdminLayout({ children, title = "Admin Settings" }) {
       <header className="bg-slate-900 border-b border-slate-800">
         <div className="max-w-screen-2xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-black text-white uppercase tracking-tight">
-                CNS Tools - {title}
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">Business Settings Management</p>
+            {/* Logo and Title */}
+            <div className="flex items-center gap-4">
+              <Link to="/" className="font-logo text-2xl font-bold leading-none tracking-wide uppercase">
+                <span className="text-accent-orange">CNS</span>{' '}
+                <span className="text-white">Tools and Repair</span>
+              </Link>
+              <div className="h-8 w-px bg-slate-700"></div>
+              <div>
+                <h1 className="text-lg font-black text-white uppercase tracking-tight">
+                  {title}
+                </h1>
+                <p className="text-xs text-slate-400">Business Settings Management</p>
+              </div>
             </div>
+
+            {/* Actions */}
             <div className="flex items-center gap-3">
               <button
                 onClick={handleLogout}
