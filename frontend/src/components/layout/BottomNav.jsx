@@ -23,10 +23,9 @@ export default function BottomNav() {
           <span className="text-[9px] font-black uppercase tracking-tighter">Home</span>
         </Link>
 
-        {/* Tablet only - Services */}
         <Link
           to="/services"
-          className={`hidden sm:flex flex-col items-center gap-1 ${
+          className={`flex flex-col items-center gap-1 ${
             isActive('/services') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -37,21 +36,6 @@ export default function BottomNav() {
             handyman
           </span>
           <span className="text-[9px] font-black uppercase tracking-tighter">Services</span>
-        </Link>
-
-        <Link
-          to="/tools"
-          className={`flex flex-col items-center gap-1 ${
-            isActive('/tools') ? 'text-primary' : 'text-slate-400'
-          }`}
-        >
-          <span
-            className="material-symbols-outlined"
-            style={{ fontVariationSettings: isActive('/tools') ? "'FILL' 1" : "'FILL' 0" }}
-          >
-            construction
-          </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Tools</span>
         </Link>
 
         {/* Tablet only - Industries */}

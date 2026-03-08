@@ -32,12 +32,6 @@ export default function Header() {
             Services
           </Link>
           <Link
-            to="/tools"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
-          >
-            Tools We Repair
-          </Link>
-          <Link
             to="/industries"
             className="font-semibold uppercase text-sm hover:text-primary transition-colors"
           >
@@ -103,13 +97,6 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Services
-            </Link>
-            <Link
-              to="/tools"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Tools We Repair
             </Link>
             <Link
               to="/industries"

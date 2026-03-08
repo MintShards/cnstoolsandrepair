@@ -1,13 +1,13 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import ScrollToTop from './components/ScrollToTop';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BottomNav from './components/layout/BottomNav';
 import Home from './pages/Home';
 import Services from './pages/Services';
-import Tools from './pages/Tools';
 import Industries from './pages/Industries';
 import Quote from './pages/Quote';
 import About from './pages/About';
@@ -31,6 +31,7 @@ function App() {
       <ThemeProvider>
         <SettingsProvider>
           <Router>
+            <ScrollToTop />
             <Routes>
               {/* Admin Routes - No header/footer */}
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -52,7 +53,7 @@ function App() {
                     <Routes>
                       <Route path="/" element={<Home />} />
                       <Route path="/services" element={<Services />} />
-                      <Route path="/tools" element={<Tools />} />
+                      <Route path="/tools" element={<Navigate to="/services" replace />} />
                       <Route path="/industries" element={<Industries />} />
                       <Route path="/quote" element={<Quote />} />
                       <Route path="/about" element={<About />} />
