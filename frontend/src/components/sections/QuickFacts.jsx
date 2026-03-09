@@ -7,8 +7,12 @@ import { useSettings } from '../../contexts/SettingsContext';
  * UX ENHANCEMENT: Added trust badges below stats for credibility (+5-8% trust signals)
  */
 
-export default function QuickFacts() {
-  const { settings, loading } = useSettings();
+export default function QuickFacts({
+  data = null,
+  loading: contentLoading = false
+}) {
+  const { settings, loading: settingsLoading } = useSettings();
+  const loading = settingsLoading || contentLoading;
 
   // Loading state
   if (loading || !settings) {
@@ -55,7 +59,7 @@ export default function QuickFacts() {
     },
     {
       icon: 'precision_manufacturing',
-      label: claims.averageTurnaround,
+      label: claims.qualityStandard,
       description: 'Workmanship',
     },
     {
@@ -70,13 +74,16 @@ export default function QuickFacts() {
     },
   ];
 
-  // Trust badges for credibility (UX improvement)
-  const trustBadges = [
-    { icon: 'verified', label: 'OEM Certified', color: 'text-green-400' },
-    { icon: 'workspace_premium', label: '15+ Years', color: 'text-blue-400' },
-    { icon: 'security', label: 'Licensed', color: 'text-purple-400' },
-    { icon: 'thumb_up', label: 'BBB Rated', color: 'text-yellow-400' },
+  // Default trust badges (fallback)
+  const defaultTrustBadges = [
+    { icon: 'verified', label: 'OEM Certified', color: 'text-green-400', display_order: 1 },
+    { icon: 'workspace_premium', label: '15+ Years', color: 'text-blue-400', display_order: 2 },
+    { icon: 'security', label: 'Licensed', color: 'text-purple-400', display_order: 3 },
+    { icon: 'thumb_up', label: 'BBB Rated', color: 'text-yellow-400', display_order: 4 },
   ];
+
+  // Use data-driven trust badges with fallback
+  const trustBadges = data?.trustBadges || defaultTrustBadges;
 
   return (
     <section className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 bg-white dark:bg-slate-950">
@@ -110,12 +117,14 @@ export default function QuickFacts() {
 
         {/* SEO Context Text */}
         <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm text-center mt-6 font-medium">
-          Serving Surrey and Metro Vancouver businesses with industrial pneumatic tool repair services.
+          Serving Surrey and Lower Mainland businesses with industrial pneumatic tool repair services.
         </p>
 
         {/* Trust Badges Row - Fully Responsive */}
         <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-          {trustBadges.map((badge, index) => (
+          {trustBadges
+            .sort((a, b) => a.display_order - b.display_order)
+            .map((badge, index) => (
             <div
               key={index}
               className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-slate-100 dark:bg-white/5 backdrop-blur-sm border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors min-w-fit"

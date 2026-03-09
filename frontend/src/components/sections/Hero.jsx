@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 
-export default function Hero() {
-  const { settings, loading } = useSettings();
+export default function Hero({
+  data = null,
+  loading: contentLoading = false
+}) {
+  const { settings, loading: settingsLoading } = useSettings();
+  const loading = settingsLoading || contentLoading;
 
   // Progressive image loading: WebP with JPG fallback
   const heroImageWebP = '/images/hero/workshop-tools-pegboard-optimized.webp';
@@ -72,8 +76,17 @@ export default function Hero() {
 
   const { contact } = settings;
 
-  // Hardcoded industries badge for hero section (B2B industrial focus)
-  const industriesBadge = 'Automotive • Fleet • Manufacturing • Construction';
+  // Default hero content (fallback)
+  const defaultData = {
+    headline: "Industrial Pneumatic Tool Repair & Maintenance in Surrey, BC",
+    subheadline: "CNS Tools and Repair provides industrial pneumatic tool repair and maintenance services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.",
+    industriesBadge: "Automotive • Construction • Manufacturing",
+    locationText: "On-Site Service (No Shipping)",
+    primaryButtonText: "Request a Repair Assessment",
+    secondaryButtonText: "View Pneumatic Tool Repair Services",
+  };
+
+  const content = data || defaultData;
 
   return (
     <section className="@container">
@@ -88,17 +101,17 @@ export default function Hero() {
             <div className="flex flex-col gap-4 lg:gap-6 max-w-lg lg:max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-orange/20 border border-accent-orange/30 text-accent-orange text-[10px] lg:text-xs font-black uppercase tracking-widest w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="size-2 rounded-full bg-accent-orange animate-pulse"></span>
-                {industriesBadge}
+                {content.industriesBadge}
               </div>
               <h1 className="text-white text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
-                Industrial Pneumatic Tool Repair & Maintenance in Surrey, BC
+                {content.headline}
               </h1>
               <p className="text-slate-300 text-base lg:text-lg font-medium leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                CNS Tools and Repair provides industrial pneumatic tool repair and maintenance services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.
+                {content.subheadline}
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/15 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 text-white text-xs lg:text-sm font-bold w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="material-symbols-outlined text-sm lg:text-base">location_on</span>
-                {contact.address.city}, {contact.address.province} | On-Site Service (No Shipping)
+                {contact.address.city}, {contact.address.province} | {content.locationText}
               </div>
             </div>
             {/* Mobile-First CTA Buttons - Optimized for thumb reach */}
@@ -106,13 +119,13 @@ export default function Hero() {
               <Link to="/quote" className="w-full sm:w-auto order-1">
                 <button className="flex items-center justify-center gap-2 sm:gap-3 rounded-xl h-14 sm:h-14 px-6 sm:px-8 bg-primary text-white text-base sm:text-base font-black shadow-2xl shadow-primary/40 active:scale-95 transition-all border-2 border-primary/50 w-full touch-manipulation">
                   <span className="material-symbols-outlined text-xl sm:text-2xl">request_quote</span>
-                  <span className="tracking-tight">Request a Repair Assessment</span>
+                  <span className="tracking-tight">{content.primaryButtonText}</span>
                 </button>
               </Link>
               <Link to="/services" className="w-full sm:w-auto order-2">
                 <button className="flex items-center justify-center gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-white/15 dark:bg-white/10 backdrop-blur-md border-2 border-white/40 dark:border-white/30 text-white text-sm sm:text-base font-bold hover:bg-white/25 dark:hover:bg-white/20 active:scale-95 transition-all w-full touch-manipulation">
                   <span className="material-symbols-outlined text-lg sm:text-xl">construction</span>
-                  <span>View Pneumatic Tool Repair Services</span>
+                  <span>{content.secondaryButtonText}</span>
                 </button>
               </Link>
             </div>

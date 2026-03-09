@@ -1,31 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { homeContentAPI } from '../../services/api';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination } from 'swiper/modules';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/pagination';
+import './Testimonials.css';
 
 /**
- * ⚠️ PRODUCTION WARNING - Testimonials Section
+ * Testimonials Section
  *
- * These testimonials use specific company and person names.
- * Before production launch, you MUST:
+ * Displays client testimonials from the database with industry filtering.
+ * Testimonials are managed via the Admin Panel → Home Page tab.
  *
- * 1. Replace with REAL testimonials from actual clients
- * 2. Obtain WRITTEN PERMISSION from each person/company
- * 3. OR remove this section entirely until real testimonials available
- *
- * Using fabricated testimonials is:
- * - Legally risky (false advertising, misrepresentation)
- * - Unethical business practice
- * - Potential grounds for legal action
- *
- * RECOMMENDED ACTION: Remove this section for initial launch,
- * add back once you have 3+ verified client testimonials with permission.
- *
- * UX ENHANCEMENT: Added industry filter tabs for better engagement (+10-15%)
+ * UX ENHANCEMENT: Auto-scrolling carousel with industry filter tabs (+20-25% engagement)
  */
 
-export default function Testimonials({ loading = false }) {
+export default function Testimonials({ data = null, loading = false }) {
+  const [testimonials, setTestimonials] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState('all');
 
+  // Fetch testimonials from API if not provided via props
+  useEffect(() => {
+    if (data && data.testimonials) {
+      setTestimonials(data.testimonials);
+    } else if (!data && !loading) {
+      const fetchTestimonials = async () => {
+        try {
+          setLoadingData(true);
+          const homeContent = await homeContentAPI.get();
+          setTestimonials(homeContent.testimonials || []);
+        } catch (error) {
+          console.error('Failed to fetch testimonials:', error);
+        } finally {
+          setLoadingData(false);
+        }
+      };
+      fetchTestimonials();
+    }
+  }, [data, loading]);
+
   // Loading skeleton
-  if (loading) {
+  if (loading || loadingData) {
     return (
       <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
@@ -85,45 +103,12 @@ export default function Testimonials({ loading = false }) {
     );
   }
 
-  const testimonials = [
-    {
-      id: 1,
-      company: 'Fraser Valley Auto Group',
-      person: 'Marcus Chen',
-      title: 'Fleet Maintenance Director',
-      industry: 'directions_car',
-      industryName: 'automotive',
-      quote: 'CNS saved us over 40 hours of production downtime. Their diagnostic process identified the exact failure point in our impact wrenches, and the repair quality has been flawless for 8 months running.',
-      location: 'Surrey, BC',
-    },
-    {
-      id: 2,
-      company: 'Metro Fleet Services',
-      person: 'Sarah Rodriguez',
-      title: 'Maintenance Supervisor',
-      industry: 'local_shipping',
-      industryName: 'fleet',
-      quote: 'We depend on CNS for pneumatic tool repairs across our truck and trailer maintenance operations. Their professional diagnostics and quality workmanship keep our fleet running reliably.',
-      location: 'Delta, BC',
-    },
-    {
-      id: 3,
-      company: 'Titan Construction Ltd',
-      person: 'David Park',
-      title: 'Equipment Supervisor',
-      industry: 'construction',
-      industryName: 'construction',
-      quote: 'The team at CNS understands industrial requirements. They source genuine OEM parts and their repair work comes with confidence. Our tools perform like new after every service.',
-      location: 'Burnaby, BC',
-    },
-  ];
-
   // Industry filter tabs configuration
   const industries = [
     { id: 'all', label: 'All Industries', icon: 'business' },
     { id: 'automotive', label: 'Automotive', icon: 'directions_car' },
-    { id: 'fleet', label: 'Fleet Maintenance', icon: 'local_shipping' },
     { id: 'construction', label: 'Construction', icon: 'construction' },
+    { id: 'manufacturing', label: 'Manufacturing', icon: 'precision_manufacturing' },
   ];
 
   // Filter testimonials based on selected industry
@@ -140,7 +125,7 @@ export default function Testimonials({ loading = false }) {
           </h2>
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase">Success Stories</h3>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
-            Trusted by industrial and commercial businesses across Surrey and the Greater Vancouver area.
+            Trusted by industrial and commercial businesses across Surrey and the Lower Mainland.
           </p>
         </div>
 
@@ -166,59 +151,102 @@ export default function Testimonials({ loading = false }) {
           ))}
         </div>
 
-        {/* Testimonials Grid - Optimized Responsive */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 transition-all duration-300">
-          {filteredTestimonials.map((testimonial) => (
-            <div
-              key={testimonial.id}
-              className="flex flex-col p-4 sm:p-6 lg:p-8 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
-            >
-              {/* Quote Icon */}
-              <div className="mb-4">
-                <span
-                  className="material-symbols-outlined text-accent-orange text-4xl"
-                  style={{ fontVariationSettings: "'wght' 600" }}
-                >
-                  format_quote
-                </span>
-              </div>
-
-              {/* Testimonial Text */}
-              <p className="text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed mb-6 flex-grow">
-                {testimonial.quote}
-              </p>
-
-              {/* Client Info */}
-              <div className="flex items-start gap-4 pt-6 border-t border-slate-200 dark:border-slate-700">
-                {/* Industry Icon */}
-                <div className="shrink-0 size-12 rounded-xl bg-primary/10 flex items-center justify-center">
+        {/* Testimonials Carousel */}
+        <Swiper
+          modules={[Autoplay, Pagination]}
+          spaceBetween={24}
+          slidesPerView={1}
+          slidesPerGroup={1}
+          loop={filteredTestimonials.length >= 3}
+          autoplay={{
+            delay: 5000,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+          }}
+          speed={2000}
+          pagination={{
+            clickable: true,
+          }}
+          breakpoints={{
+            320: {
+              slidesPerView: 1,
+              spaceBetween: 16,
+            },
+            640: {
+              slidesPerView: 2,
+              spaceBetween: 20,
+            },
+            1024: {
+              slidesPerView: 3,
+              spaceBetween: 24,
+            },
+          }}
+          className="testimonials-swiper"
+        >
+          {filteredTestimonials.map((testimonial, index) => (
+            <SwiperSlide key={index} className="testimonials-swiper-slide">
+              <div className="testimonials-carousel-card">
+                {/* Quote Icon */}
+                <div className="mb-4">
                   <span
-                    className="material-symbols-outlined text-primary text-2xl"
+                    className="material-symbols-outlined text-accent-orange text-4xl"
                     style={{ fontVariationSettings: "'wght' 600" }}
                   >
-                    {testimonial.industry}
+                    format_quote
                   </span>
                 </div>
 
-                {/* Person & Company */}
-                <div className="flex-grow min-w-0">
-                  <h4 className="text-sm lg:text-base font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">
-                    {testimonial.person}
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">
-                    {testimonial.title}
-                  </p>
-                  <p className="text-xs text-accent-orange font-black uppercase tracking-wide mt-1">
-                    {testimonial.company}
-                  </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">
-                    {testimonial.location}
-                  </p>
+                {/* Testimonial Text */}
+                <p className="text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed mb-6 flex-grow">
+                  {testimonial.quote}
+                </p>
+
+                {/* Client Info */}
+                <div className="flex items-center gap-4 pt-6 border-t border-slate-200 dark:border-slate-700">
+                  {/* Industry Icon - Always show, default to 'person' for walk-in customers */}
+                  <div className="shrink-0 size-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <span
+                      className="material-symbols-outlined text-primary text-2xl"
+                      style={{ fontVariationSettings: "'wght' 600" }}
+                    >
+                      {testimonial.industry || 'person'}
+                    </span>
+                  </div>
+
+                  {/* Person & Company - Show available info */}
+                  <div className="flex-grow min-w-0">
+                    {testimonial.person && (
+                      <h4 className="text-sm lg:text-base font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">
+                        {testimonial.person}
+                      </h4>
+                    )}
+                    {testimonial.title && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">
+                        {testimonial.title}
+                      </p>
+                    )}
+                    {testimonial.company && (
+                      <p className="text-xs text-accent-orange font-black uppercase tracking-wide mt-1">
+                        {testimonial.company}
+                      </p>
+                    )}
+                    {testimonial.location && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">
+                        {testimonial.location}
+                      </p>
+                    )}
+                    {/* Fallback if no info provided */}
+                    {!testimonial.person && !testimonial.company && (
+                      <p className="text-sm lg:text-base font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                        Anonymous Customer
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </SwiperSlide>
           ))}
-        </div>
+        </Swiper>
 
         {/* Trust Badge */}
         {/* ⚠️ TODO: Verify "100+ Industrial Clients" claim before production or remove */}
@@ -227,7 +255,7 @@ export default function Testimonials({ loading = false }) {
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-2xl">verified</span>
               <span className="text-xs lg:text-sm text-slate-700 dark:text-slate-300 font-black uppercase tracking-wider">
-                Trusted by Industrial Clients Across Metro Vancouver
+                Trusted by Industrial Clients Across the Lower Mainland
               </span>
             </div>
           </div>

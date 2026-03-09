@@ -1,4 +1,18 @@
-export default function IndustrialUseCases({ loading = false }) {
+export default function IndustrialUseCases({
+  data = null,
+  loading = false
+}) {
+  // Default content (fallback)
+  const defaultData = {
+    label: "Use Cases",
+    heading: "Industrial Use Cases We Support",
+    subtitle: "These applications describe how pneumatic tools are used within industrial environments, regardless of industry classification.",
+    description: "Our services support pneumatic tools used in automotive repair & body shops, truck & fleet maintenance, manufacturing & assembly, metal fabrication & welding, construction & concrete trades, aerospace & aviation, marine & shipbuilding, oil & gas operations, mining & aggregates, and MRO (Maintenance, Repair & Operations) environments.",
+  };
+
+  const content = data || defaultData;
+
+  //
   // Loading skeleton
   if (loading) {
     return (
@@ -29,18 +43,18 @@ export default function IndustrialUseCases({ loading = false }) {
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-12">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
-            Use Cases
+            {content.label}
           </h2>
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
-            Industrial Use Cases We Support
+            {content.heading}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-xs sm:text-sm px-4 font-medium">
-            These applications describe how pneumatic tools are used within industrial environments, regardless of industry classification.
+            {content.subtitle}
           </p>
         </div>
         <div className="max-w-3xl mx-auto">
           <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base lg:text-lg leading-relaxed text-center">
-            Our services support pneumatic tools used in automotive repair & body shops, truck & fleet maintenance, manufacturing & assembly, metal fabrication & welding, construction & concrete trades, aerospace & aviation, marine & shipbuilding, oil & gas operations, mining & aggregates, and MRO (Maintenance, Repair & Operations) environments.
+            {content.description}
           </p>
         </div>
       </div>

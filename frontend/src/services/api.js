@@ -190,4 +190,28 @@ export const galleryAPI = {
   },
 };
 
+// About Content API
+export const aboutContentAPI = {
+  get: async () => {
+    const response = await api.get('/api/about-content');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/about-content', data);
+    return response.data;
+  },
+};
+
+// Home Content API
+export const homeContentAPI = {
+  get: async () => {
+    const response = await api.get('/api/home-content/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/home-content/', data);
+    return response.data;
+  },
+};
+
 export default api;

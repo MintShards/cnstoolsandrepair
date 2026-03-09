@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
 from app.routers import quotes, tools, brands, industries, contact, gallery
-from app.routers import settings as settings_router, auth
+from app.routers import settings as settings_router, auth, about_content, home_content
 import os
 
 
@@ -68,6 +68,8 @@ app.include_router(contact.router)
 app.include_router(gallery.router)
 app.include_router(settings_router.router)
 app.include_router(auth.router)
+app.include_router(about_content.router)
+app.include_router(home_content.router)
 
 
 @app.get("/")

@@ -27,7 +27,7 @@ export default function Industries() {
         <title>Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey</title>
         <meta
           name="description"
-          content="Pneumatic tool repair for 10 major industrial sectors: Automotive, Fleet Maintenance, Manufacturing, Metal Fabrication, Construction, Oil & Gas, Aerospace, Marine, Mining, and MRO. Serving Surrey and Metro Vancouver businesses."
+          content="Pneumatic tool repair for 10 major industrial sectors: Automotive, Fleet Maintenance, Manufacturing, Metal Fabrication, Construction, Oil & Gas, Aerospace, Marine, Mining, and MRO. Serving Surrey and Lower Mainland businesses."
         />
         <meta
           name="keywords"

@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+from app.models.page_content import SocialMediaModel
 
 
 class AnnouncementType(str, Enum):
@@ -77,7 +78,7 @@ class MapConfigModel(BaseModel):
 
 class ClaimsModel(BaseModel):
     tool_types_serviced: str = Field(default="20+", alias="toolTypesServiced")
-    average_turnaround: str = Field(default="3-7 Day", alias="averageTurnaround")
+    quality_standard: str = Field(default="Quality", alias="qualityStandard")
     response_time: str = Field(default="Same-day", alias="responseTime")
     technicians: str = Field(default="Factory-Trained")
 
@@ -96,6 +97,7 @@ class BusinessSettingsUpdate(BaseModel):
     service_area: str = Field(default="Metro Vancouver", alias="serviceArea")
     map: MapConfigModel
     claims: Optional[ClaimsModel] = Field(default_factory=ClaimsModel)
+    social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)
 
     class Config:
         populate_by_name = True
@@ -149,7 +151,7 @@ class BusinessSettings(BusinessSettingsUpdate):
                 },
                 "claims": {
                     "toolTypesServiced": "20+",
-                    "averageTurnaround": "3-7 Day",
+                    "qualityStandard": "Quality",
                     "responseTime": "Same-day",
                     "technicians": "Factory-Trained"
                 },
@@ -170,6 +172,7 @@ class BusinessSettingsResponse(BaseModel):
     service_area: str = Field(alias="serviceArea")
     map: MapConfigModel
     claims: ClaimsModel
+    social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)
 
     class Config:
         populate_by_name = True

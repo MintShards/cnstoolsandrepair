@@ -1,4 +1,42 @@
-export default function WhyChooseUs({ loading = false }) {
+export default function WhyChooseUs({
+  data = null,
+  loading = false
+}) {
+  // Default content (fallback)
+  const defaultData = {
+    label: "Why Choose CNS",
+    heading: "Professional Repair Standards for Industrial Operations",
+    subheading: "Our repair process prioritizes accuracy, safety, and long-term tool performance for industrial use.",
+    features: [
+      {
+        icon: "query_stats",
+        title: "Professional Diagnostics",
+        description: "Structured inspection process identifies root causes and ensures accurate repair recommendations.",
+        display_order: 1,
+      },
+      {
+        icon: "inventory_2",
+        title: "OEM-Compatible Parts",
+        description: "Quality components from authorized suppliers ensure reliable, long-lasting repairs.",
+        display_order: 2,
+      },
+      {
+        icon: "precision_manufacturing",
+        title: "Precision Calibration",
+        description: "Calibration services for industrial air tools to maintain performance standards.",
+        display_order: 3,
+      },
+      {
+        icon: "location_on",
+        title: "In-Shop Service",
+        description: "Surrey, BC workshop—local on-site service eliminates shipping delays and damage risk.",
+        display_order: 4,
+      },
+    ],
+  };
+
+  const content = data || defaultData;
+
   // Loading skeleton
   if (loading) {
     return (
@@ -35,45 +73,24 @@ export default function WhyChooseUs({ loading = false }) {
     );
   }
 
-  const features = [
-    {
-      icon: 'query_stats',
-      title: 'Professional Diagnostics',
-      description: 'Structured inspection process identifies root causes and ensures accurate repair recommendations.',
-    },
-    {
-      icon: 'inventory_2',
-      title: 'OEM-Compatible Parts',
-      description: 'Quality components from authorized suppliers ensure reliable, long-lasting repairs.',
-    },
-    {
-      icon: 'precision_manufacturing',
-      title: 'Precision Calibration',
-      description: 'Calibration services for industrial air tools to maintain performance standards.',
-    },
-    {
-      icon: 'location_on',
-      title: 'In-Shop Service',
-      description: 'Surrey, BC workshop—local on-site service eliminates shipping delays and damage risk.',
-    },
-  ];
-
   return (
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-12">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
-            Why Choose CNS
+            {content.label}
           </h2>
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
-            Professional Repair Standards for Industrial Operations
+            {content.heading}
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mt-3 sm:mt-4 max-w-3xl mx-auto text-sm sm:text-base lg:text-lg leading-relaxed px-4">
-            Our repair process prioritizes accuracy, safety, and long-term tool performance for industrial use.
+            {content.subheading}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {features.map((feature, index) => (
+          {content.features
+            .sort((a, b) => a.display_order - b.display_order)
+            .map((feature, index) => (
             <div
               key={index}
               className="flex flex-col items-center text-center p-4 sm:p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-shadow"

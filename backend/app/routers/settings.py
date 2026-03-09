@@ -71,9 +71,14 @@ DEFAULT_SETTINGS = {
     },
     "claims": {
         "toolTypesServiced": "20+",
-        "averageTurnaround": "3-7 Day",
+        "qualityStandard": "Quality",
         "responseTime": "Same-day",
         "technicians": "Factory-Trained"
+    },
+    "social": {
+        "facebook": "",
+        "linkedin": "",
+        "instagram": ""
     }
 }
 
