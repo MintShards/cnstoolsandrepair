@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from typing import List
+from typing import List, Dict
 from bson import ObjectId
 from app.database import get_database
-from app.models.tool import ToolCreate, ToolUpdate, ToolResponse
+from app.models.tool import ToolCreate, ToolUpdate, ToolResponse, ToolCategory
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
@@ -20,6 +20,9 @@ async def create_tool(tool: ToolCreate):
     created_tool = await db.tools_catalog.find_one({"_id": result.inserted_id})
     created_tool = convert_objectid_to_str(created_tool)
 
+    # Rename _id to id for response model
+    created_tool["id"] = created_tool.pop("_id")
+
     return ToolResponse(**created_tool)
 
 
@@ -30,11 +33,47 @@ async def list_tools(active_only: bool = True):
     db = get_database()
 
     query = {"active": True} if active_only else {}
-    cursor = db.tools_catalog.find(query).sort("category", 1)
+    cursor = db.tools_catalog.find(query).sort("name", 1)
     tools = await cursor.to_list(length=None)
 
     tools = [convert_objectid_to_str(tool) for tool in tools]
+
+    # Rename _id to id for response model
+    for tool in tools:
+        tool["id"] = tool.pop("_id")
+
     return [ToolResponse(**tool) for tool in tools]
+
+
+@router.get("/by-category", response_model=Dict[str, List[ToolResponse]])
+async def get_tools_by_category(active_only: bool = True):
+    """Get tools grouped by category"""
+
+    db = get_database()
+
+    query = {"active": True} if active_only else {}
+    cursor = db.tools_catalog.find(query).sort("name", 1)
+    tools = await cursor.to_list(length=None)
+
+    tools = [convert_objectid_to_str(tool) for tool in tools]
+
+    # Rename _id to id for response model
+    for tool in tools:
+        tool["id"] = tool.pop("_id")
+
+    # Group tools by category
+    categorized = {
+        "air_tools": [],
+        "electric_tools": [],
+        "lifting_equipment": []
+    }
+
+    for tool in tools:
+        category = tool.get("category", "air_tools")  # Default to air_tools if missing
+        if category in categorized:
+            categorized[category].append(ToolResponse(**tool))
+
+    return categorized
 
 
 @router.get("/{tool_id}", response_model=ToolResponse)
@@ -52,6 +91,10 @@ async def get_tool(tool_id: str):
         raise HTTPException(status_code=404, detail="Tool not found")
 
     tool = convert_objectid_to_str(tool)
+
+    # Rename _id to id for response model
+    tool["id"] = tool.pop("_id")
+
     return ToolResponse(**tool)
 
 
@@ -79,6 +122,9 @@ async def update_tool(tool_id: str, tool: ToolUpdate):
 
     updated_tool = await db.tools_catalog.find_one({"_id": ObjectId(tool_id)})
     updated_tool = convert_objectid_to_str(updated_tool)
+
+    # Rename _id to id for response model
+    updated_tool["id"] = updated_tool.pop("_id")
 
     return ToolResponse(**updated_tool)
 

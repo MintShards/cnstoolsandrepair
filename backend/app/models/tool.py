@@ -1,20 +1,27 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from enum import Enum
+
+
+class ToolCategory(str, Enum):
+    AIR_TOOLS = "air_tools"
+    ELECTRIC_TOOLS = "electric_tools"
+    LIFTING_EQUIPMENT = "lifting_equipment"
 
 
 class ToolCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    category: str = Field(..., min_length=1, max_length=100)
+    icon: str = Field(..., min_length=1, max_length=50)
     description: str = Field(..., min_length=1, max_length=1000)
-    image_url: str = Field(default="placeholder-tool.jpg")
+    category: ToolCategory = Field(..., description="Tool category: air_tools, electric_tools, or lifting_equipment")
     active: bool = True
 
 
 class ToolUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
-    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    icon: Optional[str] = Field(None, min_length=1, max_length=50)
     description: Optional[str] = Field(None, min_length=1, max_length=1000)
-    image_url: Optional[str] = None
+    category: Optional[ToolCategory] = None
     active: Optional[bool] = None
 
 
@@ -27,9 +34,9 @@ class Tool(ToolCreate):
             "example": {
                 "_id": "507f1f77bcf86cd799439011",
                 "name": "Impact Wrenches",
-                "category": "impact_tools",
+                "icon": "build",
                 "description": "High-torque pneumatic impact wrenches for heavy-duty applications",
-                "image_url": "impact-wrench.jpg",
+                "category": "air_tools",
                 "active": True,
             }
         }
@@ -38,7 +45,7 @@ class Tool(ToolCreate):
 class ToolResponse(BaseModel):
     id: str
     name: str
-    category: str
+    icon: str
     description: str
-    image_url: str
+    category: str
     active: bool

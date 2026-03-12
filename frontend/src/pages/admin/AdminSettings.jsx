@@ -10,7 +10,7 @@ import ContactTab from '../../components/admin/tabs/ContactTab';
 import GlobalTab from '../../components/admin/tabs/GlobalTab';
 
 export default function AdminSettings() {
-  const { settings, loading: settingsLoading, refreshSettings } = useSettings();
+  const { settings, loading: settingsLoading } = useSettings();
   const [activeTab, setActiveTab] = useState('home');
   const [formData, setFormData] = useState(null);
 
@@ -50,33 +50,6 @@ export default function AdminSettings() {
     });
   };
 
-  const addService = () => {
-    setFormData((prev) => ({
-      ...prev,
-      services: [
-        ...prev.services,
-        { title: '', description: '', icon: 'build' },
-      ],
-    }));
-  };
-
-  const removeService = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      services: prev.services.filter((_, i) => i !== index),
-    }));
-  };
-
-  const updateService = (index, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      services: prev.services.map((service, i) =>
-        i === index ? { ...service, [field]: value } : service
-      ),
-    }));
-  };
-
-  // Brand management functions
   const addBrand = () => {
     setFormData((prev) => ({
       ...prev,
@@ -106,8 +79,6 @@ export default function AdminSettings() {
   const handleBrandLogoUpload = async (index, file) => {
     if (!file) return;
 
-    // For now, store as data URL (temporary solution)
-    // In production, upload to backend and get URL
     const reader = new FileReader();
     reader.onloadend = () => {
       updateBrand(index, 'logoUrl', reader.result);
@@ -167,12 +138,7 @@ export default function AdminSettings() {
             )}
 
             {activeTab === 'services' && (
-              <ServicesTab
-                formData={formData}
-                addService={addService}
-                removeService={removeService}
-                updateService={updateService}
-              />
+              <ServicesTab key="services-tab" />
             )}
 
             {activeTab === 'industries' && (

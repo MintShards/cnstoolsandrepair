@@ -65,6 +65,10 @@ export const toolsAPI = {
     const response = await api.get('/api/tools/', { params: { active_only: activeOnly } });
     return response.data;
   },
+  getByCategory: async (activeOnly = true) => {
+    const response = await api.get('/api/tools/by-category', { params: { active_only: activeOnly } });
+    return response.data;
+  },
   get: async (id) => {
     const response = await api.get(`/api/tools/${id}`);
     return response.data;

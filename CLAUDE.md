@@ -30,11 +30,14 @@ python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Start MongoDB (if using local)
-sudo systemctl start mongod
+# Create .env from example
+cp .env.example .env  # Edit with your MongoDB Atlas credentials
 
 # CRITICAL: Must bind to 0.0.0.0 in WSL for Windows browser access
 python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Alternative: Use default binding (works on macOS/Linux, NOT WSL)
+python3 -m uvicorn app.main:app --reload
 
 # Access API docs
 http://localhost:8000/docs
@@ -76,7 +79,11 @@ node scripts/optimize-images.js
 
 ### Database Migrations
 ```bash
-# Run industry data migration script
+# Tool category migration - COMPLETED (script removed)
+# All tools now have category field (air_tools, electric_tools, lifting_equipment)
+# New tools created via Admin UI automatically include category
+
+# Industry data migration
 cd backend
 python scripts/update_industries.py
 ```
@@ -212,6 +219,27 @@ python scripts/update_industries.py
 - All text elements have drop-shadow for readability: `drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]`
 - Industries badge hardcoded: "Automotive • Fleet • Manufacturing • Construction"
 
+**Homepage ToolsPreview section:**
+- Dynamically fetches first 8 active tools from Tools We Repair API (`toolsAPI.list(true).slice(0, 8)`)
+- Changes made in Admin Settings → Services Page → Tools We Repair automatically appear on homepage
+- Full tool list displayed on Services page, homepage shows preview of first 8 only
+- Component manages its own loading state with skeleton UI
+
+**Services page structure (6-section design):**
+1. **Our Services**: Flexbox grid with service cards (5 services, centered 5th card on mobile)
+2. **ExperienceBadge**: "Professional Service • Factory-Trained Technicians" trust indicator (standalone section)
+3. **Tools We Repair**: 3-column categorized tool display (Air Tools, Electric Tools, Lifting Equipment)
+   - Uses `/api/tools/by-category` endpoint for categorized data
+   - Color-coded columns: Blue (Air), Amber (Electric), Purple (Lifting)
+   - Material Symbol icons per category: `air`, `bolt`, `precision_manufacturing`
+4. **BrandsCarousel**: Swiper carousel with brand logos
+5. **HowItWorks**: 4-step workflow with dynamic content
+6. **DualCTA**: Dual call-to-action (Request Quote + Call Now)
+7. **Background alternation** (Services page only, independent from homepage):
+   - Light theme: white → slate-100 → white → slate-100 → white → slate-100
+   - Dark theme: slate-950 → slate-900 → slate-950 → slate-900 → slate-950 → slate-900
+   - Components accept `backgroundColor` prop for page-specific overrides
+
 ### Database Schema
 
 **MongoDB Collections:**
@@ -236,13 +264,13 @@ python scripts/update_industries.py
   updated_at: DateTime
 }
 
-// tools_catalog - Repairable tools (dynamic content)
+// tools_catalog - Repairable tools (dynamic content with categories)
 {
   _id: ObjectId,
   name: String,
-  category: String,
+  icon: String,  // Material Symbol icon name (e.g., "build", "hardware")
   description: String,
-  image_url: String,
+  category: Enum["air_tools", "electric_tools", "lifting_equipment"],  // Required field
   active: Boolean
 }
 
@@ -375,9 +403,9 @@ Backend CORS is configured in `app/main.py`:
 # Add tools via POST /api/tools/
 {
   "name": "Impact Wrenches",
-  "category": "impact_tools",
+  "category": "air_tools",  // Required: air_tools, electric_tools, or lifting_equipment
+  "icon": "build",  // Material Symbol icon name
   "description": "High-torque pneumatic impact wrenches",
-  "image_url": "placeholder-tool.jpg",
   "active": true
 }
 
@@ -450,7 +478,10 @@ async def send_quote_notification(quote: Quote) -> bool
 
 ### CRUD Pattern (Tools, Brands, Industries)
 - **GET /** - List all (with `active_only` query param)
-- **POST /** - Create new
+- **GET /by-category** - Get tools grouped by category (air_tools, electric_tools, lifting_equipment)
+  - **IMPORTANT**: This route MUST be defined before `/{id}` in router to avoid matching "by-category" as an ID
+  - Returns `{"air_tools": [...], "electric_tools": [...], "lifting_equipment": [...]}`
+- **POST /** - Create new (tools require `category` field)
 - **GET /{id}** - Get by ID
 - **PUT /{id}** - Update (partial updates with `exclude_unset=True`)
 - **DELETE /{id}** - Soft delete (sets `active=False`, doesn't remove from DB)
@@ -501,7 +532,19 @@ async def send_quote_notification(quote: Quote) -> bool
 - **Hidden routes** (no navigation links): `/admin/login`, `/admin/settings`
 - **Authentication**: JWT-based authentication with email + password (production-ready)
 - **Protected routes**: `ProtectedAdminRoute` component validates JWT token with backend
-- **Settings management**: Update business info, contact details, hours, social media via UI
+- **Settings management**:
+  - **Home Page**: Hero, QuickFacts, Why Choose Us, How It Works, Testimonials, Service Area
+  - **Services Page**: Services list (settings-based) + Tools catalog (separate tools_catalog collection)
+  - **Industries Page**: Industry management with soft-delete pattern
+  - **Gallery Page**: Photo gallery management
+  - **About Page**: Company information
+  - **Contact Page**: Contact details and hours
+  - **Global Settings**: Business info, social media, brands
+- **Services vs Tools architecture**:
+  - **Services**: Stored in settings collection as array, managed via settings API, no individual IDs
+  - **Tools**: Separate `tools_catalog` collection with individual documents, full CRUD via tools API, soft-delete with `active` field
+  - Both managed in ServicesTab component (`frontend/src/components/admin/tabs/ServicesTab.jsx`) with independent state
+  - ServicesTab handles its own save logic - no props passed from AdminSettings.jsx parent
 - **User creation**: Run `python scripts/create_admin.py` to create admin users
 - **Security features**:
   - Bcrypt password hashing
@@ -517,13 +560,14 @@ async def send_quote_notification(quote: Quote) -> bool
 2. **No password reset** - Manual password reset requires MongoDB access (see AUTH_SETUP_GUIDE.md)
 3. **Local file storage** - Photos stored in `backend/uploads/` (consider cloud storage like Digital Ocean Spaces/AWS S3 for production)
 4. **No pagination** - Quote list returns all quotes (add pagination for scale beyond ~1000 quotes)
-5. **Limited admin UI** - Only business settings editable via `/admin/settings`; tools/brands/industries require API/Swagger docs access
+5. **Limited admin UI** - Most content editable via `/admin/settings` tabs; quote management requires API/Swagger docs access
 6. **Quote photo upload optimization** - User-uploaded quote photos stored as-is without compression/resizing (hero images ARE optimized via frontend/scripts/optimize-images.js; consider adding client-side compression for quote uploads)
 7. **Client-side SEO only** - Meta tags injected via react-helmet-async (works for Google crawlers, but SSR/SSG would be ideal for first-pass indexing)
 8. **OG image placeholder** - Social media preview image URL configured but file not created yet (1200x630px needed at `frontend/public/og-image.jpg`)
 
-## Testing Quote Workflow
+## Testing Workflows
 
+### Quote Submission Workflow
 1. Verify MongoDB Atlas connection (no local MongoDB needed)
 2. Start backend: `cd backend && python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 3. Start frontend: `cd frontend && npm run dev`
@@ -540,6 +584,20 @@ async def send_quote_notification(quote: Quote) -> bool
 9. Verify email notification received at `NOTIFICATION_EMAIL`
 10. Check http://localhost:8000/api/quotes/ for created quote
 11. Verify photos accessible at http://localhost:8000/uploads/{filename}
+
+### Admin Authentication Workflow
+1. Create admin user: `cd backend && python scripts/create_admin.py`
+2. Navigate to http://localhost:5173/admin/login
+3. Login with admin credentials
+4. Access admin settings at http://localhost:5173/admin/settings
+5. JWT token stored in localStorage (expires in 8 hours)
+6. Token automatically refreshed on 401 errors
+
+### Content Management Workflow
+1. **Via Admin UI**: Navigate to `/admin/settings` tabs (Home, Services, Industries, Gallery, About, Contact, Global)
+2. **Via API Docs**: Navigate to `/docs` for tools, brands, quotes management (requires authentication)
+3. **Tools**: Use `/api/tools/` endpoints (category required: air_tools, electric_tools, lifting_equipment)
+4. **Services**: Edit via Admin UI → Services tab (stored in settings collection as array)
 
 ## Troubleshooting
 
@@ -583,12 +641,17 @@ async def send_quote_notification(quote: Quote) -> bool
 
 ## Design System Guidelines
 
-**Logo:**
+### Component Architecture Patterns
+- **Reusable sections** accept `backgroundColor` prop for page-specific overrides (BrandsCarousel, HowItWorks, DualCTA)
+- **Shared components** use default backgrounds from design system, overridden only when needed
+- **Example**: Services page overrides backgrounds to create independent alternation pattern from homepage
+
+### Logo
 - "CNS" text in Russo One font, accent orange (#f97316)
 - "TOOLS AND REPAIR" in default text color, uppercase, smaller size
 - Logo component in `frontend/src/components/layout/Header.jsx`
 
-**Component patterns:**
+### Component patterns
 - Icons: Material Symbols Outlined with `fontVariationSettings: "'wght' 600"`
 - Buttons: `bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 uppercase`
 - Cards: `rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm`

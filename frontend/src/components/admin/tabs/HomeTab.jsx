@@ -470,15 +470,9 @@ export default function HomeTab() {
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <span className="text-slate-400 font-bold text-sm whitespace-nowrap">#{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-white font-bold truncate">
-                        {badge.icon || 'No icon'}
-                      </span>
-                      <span className="text-slate-400 text-sm">•</span>
-                      <span className="text-slate-300 text-sm truncate">
-                        {badge.label || 'Untitled Badge'}
-                      </span>
-                    </div>
+                    <span className="text-white font-bold truncate">
+                      {badge.label || 'Untitled Badge'}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
@@ -674,15 +668,9 @@ export default function HomeTab() {
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <span className="text-slate-400 font-bold text-sm whitespace-nowrap">#{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-white font-bold truncate">
-                        {feature.icon || 'No icon'}
-                      </span>
-                      <span className="text-slate-400 text-sm">•</span>
-                      <span className="text-slate-300 text-sm truncate">
-                        {feature.title || 'Untitled Feature'}
-                      </span>
-                    </div>
+                    <span className="text-white font-bold truncate">
+                      {feature.title || 'Untitled Feature'}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
@@ -988,15 +976,9 @@ export default function HomeTab() {
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <span className="text-slate-400 font-bold text-sm whitespace-nowrap">#{index + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-white font-bold truncate">
-                          {testimonial.company || 'Unknown Company'}
-                        </span>
-                        <span className="text-slate-400 text-sm">•</span>
-                        <span className="text-slate-300 text-sm truncate">
-                          {testimonial.person || 'Anonymous'}
-                        </span>
-                      </div>
+                      <span className="text-white font-bold truncate">
+                        {testimonial.company || 'Unknown Company'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">

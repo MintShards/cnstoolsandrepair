@@ -6,13 +6,13 @@ import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import './BrandsCarousel.css';
 
-export default function BrandsCarousel() {
+export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg-slate-900' }) {
   const { settings, loading } = useSettings();
 
   // Loading skeleton
   if (loading || !settings || !settings.brands) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 bg-slate-100 dark:bg-slate-900">
+      <section className={`px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 ${backgroundColor}`}>
         <div className="max-w-screen-xl mx-auto">
           {/* Section Header Skeleton */}
           <div className="text-center mb-6 sm:mb-8 lg:mb-12">
@@ -55,7 +55,7 @@ export default function BrandsCarousel() {
   }
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 bg-slate-100 dark:bg-slate-900">
+    <section className={`px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 ${backgroundColor}`}>
       <div className="max-w-screen-xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-6 sm:mb-8 lg:mb-12">

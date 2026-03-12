@@ -1,6 +1,7 @@
 export default function HowItWorks({
   data = null,
-  loading = false
+  loading = false,
+  backgroundColor = 'bg-slate-100 dark:bg-slate-900'
 }) {
   // Default content (fallback)
   const defaultData = {
@@ -16,7 +17,7 @@ export default function HowItWorks({
       {
         number: 2,
         title: "Bring Tools to Surrey",
-        description: "Drop off at our workshop—no shipping delays or damage risk. Local, on-site service only.",
+        description: "Drop off tools at our Surrey workshop — local service with no shipping delays or damage risk.",
         display_order: 2,
       },
       {
@@ -40,7 +41,7 @@ export default function HowItWorks({
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
+      <section className={`px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 ${backgroundColor}`}>
         <div className="max-w-screen-xl mx-auto">
           {/* Header Skeleton */}
           <div className="text-center mb-8 sm:mb-10 lg:mb-16">
@@ -72,7 +73,7 @@ export default function HowItWorks({
   }
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
+    <section className={`px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 ${backgroundColor}`}>
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">{content.label}</h2>
