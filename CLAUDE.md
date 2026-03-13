@@ -283,13 +283,33 @@ python scripts/update_industries.py
   active: Boolean
 }
 
-// industries - Industries served (dynamic content, soft-delete pattern)
+// industries - Industries served (legacy collection, soft-delete pattern)
 {
   _id: ObjectId,
   name: String,  // e.g., "Automotive Repair & Body Shops"
   description: String,  // SEO-friendly description
   icon: String,  // Material Symbol icon name (e.g., "directions_car")
   active: Boolean  // false = soft-deleted, true = visible
+}
+
+// industries_page_content - Industries page content (singleton document)
+{
+  _id: ObjectId,
+  hero: {
+    label: String,       // e.g., "Who We Serve"
+    heading: String,     // e.g., "Industries We Support"
+    description: String  // Hero description text
+  },
+  industries: [
+    {
+      name: String,
+      description: String,
+      icon: String,           // Material Symbol icon name
+      toolBadges: [String],   // Array of tool types (e.g., ["Impact Wrenches", "Grinders"])
+      display_order: Number
+    }
+  ],
+  updated_at: DateTime
 }
 
 // settings - Business settings (singleton document)
@@ -492,6 +512,19 @@ async def send_quote_notification(quote: Quote) -> bool
 - Returns created quote immediately
 - Email notification sent async (doesn't block response)
 
+### Page Content Pattern (Singleton Documents)
+Three singleton document collections for dynamic page content management:
+- **GET/PUT /api/home-content/** - HomePage sections (hero, quick facts, why choose us, how it works, testimonials, service area)
+- **GET/PUT /api/industries-content/** - IndustriesPage sections (hero, industries array with tool badges)
+- Future: Services page content API (currently services stored in settings collection)
+
+**Pattern characteristics:**
+- Single document per collection (not array of documents)
+- GET returns existing document or default content if none exists
+- PUT updates/creates singleton document with `update_one(..., upsert=True)`
+- Frontend components fetch from these APIs on mount with fallback to config
+- Admin UI manages via dedicated tabs with accordion-style editors
+
 ## Deployment Architecture
 
 ### Docker Compose (Local Development)
@@ -517,8 +550,15 @@ async def send_quote_notification(quote: Quote) -> bool
 ## Important Patterns & Conventions
 
 ### Frontend Content Strategy
-- **Homepage IndustriesServed component**: Shows 6 featured industries (hardcoded in component)
-- **Backend industries API**: Returns all 10 active industries for full Industries page
+- **Homepage IndustriesServed component**: Shows first 3 industries dynamically from Industries Content API
+- **Industries page**: Displays all industries from Industries Content API with dark theme (bg-slate-900)
+  - Hero and Industries Grid combined in ONE section
+  - Custom Service Area section with bg-slate-950 (only on Industries page)
+  - Tool badges displayed as rounded pills for each industry
+- **Page content architecture**: Three singleton document patterns for dynamic content management
+  - **Home Content API** (`/api/home-content/`): HomePage sections (hero, quick facts, why choose us, how it works, testimonials, service area)
+  - **Services Content API** (`/api/services-content/`): ServicesPage sections (services list in settings, tools in separate collection)
+  - **Industries Content API** (`/api/industries-content/`): IndustriesPage sections (hero, industries array with tool badges)
 - **Frontend fallback config**: `frontend/src/config/business.js` provides fallback data when Settings API unavailable
 - **Testimonials**: Production warnings in place - replace with real client testimonials before launch
 
@@ -533,9 +573,12 @@ async def send_quote_notification(quote: Quote) -> bool
 - **Authentication**: JWT-based authentication with email + password (production-ready)
 - **Protected routes**: `ProtectedAdminRoute` component validates JWT token with backend
 - **Settings management**:
-  - **Home Page**: Hero, QuickFacts, Why Choose Us, How It Works, Testimonials, Service Area
+  - **Home Page**: Hero, QuickFacts, Why Choose Us, How It Works, Testimonials, Service Area (managed via `/api/home-content/`)
   - **Services Page**: Services list (settings-based) + Tools catalog (separate tools_catalog collection)
-  - **Industries Page**: Industry management with soft-delete pattern
+  - **Industries Page**: Hero section + Industries array with tool badges (managed via `/api/industries-content/`)
+    - Each industry has: name, description, icon, tool badges array
+    - Homepage "Who We Serve" section shows first 3 industries from this API
+    - Industries page shows all industries with dark theme
   - **Gallery Page**: Photo gallery management
   - **About Page**: Company information
   - **Contact Page**: Contact details and hours
@@ -596,8 +639,13 @@ async def send_quote_notification(quote: Quote) -> bool
 ### Content Management Workflow
 1. **Via Admin UI**: Navigate to `/admin/settings` tabs (Home, Services, Industries, Gallery, About, Contact, Global)
 2. **Via API Docs**: Navigate to `/docs` for tools, brands, quotes management (requires authentication)
-3. **Tools**: Use `/api/tools/` endpoints (category required: air_tools, electric_tools, lifting_equipment)
-4. **Services**: Edit via Admin UI → Services tab (stored in settings collection as array)
+3. **Page Content Management** (Admin UI):
+   - **Home tab**: Edit hero, quick facts, why choose us, how it works, testimonials, service area
+   - **Services tab**: Edit services list (settings array) + manage tools (separate collection with categories)
+   - **Industries tab**: Edit hero section + industries array with tool badges for each industry
+   - All managed via singleton document pattern with nested arrays
+4. **Tools**: Use `/api/tools/` endpoints (category required: air_tools, electric_tools, lifting_equipment)
+5. **Services**: Edit via Admin UI → Services tab (stored in settings collection as array)
 
 ## Troubleshooting
 

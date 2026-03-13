@@ -218,4 +218,16 @@ export const homeContentAPI = {
   },
 };
 
+// Industries Content API
+export const industriesContentAPI = {
+  get: async () => {
+    const response = await api.get('/api/industries-content/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/industries-content/', data);
+    return response.data;
+  },
+};
+
 export default api;

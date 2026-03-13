@@ -1,6 +1,25 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { industriesContentAPI } from '../../services/api';
 
-export default function IndustriesServed({ loading = false }) {
+export default function IndustriesServed() {
+  const [industriesData, setIndustriesData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchIndustries = async () => {
+      try {
+        const data = await industriesContentAPI.get();
+        setIndustriesData(data);
+      } catch (error) {
+        console.error('Failed to fetch industries:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIndustries();
+  }, []);
   // Loading skeleton
   if (loading) {
     return (
@@ -54,57 +73,21 @@ export default function IndustriesServed({ loading = false }) {
     );
   }
 
-  const industries = [
-    {
-      name: 'Automotive Repair & Body Shops',
-      icon: 'directions_car',
-      description: 'Auto repair shops and body shops rely on pneumatic tools for precision work, from impact wrenches to spray guns.',
-      useCases: ['Impact wrenches', 'Air ratchets', 'Spray guns', 'Sanders'],
-    },
-    {
-      name: 'Fleet & Truck Maintenance',
-      icon: 'local_shipping',
-      description: 'Fleet maintenance operations depend on reliable pneumatic equipment for heavy-duty truck and trailer repairs.',
-      useCases: ['Impact tools', 'Grinders', 'Air hammers', 'Drills'],
-    },
-    {
-      name: 'Manufacturing & Assembly',
-      icon: 'precision_manufacturing',
-      description: 'Industrial manufacturing plants use pneumatic tools for assembly lines, fabrication, and quality control.',
-      useCases: ['Assembly tools', 'Grinders', 'Specialty tools', 'Torque tools'],
-    },
-    {
-      name: 'Metal Fabrication & Welding',
-      icon: 'manufacturing',
-      description: 'Metal fabrication shops require precision pneumatic tools for cutting, grinding, and finishing metalwork.',
-      useCases: ['Cut-off tools', 'Die grinders', 'Needle scalers', 'Sanders'],
-    },
-    {
-      name: 'Construction & Concrete',
-      icon: 'apartment',
-      description: 'Construction sites depend on pneumatic tools for framing, finishing, concrete work, and heavy-duty applications.',
-      useCases: ['Nail guns', 'Drills', 'Breakers', 'Chipping hammers'],
-    },
-    {
-      name: 'Oil, Gas & Energy',
-      icon: 'oil_barrel',
-      description: 'Energy sector operations in hazardous environments require certified pneumatic tools for safe, spark-free operation.',
-      useCases: ['Hazloc tools', 'Impact wrenches', 'Grinders', 'Drills'],
-    },
-  ];
+  // Get first 3 industries from API data
+  const industries = (industriesData?.industries || []).slice(0, 3);
 
   return (
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
-            Who We Serve
+            {industriesData?.hero?.label || 'Who We Serve'}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mb-3 sm:mb-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
-            We provide industrial pneumatic tool repair services for businesses operating in demanding environments across Surrey and Metro Vancouver.
+            {industriesData?.hero?.description || 'We provide industrial pneumatic tool repair services for businesses operating in demanding environments across Surrey and Metro Vancouver.'}
           </p>
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
-            Industries We Support
+            {industriesData?.hero?.heading || 'Industries We Support'}
           </h3>
         </div>
 
@@ -129,12 +112,12 @@ export default function IndustriesServed({ loading = false }) {
                 {industry.description}
               </p>
               <div className="flex flex-wrap gap-2">
-                {industry.useCases.map((useCase, idx) => (
+                {(industry.toolBadges || []).map((badge, idx) => (
                   <span
                     key={idx}
                     className="px-2.5 sm:px-3 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
                   >
-                    {useCase}
+                    {badge}
                   </span>
                 ))}
               </div>

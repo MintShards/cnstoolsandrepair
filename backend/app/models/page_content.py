@@ -192,3 +192,42 @@ class HomePageContentResponse(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+# ============================================================================
+# INDUSTRIES PAGE CONTENT MODELS
+# ============================================================================
+
+class IndustryItemModel(BaseModel):
+    """Individual industry item"""
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1, max_length=500)
+    icon: str = Field(default="business", max_length=50)
+    tool_badges: List[str] = Field(default_factory=list, alias="toolBadges")
+    display_order: int = Field(default=0)
+
+    class Config:
+        populate_by_name = True
+
+
+class IndustriesPageHeroModel(BaseModel):
+    """Hero section for industries page"""
+    label: str = Field(..., min_length=1, max_length=100)
+    heading: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1, max_length=500)
+
+
+class IndustriesPageContentUpdate(BaseModel):
+    """Schema for updating industries page content"""
+    hero: IndustriesPageHeroModel
+    industries: List[IndustryItemModel] = Field(default_factory=list)
+
+
+class IndustriesPageContentResponse(BaseModel):
+    """API response schema for industries page content"""
+    hero: IndustriesPageHeroModel
+    industries: List[IndustryItemModel]
+    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+
+    class Config:
+        populate_by_name = True
