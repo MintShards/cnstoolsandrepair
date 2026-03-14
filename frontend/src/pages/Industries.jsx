@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { industriesContentAPI, homeContentAPI } from '../services/api';
-import ServiceArea from '../components/sections/ServiceArea';
-import FinalCTA from '../components/sections/FinalCTA';
+import DualCTA from '../components/sections/DualCTA';
 
 export default function Industries() {
   const [hero, setHero] = useState(null);
@@ -155,11 +154,8 @@ export default function Industries() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <FinalCTA
-        data={homeContent?.finalCta}
-        loading={loading}
-      />
+      {/* Call-to-Action */}
+      <DualCTA backgroundColor="bg-slate-100 dark:bg-slate-900" />
     </main>
     </>
   );

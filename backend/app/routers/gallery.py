@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from typing import List
 from bson import ObjectId
@@ -6,6 +7,7 @@ from app.database import get_database
 from app.models.gallery import GalleryPhotoCreate, GalleryPhotoResponse, GalleryPhotoUpdate
 from app.services.file_service import save_upload_file
 from app.utils.helpers import convert_objectid_to_str
+from app.config import settings
 
 router = APIRouter(prefix="/api/gallery", tags=["gallery"])
 
@@ -94,18 +96,28 @@ async def update_gallery_photo(photo_id: str, photo_update: GalleryPhotoUpdate):
 
 @router.delete("/{photo_id}", status_code=204)
 async def delete_gallery_photo(photo_id: str):
-    """Delete gallery photo (admin endpoint) - soft delete by setting active=False"""
+    """Delete gallery photo (admin endpoint) - hard delete (removes file and DB entry)"""
     db = get_database()
 
     if not ObjectId.is_valid(photo_id):
         raise HTTPException(status_code=400, detail="Invalid photo ID")
 
-    result = await db.gallery_photos.update_one(
-        {"_id": ObjectId(photo_id)},
-        {"$set": {"active": False}}
-    )
+    # Fetch photo to get filename before deleting
+    photo = await db.gallery_photos.find_one({"_id": ObjectId(photo_id)})
 
-    if result.matched_count == 0:
+    if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
+
+    # Delete from database
+    await db.gallery_photos.delete_one({"_id": ObjectId(photo_id)})
+
+    # Delete physical file
+    file_path = os.path.join(settings.UPLOAD_DIR, photo["image_url"])
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            # Log warning but continue - file may already be deleted
+            print(f"Warning: Failed to delete file {file_path}: {e}")
 
     return None

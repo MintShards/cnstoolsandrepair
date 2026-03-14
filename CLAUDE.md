@@ -721,3 +721,219 @@ Three singleton document collections for dynamic page content management:
 - `sm:` tablet (640px+)
 - `lg:` desktop (1024px+)
 - Bottom nav visible on mobile, hidden on desktop
+
+## Production Deployment Checklist
+
+**⚠️ CRITICAL: Complete before going live**
+
+The current development setup uses **local filesystem storage** (`backend/uploads/`) which will **lose all uploaded photos** on production deployment (App Platform container restarts, new deployments). This affects both:
+- **Gallery photos** (uploaded via admin panel)
+- **Quote request photos** (uploaded by customers)
+
+### Required: Digital Ocean Spaces Integration
+
+**Why Spaces is required:**
+- Production containers have ephemeral filesystems (data lost on restart/deploy)
+- Local uploads don't survive App Platform deployments
+- Quote photo URLs in emails would be broken
+- Gallery photos would disappear after each deployment
+
+**Cost:** $5/month (250GB storage + 1TB bandwidth included)
+
+### Deployment Options
+
+#### Option 1: App Platform + Spaces (RECOMMENDED)
+
+**Architecture:**
+```
+Digital Ocean App Platform ($12/month)
+├─ Backend (FastAPI container)
+├─ Frontend (React static site)
+└─ Auto-deploy from GitHub
+
+Digital Ocean Spaces ($5/month)
+└─ Permanent image storage (gallery + quotes)
+
+MongoDB Atlas (Free tier)
+└─ Database (already configured)
+
+Total: ~$17/month
+```
+
+**Pros:**
+- Fully managed platform (no server maintenance)
+- Auto-deploy on GitHub push
+- Automatic SSL certificates
+- Built-in monitoring and logs
+- Zero DevOps knowledge required
+
+**Setup:**
+1. Create Spaces bucket: `cnstoolsandrepair-photos`
+2. Generate Spaces access keys
+3. Update backend code (see implementation section below)
+4. Create App Platform app from GitHub repo
+5. Configure environment variables
+6. Deploy automatically
+
+#### Option 2: Droplet + Spaces
+
+**Architecture:**
+```
+Digital Ocean Droplet ($6-12/month)
+├─ Ubuntu server
+├─ Docker Compose
+├─ Nginx reverse proxy
+└─ Manual Let's Encrypt SSL
+
+Digital Ocean Spaces ($5/month)
+MongoDB Atlas (Free tier)
+
+Total: ~$11-17/month
+```
+
+**Pros:**
+- More control over server configuration
+- Slightly cheaper ($6 vs $12 for hosting)
+
+**Cons:**
+- Manual server setup and maintenance
+- Manual SSL certificate renewal
+- Manual deployments (git pull + restart)
+- Requires DevOps knowledge
+
+### Spaces Implementation Checklist
+
+- [ ] **Create Spaces Bucket**
+  - Login to Digital Ocean dashboard
+  - Create → Spaces → Choose NYC3 region
+  - Name: `cnstoolsandrepair-photos`
+  - Set permissions: Public read, private write
+  - Generate access keys (save securely)
+
+- [ ] **Update Backend Code**
+  - [ ] Install `boto3` library: `pip install boto3`
+  - [ ] Update `backend/app/services/file_service.py` to upload to Spaces
+  - [ ] Organize folders: `gallery/` and `quotes/`
+  - [ ] Update delete endpoint to remove from Spaces
+  - [ ] Test locally with Spaces credentials
+
+- [ ] **Migrate Existing Files**
+  - [ ] Upload current `backend/uploads/` files to Spaces `gallery/` folder
+  - [ ] Update MongoDB records with full Spaces URLs
+  - [ ] Test image access from Spaces URLs
+
+- [ ] **Environment Configuration**
+  ```env
+  # Add to backend/.env.production
+  SPACES_REGION=nyc3
+  SPACES_BUCKET=cnstoolsandrepair-photos
+  SPACES_KEY=<your_spaces_access_key>
+  SPACES_SECRET=<your_spaces_secret_key>
+  SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
+
+  # Update for production
+  MONGODB_URL=<atlas_production_connection_string>
+  DATABASE_NAME=cnstoolsandrepair_db_prod
+  CORS_ORIGINS=https://cnstoolsandrepair.com
+  ENVIRONMENT=production
+  ```
+
+- [ ] **Test Production Setup**
+  - [ ] Upload test photo via admin panel → verify in Spaces
+  - [ ] Submit test quote with photo → verify email has working Spaces URL
+  - [ ] Delete photo via admin panel → verify removed from Spaces
+  - [ ] Check public gallery page displays Spaces images
+
+- [ ] **Deploy to Digital Ocean**
+  - [ ] If App Platform: Create app, connect GitHub, set env vars
+  - [ ] If Droplet: SSH setup, Docker install, Nginx config, SSL cert
+  - [ ] Update DNS (Hostinger → Digital Ocean nameservers)
+  - [ ] Test production URL end-to-end
+
+### File Organization in Spaces
+
+```
+cnstoolsandrepair-photos/
+├── gallery/              # Gallery page photos (admin uploads)
+│   ├── uuid1.jpg
+│   ├── uuid2.png
+│   └── uuid3.webp
+│
+└── quotes/               # Customer quote request photos
+    ├── uuid4.jpg
+    ├── uuid5.png
+    └── uuid6.jpg
+```
+
+### Implementation Code Changes Required
+
+**Backend changes:**
+1. `app/services/file_service.py` - Replace local save with Spaces upload
+2. `app/routers/gallery.py` - Delete from Spaces instead of local disk
+3. `app/routers/quotes.py` - Already uses file_service (automatic)
+4. `app/config.py` - Add Spaces settings
+5. `requirements.txt` - Add `boto3`
+
+**Frontend changes:**
+- Minimal: Images already use URLs from database (automatic switch to Spaces URLs)
+
+**Email template changes:**
+- Quote notification emails will show clickable Spaces URLs instead of broken local paths
+
+### Cost Breakdown
+
+| Service | Development | Production | Notes |
+|---------|-------------|------------|-------|
+| **Hosting** | $0 (local) | $12/month | App Platform Starter |
+| **Image Storage** | $0 (local) | $5/month | Spaces 250GB |
+| **Database** | $0 | $0 | MongoDB Atlas free tier |
+| **SSL Certificate** | N/A | $0 | Included with App Platform |
+| **Domain** | N/A | ~$15/year | cnstoolsandrepair.com |
+| **Total** | $0 | **~$17/month** | Plus domain annual fee |
+
+### Storage Estimates
+
+**Year 1 projections:**
+- Gallery photos: 27 current + ~10 new/year = ~70MB
+- Quote photos: ~100 quotes/year × 2 photos × 2MB = ~400MB
+- **Total: ~470MB** (well under 250GB Spaces limit)
+
+**Spaces pricing:**
+- 250GB storage included in $5/month
+- 1TB bandwidth included
+- Additional: $0.02/GB storage, $0.01/GB bandwidth
+
+### Security Notes
+
+**Quote photo privacy:**
+- Current implementation: Public URLs with UUID filenames (security through obscurity)
+- UUIDs are hard to guess: `7eabdf02-4413-406c-bcd0-2c3f5a49f901.jpg`
+- Alternative: Implement signed URLs with expiration (more complex, not needed initially)
+
+**Spaces permissions:**
+- Gallery folder: Public read (photos shown on public gallery page)
+- Quotes folder: Public read (required for email links to work)
+- Both folders: Private write (only backend can upload/delete)
+
+### Pre-Production Testing
+
+Before going live, verify:
+1. ✅ All pages complete and tested
+2. ✅ Admin authentication working
+3. ✅ Quote form with photo upload tested
+4. ✅ Gallery admin UI tested
+5. ✅ Email notifications working
+6. ✅ Spaces integration tested locally
+7. ✅ Production environment variables configured
+8. ✅ Domain DNS configured
+9. ✅ SSL certificate working
+10. ✅ End-to-end user flow tested on production URL
+
+### Rollback Plan
+
+If production deployment issues occur:
+1. Keep local development environment running
+2. Spaces data is persistent (no data loss)
+3. MongoDB Atlas backups available (point-in-time recovery)
+4. Can redeploy from git commit history
+5. Local `uploads/` backup before migration (safety net)
