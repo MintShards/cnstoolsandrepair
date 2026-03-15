@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class AboutContentUpdate(BaseModel):
     """Schema for updating about page content"""
+    page_heading: str = Field(..., min_length=1, max_length=200)
     company_story: str = Field(..., min_length=1, max_length=5000)
     mission_statement: str = Field(..., min_length=1, max_length=1000)
     team_description: str = Field(..., min_length=1, max_length=2000)
@@ -21,6 +23,7 @@ class AboutContent(AboutContentUpdate):
 
 class AboutContentResponse(BaseModel):
     """API response schema for about content"""
+    page_heading: Optional[str] = "Industrial pneumatic tool repair and maintenance services in Surrey, BC"
     company_story: str
     mission_statement: str
     team_description: str

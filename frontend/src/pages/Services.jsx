@@ -62,26 +62,20 @@ export default function Services() {
         {/* Our Services Section */}
         <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
           <div className="max-w-screen-xl mx-auto">
-            <div className="text-center mb-12 lg:mb-16">
-              <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</h2>
-              <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Our Services</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
-                Expert pneumatic tool repair and maintenance services in Surrey, BC, supporting automotive, manufacturing, and industrial businesses across Surrey and the Metro Vancouver area.
-              </p>
-            </div>
-
             {loadingSettings ? (
               <>
-                {/* Header Skeleton */}
+                {/* Hero Skeleton */}
                 <div className="text-center mb-12 lg:mb-16">
                   <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
-                  <div className="h-10 w-48 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-4 animate-pulse"></div>
-                  <div className="h-4 w-96 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
-                  <div className="h-4 w-80 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+                  <div className="h-10 lg:h-12 w-48 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-4 animate-pulse"></div>
+                  <div className="max-w-2xl mx-auto space-y-2">
+                    <div className="h-4 lg:h-5 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                    <div className="h-4 lg:h-5 w-4/5 mx-auto bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  </div>
                 </div>
 
                 {/* Service Cards Skeleton */}
-                <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8 mb-12 lg:mb-16">
+                <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div
                       key={i}
@@ -98,41 +92,50 @@ export default function Services() {
                     </div>
                   ))}
                 </div>
-
-                {/* ExperienceBadge Skeleton */}
-                <div className="flex justify-center">
-                  <div className="h-16 w-96 max-w-full bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse"></div>
-                </div>
               </>
-            ) : services.length > 0 ? (
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8">
-                {services.map((service, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:border-primary dark:hover:border-primary transition-all text-center w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] md:w-[calc(25%-1.5rem)] lg:w-[calc(20%-1.6rem)]"
-                  >
-                    <div className="mx-auto">
-                      <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                        <span
-                          className="material-symbols-outlined text-primary text-4xl"
-                          style={{ fontVariationSettings: "'wght' 600" }}
-                        >
-                          {service.icon}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-black mb-2 uppercase tracking-tight">{service.title}</h3>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{service.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             ) : (
-              <div className="text-center py-20">
-                <span className="material-symbols-outlined text-6xl text-slate-400">build</span>
-                <p className="mt-4 text-slate-500">No services listed yet. Check back soon!</p>
-              </div>
+              <>
+                {/* Hero Section */}
+                <div className="text-center mb-12 lg:mb-16">
+                  <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</h2>
+                  <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Our Services</h1>
+                  <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
+                    Expert pneumatic tool repair and maintenance services in Surrey, BC, supporting automotive, manufacturing, and industrial businesses across Surrey and the Metro Vancouver area.
+                  </p>
+                </div>
+
+                {/* Service Cards */}
+                {services.length > 0 ? (
+                  <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8">
+                    {services.map((service, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:border-primary dark:hover:border-primary transition-all text-center w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] md:w-[calc(25%-1.5rem)] lg:w-[calc(20%-1.6rem)]"
+                      >
+                        <div className="mx-auto">
+                          <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <span
+                              className="material-symbols-outlined text-primary text-4xl"
+                              style={{ fontVariationSettings: "'wght' 600" }}
+                            >
+                              {service.icon}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-base sm:text-lg font-black mb-2 uppercase tracking-tight">{service.title}</h3>
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{service.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <span className="material-symbols-outlined text-6xl text-slate-400">build</span>
+                    <p className="mt-4 text-slate-500">No services listed yet. Check back soon!</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -147,22 +150,16 @@ export default function Services() {
         {/* Tools We Repair Section - Categorized by Type */}
         <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
           <div className="max-w-screen-xl mx-auto">
-            <div className="text-center mb-12 lg:mb-16">
-              <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
-              <h2 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools We Repair</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
-                Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, and lifting equipment. All major brands serviced including Ingersoll Rand, DeWalt, and Chicago Pneumatic.
-              </p>
-            </div>
-
             {loadingTools ? (
               <>
-                {/* Header Skeleton */}
+                {/* Hero Skeleton */}
                 <div className="text-center mb-12 lg:mb-16">
                   <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
-                  <div className="h-10 w-48 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-4 animate-pulse"></div>
-                  <div className="h-4 w-96 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
-                  <div className="h-4 w-80 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+                  <div className="h-10 lg:h-12 w-48 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-4 animate-pulse"></div>
+                  <div className="max-w-2xl mx-auto space-y-2">
+                    <div className="h-4 lg:h-5 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                    <div className="h-4 lg:h-5 w-5/6 mx-auto bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  </div>
                 </div>
 
                 {/* 3-Column Tool Categories Skeleton */}
@@ -243,133 +240,147 @@ export default function Services() {
                   </div>
                 </div>
               </>
-            ) : toolsByCategory ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
-                {/* Air Tools Column */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-500">
-                    <div className="size-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <span
-                        className="material-symbols-outlined text-blue-500 text-3xl"
-                        style={{ fontVariationSettings: "'wght' 600" }}
-                      >
-                        air
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Air Tools</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {toolsByCategory.air_tools && toolsByCategory.air_tools.length > 0 ? (
-                      toolsByCategory.air_tools.map((tool) => (
-                        <div
-                          key={tool.id}
-                          className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className="material-symbols-outlined text-blue-500 text-2xl shrink-0 mt-0.5"
-                              style={{ fontVariationSettings: "'wght' 600" }}
-                            >
-                              {tool.icon || 'build'}
-                            </span>
-                            <div>
-                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-400 italic">No air tools listed.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Electric Tools Column */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
-                    <div className="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                      <span
-                        className="material-symbols-outlined text-amber-500 text-3xl"
-                        style={{ fontVariationSettings: "'wght' 600" }}
-                      >
-                        bolt
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Electric Tools</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {toolsByCategory.electric_tools && toolsByCategory.electric_tools.length > 0 ? (
-                      toolsByCategory.electric_tools.map((tool) => (
-                        <div
-                          key={tool.id}
-                          className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className="material-symbols-outlined text-amber-500 text-2xl shrink-0 mt-0.5"
-                              style={{ fontVariationSettings: "'wght' 600" }}
-                            >
-                              {tool.icon || 'power'}
-                            </span>
-                            <div>
-                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-400 italic">No electric tools listed.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Lifting Equipment Column */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-purple-500">
-                    <div className="size-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                      <span
-                        className="material-symbols-outlined text-purple-500 text-3xl"
-                        style={{ fontVariationSettings: "'wght' 600" }}
-                      >
-                        precision_manufacturing
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Lifting Equipment</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {toolsByCategory.lifting_equipment && toolsByCategory.lifting_equipment.length > 0 ? (
-                      toolsByCategory.lifting_equipment.map((tool) => (
-                        <div
-                          key={tool.id}
-                          className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 transition-colors"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className="material-symbols-outlined text-purple-500 text-2xl shrink-0 mt-0.5"
-                              style={{ fontVariationSettings: "'wght' 600" }}
-                            >
-                              {tool.icon || 'precision_manufacturing'}
-                            </span>
-                            <div>
-                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-400 italic">No lifting equipment listed.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
             ) : (
-              <div className="text-center py-20">
-                <span className="material-symbols-outlined text-6xl text-slate-400">inventory_2</span>
-                <p className="mt-4 text-slate-500">No tools listed yet. Check back soon!</p>
-              </div>
+              <>
+                {/* Hero Section */}
+                <div className="text-center mb-12 lg:mb-16">
+                  <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
+                  <h2 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools We Repair</h2>
+                  <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
+                    Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, and lifting equipment. All major brands serviced including Ingersoll Rand, DeWalt, and Chicago Pneumatic.
+                  </p>
+                </div>
+
+                {/* Tool Categories */}
+                {toolsByCategory ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+                        {/* Air Tools Column */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-500">
+                        <div className="size-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                          <span
+                            className="material-symbols-outlined text-blue-500 text-3xl"
+                            style={{ fontVariationSettings: "'wght' 600" }}
+                          >
+                            air
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Air Tools</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {toolsByCategory.air_tools && toolsByCategory.air_tools.length > 0 ? (
+                          toolsByCategory.air_tools.map((tool) => (
+                            <div
+                              key={tool.id}
+                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <span
+                                  className="material-symbols-outlined text-blue-500 text-2xl shrink-0 mt-0.5"
+                                  style={{ fontVariationSettings: "'wght' 600" }}
+                                >
+                                  {tool.icon || 'build'}
+                                </span>
+                                <div>
+                                  <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400 italic">No air tools listed.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Electric Tools Column */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
+                        <div className="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                          <span
+                            className="material-symbols-outlined text-amber-500 text-3xl"
+                            style={{ fontVariationSettings: "'wght' 600" }}
+                          >
+                            bolt
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Electric Tools</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {toolsByCategory.electric_tools && toolsByCategory.electric_tools.length > 0 ? (
+                          toolsByCategory.electric_tools.map((tool) => (
+                            <div
+                              key={tool.id}
+                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <span
+                                  className="material-symbols-outlined text-amber-500 text-2xl shrink-0 mt-0.5"
+                                  style={{ fontVariationSettings: "'wght' 600" }}
+                                >
+                                  {tool.icon || 'power'}
+                                </span>
+                                <div>
+                                  <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400 italic">No electric tools listed.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Lifting Equipment Column */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-purple-500">
+                        <div className="size-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                          <span
+                            className="material-symbols-outlined text-purple-500 text-3xl"
+                            style={{ fontVariationSettings: "'wght' 600" }}
+                          >
+                            precision_manufacturing
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Lifting Equipment</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {toolsByCategory.lifting_equipment && toolsByCategory.lifting_equipment.length > 0 ? (
+                          toolsByCategory.lifting_equipment.map((tool) => (
+                            <div
+                              key={tool.id}
+                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <span
+                                  className="material-symbols-outlined text-purple-500 text-2xl shrink-0 mt-0.5"
+                                  style={{ fontVariationSettings: "'wght' 600" }}
+                                >
+                                  {tool.icon || 'precision_manufacturing'}
+                                </span>
+                                <div>
+                                  <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400 italic">No lifting equipment listed.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <span className="material-symbols-outlined text-6xl text-slate-400">inventory_2</span>
+                    <p className="mt-4 text-slate-500">No tools listed yet. Check back soon!</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

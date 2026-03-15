@@ -1,10 +1,9 @@
-from fastapi import APIRouter, HTTPException
 from datetime import datetime
+
+from fastapi import APIRouter, HTTPException
+
 from app.database import get_database
-from app.models.page_content import (
-    AboutContentUpdate,
-    AboutContentResponse
-)
+from app.models.page_content import AboutContentResponse, AboutContentUpdate
 from app.utils.helpers import convert_objectid_to_str
 
 
@@ -13,10 +12,11 @@ router = APIRouter(prefix="/api/about-content", tags=["about-content"])
 
 # Default about content to return if none exists in database
 DEFAULT_ABOUT_CONTENT = {
-    "company_story": "CNS Tools and Repair is Surrey, BC's premier industrial pneumatic tool repair specialist. We provide comprehensive repair, maintenance, rental, and sales services for businesses across automotive, fleet maintenance, manufacturing, metal fabrication, construction, oil & gas, aerospace, marine, mining, and MRO sectors.",
+    "page_heading": "Industrial pneumatic tool repair and maintenance services in Surrey, BC",
+    "company_story": "Industrial pneumatic tool repair services based in Surrey, British Columbia. We provide comprehensive repair, maintenance, rental, and sales services for businesses across automotive, fleet maintenance, manufacturing, metal fabrication, construction, oil & gas, aerospace, marine, mining, and MRO sectors. Our technicians bring years of hands-on experience servicing pneumatic tools used in demanding industrial environments.",
     "mission_statement": "Our mission is to minimize equipment downtime for industrial businesses through professional diagnostics, quality repairs, and reliable service.",
     "team_description": "Our on-site facility is equipped with state-of-the-art diagnostic tools and staffed by certified technicians with years of hands-on experience repairing pneumatic tools from all major brands.",
-    "updatedAt": datetime.utcnow()
+    "updated_at": datetime.utcnow()
 }
 
 
@@ -56,7 +56,7 @@ async def update_about_content(content_data: AboutContentUpdate):
     # Prepare content document
     content_dict = content_data.model_dump(by_alias=True)
     content_dict["active"] = True
-    content_dict["updatedAt"] = datetime.utcnow()
+    content_dict["updated_at"] = datetime.utcnow()
 
     # Upsert: update if exists, create if doesn't
     # Filter by active=True ensures only one document is ever active
