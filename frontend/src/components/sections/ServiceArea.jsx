@@ -1,6 +1,7 @@
 export default function ServiceArea({
   data = null,
-  loading = false
+  loading = false,
+  backgroundColor = "bg-slate-100 dark:bg-slate-900"
 }) {
   // Default content (fallback)
   const defaultData = {
@@ -20,7 +21,7 @@ export default function ServiceArea({
   // Loading skeleton
   if (loading) {
     return (
-      <section className="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 bg-slate-100 dark:bg-slate-900">
+      <section className={`px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 ${backgroundColor}`}>
         <div className="max-w-screen-xl mx-auto">
           <div className="max-w-4xl mx-auto text-center space-y-2">
             <div className="h-5 lg:h-6 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -51,7 +52,7 @@ export default function ServiceArea({
   };
 
   return (
-    <section className="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 bg-slate-100 dark:bg-slate-900">
+    <section className={`px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 ${backgroundColor}`}>
       <div className="max-w-screen-xl mx-auto">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base lg:text-lg leading-relaxed">

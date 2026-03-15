@@ -122,6 +122,33 @@ export default function GlobalTab({ formData, updateField, addBrand, removeBrand
         />
       </div>
 
+      {/* Map & Location */}
+      <h3 className="text-xl font-black text-white uppercase tracking-tight mt-8 mb-4">
+        Map & Location
+      </h3>
+      <AdminTextarea
+        label="Google Maps Embed URL"
+        value={formData.map.embedUrl}
+        onChange={(v) => updateField('map.embedUrl', v)}
+        required
+        rows={3}
+        helperText="Get from Google Maps → Share → Embed"
+      />
+      <AdminInput
+        label="Directions URL"
+        value={formData.map.directionsUrl}
+        onChange={(v) => updateField('map.directionsUrl', v)}
+        required
+        helperText="Link for 'Get Directions' button"
+      />
+      <AdminInput
+        label="Service Area"
+        value={formData.serviceArea}
+        onChange={(v) => updateField('serviceArea', v)}
+        maxLength={100}
+        helperText="Example: Metro Vancouver"
+      />
+
       {/* Social Media */}
       <h3 className="text-xl font-black text-white uppercase tracking-tight mt-8 mb-4">
         Social Media Links

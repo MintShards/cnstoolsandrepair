@@ -132,10 +132,22 @@ export const industriesAPI = {
   },
 };
 
-// Contact API
-export const contactAPI = {
-  send: async (data) => {
+// Contact Form API
+export const contactFormAPI = {
+  submit: async (data) => {
     const response = await api.post('/api/contact/', data);
+    return response.data;
+  },
+};
+
+// Contact Content API
+export const contactContentAPI = {
+  get: async () => {
+    const response = await api.get('/api/contact-content/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/contact-content/', data);
     return response.data;
   },
 };

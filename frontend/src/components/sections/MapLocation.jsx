@@ -34,7 +34,7 @@ export default function MapLocation() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-10">
           {/* Map Container */}
           <div className="lg:col-span-3">
-            <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800">
+            <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[600px] rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800">
               <iframe
                 src={map.embedUrl}
                 width="100%"
@@ -50,9 +50,9 @@ export default function MapLocation() {
           </div>
 
           {/* Contact Info & Directions */}
-          <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5 lg:gap-6">
+          <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5 lg:gap-6 lg:h-[600px]">
             {/* Address Card with Plain-Text NAP for SEO */}
-            <div className="p-4 sm:p-6 lg:p-8 bg-slate-100 dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <div className="p-4 sm:p-6 lg:p-8 bg-slate-100 dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex-grow">
               <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <div className="shrink-0">
                   <div className="size-12 sm:size-14 rounded-xl bg-accent-orange/10 flex items-center justify-center">

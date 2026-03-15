@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { industriesContentAPI, homeContentAPI } from '../services/api';
 import DualCTA from '../components/sections/DualCTA';
+import ServiceArea from '../components/sections/ServiceArea';
 
 export default function Industries() {
   const [hero, setHero] = useState(null);
@@ -176,37 +177,8 @@ export default function Industries() {
           </div>
         </section>
 
-        {/* Service Area - Custom background for Industries page */}
-        <section className="px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 bg-white dark:bg-slate-950">
-        <div className="max-w-screen-xl mx-auto">
-          <div className="max-w-4xl mx-auto text-center">
-            {loading ? (
-              /* Service Area Skeleton */
-              <div className="space-y-2">
-                <div className="h-4 lg:h-5 w-full max-w-3xl mx-auto bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
-                <div className="h-4 lg:h-5 w-5/6 mx-auto bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
-              </div>
-            ) : (
-              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base lg:text-lg leading-relaxed">
-                {homeContent?.serviceArea?.highlightedCities ? (
-                  <>
-                    Based in Surrey, BC, CNS Tools and Repair provides industrial pneumatic tool repair services to businesses across{' '}
-                    {homeContent.serviceArea.highlightedCities.map((city, index) => (
-                      <span key={index}>
-                        <span className="font-bold text-slate-700 dark:text-slate-300">{city}</span>
-                        {index < homeContent.serviceArea.highlightedCities.length - 1 && ', '}
-                      </span>
-                    ))}
-                    , and the Lower Mainland.
-                  </>
-                ) : (
-                  'Based in Surrey, BC, CNS Tools and Repair provides industrial pneumatic tool repair services to businesses across Surrey, Delta, Burnaby, New Westminster, Coquitlam, Langley, Richmond, Vancouver, and the Lower Mainland.'
-                )}
-              </p>
-            )}
-          </div>
-          </div>
-        </section>
+        {/* Service Area */}
+        <ServiceArea data={homeContent?.serviceArea} loading={loading} backgroundColor="bg-white dark:bg-slate-950" />
 
         {/* Call-to-Action */}
         <DualCTA backgroundColor="bg-slate-100 dark:bg-slate-900" />
