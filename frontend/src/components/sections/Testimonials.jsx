@@ -103,6 +103,11 @@ export default function Testimonials({ data = null, loading = false }) {
     );
   }
 
+  // Hide entire section if no testimonials
+  if (!testimonials || testimonials.length === 0) {
+    return null;
+  }
+
   // Industry filter tabs configuration
   const industries = [
     { id: 'all', label: 'All Industries', icon: 'business' },
