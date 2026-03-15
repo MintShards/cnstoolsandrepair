@@ -3,6 +3,7 @@ import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import ScrollToTop from './components/ScrollToTop';
+import AnnouncementBanner from './components/layout/AnnouncementBanner';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import BottomNav from './components/layout/BottomNav';
@@ -49,6 +50,7 @@ function App() {
                 path="*"
                 element={
                   <div className="min-h-screen flex flex-col">
+                    <AnnouncementBanner />
                     <Header />
                     <Routes>
                       <Route path="/" element={<Home />} />

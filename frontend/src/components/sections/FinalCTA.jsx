@@ -1,7 +1,11 @@
+import { useSettings } from '../../contexts/SettingsContext';
+
 export default function FinalCTA({
   data = null,
   loading = false
 }) {
+  const { settings } = useSettings();
+
   // Default content (fallback)
   const defaultData = {
     heading: "Request Professional Pneumatic Tool Repair Services",
@@ -66,7 +70,7 @@ export default function FinalCTA({
                 <span>{content.primaryButtonText}</span>
               </button>
             </a>
-            <a href="/contact" className="w-full sm:w-auto">
+            <a href={`tel:${settings?.contact?.phoneLink || '6045818930'}`} className="w-full sm:w-auto">
               <button className="w-full sm:w-auto sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
                 <span className="material-symbols-outlined text-lg sm:text-xl">call</span>
                 <span>{content.secondaryButtonText}</span>

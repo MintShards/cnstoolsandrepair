@@ -1,9 +1,12 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
@@ -21,37 +24,49 @@ export default function Header() {
         <nav className="hidden lg:flex items-center gap-6">
           <Link
             to="/"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/') ? 'text-primary' : 'hover:text-primary'
+            }`}
           >
             Home
           </Link>
           <Link
             to="/services"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/services') ? 'text-primary' : 'hover:text-primary'
+            }`}
           >
             Services
           </Link>
           <Link
             to="/industries"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/industries') ? 'text-primary' : 'hover:text-primary'
+            }`}
           >
             Industries
           </Link>
           <Link
             to="/gallery"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/gallery') ? 'text-primary' : 'hover:text-primary'
+            }`}
           >
             Gallery
           </Link>
           <Link
             to="/about"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/about') ? 'text-primary' : 'hover:text-primary'
+            }`}
           >
             About
           </Link>
           <Link
             to="/contact"
-            className="font-semibold uppercase text-sm hover:text-primary transition-colors"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/contact') ? 'text-primary' : 'hover:text-primary'
+            }`}
           >
             Contact
           </Link>
@@ -86,42 +101,66 @@ export default function Header() {
           <nav className="flex flex-col p-4 gap-2">
             <Link
               to="/"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/services"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/services')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Services
             </Link>
             <Link
               to="/industries"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/industries')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Industries
             </Link>
             <Link
               to="/gallery"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/gallery')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Gallery
             </Link>
             <Link
               to="/about"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/about')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="px-4 py-3 font-semibold uppercase text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/contact')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Contact

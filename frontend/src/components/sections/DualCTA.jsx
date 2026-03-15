@@ -1,12 +1,11 @@
 import { useSettings } from '../../contexts/SettingsContext';
-import { BUSINESS_INFO } from '../../config/business';
 
 export default function DualCTA({ backgroundColor = 'bg-white dark:bg-slate-900' }) {
   const { settings } = useSettings();
 
-  // Use settings or fallback to business config
-  const phone = settings?.phone || BUSINESS_INFO.phone;
-  const phoneLink = phone.replace(/[^0-9]/g, '');
+  // Use settings or fallback to current admin values
+  const phone = settings?.contact?.phone || '(604) 581-8930';
+  const phoneLink = settings?.contact?.phoneLink || '6045818930';
 
   return (
     <section className={`px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 ${backgroundColor}`}>

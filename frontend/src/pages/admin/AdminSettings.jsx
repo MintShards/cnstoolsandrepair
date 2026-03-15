@@ -50,42 +50,6 @@ export default function AdminSettings() {
     });
   };
 
-  const addBrand = () => {
-    setFormData((prev) => ({
-      ...prev,
-      brands: [
-        ...prev.brands,
-        { name: '', logoUrl: '', authorized: false, displayOrder: prev.brands.length },
-      ],
-    }));
-  };
-
-  const removeBrand = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      brands: prev.brands.filter((_, i) => i !== index),
-    }));
-  };
-
-  const updateBrand = (index, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      brands: prev.brands.map((brand, i) =>
-        i === index ? { ...brand, [field]: value } : brand
-      ),
-    }));
-  };
-
-  const handleBrandLogoUpload = async (index, file) => {
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateBrand(index, 'logoUrl', reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
   if (settingsLoading || !formData) {
     return (
       <AdminLayout>
@@ -158,14 +122,7 @@ export default function AdminSettings() {
             )}
 
             {activeTab === 'global' && (
-              <GlobalTab
-                formData={formData}
-                updateField={updateField}
-                addBrand={addBrand}
-                removeBrand={removeBrand}
-                updateBrand={updateBrand}
-                handleBrandLogoUpload={handleBrandLogoUpload}
-              />
+              <GlobalTab />
             )}
           </div>
         </main>

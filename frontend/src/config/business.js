@@ -11,16 +11,16 @@ export const BUSINESS_INFO = {
   tagline: 'Expert Pneumatic Tool Repair & Maintenance',
 
   // Contact Information (fallback values)
-  phone: '(604) 555-0123',
-  phoneLink: '6045550123',
-  email: 'info@cnstools.com',
+  phone: '(604) 581-8930',
+  phoneLink: '6045818930',
+  email: 'contact@cnstoolsandrepair.com',
 
   // Location (fallback values)
   address: {
-    street: 'Unit 65, 13335 115 Ave',
+    street: 'Unit 65 13335 115 Ave',
     city: 'Surrey',
     province: 'BC',
-    postalCode: 'V3R 2X1',
+    postalCode: 'V3R 0R8',
     country: 'Canada',
   },
 
@@ -29,7 +29,7 @@ export const BUSINESS_INFO = {
 
   // Operating Hours
   hours: {
-    weekdays: 'Monday - Friday: 8:00 AM - 5:00 PM',
+    weekdays: 'Monday - Friday: 9:00 AM - 4:00 PM',
     weekend: 'Saturday - Sunday: Closed',
     timezone: 'PST',
   },

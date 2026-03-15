@@ -1,14 +1,169 @@
+import { useState, useEffect } from 'react';
+import { settingsAPI } from '../../../services/api';
 import AdminInput from '../AdminInput';
 import AdminTextarea from '../AdminTextarea';
 import AdminToggle from '../AdminToggle';
 import AdminSelect from '../AdminSelect';
 
-export default function GlobalTab({ formData, updateField, addBrand, removeBrand, updateBrand, handleBrandLogoUpload }) {
+export default function GlobalTab() {
+  const [formData, setFormData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  // Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await settingsAPI.get();
+        // Initialize social field if not present
+        if (!data.social) {
+          data.social = { facebook: '', linkedin: '', instagram: '' };
+        }
+        setFormData(data);
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+        showNotification('Failed to load settings: ' + error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setNotification(null);
+
+    try {
+      await settingsAPI.update(formData);
+      showNotification('Global settings saved successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      showNotification('Failed to save: ' + error.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const updateField = (path, value) => {
+    const keys = path.split('.');
+    setFormData((prev) => {
+      const newData = { ...prev };
+      let current = newData;
+      for (let i = 0; i < keys.length - 1; i++) {
+        current[keys[i]] = { ...current[keys[i]] };
+        current = current[keys[i]];
+      }
+      current[keys[keys.length - 1]] = value;
+      return newData;
+    });
+  };
+
+  const addBrand = () => {
+    setFormData((prev) => ({
+      ...prev,
+      brands: [
+        ...prev.brands,
+        { name: '', logoUrl: '', authorized: false, displayOrder: prev.brands.length },
+      ],
+    }));
+  };
+
+  const removeBrand = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      brands: prev.brands.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateBrand = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      brands: prev.brands.map((brand, i) =>
+        i === index ? { ...brand, [field]: value } : brand
+      ),
+    }));
+  };
+
+  const handleBrandLogoUpload = async (index, file) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateBrand(index, 'logoUrl', reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <span className="material-symbols-outlined text-6xl text-primary animate-spin">refresh</span>
+      </div>
+    );
+  }
+
+  if (!formData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-400">Failed to load settings</p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-6">
-        Global Settings
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+          Global Settings
+        </h2>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-lg transition-colors"
+        >
+          {saving ? (
+            <>
+              <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+              Saving...
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined text-base">save</span>
+              Save Changes
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Notification */}
+      {notification && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          notification.type === 'success'
+            ? 'bg-green-900/20 border-green-700'
+            : 'bg-red-900/20 border-red-700'
+        }`}>
+          <div className="flex gap-3">
+            <span className={`material-symbols-outlined ${
+              notification.type === 'success' ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {notification.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <p className={`text-sm font-medium ${
+              notification.type === 'success' ? 'text-green-300' : 'text-red-300'
+            }`}>
+              {notification.message}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
         <div className="flex gap-3">

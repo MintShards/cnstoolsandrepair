@@ -77,14 +77,12 @@ export default function MapLocation() {
 
               {/* Quick Info */}
               <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="material-symbols-outlined text-primary text-lg sm:text-xl">call</span>
-                  <a
-                    href={`tel:${contact.phoneLink}`}
-                    className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors"
-                  >
-                    {contact.phone}
-                  </a>
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <span className="material-symbols-outlined text-primary text-lg sm:text-xl shrink-0">schedule</span>
+                  <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                    <p>{hours.weekdays}</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs mt-1">{hours.weekend}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3">
                   <span className="material-symbols-outlined text-primary text-lg sm:text-xl">mail</span>
@@ -95,12 +93,14 @@ export default function MapLocation() {
                     {contact.email}
                   </a>
                 </div>
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <span className="material-symbols-outlined text-primary text-lg sm:text-xl shrink-0">schedule</span>
-                  <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    <p>{hours.weekdays}</p>
-                    <p className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs mt-1">{hours.weekend}</p>
-                  </div>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="material-symbols-outlined text-primary text-lg sm:text-xl">call</span>
+                  <a
+                    href={`tel:${contact.phoneLink}`}
+                    className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors"
+                  >
+                    {contact.phone}
+                  </a>
                 </div>
               </div>
             </div>
