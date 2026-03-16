@@ -30,14 +30,14 @@ export default function IndustriesServed() {
             {/* "Who We Serve" label */}
             <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-2 animate-pulse"></div>
 
+            {/* "Industries We Support" main heading */}
+            <div className="h-8 sm:h-9 lg:h-10 w-72 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto mb-3 sm:mb-4 animate-pulse"></div>
+
             {/* Description paragraph (2 lines) */}
-            <div className="mb-3 sm:mb-4 max-w-2xl mx-auto px-4 space-y-2">
+            <div className="max-w-2xl mx-auto px-4 space-y-2">
               <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
               <div className="h-4 w-4/5 mx-auto bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
             </div>
-
-            {/* "Industries We Support" main heading */}
-            <div className="h-8 sm:h-9 lg:h-10 w-72 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
           </div>
 
           {/* Industry Cards Grid Skeleton */}
@@ -83,12 +83,12 @@ export default function IndustriesServed() {
           <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             {industriesData?.hero?.label || 'Who We Serve'}
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-3 sm:mb-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
-            {industriesData?.hero?.description || 'We provide industrial pneumatic tool repair services for businesses operating in demanding environments across Surrey and Metro Vancouver.'}
-          </p>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
+          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4 mb-3 sm:mb-4">
             {industriesData?.hero?.heading || 'Industries We Support'}
           </h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base px-4">
+            {industriesData?.hero?.description || 'We provide industrial pneumatic tool repair services for businesses operating in demanding environments across Surrey and Metro Vancouver.'}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
