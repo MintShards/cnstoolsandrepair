@@ -77,9 +77,11 @@ export default function Footer() {
           {/* Bottom Bar Skeleton - Copyright & Legal */}
           <div className="pt-8 pb-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
             <div className="h-4 w-64 bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
-            <div className="h-4 w-80 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+            <div className="h-4 w-72 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
             <div className="flex justify-center gap-4">
               <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              <div className="h-3 w-px bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+              <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
               <div className="h-3 w-px bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
               <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
             </div>
@@ -308,7 +310,7 @@ export default function Footer() {
             © {new Date().getFullYear()} CNS Tools and Repair. All rights reserved.
           </p>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-            Serving Surrey and the Lower Mainland, British Columbia.
+            Surrey, BC • Serving the Lower Mainland
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs sm:text-sm">
             <Link
@@ -316,6 +318,13 @@ export default function Footer() {
               className="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
             >
               Privacy Policy
+            </Link>
+            <span className="text-slate-400 dark:text-slate-600">|</span>
+            <Link
+              to="/terms-conditions"
+              className="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
+            >
+              Terms &amp; Conditions
             </Link>
             <span className="text-slate-400 dark:text-slate-600">|</span>
             <Link
