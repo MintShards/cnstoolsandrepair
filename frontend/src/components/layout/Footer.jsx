@@ -2,7 +2,92 @@ import { Link } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 
 export default function Footer() {
-  const { settings } = useSettings();
+  const { settings, loading } = useSettings();
+
+  // Loading skeleton
+  if (loading || !settings) {
+    return (
+      <footer role="contentinfo" className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 pb-24 lg:pb-0">
+        <div className="max-w-screen-xl mx-auto px-6 py-12">
+          {/* Main Footer Grid Skeleton - 4 Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-8">
+
+            {/* Column 1: Logo & Social Skeleton */}
+            <div>
+              {/* Logo Skeleton */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-5 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-5 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              </div>
+              {/* Description Skeleton */}
+              <div className="space-y-2 mb-4">
+                <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              </div>
+              {/* Social Icons Skeleton */}
+              <div className="flex gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Column 2: Services Skeleton */}
+            <div>
+              <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded mb-4 animate-pulse"></div>
+              <ul className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <li key={i}>
+                    <div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 3: Quick Links Skeleton */}
+            <div>
+              <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded mb-4 animate-pulse"></div>
+              <ul className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <li key={i}>
+                    <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Column 4: Contact Us Skeleton */}
+            <div>
+              <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded mb-4 animate-pulse"></div>
+              <ul className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse shrink-0 mt-0.5"></div>
+                    <div className="h-4 w-40 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar Skeleton - Copyright & Legal */}
+          <div className="pt-8 pb-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
+            <div className="h-4 w-64 bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+            <div className="h-4 w-80 max-w-full bg-slate-200 dark:bg-slate-800 rounded mx-auto animate-pulse"></div>
+            <div className="flex justify-center gap-4">
+              <div className="h-3 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+              <div className="h-3 w-px bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+              <div className="h-3 w-28 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   const getSocialIcon = (icon) => {
     const iconMap = {
