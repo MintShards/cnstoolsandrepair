@@ -33,8 +33,15 @@ class AboutContentResponse(BaseModel):
         populate_by_name = True
 
 
+class SocialMediaItemModel(BaseModel):
+    """Individual social media platform item"""
+    platform: str = Field(..., min_length=1, max_length=50)  # e.g., "LinkedIn", "Facebook"
+    icon: str = Field(..., min_length=1, max_length=50)  # e.g., "linkedin", "facebook"
+    url: str = Field(default="", max_length=500)  # Social media profile URL
+    order: int = Field(default=0, ge=0)  # Display order
+
 class SocialMediaModel(BaseModel):
-    """Social media links"""
+    """Legacy social media links (deprecated - use array instead)"""
     facebook: str = Field(default="", max_length=500)
     linkedin: str = Field(default="", max_length=500)
     instagram: str = Field(default="", max_length=500)

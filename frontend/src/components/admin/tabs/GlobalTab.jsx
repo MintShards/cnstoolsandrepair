@@ -20,6 +20,16 @@ export default function GlobalTab() {
         if (!data.social) {
           data.social = { facebook: '', linkedin: '', instagram: '' };
         }
+        // Migrate old social object to new socialMedia array if needed
+        if (!data.socialMedia && data.social) {
+          data.socialMedia = [];
+          if (data.social.linkedin) data.socialMedia.push({ platform: 'LinkedIn', icon: 'linkedin', url: data.social.linkedin, order: 0 });
+          if (data.social.facebook) data.socialMedia.push({ platform: 'Facebook', icon: 'facebook', url: data.social.facebook, order: 1 });
+          if (data.social.instagram) data.socialMedia.push({ platform: 'Instagram', icon: 'instagram', url: data.social.instagram, order: 2 });
+        }
+        if (!data.socialMedia) {
+          data.socialMedia = [];
+        }
         setFormData(data);
       } catch (error) {
         console.error('Failed to fetch settings:', error);
@@ -100,6 +110,48 @@ export default function GlobalTab() {
       updateBrand(index, 'logoUrl', reader.result);
     };
     reader.readAsDataURL(file);
+  };
+
+  // Social Media CRUD operations
+  const addSocialMedia = () => {
+    setFormData((prev) => ({
+      ...prev,
+      socialMedia: [
+        ...prev.socialMedia,
+        { platform: 'Facebook', icon: 'facebook', url: '', order: prev.socialMedia.length },
+      ],
+    }));
+  };
+
+  const removeSocialMedia = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      socialMedia: prev.socialMedia.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateSocialMedia = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      socialMedia: prev.socialMedia.map((social, i) =>
+        i === index ? { ...social, [field]: value } : social
+      ),
+    }));
+  };
+
+  const updateSocialPlatform = (index, platformName) => {
+    const iconMap = {
+      'Facebook': 'facebook',
+      'LinkedIn': 'linkedin',
+      'Instagram': 'instagram',
+      'WhatsApp': 'whatsapp',
+      'Twitter': 'twitter',
+      'YouTube': 'youtube',
+      'TikTok': 'tiktok',
+      'Pinterest': 'pinterest',
+    };
+    updateSocialMedia(index, 'platform', platformName);
+    updateSocialMedia(index, 'icon', iconMap[platformName] || platformName.toLowerCase());
   };
 
   if (loading) {
@@ -308,28 +360,95 @@ export default function GlobalTab() {
       <h3 className="text-xl font-black text-white uppercase tracking-tight mt-8 mb-4">
         Social Media Links
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <AdminInput
-          label="Facebook URL"
-          value={formData.social?.facebook || ''}
-          onChange={(v) => updateField('social.facebook', v)}
-          maxLength={500}
-          placeholder="https://facebook.com/..."
-        />
-        <AdminInput
-          label="LinkedIn URL"
-          value={formData.social?.linkedin || ''}
-          onChange={(v) => updateField('social.linkedin', v)}
-          maxLength={500}
-          placeholder="https://linkedin.com/company/..."
-        />
-        <AdminInput
-          label="Instagram URL"
-          value={formData.social?.instagram || ''}
-          onChange={(v) => updateField('social.instagram', v)}
-          maxLength={500}
-          placeholder="https://instagram.com/..."
-        />
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-slate-400">
+          {formData.socialMedia.length} social media link{formData.socialMedia.length !== 1 ? 's' : ''} total
+        </p>
+        <button
+          onClick={addSocialMedia}
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-colors"
+        >
+          <span className="material-symbols-outlined">add</span>
+          Add Social Media
+        </button>
+      </div>
+
+      {formData.socialMedia.length === 0 && (
+        <div className="p-8 text-center bg-slate-800 rounded-lg border border-slate-700 mb-6">
+          <span className="material-symbols-outlined text-6xl text-slate-600 mb-4">
+            share
+          </span>
+          <p className="text-slate-400 mb-2">No social media links added yet.</p>
+          <p className="text-sm text-slate-500">Click "Add Social Media" to get started.</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {formData.socialMedia
+          .sort((a, b) => a.order - b.order)
+          .map((social, index) => {
+            const actualIndex = formData.socialMedia.findIndex(s => s === social);
+            return (
+              <div
+                key={actualIndex}
+                className="p-4 bg-slate-800 border border-slate-700 rounded-lg"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-white">{social.platform}</h4>
+                  <button
+                    onClick={() => removeSocialMedia(actualIndex)}
+                    className="p-1.5 hover:bg-red-900/20 text-slate-400 hover:text-red-400 rounded transition-colors"
+                    title="Delete"
+                  >
+                    <span className="material-symbols-outlined text-base">delete</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">Platform</label>
+                    <select
+                      value={social.platform}
+                      onChange={(e) => updateSocialPlatform(actualIndex, e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-primary focus:outline-none"
+                    >
+                      <option value="LinkedIn">LinkedIn</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Twitter">Twitter / X</option>
+                      <option value="YouTube">YouTube</option>
+                      <option value="TikTok">TikTok</option>
+                      <option value="Pinterest">Pinterest</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">URL</label>
+                    <input
+                      type="url"
+                      value={social.url}
+                      onChange={(e) => updateSocialMedia(actualIndex, 'url', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-primary focus:outline-none"
+                      placeholder={`https://${social.icon}.com/...`}
+                      maxLength={500}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">Display Order</label>
+                    <input
+                      type="number"
+                      value={social.order}
+                      onChange={(e) => updateSocialMedia(actualIndex, 'order', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-primary focus:outline-none"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
       </div>
 
       {/* Announcement Banner */}

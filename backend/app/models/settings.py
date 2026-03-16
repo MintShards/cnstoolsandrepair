@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
-from app.models.page_content import SocialMediaModel
+from app.models.page_content import SocialMediaModel, SocialMediaItemModel
 
 
 class AnnouncementType(str, Enum):
@@ -97,7 +97,8 @@ class BusinessSettingsUpdate(BaseModel):
     service_area: str = Field(default="Metro Vancouver", alias="serviceArea")
     map: MapConfigModel
     claims: Optional[ClaimsModel] = Field(default_factory=ClaimsModel)
-    social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)
+    social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
+    social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
 
     class Config:
         populate_by_name = True
@@ -172,7 +173,8 @@ class BusinessSettingsResponse(BaseModel):
     service_area: str = Field(alias="serviceArea")
     map: MapConfigModel
     claims: ClaimsModel
-    social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)
+    social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
+    social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
 
     class Config:
         populate_by_name = True

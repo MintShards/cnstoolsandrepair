@@ -102,6 +102,8 @@ export function SettingsProvider({ children }) {
         responseTime: BUSINESS_INFO.claims?.responseTime || 'Same-day',
         technicians: BUSINESS_INFO.claims?.technicians || 'Factory-Trained',
       },
+      social: BUSINESS_INFO.social || {},
+      socialMedia: [],  // Empty array as default for new dynamic social media
     };
   };
 
