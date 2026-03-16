@@ -118,7 +118,7 @@ export default function GlobalTab() {
       ...prev,
       socialMedia: [
         ...prev.socialMedia,
-        { platform: 'Facebook', icon: 'facebook', url: '', order: prev.socialMedia.length },
+        { platform: 'Facebook', icon: 'facebook', url: '' },
       ],
     }));
   };
@@ -148,7 +148,7 @@ export default function GlobalTab() {
       'Twitter': 'twitter',
       'YouTube': 'youtube',
       'TikTok': 'tiktok',
-      'Pinterest': 'pinterest',
+      'Google': 'google',
     };
     updateSocialMedia(index, 'platform', platformName);
     updateSocialMedia(index, 'icon', iconMap[platformName] || platformName.toLowerCase());
@@ -385,18 +385,16 @@ export default function GlobalTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {formData.socialMedia
-          .sort((a, b) => a.order - b.order)
           .map((social, index) => {
-            const actualIndex = formData.socialMedia.findIndex(s => s === social);
             return (
               <div
-                key={actualIndex}
+                key={index}
                 className="p-4 bg-slate-800 border border-slate-700 rounded-lg"
               >
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-bold text-white">{social.platform}</h4>
                   <button
-                    onClick={() => removeSocialMedia(actualIndex)}
+                    onClick={() => removeSocialMedia(index)}
                     className="p-1.5 hover:bg-red-900/20 text-slate-400 hover:text-red-400 rounded transition-colors"
                     title="Delete"
                   >
@@ -409,7 +407,7 @@ export default function GlobalTab() {
                     <label className="block text-xs font-bold text-slate-400 mb-1">Platform</label>
                     <select
                       value={social.platform}
-                      onChange={(e) => updateSocialPlatform(actualIndex, e.target.value)}
+                      onChange={(e) => updateSocialPlatform(index, e.target.value)}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-primary focus:outline-none"
                     >
                       <option value="LinkedIn">LinkedIn</option>
@@ -419,7 +417,7 @@ export default function GlobalTab() {
                       <option value="Twitter">Twitter / X</option>
                       <option value="YouTube">YouTube</option>
                       <option value="TikTok">TikTok</option>
-                      <option value="Pinterest">Pinterest</option>
+                      <option value="Google">Google Business</option>
                     </select>
                   </div>
 
@@ -428,21 +426,10 @@ export default function GlobalTab() {
                     <input
                       type="url"
                       value={social.url}
-                      onChange={(e) => updateSocialMedia(actualIndex, 'url', e.target.value)}
+                      onChange={(e) => updateSocialMedia(index, 'url', e.target.value)}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-primary focus:outline-none"
                       placeholder={`https://${social.icon}.com/...`}
                       maxLength={500}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1">Display Order</label>
-                    <input
-                      type="number"
-                      value={social.order}
-                      onChange={(e) => updateSocialMedia(actualIndex, 'order', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm text-white focus:border-primary focus:outline-none"
-                      min="0"
                     />
                   </div>
                 </div>
