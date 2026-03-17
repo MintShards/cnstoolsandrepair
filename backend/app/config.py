@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     max_file_size: int = 5242880  # 5MB
     allowed_extensions: str = "jpg,jpeg,png,webp"
     upload_dir: str = "uploads"
+    upload_base_url: str = "http://localhost:8000"  # For production: https://yourdomain.com or Digital Ocean Spaces URL
 
     # Environment
     environment: str = "development"

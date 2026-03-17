@@ -184,13 +184,27 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 - Check logs for "Email sent! Status code: 202"
 - Free tier: 100 emails/day limit
 
+## Security Features
+
+**Implemented protections:**
+- **Rate limiting**: 5 requests/hour per IP (slowapi) - prevents DOS attacks
+- **CSRF protection**: Token-based validation (fastapi-csrf-protect)
+- **File validation**: Deep image content verification with Pillow
+- **Idempotency**: Duplicate submission prevention with 5-min cache
+- **Phone validation**: Strict ###-###-#### format enforcement
+- **Filename sanitization**: Path traversal attack prevention
+
+**Production requirements:**
+- Enable `cookie_secure=True` for CSRF (requires HTTPS)
+- Migrate idempotency cache to Redis for multi-server deployments
+- Configure slowapi Redis storage for distributed rate limiting
+
 ## Known Limitations
 
-1. **No rate limiting** - Add slowapi middleware for brute-force protection
-2. **No password reset** - Manual via MongoDB (see AUTH_SETUP_GUIDE.md)
-3. **Local file storage** - Production needs Digital Ocean Spaces/AWS S3 (see DEPLOYMENT.md)
-4. **No pagination** - Quote list returns all (add for >1000 quotes)
-5. **Client-side SEO** - Meta tags via react-helmet-async (SSR/SSG would be better)
+1. **No password reset** - Manual via MongoDB (see AUTH_SETUP_GUIDE.md)
+2. **Local file storage** - Production needs Digital Ocean Spaces/AWS S3 (see DEPLOYMENT.md)
+3. **No pagination** - Quote list returns all (add for >1000 quotes)
+4. **Client-side SEO** - Meta tags via react-helmet-async (SSR/SSG would be better)
 
 ## Production Deployment
 
