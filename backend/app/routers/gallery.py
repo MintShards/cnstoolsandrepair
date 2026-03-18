@@ -1,13 +1,11 @@
-import os
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from typing import List
 from bson import ObjectId
 from datetime import datetime
 from app.database import get_database
 from app.models.gallery import GalleryPhotoCreate, GalleryPhotoResponse, GalleryPhotoUpdate
-from app.services.file_service import save_upload_file
+from app.services.file_service import save_upload_file, delete_file
 from app.utils.helpers import convert_objectid_to_str
-from app.config import settings
 
 router = APIRouter(prefix="/api/gallery", tags=["gallery"])
 
@@ -35,33 +33,41 @@ async def upload_gallery_photo(
     display_order: int = 0
 ):
     """Upload a new gallery photo (admin endpoint)"""
-    db = get_database()
+    try:
+        db = get_database()
 
-    if not photo.filename:
-        raise HTTPException(status_code=400, detail="No photo provided")
+        if not photo.filename:
+            raise HTTPException(status_code=400, detail="No photo provided")
 
-    # Save uploaded photo
-    filename = await save_upload_file(photo)
+        # Save uploaded photo (to 'gallery' folder in Spaces or local)
+        print(f"Attempting to upload photo: {photo.filename}")
+        filename = await save_upload_file(photo, folder="gallery")
+        print(f"Upload successful, returned: {filename}")
 
-    # Create gallery photo document
-    photo_data = GalleryPhotoCreate(
-        image_url=filename,
-        display_order=display_order,
-        active=True
-    )
+        # Create gallery photo document
+        photo_data = GalleryPhotoCreate(
+            image_url=filename,
+            display_order=display_order,
+            active=True
+        )
 
-    # Insert into database
-    photo_dict = photo_data.model_dump()
-    photo_dict["created_at"] = datetime.utcnow()
+        # Insert into database
+        photo_dict = photo_data.model_dump()
+        photo_dict["created_at"] = datetime.utcnow()
 
-    result = await db.gallery_photos.insert_one(photo_dict)
+        result = await db.gallery_photos.insert_one(photo_dict)
 
-    # Fetch created photo
-    created_photo = await db.gallery_photos.find_one({"_id": result.inserted_id})
-    created_photo = convert_objectid_to_str(created_photo)
-    created_photo["id"] = created_photo.pop("_id")
+        # Fetch created photo
+        created_photo = await db.gallery_photos.find_one({"_id": result.inserted_id})
+        created_photo = convert_objectid_to_str(created_photo)
+        created_photo["id"] = created_photo.pop("_id")
 
-    return GalleryPhotoResponse(**created_photo)
+        return GalleryPhotoResponse(**created_photo)
+    except Exception as e:
+        import traceback
+        print(f"Gallery upload error: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/{photo_id}", response_model=GalleryPhotoResponse)
@@ -111,13 +117,11 @@ async def delete_gallery_photo(photo_id: str):
     # Delete from database
     await db.gallery_photos.delete_one({"_id": ObjectId(photo_id)})
 
-    # Delete physical file
-    file_path = os.path.join(settings.UPLOAD_DIR, photo["image_url"])
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-        except Exception as e:
-            # Log warning but continue - file may already be deleted
-            print(f"Warning: Failed to delete file {file_path}: {e}")
+    # Delete physical file from Spaces or local storage
+    try:
+        await delete_file(photo["image_url"])
+    except Exception as e:
+        # Log warning but continue - file may already be deleted
+        print(f"Warning: Failed to delete file {photo['image_url']}: {e}")
 
     return None

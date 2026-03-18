@@ -12,7 +12,6 @@ from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
 from app.routers import quotes, tools, brands, industries, contact, gallery
 from app.routers import settings as settings_router, auth, about_content, home_content, industries_content, contact_content
-import os
 
 
 @asynccontextmanager
@@ -22,8 +21,9 @@ async def lifespan(app: FastAPI):
     await connect_to_mongo()
 
     # Create uploads directory if it doesn't exist
-    os.makedirs(settings.upload_dir, exist_ok=True)
-    print(f"Uploads directory: {os.path.abspath(settings.upload_dir)}")
+    from pathlib import Path
+    Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    print(f"Uploads directory: {Path(settings.upload_dir).absolute()}")
 
     yield
     # Shutdown
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 class CsrfSettings(BaseModel):
     secret_key: str = settings.jwt_secret_key
     cookie_samesite: str = "lax"
-    cookie_secure: bool = False  # Set to True in production with HTTPS
+    cookie_secure: bool = settings.environment == "production"  # Auto-enable in production
 
 
 @CsrfProtect.load_config
@@ -70,7 +70,10 @@ async def log_requests(request: Request, call_next):
         print(f"Response status: {response.status_code}")
         return response
     except Exception as e:
+        import traceback
         print(f"Request error: {str(e)}")
+        print("Full traceback:")
+        traceback.print_exc()
         raise
 
 # CORS middleware

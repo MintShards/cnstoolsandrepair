@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     upload_dir: str = "uploads"
     upload_base_url: str = "http://localhost:8000"  # For production: https://yourdomain.com or Digital Ocean Spaces URL
 
+    # Digital Ocean Spaces (S3-compatible object storage)
+    spaces_region: str = "nyc3"
+    spaces_bucket: str = "cnstoolsandrepair-photos"
+    spaces_key: str = ""  # Set in .env
+    spaces_secret: str = ""  # Set in .env
+    spaces_endpoint: str = "https://nyc3.digitaloceanspaces.com"
+    use_spaces: bool = False  # Set to True to enable Spaces (requires credentials)
+
     # Environment
     environment: str = "development"
 

@@ -7,10 +7,9 @@ import re
 
 class QuoteStatus(str, Enum):
     PENDING = "pending"
-    REVIEWED = "reviewed"
+    IN_PROGRESS = "in_progress"
     QUOTED = "quoted"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    COMPLETED = "completed"
 
 
 class ToolEntry(BaseModel):
@@ -80,16 +79,21 @@ class Quote(QuoteCreate):
         }
 
 
+class QuoteUpdate(BaseModel):
+    """Model for updating quote status"""
+    status: QuoteStatus
+
+
 class QuoteResponse(BaseModel):
     id: str
-    request_number: str
-    company_name: Optional[str]
+    request_number: str = "REQ-LEGACY"  # Default for legacy quotes without request numbers
+    company_name: Optional[str] = None
     contact_person: str
     email: str
     phone: str
-    tools: List[ToolEntry]
-    photos: List[str]
-    status: str
+    tools: List[ToolEntry] = []  # Default to empty list for legacy quotes
+    photos: List[str] = []  # Default to empty list for legacy quotes
+    status: str = "pending"  # Default status
     created_at: datetime
     updated_at: datetime
     email_sent: bool = True  # Track if notification email was sent successfully

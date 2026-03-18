@@ -57,6 +57,13 @@ export const quotesAPI = {
     const response = await api.get('/api/quotes/', { params });
     return response.data;
   },
+  update: async (id, data) => {
+    const response = await api.put(`/api/quotes/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/quotes/${id}`);
+  },
 };
 
 // Tools API

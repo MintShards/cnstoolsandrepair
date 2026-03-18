@@ -1,4 +1,3 @@
-import os
 import uuid
 import re
 from pathlib import Path
@@ -7,6 +6,44 @@ from fastapi import UploadFile, HTTPException
 from PIL import Image
 from app.config import settings
 
+# Digital Ocean Spaces (S3-compatible) client
+try:
+    import boto3
+    from botocore.exceptions import ClientError
+    BOTO3_AVAILABLE = True
+except ImportError:
+    BOTO3_AVAILABLE = False
+    print("Warning: boto3 not installed. Spaces integration disabled.")
+
+
+def get_spaces_client():
+    """Get initialized Spaces client (lazy loading)"""
+    if not BOTO3_AVAILABLE:
+        raise HTTPException(
+            status_code=500,
+            detail="Spaces integration not available. Install boto3."
+        )
+
+    if not settings.use_spaces:
+        raise HTTPException(
+            status_code=500,
+            detail="Spaces integration is disabled. Set USE_SPACES=true in .env"
+        )
+
+    if not settings.spaces_key or not settings.spaces_secret:
+        raise HTTPException(
+            status_code=500,
+            detail="Spaces credentials not configured. Set SPACES_KEY and SPACES_SECRET in .env"
+        )
+
+    return boto3.client(
+        's3',
+        region_name=settings.spaces_region,
+        endpoint_url=settings.spaces_endpoint,
+        aws_access_key_id=settings.spaces_key,
+        aws_secret_access_key=settings.spaces_secret
+    )
+
 
 def sanitize_filename(filename: str) -> str:
     """Sanitize filename to prevent path traversal and other attacks"""
@@ -14,7 +51,7 @@ def sanitize_filename(filename: str) -> str:
         return "unknown"
 
     # Remove path separators and other dangerous characters
-    filename = os.path.basename(filename)
+    filename = Path(filename).name
     # Keep only alphanumeric, dots, hyphens, underscores
     sanitized = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
 
@@ -65,8 +102,39 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
         return False
 
 
-async def save_upload_file(file: UploadFile) -> str:
-    """Save uploaded file and return filename"""
+async def upload_file_to_spaces(file: UploadFile, folder: str, contents: bytes, file_ext: str) -> str:
+    """Upload file to Digital Ocean Spaces, return public URL"""
+    unique_filename = f"{uuid.uuid4()}.{file_ext}"
+    key = f"{folder}/{unique_filename}"
+
+    try:
+        s3_client = get_spaces_client()
+        s3_client.upload_fileobj(
+            BytesIO(contents),
+            settings.spaces_bucket,
+            key,
+            ExtraArgs={'ACL': 'public-read', 'ContentType': f'image/{file_ext}'}
+        )
+        # Return full public URL
+        return f"{settings.spaces_endpoint}/{settings.spaces_bucket}/{key}"
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=f"Upload to Spaces failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error uploading to Spaces: {str(e)}")
+
+
+async def save_upload_file(file: UploadFile, folder: str = "uploads") -> str:
+    """
+    Save uploaded file and return filename or URL.
+
+    Args:
+        file: The uploaded file
+        folder: Folder name for organization (e.g., 'gallery', 'quotes')
+
+    Returns:
+        If USE_SPACES=true: Full Spaces URL (https://...)
+        If USE_SPACES=false: Filename only (stored locally in uploads/)
+    """
 
     # Sanitize original filename
     sanitized_original = sanitize_filename(file.filename) if file.filename else "unknown"
@@ -94,27 +162,61 @@ async def save_upload_file(file: UploadFile) -> str:
             detail="Invalid image file. File content does not match declared type or is corrupted."
         )
 
-    # Generate unique filename
-    unique_filename = f"{uuid.uuid4()}.{file_ext}"
-    file_path = Path(settings.upload_dir) / unique_filename
+    # Upload to Spaces if enabled, otherwise save locally
+    if settings.use_spaces:
+        return await upload_file_to_spaces(file, folder, contents, file_ext)
+    else:
+        # Local filesystem storage (development only)
+        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        file_path = Path(settings.upload_dir) / unique_filename
 
-    # Ensure upload directory exists
-    file_path.parent.mkdir(parents=True, exist_ok=True)
+        # Ensure upload directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Save file
-    with open(file_path, "wb") as f:
-        f.write(contents)
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(contents)
 
-    return unique_filename
+        return unique_filename
 
 
-def delete_file(filename: str) -> bool:
-    """Delete uploaded file"""
+async def delete_file_from_spaces(file_url: str) -> bool:
+    """Delete file from Digital Ocean Spaces by URL"""
     try:
-        file_path = Path(settings.upload_dir) / filename
-        if file_path.exists():
-            file_path.unlink()
-            return True
+        # Extract key from URL (e.g., "gallery/uuid.jpg" from full URL)
+        key = file_url.split(f"{settings.spaces_bucket}/")[-1]
+
+        s3_client = get_spaces_client()
+        s3_client.delete_object(Bucket=settings.spaces_bucket, Key=key)
+        return True
+    except ClientError as e:
+        print(f"Delete from Spaces failed: {str(e)}")
         return False
-    except Exception:
+    except Exception as e:
+        print(f"Unexpected error deleting from Spaces: {str(e)}")
         return False
+
+
+async def delete_file(filename_or_url: str) -> bool:
+    """
+    Delete uploaded file from Spaces or local storage.
+
+    Args:
+        filename_or_url: Either a filename (local) or full Spaces URL
+
+    Returns:
+        True if deleted successfully, False otherwise
+    """
+    # Check if it's a Spaces URL
+    if filename_or_url.startswith("https://") and settings.spaces_bucket in filename_or_url:
+        return await delete_file_from_spaces(filename_or_url)
+    else:
+        # Local filesystem deletion
+        try:
+            file_path = Path(settings.upload_dir) / filename_or_url
+            if file_path.exists():
+                file_path.unlink()
+                return True
+            return False
+        except Exception:
+            return False

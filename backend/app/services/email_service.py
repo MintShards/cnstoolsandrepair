@@ -1,8 +1,10 @@
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email
+from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition
 from app.config import settings
 from app.models.quote import Quote
 from datetime import timedelta
+import base64
+import requests
 
 
 def format_pst_datetime(utc_dt) -> str:
@@ -35,12 +37,6 @@ async def send_quote_notification(quote: Quote) -> bool:
     # Format submission time
     submitted_time = format_pst_datetime(quote.created_at)
 
-    # Build photo section (compact with indentation)
-    if quote.photos:
-        photo_links = "\n".join([f"  📷 {settings.upload_base_url}/uploads/{photo}" for photo in quote.photos])
-    else:
-        photo_links = "  📷 No photos"
-
     # Build customer section (show company only if provided)
     customer_section = "CUSTOMER:\n"
     if quote.company_name:
@@ -59,6 +55,13 @@ async def send_quote_notification(quote: Quote) -> bool:
         tools_section += f"  Quantity: {tool.quantity}\n"
         tools_section += f"  Problem: {tool.problem_description}\n"
 
+    # Build photo section (photos will be attachments)
+    if quote.photos:
+        photo_count = len(quote.photos)
+        photo_text = f"  📎 {photo_count} photo{'s' if photo_count > 1 else ''} attached"
+    else:
+        photo_text = "  📷 No photos"
+
     # Subject line (use company if available, otherwise contact person)
     subject_name = quote.company_name if quote.company_name else quote.contact_person
 
@@ -66,7 +69,7 @@ async def send_quote_notification(quote: Quote) -> bool:
     tool_count = len(quote.tools)
     tool_summary = f"{tool_count} tool{'s' if tool_count > 1 else ''}"
 
-    # Compact email body with clear field separation
+    # Plain text email body
     body = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REQUEST #{quote.request_number}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -75,7 +78,7 @@ Submitted: {submitted_time}
 {customer_section}
 {tools_section}
 PHOTOS:
-{photo_links}
+{photo_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Reply to contact customer | Call {quote.phone}
@@ -85,7 +88,7 @@ cnstoolsandrepair@gmail.com
 """
 
     try:
-        # Create SendGrid message with Reply-To
+        # Create SendGrid message (plain text only)
         message = Mail(
             from_email=settings.sendgrid_from_email,
             to_emails=settings.notification_email,
@@ -94,8 +97,51 @@ cnstoolsandrepair@gmail.com
         )
 
         # Set Reply-To to customer's email for easy response
-        # When you click Reply, it will go to the customer's email
         message.reply_to = Email(quote.email, quote.contact_person)
+
+        # Attach photos as email attachments
+        if quote.photos:
+            attachments = []
+            for idx, photo in enumerate(quote.photos, start=1):
+                try:
+                    # Get photo URL (handle both Spaces URLs and local paths)
+                    photo_url = photo if photo.startswith('http') else f'{settings.upload_base_url}/uploads/{photo}'
+
+                    # Download photo from Spaces or local server
+                    response_photo = requests.get(photo_url, timeout=10)
+                    response_photo.raise_for_status()
+                    photo_data = response_photo.content
+
+                    # Encode as base64
+                    encoded = base64.b64encode(photo_data).decode()
+
+                    # Determine file extension and MIME type
+                    file_ext = photo.split('.')[-1].lower() if '.' in photo else 'jpg'
+                    mime_types = {
+                        'jpg': 'image/jpeg',
+                        'jpeg': 'image/jpeg',
+                        'png': 'image/png',
+                        'webp': 'image/webp'
+                    }
+                    mime_type = mime_types.get(file_ext, 'image/jpeg')
+
+                    # Create attachment
+                    attachment = Attachment(
+                        file_content=FileContent(encoded),
+                        file_name=FileName(f"tool-photo-{idx}.{file_ext}"),
+                        file_type=FileType(mime_type),
+                        disposition=Disposition('attachment')
+                    )
+                    attachments.append(attachment)
+
+                except Exception as e:
+                    print(f"Warning: Failed to attach photo {photo}: {str(e)}")
+                    # Continue with other photos even if one fails
+                    continue
+
+            # Add all attachments to message
+            if attachments:
+                message.attachment = attachments
 
         # Send email via SendGrid
         sg = SendGridAPIClient(settings.sendgrid_api_key)

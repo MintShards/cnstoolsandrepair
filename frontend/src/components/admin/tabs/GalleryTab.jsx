@@ -233,12 +233,11 @@ export default function GalleryTab() {
                   <tr key={photo.id} className="hover:bg-slate-700/50 transition-colors">
                     <td className="py-3 px-4">
                       <img
-                        src={`${API_BASE_URL}/uploads/${photo.image_url}`}
+                        src={photo.image_url.startsWith('http') ? photo.image_url : `${API_BASE_URL}/uploads/${photo.image_url}`}
                         alt="Thumbnail"
                         className="w-16 h-16 object-cover rounded-lg border border-slate-600"
                       />
-                    </td>
-                    <td className="py-3 px-4 text-slate-300 font-mono text-xs">
+                    </td>                    <td className="py-3 px-4 text-slate-300 font-mono text-xs">
                       {photo.image_url}
                     </td>
                     <td className="py-3 px-4 text-slate-400">
