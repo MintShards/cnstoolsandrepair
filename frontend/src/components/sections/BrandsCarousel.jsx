@@ -1,4 +1,5 @@
-import { useSettings } from '../../contexts/SettingsContext';
+import { useState, useEffect } from 'react';
+import { brandsAPI } from '../../services/api';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 
@@ -7,10 +8,27 @@ import 'swiper/css';
 import './BrandsCarousel.css';
 
 export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg-slate-900' }) {
-  const { settings, loading } = useSettings();
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch brands from API
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const data = await brandsAPI.list(true); // Get active brands only
+        setBrands(data);
+      } catch (error) {
+        console.error('Failed to fetch brands:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
 
   // Loading skeleton
-  if (loading || !settings || !settings.brands) {
+  if (loading) {
     return (
       <section className={`px-6 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-20 ${backgroundColor}`}>
         <div className="max-w-screen-xl mx-auto">
@@ -35,22 +53,14 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
     );
   }
 
-  // Don't render if no brands after loading
-  if (!settings.brands || settings.brands.length === 0) {
-    return null;
-  }
-
-  // Filter active brands with logos, then sort by display order
-  const activeBrands = settings.brands.filter(brand => {
-    const hasLogo = brand.logoUrl && brand.logoUrl.trim() !== '';
-    const isActive = brand.active !== false; // Default to true if undefined
-    return hasLogo && isActive;
+  // Filter brands with logos (API returns active brands, backend sorts by creation order)
+  const activeBrands = brands.filter(brand => {
+    const hasLogo = brand.logo_url && brand.logo_url.trim() !== '';
+    return hasLogo;
   });
 
-  const sortedBrands = [...activeBrands].sort((a, b) => a.displayOrder - b.displayOrder);
-
   // Don't render if no active brands to display
-  if (sortedBrands.length === 0) {
+  if (activeBrands.length === 0) {
     return null;
   }
 
@@ -83,13 +93,13 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
           speed={5000}
           className="brands-swiper"
         >
-          {sortedBrands.map((brand, index) => (
-            <SwiperSlide key={`${brand.name}-${index}`} className="brands-swiper-slide">
+          {activeBrands.map((brand, index) => (
+            <SwiperSlide key={`${brand.id}-${index}`} className="brands-swiper-slide">
               <div className="brands-carousel-card">
                 {/* Brand Logo */}
                 <div className="brands-logo-container">
                   <img
-                    src={brand.logoUrl}
+                    src={brand.logo_url}
                     alt={brand.name}
                     className="brands-logo"
                   />

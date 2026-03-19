@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { settingsAPI } from '../../../services/api';
+import { settingsAPI, brandsAPI } from '../../../services/api';
 import AdminInput from '../AdminInput';
 import AdminTextarea from '../AdminTextarea';
 import AdminToggle from '../AdminToggle';
@@ -7,7 +7,9 @@ import AdminSelect from '../AdminSelect';
 
 export default function GlobalTab() {
   const [formData, setFormData] = useState(null);
+  const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [brandsLoading, setBrandsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -40,6 +42,23 @@ export default function GlobalTab() {
     };
 
     fetchSettings();
+  }, []);
+
+  // Fetch brands from API (separate from settings)
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const data = await brandsAPI.list(false); // Get all brands (active and inactive)
+        setBrands(data);
+      } catch (error) {
+        console.error('Failed to fetch brands:', error);
+        showNotification('Failed to load brands: ' + error.message, 'error');
+      } finally {
+        setBrandsLoading(false);
+      }
+    };
+
+    fetchBrands();
   }, []);
 
   const handleSave = async () => {
@@ -76,40 +95,64 @@ export default function GlobalTab() {
     });
   };
 
-  const addBrand = () => {
-    setFormData((prev) => ({
-      ...prev,
-      brands: [
-        ...prev.brands,
-        { name: '', logoUrl: '', authorized: false, displayOrder: prev.brands.length },
-      ],
-    }));
+  // Brand CRUD operations (using API instead of settings)
+  const addBrand = async () => {
+    try {
+      const newBrand = await brandsAPI.create({
+        name: 'New Brand',
+        active: true,
+      });
+      setBrands((prev) => [...prev, newBrand]);
+      showNotification('Brand created! Upload logo and edit name.', 'success');
+    } catch (error) {
+      console.error('Failed to create brand:', error);
+      showNotification('Failed to create brand: ' + error.message, 'error');
+    }
   };
 
-  const removeBrand = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      brands: prev.brands.filter((_, i) => i !== index),
-    }));
+  const removeBrand = async (brandId) => {
+    try {
+      await brandsAPI.delete(brandId);
+      setBrands((prev) => prev.filter((b) => b.id !== brandId));
+      showNotification('Brand deleted successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to delete brand:', error);
+      showNotification('Failed to delete brand: ' + error.message, 'error');
+    }
   };
 
-  const updateBrand = (index, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      brands: prev.brands.map((brand, i) =>
-        i === index ? { ...brand, [field]: value } : brand
-      ),
-    }));
+  const updateBrand = async (brandId, field, value) => {
+    try {
+      const formData = new FormData();
+      formData.append(field, value);
+
+      const updated = await brandsAPI.update(brandId, formData);
+      setBrands((prev) => prev.map((b) => (b.id === brandId ? updated : b)));
+
+      // Show notification only for significant updates (not every keystroke)
+      if (field === 'active' || field === 'authorized') {
+        showNotification('Brand updated successfully!', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to update brand:', error);
+      showNotification('Failed to update brand: ' + error.message, 'error');
+    }
   };
 
-  const handleBrandLogoUpload = async (index, file) => {
+  const handleBrandLogoUpload = async (brandId, file) => {
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateBrand(index, 'logoUrl', reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      const updated = await brandsAPI.update(brandId, formData);
+      setBrands((prev) => prev.map((b) => (b.id === brandId ? updated : b)));
+      showNotification('Logo uploaded to Spaces successfully!', 'success');
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+      showNotification('Failed to upload logo: ' + error.message, 'error');
+    }
   };
 
   // Social Media CRUD operations
@@ -154,7 +197,7 @@ export default function GlobalTab() {
     updateSocialMedia(index, 'icon', iconMap[platformName] || platformName.toLowerCase());
   };
 
-  if (loading) {
+  if (loading || brandsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <span className="material-symbols-outlined text-6xl text-primary animate-spin">refresh</span>
@@ -478,7 +521,7 @@ export default function GlobalTab() {
       </h3>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-slate-400">
-          {formData.brands.length} brand{formData.brands.length !== 1 ? 's' : ''} total
+          {brands.length} brand{brands.length !== 1 ? 's' : ''} total
         </p>
         <button
           onClick={addBrand}
@@ -489,21 +532,21 @@ export default function GlobalTab() {
         </button>
       </div>
 
-      {formData.brands.length > 0 && (
+      {brands.length > 0 && (
         <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
           <div className="flex gap-3">
             <span className="material-symbols-outlined text-blue-400">info</span>
             <div className="flex-1 text-sm text-blue-300">
               <p className="font-bold mb-1">Managing Brand Visibility</p>
               <p className="text-blue-400">
-                Click the eye icon to enable/disable brands. Only enabled brands with logos show on your website.
+                Click the eye icon to toggle visibility. Only active brands with logos appear on your website (in creation order).
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {formData.brands.length === 0 && (
+      {brands.length === 0 && (
         <div className="p-8 text-center bg-slate-800 rounded-lg border border-slate-700">
           <span className="material-symbols-outlined text-6xl text-slate-600 mb-4">
             business
@@ -514,17 +557,14 @@ export default function GlobalTab() {
 
       {/* Brand Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {formData.brands
-          .sort((a, b) => a.displayOrder - b.displayOrder)
-          .map((brand) => {
-            const actualIndex = formData.brands.findIndex(b => b === brand);
-            const hasLogo = brand.logoUrl && brand.logoUrl.trim() !== '';
+        {brands.map((brand) => {
+            const hasLogo = brand.logo_url && brand.logo_url.trim() !== '';
             const isActive = brand.active !== false;
             const showInCarousel = hasLogo && isActive;
 
             return (
               <div
-                key={actualIndex}
+                key={brand.id}
                 className={`relative p-3 rounded-lg border transition-all ${
                   showInCarousel
                     ? 'bg-slate-800 border-slate-700'
@@ -534,7 +574,7 @@ export default function GlobalTab() {
                 {/* Action Buttons */}
                 <div className="absolute top-2 right-2 flex gap-1">
                   <button
-                    onClick={() => updateBrand(actualIndex, 'active', !isActive)}
+                    onClick={() => updateBrand(brand.id, 'active', !isActive)}
                     className={`p-1.5 rounded transition-colors ${
                       isActive
                         ? 'hover:bg-orange-900/20 text-slate-400 hover:text-orange-400'
@@ -547,7 +587,7 @@ export default function GlobalTab() {
                     </span>
                   </button>
                   <button
-                    onClick={() => removeBrand(actualIndex)}
+                    onClick={() => removeBrand(brand.id)}
                     className="p-1.5 hover:bg-red-900/20 text-slate-400 hover:text-red-400 rounded transition-colors"
                     title="Delete brand"
                   >
@@ -557,9 +597,9 @@ export default function GlobalTab() {
 
                 {/* Logo */}
                 <div className="flex justify-center mb-2">
-                  {brand.logoUrl ? (
+                  {brand.logo_url ? (
                     <img
-                      src={brand.logoUrl}
+                      src={brand.logo_url}
                       alt={brand.name || 'Brand logo'}
                       className="h-10 w-16 object-contain bg-white p-1 rounded"
                     />
@@ -592,9 +632,6 @@ export default function GlobalTab() {
                       ★
                     </span>
                   )}
-                  <span className="text-[10px] text-slate-500" title="Display order">
-                    #{brand.displayOrder}
-                  </span>
                 </div>
 
                 {/* Expandable Details */}
@@ -612,7 +649,12 @@ export default function GlobalTab() {
                       <input
                         type="text"
                         value={brand.name}
-                        onChange={(e) => updateBrand(actualIndex, 'name', e.target.value)}
+                        onChange={(e) => {
+                          setBrands((prev) =>
+                            prev.map((b) => (b.id === brand.id ? { ...b, name: e.target.value } : b))
+                          );
+                        }}
+                        onBlur={(e) => updateBrand(brand.id, 'name', e.target.value)}
                         className="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-white focus:border-primary focus:outline-none"
                         placeholder="Brand name"
                         maxLength={100}
@@ -623,17 +665,20 @@ export default function GlobalTab() {
                       <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Logo</label>
                       <input
                         type="file"
-                        accept="image/png,image/jpeg,image/svg+xml"
-                        onChange={(e) => handleBrandLogoUpload(actualIndex, e.target.files[0])}
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        onChange={(e) => handleBrandLogoUpload(brand.id, e.target.files[0])}
                         className="block w-full text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
                       />
+                      <p className="text-[9px] text-slate-500 mt-0.5">
+                        Uploads to Digital Ocean Spaces
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded">
                       <label className="text-[10px] font-bold text-slate-400">Authorized</label>
                       <button
                         type="button"
-                        onClick={() => updateBrand(actualIndex, 'authorized', !brand.authorized)}
+                        onClick={() => updateBrand(brand.id, 'authorized', !brand.authorized)}
                         className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
                           brand.authorized ? 'bg-primary' : 'bg-slate-700'
                         }`}
@@ -644,17 +689,6 @@ export default function GlobalTab() {
                           }`}
                         />
                       </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Order</label>
-                      <input
-                        type="number"
-                        value={brand.displayOrder}
-                        onChange={(e) => updateBrand(actualIndex, 'displayOrder', parseInt(e.target.value) || 0)}
-                        className="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-white focus:border-primary focus:outline-none"
-                        min="0"
-                      />
                     </div>
                   </div>
                 </details>

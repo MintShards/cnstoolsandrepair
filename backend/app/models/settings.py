@@ -50,18 +50,6 @@ class ServiceItemModel(BaseModel):
     icon: str = Field(..., min_length=1, max_length=50)
 
 
-class BrandItemModel(BaseModel):
-    """Brand/manufacturer that we service"""
-    name: str = Field(..., min_length=1, max_length=100)
-    logo_url: str = Field(..., alias="logoUrl")  # Path to uploaded logo file
-    authorized: bool = Field(default=False)  # Authorized repair center status
-    display_order: int = Field(default=0, alias="displayOrder")
-    active: bool = Field(default=True)  # Whether brand is active/visible in carousel
-
-    class Config:
-        populate_by_name = True
-
-
 class AnnouncementModel(BaseModel):
     enabled: bool = Field(default=False)
     message: str = Field(default="", max_length=500)
@@ -92,7 +80,6 @@ class BusinessSettingsUpdate(BaseModel):
     hours: HoursModel
     hero: HeroModel
     services: List[ServiceItemModel] = Field(default_factory=list)
-    brands: List[BrandItemModel] = Field(default_factory=list)
     announcement: Optional[AnnouncementModel] = Field(default_factory=AnnouncementModel)
     service_area: str = Field(default="Metro Vancouver", alias="serviceArea")
     map: MapConfigModel
@@ -168,7 +155,6 @@ class BusinessSettingsResponse(BaseModel):
     hours: HoursModel
     hero: HeroModel
     services: List[ServiceItemModel]
-    brands: List[BrandItemModel] = Field(default_factory=list)
     announcement: AnnouncementModel
     service_area: str = Field(alias="serviceArea")
     map: MapConfigModel

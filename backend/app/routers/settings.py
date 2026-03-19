@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
 from app.database import get_database
@@ -8,6 +8,7 @@ from app.models.settings import (
     BusinessSettingsResponse
 )
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -103,15 +104,14 @@ async def get_settings():
     return BusinessSettingsResponse(**settings)
 
 
-@router.put("/", response_model=BusinessSettingsResponse)
+@router.put("/", response_model=BusinessSettingsResponse, dependencies=[Depends(require_admin)])
 async def update_settings(settings_data: BusinessSettingsUpdate):
     """
     Admin endpoint to update business settings.
     Creates new settings if none exist, updates existing otherwise.
     Ensures only one active settings document exists.
 
-    TODO: Add authentication middleware to protect this endpoint
-    Example: @router.put("/", dependencies=[Depends(verify_admin)])
+    Requires admin authentication.
     """
     db = get_database()
 

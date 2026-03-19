@@ -23,7 +23,6 @@ async def lifespan(app: FastAPI):
     # Create uploads directory if it doesn't exist
     from pathlib import Path
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
-    print(f"Uploads directory: {Path(settings.upload_dir).absolute()}")
 
     yield
     # Shutdown
@@ -88,7 +87,6 @@ app.add_middleware(
 # Mount uploads directory for serving uploaded files
 try:
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
-    print(f"Mounted uploads directory: {settings.upload_dir}")
 except Exception as e:
     print(f"Failed to mount uploads directory: {str(e)}")
 

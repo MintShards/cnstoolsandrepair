@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from app.database import get_database
 from app.models.contact_content import (
@@ -6,6 +6,7 @@ from app.models.contact_content import (
     ContactContentResponse
 )
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 
 
 router = APIRouter(prefix="/api/contact-content", tags=["contact-content"])
@@ -41,15 +42,14 @@ async def get_contact_content():
     return ContactContentResponse(**content)
 
 
-@router.put("/", response_model=ContactContentResponse)
+@router.put("/", response_model=ContactContentResponse, dependencies=[Depends(require_admin)])
 async def update_contact_content(content_data: ContactContentUpdate):
     """
     Admin endpoint to update contact page content.
     Creates new content if none exist, updates existing otherwise.
     Ensures only one active content document exists.
 
-    TODO: Add authentication middleware to protect this endpoint
-    Example: @router.put("/", dependencies=[Depends(verify_admin)])
+    Requires admin authentication.
     """
     db = get_database()
 

@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from app.database import get_database
 from app.models.page_content import AboutContentResponse, AboutContentUpdate
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 
 
 router = APIRouter(prefix="/api/about-content", tags=["about-content"])
@@ -41,15 +42,14 @@ async def get_about_content():
     return AboutContentResponse(**about_content)
 
 
-@router.put("/", response_model=AboutContentResponse)
+@router.put("/", response_model=AboutContentResponse, dependencies=[Depends(require_admin)])
 async def update_about_content(content_data: AboutContentUpdate):
     """
     Admin endpoint to update about page content.
     Creates new content if none exists, updates existing otherwise.
     Ensures only one active about_content document exists.
 
-    TODO: Add authentication middleware to protect this endpoint
-    Example: @router.put("/", dependencies=[Depends(verify_admin)])
+    Requires admin authentication.
     """
     db = get_database()
 

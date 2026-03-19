@@ -104,11 +104,15 @@ export const brandsAPI = {
     return response.data;
   },
   create: async (data) => {
-    const response = await api.post('/api/brands/', data);
+    const response = await api.post('/api/brands/', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
   update: async (id, data) => {
-    const response = await api.put(`/api/brands/${id}`, data);
+    const response = await api.put(`/api/brands/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
   delete: async (id) => {
