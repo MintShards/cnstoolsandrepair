@@ -47,19 +47,19 @@ export default function StickyQuoteCTA() {
     <div
       className="fixed bottom-0 left-0 right-0 z-50 bg-primary p-3 sm:p-4 shadow-2xl shadow-primary/50 border-t-2 border-primary-dark md:hidden"
       role="complementary"
-      aria-label="Quick quote request"
+      aria-label="Quick repair request"
       style={{
         animation: 'slideUp 0.3s ease-out',
       }}
     >
       <div className="max-w-screen-xl mx-auto">
-        <Link to="/quote" className="block">
+        <Link to="/repair-request" className="block">
           <button
             className="w-full h-12 sm:h-14 bg-white text-primary font-black rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 uppercase text-xs sm:text-sm touch-manipulation"
-            aria-label="Request a free quote now"
+            aria-label="Submit repair request now"
           >
-            <span className="material-symbols-outlined text-lg sm:text-xl">request_quote</span>
-            <span className="whitespace-nowrap">Get Free Quote Now</span>
+            <span className="material-symbols-outlined text-lg sm:text-xl">build</span>
+            <span className="whitespace-nowrap">Submit Repair Request</span>
           </button>
         </Link>
       </div>

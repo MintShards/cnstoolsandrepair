@@ -176,14 +176,9 @@ export default function Services() {
                           key={i}
                           className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded bg-slate-200 dark:bg-slate-700 shrink-0 animate-pulse"></div>
-                            <div className="flex-1">
-                              <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
-                              <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
-                              <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                            </div>
-                          </div>
+                          <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
+                          <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
+                          <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
                         </div>
                       ))}
                     </div>
@@ -201,14 +196,9 @@ export default function Services() {
                           key={i}
                           className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded bg-slate-200 dark:bg-slate-700 shrink-0 animate-pulse"></div>
-                            <div className="flex-1">
-                              <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
-                              <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
-                              <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                            </div>
-                          </div>
+                          <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
+                          <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
+                          <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
                         </div>
                       ))}
                     </div>
@@ -226,14 +216,9 @@ export default function Services() {
                           key={i}
                           className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="size-8 rounded bg-slate-200 dark:bg-slate-700 shrink-0 animate-pulse"></div>
-                            <div className="flex-1">
-                              <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
-                              <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
-                              <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                            </div>
-                          </div>
+                          <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
+                          <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
+                          <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
                         </div>
                       ))}
                     </div>
@@ -274,18 +259,8 @@ export default function Services() {
                               key={tool.id}
                               className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
                             >
-                              <div className="flex items-start gap-3">
-                                <span
-                                  className="material-symbols-outlined text-blue-500 text-2xl shrink-0 mt-0.5"
-                                  style={{ fontVariationSettings: "'wght' 600" }}
-                                >
-                                  {tool.icon || 'build'}
-                                </span>
-                                <div>
-                                  <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
-                                </div>
-                              </div>
+                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
                             </div>
                           ))
                         ) : (
@@ -314,18 +289,8 @@ export default function Services() {
                               key={tool.id}
                               className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
                             >
-                              <div className="flex items-start gap-3">
-                                <span
-                                  className="material-symbols-outlined text-amber-500 text-2xl shrink-0 mt-0.5"
-                                  style={{ fontVariationSettings: "'wght' 600" }}
-                                >
-                                  {tool.icon || 'power'}
-                                </span>
-                                <div>
-                                  <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
-                                </div>
-                              </div>
+                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
                             </div>
                           ))
                         ) : (
@@ -354,18 +319,8 @@ export default function Services() {
                               key={tool.id}
                               className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 transition-colors"
                             >
-                              <div className="flex items-start gap-3">
-                                <span
-                                  className="material-symbols-outlined text-purple-500 text-2xl shrink-0 mt-0.5"
-                                  style={{ fontVariationSettings: "'wght' 600" }}
-                                >
-                                  {tool.icon || 'precision_manufacturing'}
-                                </span>
-                                <div>
-                                  <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
-                                </div>
-                              </div>
+                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
                             </div>
                           ))
                         ) : (

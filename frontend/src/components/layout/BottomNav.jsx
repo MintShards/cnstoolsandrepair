@@ -55,7 +55,7 @@ export default function BottomNav() {
         </Link>
 
         <div className="relative -mt-12">
-          <Link to="/quote">
+          <Link to="/repair-request">
             <button className="bg-primary size-14 rounded-full shadow-xl shadow-primary/40 flex items-center justify-center text-white ring-4 ring-white dark:ring-slate-950">
               <span className="material-symbols-outlined" style={{ fontSize: '30px' }}>
                 add_task
@@ -63,7 +63,7 @@ export default function BottomNav() {
             </button>
           </Link>
           <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-black text-primary uppercase whitespace-nowrap">
-            Quote
+            Repair
           </span>
         </div>
 

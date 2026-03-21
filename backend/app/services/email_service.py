@@ -1,7 +1,8 @@
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition
-from app.config import settings
+from app.config import settings as app_settings
 from app.models.quote import Quote
+from app.routers.settings import DEFAULT_SETTINGS
 from datetime import timedelta
 import base64
 import requests
@@ -31,8 +32,18 @@ def format_pst_datetime(utc_dt) -> str:
     return f"{month} {day}, {year} at {display_hour}:{minute:02d} {am_pm} PST"
 
 
-async def send_quote_notification(quote: Quote) -> bool:
+async def send_quote_notification(quote: Quote, business_settings: dict = None) -> bool:
     """Send email notification to team when new quote is submitted"""
+
+    # Extract business info from settings (with fallback to DEFAULT_SETTINGS)
+    if business_settings and "contact" in business_settings:
+        city = business_settings["contact"]["address"]["city"]
+        province = business_settings["contact"]["address"]["province"]
+        business_email = business_settings["contact"]["email"]
+    else:
+        city = DEFAULT_SETTINGS["contact"]["address"]["city"]
+        province = DEFAULT_SETTINGS["contact"]["address"]["province"]
+        business_email = DEFAULT_SETTINGS["contact"]["email"]
 
     # Format submission time
     submitted_time = format_pst_datetime(quote.created_at)
@@ -81,17 +92,15 @@ PHOTOS:
 {photo_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Reply to contact customer | Call {quote.phone}
-
-CNS Tools and Repair | Surrey, BC
-cnstoolsandrepair@gmail.com
+CNS Tools and Repair | {city}, {province}
+{business_email}
 """
 
     try:
         # Create SendGrid message (plain text only)
         message = Mail(
-            from_email=settings.sendgrid_from_email,
-            to_emails=settings.notification_email,
+            from_email=app_settings.sendgrid_from_email,
+            to_emails=app_settings.notification_email,
             subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}",
             plain_text_content=body
         )
@@ -105,7 +114,7 @@ cnstoolsandrepair@gmail.com
             for idx, photo in enumerate(quote.photos, start=1):
                 try:
                     # Get photo URL (handle both Spaces URLs and local paths)
-                    photo_url = photo if photo.startswith('http') else f'{settings.upload_base_url}/uploads/{photo}'
+                    photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/uploads/{photo}'
 
                     # Download photo from Spaces or local server
                     response_photo = requests.get(photo_url, timeout=10)

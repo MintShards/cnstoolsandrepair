@@ -113,10 +113,13 @@ async def create_quote(
     # Rename _id to id for QuoteResponse
     created_quote["id"] = created_quote.pop("_id")
 
+    # Fetch business settings for email footer
+    business_settings = await db.settings.find_one({})
+
     # Send email notification (non-blocking) and track success
     email_sent = False
     try:
-        email_sent = await send_quote_notification(quote_obj)
+        email_sent = await send_quote_notification(quote_obj, business_settings)
         log_email_notification(request_number, email_sent)
     except Exception as e:
         log_email_notification(request_number, False, str(e))

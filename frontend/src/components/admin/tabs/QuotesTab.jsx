@@ -30,7 +30,7 @@ export default function QuotesTab() {
       setQuotes(data);
     } catch (error) {
       console.error('Failed to fetch quotes:', error);
-      setStatusMessage({ type: 'error', text: 'Failed to load quote requests' });
+      setStatusMessage({ type: 'error', text: 'Failed to load repair requests' });
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function QuotesTab() {
 
     try {
       await quotesAPI.delete(deleteConfirmId.id);
-      setStatusMessage({ type: 'success', text: 'Quote request deleted successfully' });
+      setStatusMessage({ type: 'success', text: 'Repair request deleted successfully' });
 
       // Remove from local state
       setQuotes(quotes.filter(q => q.id !== deleteConfirmId.id));
@@ -77,7 +77,7 @@ export default function QuotesTab() {
       }
     } catch (error) {
       console.error('Failed to delete quote:', error);
-      setStatusMessage({ type: 'error', text: 'Failed to delete quote request' });
+      setStatusMessage({ type: 'error', text: 'Failed to delete repair request' });
       setDeleteConfirmId(null);
     }
   };
@@ -100,7 +100,7 @@ export default function QuotesTab() {
     const statusConfig = {
       pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-400', border: 'border-yellow-700', label: 'Pending' },
       in_progress: { bg: 'bg-blue-900/30', text: 'text-blue-400', border: 'border-blue-700', label: 'In Progress' },
-      quoted: { bg: 'bg-purple-900/30', text: 'text-purple-400', border: 'border-purple-700', label: 'Quoted' },
+      quoted: { bg: 'bg-purple-900/30', text: 'text-purple-400', border: 'border-purple-700', label: 'Quote Provided' },
       completed: { bg: 'bg-green-900/30', text: 'text-green-400', border: 'border-green-700', label: 'Completed' },
     };
     const config = statusConfig[status] || statusConfig.pending;
@@ -179,7 +179,7 @@ export default function QuotesTab() {
   return (
     <div>
       <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-6">
-        Quote Requests
+        Repair Requests
       </h2>
 
       {/* Status Message */}
@@ -224,14 +224,14 @@ export default function QuotesTab() {
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
-              <option value="quoted">Quoted</option>
+              <option value="quoted">Quote Provided</option>
               <option value="completed">Completed</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Quotes Table */}
+      {/* Repair Requests Table */}
       <div className="p-6 bg-slate-800 rounded-lg border border-slate-700">
         <h3 className="text-lg font-bold text-white mb-4">
           Requests ({totalResults})
@@ -240,13 +240,13 @@ export default function QuotesTab() {
         {loading ? (
           <div className="text-center py-8">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">refresh</span>
-            <p className="mt-2 text-slate-400">Loading quotes...</p>
+            <p className="mt-2 text-slate-400">Loading repair requests...</p>
           </div>
         ) : filteredQuotes.length === 0 ? (
           <div className="text-center py-8">
             <span className="material-symbols-outlined text-4xl text-slate-600">request_quote</span>
             <p className="mt-2 text-slate-400">
-              {searchQuery || statusFilter ? 'No quotes match your filters' : 'No quote requests yet'}
+              {searchQuery || statusFilter ? 'No repair requests match your filters' : 'No repair requests yet'}
             </p>
           </div>
         ) : (
@@ -384,7 +384,7 @@ export default function QuotesTab() {
         )}
       </div>
 
-      {/* Quote Detail Modal */}
+      {/* Repair Request Detail Modal */}
       {selectedQuote && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 overflow-y-auto"
@@ -398,7 +398,7 @@ export default function QuotesTab() {
             <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-white uppercase">
-                  Request {selectedQuote.request_number}
+                  Repair Request {selectedQuote.request_number}
                 </h3>
                 <p className="text-sm text-slate-400 mt-1">
                   Submitted {formatDate(selectedQuote.created_at)}
@@ -424,7 +424,7 @@ export default function QuotesTab() {
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
-                  <option value="quoted">Quoted</option>
+                  <option value="quoted">Quote Provided</option>
                   <option value="completed">Completed</option>
                 </select>
               </div>

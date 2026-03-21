@@ -21,13 +21,13 @@ export default function DualCTA({ backgroundColor = 'bg-white dark:bg-slate-900'
 
           {/* Dual CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 sm:mb-12">
-            {/* Primary CTA - Request Quote */}
-            <a href="/quote" className="w-full sm:w-auto">
+            {/* Primary CTA - Submit Repair Request */}
+            <a href="/repair-request" className="w-full sm:w-auto">
               <button className="w-full sm:w-auto bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-95 transition-all uppercase flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>
-                  request_quote
+                  build
                 </span>
-                Request a Quote
+                Submit Repair Request
               </button>
             </a>
 

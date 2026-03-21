@@ -20,9 +20,14 @@ export default function ContactForm() {
       });
       reset();
     } catch (error) {
+      const isRateLimit = error.response?.status === 429;
+      const errorMessage = error.response?.data?.detail || 'Failed to send message. Please try again.';
+
       setSubmitStatus({
         type: 'error',
-        message: error.response?.data?.detail || 'Failed to send message. Please try again.'
+        message: isRateLimit
+          ? `⏳ ${errorMessage}`
+          : errorMessage
       });
     } finally {
       setIsSubmitting(false);

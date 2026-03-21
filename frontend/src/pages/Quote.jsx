@@ -44,9 +44,9 @@ function SuccessModal({ isOpen, onClose, onNewQuote }) {
           <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="material-symbols-outlined text-5xl text-green-600 dark:text-green-400">check_circle</span>
           </div>
-          <h2 id="success-modal-title" className="text-2xl font-black uppercase mb-2">Quote Submitted!</h2>
+          <h2 id="success-modal-title" className="text-2xl font-black uppercase mb-2">Request Submitted!</h2>
           <p className="text-slate-600 dark:text-slate-400">
-            We've received your quote request and will contact you soon with a detailed assessment.
+            We've received your repair request. Our team will contact you to schedule a tool inspection and provide a quote after assessment.
           </p>
         </div>
 
@@ -54,7 +54,7 @@ function SuccessModal({ isOpen, onClose, onNewQuote }) {
           <button
             onClick={onNewQuote}
             className="flex-1 bg-primary text-white font-black py-3 px-6 rounded-xl hover:bg-primary/90 transition-colors uppercase"
-            aria-label="Submit another quote request"
+            aria-label="Submit another repair request"
           >
             Submit Another
           </button>
@@ -99,7 +99,6 @@ export default function Quote() {
         const now = Date.now();
 
         if (draft.timestamp && (now - draft.timestamp > DRAFT_EXPIRY)) {
-          console.log('Draft expired, removing from storage');
           localStorage.removeItem(draftKey);
           return;
         }
@@ -324,7 +323,7 @@ export default function Quote() {
       if (response.email_sent === false) {
         setSubmitStatus({
           type: 'warning',
-          message: 'Quote submitted successfully, but email notification failed. We will contact you soon. For urgent matters, please call us.'
+          message: 'Repair request submitted successfully, but email notification failed. We will contact you soon. For urgent matters, please call us.'
         });
       }
 
@@ -343,7 +342,7 @@ export default function Quote() {
 
       setSubmitStatus({
         type: 'error',
-        message: error.response?.data?.detail || 'Failed to submit quote. Please try again.'
+        message: error.response?.data?.detail || 'Failed to submit repair request. Please try again.'
       });
 
       // Focus on error message for screen readers
@@ -370,29 +369,29 @@ export default function Quote() {
   return (
     <>
       <Helmet>
-        <title>Request Free Pneumatic Tool Repair Quote | CNS Tools Surrey BC</title>
+        <title>Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC</title>
         <meta
           name="description"
-          content="Request a free quote for industrial pneumatic tool repair in Surrey, BC. Upload photos, describe your tool issue, and get professional repair assessment. Fast turnaround for automotive, fleet, manufacturing, and construction industries."
+          content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool, provide a detailed quote, and complete professional repairs. Serving automotive, fleet, manufacturing, and construction industries."
         />
         <meta
           name="keywords"
-          content="free tool repair quote, pneumatic tool quote Surrey, industrial tool repair estimate, air tool repair quote BC, tool repair assessment"
+          content="tool repair request Surrey, pneumatic tool repair service, industrial tool repair BC, air tool diagnostic, tool repair assessment Surrey"
         />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/quote" />
+        <link rel="canonical" href="https://cnstoolsandrepair.com/repair-request" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/quote" />
-        <meta property="og:title" content="Request Free Pneumatic Tool Repair Quote | CNS Tools Surrey BC" />
-        <meta property="og:description" content="Get a free quote for industrial pneumatic tool repair in Surrey, BC. Upload photos, describe your tool issue, and get professional assessment." />
+        <meta property="og:url" content="https://cnstoolsandrepair.com/repair-request" />
+        <meta property="og:title" content="Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC" />
+        <meta property="og:description" content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool and provide a detailed quote." />
         <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://cnstoolsandrepair.com/quote" />
-        <meta name="twitter:title" content="Request Free Pneumatic Tool Repair Quote | CNS Tools Surrey BC" />
-        <meta name="twitter:description" content="Get a free quote for industrial pneumatic tool repair in Surrey, BC. Upload photos, describe your tool issue, and get professional assessment." />
+        <meta name="twitter:url" content="https://cnstoolsandrepair.com/repair-request" />
+        <meta name="twitter:title" content="Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC" />
+        <meta name="twitter:description" content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool and provide a detailed quote." />
         <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
       </Helmet>
 
@@ -406,9 +405,9 @@ export default function Quote() {
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get Started</h2>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Request a Quote</h1>
+          <h1 className="text-4xl font-black tracking-tight uppercase">Submit Repair Request</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-4">
-            Fill out the form below and our team will get back to you with a detailed quote.
+            Submit your tool details below. We'll contact you to schedule a diagnostic inspection and provide an accurate quote after assessing your tool.
           </p>
         </div>
 
@@ -766,7 +765,7 @@ export default function Quote() {
             type="submit"
             disabled={isSubmitting}
             className="w-full bg-primary text-white font-black py-4 rounded-xl shadow-xl shadow-primary/30 active:scale-95 transition-transform uppercase disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            aria-label={isSubmitting ? 'Submitting quote request' : 'Submit quote request'}
+            aria-label={isSubmitting ? 'Submitting repair request' : 'Submit repair request'}
           >
             {isSubmitting ? (
               <>
@@ -776,7 +775,7 @@ export default function Quote() {
             ) : (
               <>
                 <span className="material-symbols-outlined" aria-hidden="true">send</span>
-                Submit Quote Request
+                Submit Repair Request
               </>
             )}
           </button>

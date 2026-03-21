@@ -64,7 +64,7 @@ export default function FinalCTA({
           </p>
           {/* Mobile-First CTA Buttons */}
           <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 lg:gap-4 mt-2 sm:mt-4 px-4 sm:px-0">
-            <a href="/quote" className="w-full sm:w-auto">
+            <a href="/repair-request" className="w-full sm:w-auto">
               <button className="w-full sm:w-auto sm:px-8 h-14 sm:h-16 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 sm:gap-3 shadow-2xl shadow-primary/40 border-2 border-primary/50 uppercase text-sm sm:text-base hover:bg-primary/90 transition-all active:scale-95 touch-manipulation">
                 <span className="material-symbols-outlined text-xl sm:text-2xl">fact_check</span>
                 <span>{content.primaryButtonText}</span>

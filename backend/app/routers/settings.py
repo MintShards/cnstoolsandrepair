@@ -19,7 +19,7 @@ DEFAULT_SETTINGS = {
     "contact": {
         "phone": "(604) 555-0123",
         "phoneLink": "6045550123",
-        "email": "info@cnstools.com",
+        "email": "contact@cnstoolsandrepair.com",
         "address": {
             "street": "Surrey, BC, Canada",
             "city": "Surrey",

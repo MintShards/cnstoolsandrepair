@@ -32,7 +32,7 @@ export default function AdminSettings() {
     { id: 'services', label: 'Services Page', icon: 'build' },
     { id: 'industries', label: 'Industries Page', icon: 'factory' },
     { id: 'gallery', label: 'Gallery Page', icon: 'photo_library' },
-    { id: 'quotes', label: 'Quote Requests', icon: 'request_quote' },
+    { id: 'quotes', label: 'Repair Requests', icon: 'request_quote' },
     { id: 'about', label: 'About Page', icon: 'info' },
     { id: 'contact', label: 'Contact Page', icon: 'contact_mail' },
     { id: 'global', label: 'Global Settings', icon: 'settings' },

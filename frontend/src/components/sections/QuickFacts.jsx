@@ -58,7 +58,7 @@ export default function QuickFacts({
       description: 'Serviced',
     },
     {
-      icon: 'precision_manufacturing',
+      icon: 'workspace_premium',
       label: claims.qualityStandard,
       description: 'Workmanship',
     },

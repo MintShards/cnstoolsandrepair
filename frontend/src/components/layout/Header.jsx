@@ -71,18 +71,18 @@ export default function Header() {
             Contact
           </Link>
           <ThemeToggle />
-          <Link to="/quote">
+          <Link to="/repair-request">
             <button className="bg-primary text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
-              Get Quote
+              Get Repair
             </button>
           </Link>
         </nav>
 
         {/* Mobile Navigation Toggle - Hidden on desktop */}
         <div className="flex lg:hidden items-center gap-2">
-          <Link to="/quote">
+          <Link to="/repair-request">
             <button className="bg-primary text-white text-[10px] font-bold px-3 py-2 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
-              Quote
+              Repair
             </button>
           </Link>
           <ThemeToggle />

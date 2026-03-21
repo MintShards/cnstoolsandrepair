@@ -116,9 +116,9 @@ export default function Hero({
             </div>
             {/* Mobile-First CTA Buttons - Optimized for thumb reach */}
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-3 lg:gap-4 mt-6 sm:mt-6">
-              <Link to="/quote" className="w-full sm:w-auto order-1">
+              <Link to="/repair-request" className="w-full sm:w-auto order-1">
                 <button className="flex items-center justify-center gap-2 sm:gap-3 rounded-xl h-14 sm:h-14 px-6 sm:px-8 bg-primary text-white text-base sm:text-base font-black shadow-2xl shadow-primary/40 active:scale-95 transition-all border-2 border-primary/50 w-full touch-manipulation">
-                  <span className="material-symbols-outlined text-xl sm:text-2xl">request_quote</span>
+                  <span className="material-symbols-outlined text-xl sm:text-2xl">build</span>
                   <span className="tracking-tight">{content.primaryButtonText}</span>
                 </button>
               </Link>

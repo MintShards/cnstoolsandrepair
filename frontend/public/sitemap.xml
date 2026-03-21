@@ -32,10 +32,10 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Quote -->
+  <!-- Repair Request -->
   <url>
-    <loc>https://cnstoolsandrepair.com/quote</loc>
-    <lastmod>2026-02-28</lastmod>
+    <loc>https://cnstoolsandrepair.com/repair-request</loc>
+    <lastmod>2026-03-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.9</priority>
   </url>

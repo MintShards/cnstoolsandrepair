@@ -217,10 +217,10 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/quote"
+                  to="/repair-request"
                   className="text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
-                  Request a Quote
+                  Submit Repair Request
                 </Link>
               </li>
             </ul>

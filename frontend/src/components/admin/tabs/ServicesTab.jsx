@@ -91,7 +91,6 @@ export default function ServicesTab() {
           // Update existing tool
           await toolsAPI.update(tool.id, {
             name: tool.name,
-            icon: tool.icon,
             description: tool.description,
             category: tool.category,
             active: tool.active,
@@ -102,7 +101,6 @@ export default function ServicesTab() {
           // Create new tool
           const created = await toolsAPI.create({
             name: tool.name,
-            icon: tool.icon,
             description: tool.description,
             category: tool.category,
             active: tool.active,
@@ -220,7 +218,6 @@ export default function ServicesTab() {
       ...prev,
       {
         name: '',
-        icon: 'build',
         description: '',
         category: 'air_tools',
         active: true
@@ -529,15 +526,6 @@ export default function ServicesTab() {
                           maxLength={1000}
                           rows={3}
                           placeholder="High-torque pneumatic impact wrenches for heavy-duty applications..."
-                        />
-                        <AdminInput
-                          label="Icon (Material Symbol name)"
-                          value={tool.icon}
-                          onChange={(v) => updateTool(index, 'icon', v)}
-                          required
-                          maxLength={50}
-                          placeholder="build"
-                          helperText="See: fonts.google.com/icons"
                         />
                       </div>
                     </div>
