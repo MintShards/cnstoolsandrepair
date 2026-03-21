@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## ⚠️ Security Notice
 **IMPORTANT:** Never include real MongoDB credentials, SendGrid API keys, passwords, or tokens in this file. All credentials are in `backend/.env` (gitignored).
@@ -56,21 +56,46 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 
 ### Frontend (React)
 - **React Router v6** with component-based architecture
-- **State**: ThemeContext (dark mode), SettingsContext (business settings), React Hook Form (forms)
+- **State**: ThemeContext (dark mode), SettingsContext (business settings)
+- **Forms**: React Hook Form with collapsible multi-tool quote form, auto-capitalization on inputs
 - **Design**: Tailwind CSS, Russo One logo font, Montserrat body, Material Symbols icons
 - **Colors**: Primary blue #1152d4, Accent orange #f97316
 - **SEO**: react-helmet-async, sitemap.xml, robots.txt, Open Graph tags, structured data
 - **Vite**: Proxies `/api` and `/uploads` to backend (no CORS issues in dev)
+- **Key components**:
+  - `Quote.jsx` - Multi-tool form with collapsible tool entries (default 1 tool shown)
+  - `AdminSettings.jsx` - Tabbed interface for content management
+  - Route redirects: `/quote` → `/repair-request`, `/tools` → `/services`
 
 ### Database Schema
 ```javascript
-// quotes - Customer quote requests with photos
+// quotes - Customer quote requests with multi-tool support and photos
+{
+  request_number: "REQ-2026-0001",  // Auto-generated via atomic counter
+  company_name: string | null,
+  contact_person: string,
+  email: string,
+  phone: string,  // Format: ###-###-####
+  tools: [{
+    tool_type: string,       // Auto-capitalized
+    tool_brand: string,      // Auto-capitalized
+    tool_model: string,      // Auto-capitalized
+    quantity: number,
+    problem_description: string
+  }],
+  photos: [string],  // Array of /uploads/quotes/{uuid}.ext
+  status: "pending" | "in_progress" | "completed",
+  created_at: datetime,
+  updated_at: datetime
+}
+
 // tools_catalog - Repairable tools (categorized: air_tools, electric_tools, lifting_equipment)
-// brands - Brand logos for carousel
+// brands - Brand logos for carousel (has 'authorized' field for classification)
 // industries_page_content - Industries page content (singleton document with hero + industries array)
 // settings - Business settings (singleton document)
 // gallery - Photo gallery
 // users - Admin authentication
+// counters - Atomic counters for request number generation
 ```
 
 ## Critical Patterns
@@ -82,6 +107,36 @@ created_quote = await db.quotes.find_one({"_id": result.inserted_id})
 created_quote = convert_objectid_to_str(created_quote)
 created_quote["id"] = created_quote.pop("_id")
 return QuoteResponse(**created_quote)
+```
+
+### Multi-Tool Quote System (NEW)
+```python
+# Quote now supports multiple tools with auto-capitalization
+tools_data = json.loads(tools)  # Parse JSON array from form
+tool_entries = [ToolEntry(**tool) for tool in tools_data]
+
+# ToolEntry model auto-capitalizes tool_type, tool_brand, tool_model
+class ToolEntry(BaseModel):
+    tool_type: str = Field(..., min_length=1)
+    tool_brand: str = Field(..., min_length=1)
+    tool_model: str = Field(..., min_length=1)
+    quantity: int = Field(gt=0)
+    problem_description: str = Field(..., min_length=10)
+
+    @field_validator('tool_type', 'tool_brand', 'tool_model', mode='before')
+    def capitalize_fields(cls, v):
+        if v: return v.strip().title()
+        return v
+```
+
+### Request Number Generation (ATOMIC)
+```python
+# Atomic counter using MongoDB findOneAndUpdate for thread safety
+request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
+
+# Backend: app/database.py:get_next_request_number()
+# Uses counters collection with atomic increment
+# Format: REQ-2026-0001, REQ-2026-0002, etc. (resets yearly)
 ```
 
 ### Tools API Route Order (CRITICAL)
@@ -138,11 +193,15 @@ VITE_API_URL=http://localhost:8000
 
 ## Development Workflows
 
-### Quote Submission Test
+### Quote Submission Test (Multi-Tool)
 1. Start backend (WSL: `--host 0.0.0.0`) + frontend
-2. Navigate to `/quote`, fill form, upload photos
-3. Verify backend logs: "Email sent! Status code: 202"
-4. Check `/api/quotes/` and `/uploads/{filename}`
+2. Navigate to `/repair-request` (route renamed from `/quote`)
+3. Fill form: customer info + add multiple tools (collapsible UI)
+4. Upload photos (max 5, 5MB each, jpg/png/webp)
+5. Verify backend logs: "Email sent! Status code: 202"
+6. Check `/api/quotes/` for request with `request_number` (e.g., "REQ-2026-0001")
+7. Verify photos in `/uploads/quotes/{uuid}.ext`
+8. Email should show all tools formatted with brands/models capitalized
 
 ### Admin Content Management
 1. Create admin: `python scripts/create_admin.py`
@@ -187,12 +246,29 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 ## Security Features
 
 **Implemented protections:**
-- **Rate limiting**: 5 requests/hour per IP (slowapi) - prevents DOS attacks
-- **CSRF protection**: Token-based validation (fastapi-csrf-protect)
-- **File validation**: Deep image content verification with Pillow
-- **Idempotency**: Duplicate submission prevention with 5-min cache
-- **Phone validation**: Strict ###-###-#### format enforcement
-- **Filename sanitization**: Path traversal attack prevention
+- **Rate limiting**: 5 requests/hour per IP on quote endpoint (slowapi) - prevents DOS attacks
+- **CSRF protection**: Token-based validation (fastapi-csrf-protect) with `/api/csrf-token` endpoint
+- **File validation**: Deep image content verification with Pillow before saving
+- **Idempotency**: Duplicate submission prevention with 5-min cache using `idempotency_key`
+- **Phone validation**: Strict ###-###-#### format enforcement via Pydantic validator
+- **Filename sanitization**: UUID-based filenames prevent path traversal attacks
+- **Auto-capitalization**: Tool fields (type/brand/model) auto-capitalize to prevent injection
+
+**Security implementation example:**
+```python
+# Rate limiting on quote endpoint
+@router.post("/", response_model=QuoteResponse, status_code=201)
+@limiter.limit("5/hour")
+async def create_quote(request: Request, ...):
+    # Idempotency check
+    if idempotency_key and idempotency_key in idempotency_cache:
+        return cached_response
+
+    # File validation happens in save_upload_file()
+    # - Max size check (5MB)
+    # - Extension whitelist (.jpg, .jpeg, .png, .webp)
+    # - Deep image verification with Pillow.Image.verify()
+```
 
 **Production requirements:**
 - Enable `cookie_secure=True` for CSRF (requires HTTPS)
