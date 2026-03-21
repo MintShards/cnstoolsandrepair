@@ -119,6 +119,9 @@ async def main():
         # Collections to copy (in order of importance)
         collections_to_copy = [
             "settings",                    # Critical - fixes homepage and admin
+            "home_content",                # Homepage sections
+            "about_content",               # About page content
+            "contact_page_content",        # Contact page content
             "brands",                      # Brand logos carousel
             "tools_catalog",               # Services page tools
             "gallery",                     # Gallery photos
