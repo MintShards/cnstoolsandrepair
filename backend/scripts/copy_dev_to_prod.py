@@ -119,13 +119,17 @@ async def main():
         # Collections to copy (in order of importance)
         collections_to_copy = [
             "settings",                    # Critical - fixes homepage and admin
+            "business_settings",           # Business settings
             "home_content",                # Homepage sections
             "about_content",               # About page content
             "contact_page_content",        # Contact page content
             "brands",                      # Brand logos carousel
             "tools_catalog",               # Services page tools
-            "gallery",                     # Gallery photos
+            "gallery",                     # Gallery photos (if exists)
+            "gallery_photos",              # Gallery photos collection
+            "industries",                  # Industries list
             "industries_page_content",     # Industries page content
+            "counters",                    # Request number counters
         ]
 
         print("\n📦 Copying Collections")
