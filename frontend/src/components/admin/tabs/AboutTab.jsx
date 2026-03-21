@@ -146,6 +146,48 @@ export default function AboutTab() {
             {formData.company_story?.length || 0}/5000 characters
           </p>
         </div>
+
+        {/* Mission Statement */}
+        <div className="p-6 bg-slate-800 rounded-lg border border-slate-700">
+          <div className="flex items-start gap-3 mb-4">
+            <span className="material-symbols-outlined text-primary text-2xl">flag</span>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Mission Statement</h3>
+              <p className="text-sm text-slate-400">Company mission and core values</p>
+            </div>
+          </div>
+          <AdminTextarea
+            value={formData.mission_statement || ''}
+            onChange={(value) => updateField('mission_statement', value)}
+            placeholder="Example: Our mission is to minimize equipment downtime for industrial businesses through professional diagnostics, quality repairs, and reliable service."
+            rows={3}
+            maxLength={1000}
+          />
+          <p className="text-xs text-slate-500 mt-2">
+            {formData.mission_statement?.length || 0}/1000 characters
+          </p>
+        </div>
+
+        {/* Team Description */}
+        <div className="p-6 bg-slate-800 rounded-lg border border-slate-700">
+          <div className="flex items-start gap-3 mb-4">
+            <span className="material-symbols-outlined text-accent-orange text-2xl">groups</span>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Team Description</h3>
+              <p className="text-sm text-slate-400">Information about your team and facility</p>
+            </div>
+          </div>
+          <AdminTextarea
+            value={formData.team_description || ''}
+            onChange={(value) => updateField('team_description', value)}
+            placeholder="Example: Our on-site facility is equipped with state-of-the-art diagnostic tools and staffed by certified technicians with years of hands-on experience repairing pneumatic tools from all major brands."
+            rows={4}
+            maxLength={2000}
+          />
+          <p className="text-xs text-slate-500 mt-2">
+            {formData.team_description?.length || 0}/2000 characters
+          </p>
+        </div>
       </div>
 
       {/* Save Button (Bottom) */}

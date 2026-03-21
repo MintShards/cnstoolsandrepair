@@ -11,7 +11,7 @@ class ToolCategory(str, Enum):
 
 class ToolCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    icon: str = Field(..., min_length=1, max_length=50)
+    icon: Optional[str] = Field(default="build", min_length=1, max_length=50)
     description: str = Field(..., min_length=1, max_length=1000)
     category: ToolCategory = Field(..., description="Tool category: air_tools, electric_tools, or lifting_equipment")
     active: bool = True
@@ -45,7 +45,7 @@ class Tool(ToolCreate):
 class ToolResponse(BaseModel):
     id: str
     name: str
-    icon: str
+    icon: str = "build"
     description: str
     category: str
     active: bool
