@@ -22,5 +22,6 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 8000
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run application with gunicorn for production (4 workers with uvicorn worker class)
+# For development, override with: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
