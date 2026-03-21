@@ -14,6 +14,7 @@ build/
 
 # Backend
 backend/.env
+backend/.env.production
 backend/uploads/*
 !backend/uploads/.gitkeep
 
