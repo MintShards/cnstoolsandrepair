@@ -93,6 +93,7 @@ export default function ServicesTab() {
             name: tool.name,
             description: tool.description,
             category: tool.category,
+            icon: tool.icon,
             active: tool.active,
           });
           // Keep in local state with existing ID
@@ -103,6 +104,7 @@ export default function ServicesTab() {
             name: tool.name,
             description: tool.description,
             category: tool.category,
+            icon: tool.icon,
             active: tool.active,
           });
           // Add to local state with new ID from backend
@@ -220,6 +222,7 @@ export default function ServicesTab() {
         name: '',
         description: '',
         category: 'air_tools',
+        icon: 'build',
         active: true
       },
     ]);
@@ -497,6 +500,16 @@ export default function ServicesTab() {
                           required
                           maxLength={200}
                           placeholder="Impact Wrenches"
+                        />
+
+                        <AdminInput
+                          label="Icon (Material Symbol)"
+                          value={tool.icon || 'build'}
+                          onChange={(v) => updateTool(index, 'icon', v)}
+                          required
+                          maxLength={50}
+                          placeholder="build"
+                          helperText="Material icon name - see fonts.google.com/icons"
                         />
 
                         {/* Category Dropdown */}
