@@ -153,7 +153,7 @@ CNS Tools and Repair | {city}, {province}
                 message.attachment = attachments
 
         # Send email via SendGrid
-        sg = SendGridAPIClient(settings.sendgrid_api_key)
+        sg = SendGridAPIClient(app_settings.sendgrid_api_key)
         response = sg.send(message)
 
         print(f"Email sent! Status code: {response.status_code}")
