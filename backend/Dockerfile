@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY ./app ./app
 
+# Copy scripts for admin user creation and database setup
+COPY ./scripts ./scripts
+
 # Create uploads directory
 RUN mkdir -p uploads
 
