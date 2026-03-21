@@ -74,7 +74,17 @@ async def main():
     """Main function to copy dev data to prod"""
 
     print_header("COPY DEV DATA TO PRODUCTION")
-    print(f"\nDev Database:  cnstoolsandrepair_db_dev")
+
+    # Prompt for dev MongoDB connection string
+    print("\n📝 Enter your DEV MongoDB connection string:")
+    print("   (The cluster where your development database lives)")
+    dev_mongodb_url = input("Dev MongoDB URL: ").strip()
+
+    if not dev_mongodb_url:
+        print("❌ Dev MongoDB URL is required")
+        sys.exit(1)
+
+    print(f"\nDev Database:  cnstoolsandrepair_db_dev (separate cluster)")
     print(f"Prod Database: {settings.database_name}")
     print("=" * 60)
 
@@ -88,17 +98,23 @@ async def main():
         sys.exit(0)
 
     try:
-        # Connect to MongoDB
-        print("\n🔌 Connecting to MongoDB...")
-        client = AsyncIOMotorClient(settings.mongodb_url, serverSelectionTimeoutMS=10000)
+        # Connect to BOTH MongoDB clusters
+        print("\n🔌 Connecting to MongoDB clusters...")
 
-        # Get both databases
-        dev_db = client["cnstoolsandrepair_db_dev"]
-        prod_db = client[settings.database_name]
+        # Dev cluster connection
+        dev_client = AsyncIOMotorClient(dev_mongodb_url, serverSelectionTimeoutMS=10000)
+        dev_db = dev_client["cnstoolsandrepair_db_dev"]
 
-        # Test connection
-        await client.admin.command('ping')
-        print("✅ Connected to MongoDB successfully")
+        # Prod cluster connection (from settings)
+        prod_client = AsyncIOMotorClient(settings.mongodb_url, serverSelectionTimeoutMS=10000)
+        prod_db = prod_client[settings.database_name]
+
+        # Test both connections
+        await dev_client.admin.command('ping')
+        print("✅ Connected to Dev cluster successfully")
+
+        await prod_client.admin.command('ping')
+        print("✅ Connected to Prod cluster successfully")
 
         # Collections to copy (in order of importance)
         collections_to_copy = [
@@ -144,8 +160,9 @@ async def main():
             print("\n⚠️  COPY COMPLETED WITH ERRORS")
             print("   Review failed collections above")
 
-        # Close connection
-        client.close()
+        # Close both connections
+        dev_client.close()
+        prod_client.close()
 
         sys.exit(0 if successful == total else 1)
 
