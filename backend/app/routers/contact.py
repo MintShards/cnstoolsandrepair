@@ -58,14 +58,20 @@ async def send_contact_message(request: Request, contact: ContactMessage):
     # Check email-based rate limit (after IP check passes from decorator)
     await check_email_rate_limit(db, contact.email, hours=1, max_messages=5)
 
-    # Fetch business settings for dynamic email footer
+    # Fetch business settings for dynamic email footer (with error handling)
     business_settings = await db.settings.find_one({})
-    if business_settings and "contact" in business_settings:
-        city = business_settings["contact"]["address"]["city"]
-        province = business_settings["contact"]["address"]["province"]
-        business_email = business_settings["contact"]["email"]
-    else:
-        # Fallback to DEFAULT_SETTINGS if settings not found
+    try:
+        if business_settings and "contact" in business_settings and "address" in business_settings["contact"]:
+            city = business_settings["contact"]["address"]["city"]
+            province = business_settings["contact"]["address"]["province"]
+            business_email = business_settings["contact"]["email"]
+        else:
+            # Fallback to DEFAULT_SETTINGS if settings not found or incomplete
+            city = DEFAULT_SETTINGS["contact"]["address"]["city"]
+            province = DEFAULT_SETTINGS["contact"]["address"]["province"]
+            business_email = DEFAULT_SETTINGS["contact"]["email"]
+    except (KeyError, TypeError):
+        # Fallback if settings structure is invalid
         city = DEFAULT_SETTINGS["contact"]["address"]["city"]
         province = DEFAULT_SETTINGS["contact"]["address"]["province"]
         business_email = DEFAULT_SETTINGS["contact"]["email"]
