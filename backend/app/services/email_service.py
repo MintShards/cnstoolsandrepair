@@ -37,11 +37,17 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
     """Send email notification to team when new quote is submitted"""
 
     # Extract business info from settings (with fallback to DEFAULT_SETTINGS)
-    if business_settings and "contact" in business_settings:
-        city = business_settings["contact"]["address"]["city"]
-        province = business_settings["contact"]["address"]["province"]
-        business_email = business_settings["contact"]["email"]
-    else:
+    try:
+        if business_settings and "contact" in business_settings and "address" in business_settings["contact"]:
+            city = business_settings["contact"]["address"]["city"]
+            province = business_settings["contact"]["address"]["province"]
+            business_email = business_settings["contact"]["email"]
+        else:
+            city = DEFAULT_SETTINGS["contact"]["address"]["city"]
+            province = DEFAULT_SETTINGS["contact"]["address"]["province"]
+            business_email = DEFAULT_SETTINGS["contact"]["email"]
+    except (KeyError, TypeError):
+        # Fallback if settings structure is invalid
         city = DEFAULT_SETTINGS["contact"]["address"]["city"]
         province = DEFAULT_SETTINGS["contact"]["address"]["province"]
         business_email = DEFAULT_SETTINGS["contact"]["email"]
