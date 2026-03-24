@@ -83,12 +83,32 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
     tool_count = len(quote.tools)
     tool_summary = f"{tool_count} tool{'s' if tool_count > 1 else ''}"
 
+    # Initialize photo text (will be updated after processing attachments)
+    photo_text_initial = "  ⏳ Processing photos..."
+
+    # Build initial email body (will be updated with final photo status)
+    body_template = """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUEST #{request_number}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Submitted: {submitted_time}
+
+{customer_section}
+{tools_section}
+PHOTOS:
+{photo_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CNS Tools and Repair | {city}, {province}
+{business_email}
+"""
+
     try:
-        # Create SendGrid message (plain text only) - body built after attachment processing
+        # Create SendGrid message with initial content
         message = Mail(
             from_email=app_settings.sendgrid_from_email,
             to_emails=app_settings.notification_email,
-            subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}"
+            subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}",
+            plain_text_content="Processing quote notification..."
         )
 
         # Set Reply-To to customer's email for easy response
@@ -169,23 +189,19 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
         else:
             photo_text = "  📷 No photos"
 
-        # Build final email body with photo status
-        body = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REQUEST #{quote.request_number}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Submitted: {submitted_time}
+        # Build final email body with photo status using template
+        body = body_template.format(
+            request_number=quote.request_number,
+            submitted_time=submitted_time,
+            customer_section=customer_section,
+            tools_section=tools_section,
+            photo_text=photo_text,
+            city=city,
+            province=province,
+            business_email=business_email
+        )
 
-{customer_section}
-{tools_section}
-PHOTOS:
-{photo_text}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CNS Tools and Repair | {city}, {province}
-{business_email}
-"""
-
-        # Set email body
+        # Update email body with final content
         message.plain_text_content = body
 
         # Send email via SendGrid
