@@ -6,6 +6,7 @@ from app.routers.settings import DEFAULT_SETTINGS
 from datetime import timedelta
 import base64
 import requests
+import traceback
 
 
 def format_pst_datetime(utc_dt) -> str:
@@ -66,12 +67,8 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
         tools_section += f"  Quantity: {tool.quantity}\n"
         tools_section += f"  Problem: {tool.problem_description}\n"
 
-    # Build photo section (photos will be attachments)
-    if quote.photos:
-        photo_count = len(quote.photos)
-        photo_text = f"  📎 {photo_count} photo{'s' if photo_count > 1 else ''} attached"
-    else:
-        photo_text = "  📷 No photos"
+    # Build photo section (photos will be attachments) - placeholder, updated after processing
+    photo_text = ""
 
     # Subject line (use company if available, otherwise contact person)
     subject_name = quote.company_name if quote.company_name else quote.contact_person
@@ -80,44 +77,33 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
     tool_count = len(quote.tools)
     tool_summary = f"{tool_count} tool{'s' if tool_count > 1 else ''}"
 
-    # Plain text email body
-    body = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REQUEST #{quote.request_number}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Submitted: {submitted_time}
-
-{customer_section}
-{tools_section}
-PHOTOS:
-{photo_text}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CNS Tools and Repair | {city}, {province}
-{business_email}
-"""
-
     try:
-        # Create SendGrid message (plain text only)
+        # Create SendGrid message (plain text only) - body built after attachment processing
         message = Mail(
             from_email=app_settings.sendgrid_from_email,
             to_emails=app_settings.notification_email,
-            subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}",
-            plain_text_content=body
+            subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}"
         )
 
         # Set Reply-To to customer's email for easy response
         message.reply_to = Email(quote.email, quote.contact_person)
 
-        # Attach photos as email attachments
+        # Attach photos as email attachments (with fallback for production)
+        attachment_errors = []
         if quote.photos:
             attachments = []
             for idx, photo in enumerate(quote.photos, start=1):
                 try:
                     # Get photo URL (handle both Spaces URLs and local paths)
-                    photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/uploads/{photo}'
+                    if app_settings.use_spaces:
+                        # Production: Photos in Digital Ocean Spaces
+                        photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/{photo}'
+                    else:
+                        # Development: Local file system
+                        photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/uploads/{photo}'
 
-                    # Download photo from Spaces or local server
-                    response_photo = requests.get(photo_url, timeout=10)
+                    # Download photo from Spaces or local server (increased timeout for production)
+                    response_photo = requests.get(photo_url, timeout=30)
                     response_photo.raise_for_status()
                     photo_data = response_photo.content
 
@@ -144,20 +130,66 @@ CNS Tools and Repair | {city}, {province}
                     attachments.append(attachment)
 
                 except Exception as e:
-                    print(f"Warning: Failed to attach photo {photo}: {str(e)}")
+                    # Log detailed error for debugging production issues
+                    error_msg = f"Failed to attach photo {photo}: {str(e)}"
+                    print(f"⚠️ Photo Attachment Error: {error_msg}")
+                    print(f"📍 Photo URL attempted: {photo_url if 'photo_url' in locals() else 'URL not constructed'}")
+                    print(f"📋 Traceback:\n{traceback.format_exc()}")
+
+                    # Track failed photos
+                    attachment_errors.append(photo)
                     # Continue with other photos even if one fails
                     continue
 
-            # Add all attachments to message
+            # Add all successful attachments to message
             if attachments:
                 message.attachment = attachments
+
+        # Build photo section for email body (after attachment processing)
+        if quote.photos:
+            successful_count = len(quote.photos) - len(attachment_errors)
+            failed_count = len(attachment_errors)
+
+            if failed_count == 0:
+                # All photos attached successfully
+                photo_text = f"  📎 {successful_count} photo{'s' if successful_count > 1 else ''} attached"
+            elif successful_count > 0:
+                # Some photos attached, some failed
+                photo_text = f"  📎 {successful_count} photo{'s' if successful_count > 1 else ''} attached\n"
+                photo_text += f"  ⚠️  {failed_count} photo{'s' if failed_count > 1 else ''} could not be attached - view in admin dashboard"
+            else:
+                # All photos failed
+                photo_text = f"  ⚠️  {len(quote.photos)} photo{'s' if len(quote.photos) > 1 else ''} uploaded but could not be attached - view in admin dashboard"
+        else:
+            photo_text = "  📷 No photos"
+
+        # Build final email body with photo status
+        body = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUEST #{quote.request_number}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Submitted: {submitted_time}
+
+{customer_section}
+{tools_section}
+PHOTOS:
+{photo_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CNS Tools and Repair | {city}, {province}
+{business_email}
+"""
+
+        # Set email body
+        message.plain_text_content = body
 
         # Send email via SendGrid
         sg = SendGridAPIClient(app_settings.sendgrid_api_key)
         response = sg.send(message)
 
-        print(f"Email sent! Status code: {response.status_code}")
-        print(f"Request: #{quote.request_number} | Customer: {subject_name}")
+        print(f"✅ Email sent! Status code: {response.status_code}")
+        print(f"📧 Request: #{quote.request_number} | Customer: {subject_name}")
+        if attachment_errors:
+            print(f"⚠️  {len(attachment_errors)} photo(s) failed to attach but email sent successfully")
         return True
     except Exception as e:
         print(f"Failed to send email: {str(e)}")
