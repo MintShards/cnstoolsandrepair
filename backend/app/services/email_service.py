@@ -4,6 +4,7 @@ from app.config import settings as app_settings
 from app.models.quote import Quote
 from app.routers.settings import DEFAULT_SETTINGS
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 import base64
 import requests
 import traceback
@@ -11,26 +12,35 @@ import traceback
 
 def format_pst_datetime(utc_dt) -> str:
     """Convert UTC datetime to Pacific Time (PST/PDT) and format for readability"""
-    # Pacific timezone is UTC-8 (PST) or UTC-7 (PDT)
-    # Simplified: Use UTC-8 for now (can add pytz for full DST support later)
-    pst_offset = timedelta(hours=-8)
-    pst_dt = utc_dt + pst_offset
+    # Convert UTC to Pacific timezone (automatically handles PST/PDT)
+    pacific_tz = ZoneInfo("America/Vancouver")  # Surrey, BC is in Pacific timezone
 
-    # Format: March 17, 2026 at 1:33 AM PST
+    # Ensure utc_dt is timezone-aware (UTC)
+    if utc_dt.tzinfo is None:
+        from datetime import timezone
+        utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+
+    # Convert to Pacific time
+    pacific_dt = utc_dt.astimezone(pacific_tz)
+
+    # Format: March 17, 2026 at 1:33 AM PDT (or PST depending on date)
     month_names = ['January', 'February', 'March', 'April', 'May', 'June',
                    'July', 'August', 'September', 'October', 'November', 'December']
 
-    month = month_names[pst_dt.month - 1]
-    day = pst_dt.day
-    year = pst_dt.year
-    hour = pst_dt.hour
-    minute = pst_dt.minute
+    month = month_names[pacific_dt.month - 1]
+    day = pacific_dt.day
+    year = pacific_dt.year
+    hour = pacific_dt.hour
+    minute = pacific_dt.minute
 
     # Convert 24hr to 12hr format
     am_pm = "AM" if hour < 12 else "PM"
     display_hour = hour if 1 <= hour <= 12 else (hour - 12 if hour > 12 else 12)
 
-    return f"{month} {day}, {year} at {display_hour}:{minute:02d} {am_pm} PST"
+    # Determine if DST is in effect (PDT vs PST)
+    tz_name = pacific_dt.strftime('%Z')  # Returns 'PST' or 'PDT'
+
+    return f"{month} {day}, {year} at {display_hour}:{minute:02d} {am_pm} {tz_name}"
 
 
 async def send_quote_notification(quote: Quote, business_settings: dict = None) -> bool:
