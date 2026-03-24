@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from typing import List, Optional
 from bson import ObjectId
+from pydantic import BaseModel
 from app.database import get_database
 from app.models.brand import BrandResponse
 from app.utils.helpers import convert_objectid_to_str
@@ -8,6 +9,11 @@ from app.services.file_service import save_upload_file, delete_file
 from app.dependencies.auth import require_admin
 
 router = APIRouter(prefix="/api/brands", tags=["brands"])
+
+
+class BrandOrderUpdate(BaseModel):
+    id: str
+    order: int
 
 
 @router.post("/", response_model=BrandResponse, status_code=201, dependencies=[Depends(require_admin)])
@@ -26,11 +32,16 @@ async def create_brand(
     if logo:
         logo_url = await save_upload_file(logo, folder="brands")
 
+    # Get the highest current order value and increment
+    max_order_brand = await db.brands.find_one(sort=[("order", -1)])
+    next_order = (max_order_brand.get("order", 0) + 1) if max_order_brand else 0
+
     brand_dict = {
         "name": name,
         "logo_url": logo_url,
         "active": active,
-        "authorized": authorized
+        "authorized": authorized,
+        "order": next_order
     }
 
     result = await db.brands.insert_one(brand_dict)
@@ -46,12 +57,12 @@ async def create_brand(
 
 @router.get("/", response_model=List[BrandResponse])
 async def list_brands(active_only: bool = True):
-    """List all brands (sorted by creation date - oldest first)"""
+    """List all brands (sorted by custom order for carousel display)"""
 
     db = get_database()
 
     query = {"active": True} if active_only else {}
-    cursor = db.brands.find(query).sort("_id", 1)  # Sort by ObjectId (creation time)
+    cursor = db.brands.find(query).sort("order", 1)  # Sort by custom order field
     brands = await cursor.to_list(length=None)
 
     brands = [convert_objectid_to_str(brand) for brand in brands]
@@ -183,3 +194,33 @@ async def delete_brand(brand_id: str):
         raise
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid brand ID format")
+
+
+@router.put("/reorder", status_code=200, dependencies=[Depends(require_admin)])
+async def reorder_brands(brands: List[BrandOrderUpdate]):
+    """Update the order of multiple brands for carousel display"""
+
+    db = get_database()
+
+    if not brands:
+        raise HTTPException(status_code=400, detail="No brands provided")
+
+    # Update each brand's order
+    updated_count = 0
+    for brand_update in brands:
+        try:
+            result = await db.brands.update_one(
+                {"_id": ObjectId(brand_update.id)},
+                {"$set": {"order": brand_update.order}}
+            )
+            if result.matched_count > 0:
+                updated_count += 1
+        except Exception as e:
+            print(f"Error updating brand {brand_update.id}: {str(e)}")
+            continue
+
+    return {
+        "success": True,
+        "updated_count": updated_count,
+        "message": f"Successfully updated order for {updated_count} brands"
+    }

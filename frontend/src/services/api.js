@@ -118,6 +118,10 @@ export const brandsAPI = {
   delete: async (id) => {
     await api.delete(`/api/brands/${id}`);
   },
+  reorder: async (brands) => {
+    const response = await api.put('/api/brands/reorder', brands);
+    return response.data;
+  },
 };
 
 // Industries API

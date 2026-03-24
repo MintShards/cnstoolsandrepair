@@ -1,9 +1,175 @@
 import { useState, useEffect } from 'react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { settingsAPI, brandsAPI } from '../../../services/api';
 import AdminInput from '../AdminInput';
 import AdminTextarea from '../AdminTextarea';
 import AdminToggle from '../AdminToggle';
 import AdminSelect from '../AdminSelect';
+
+// Sortable Brand Card Component
+function SortableBrandCard({ brand, updateBrand, removeBrand, handleBrandLogoUpload }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: brand.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const hasLogo = brand.logo_url && brand.logo_url.trim() !== '';
+  const isActive = brand.active !== false;
+  const showInCarousel = hasLogo && isActive;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative p-3 rounded-lg border transition-all ${
+        showInCarousel
+          ? 'bg-slate-800 border-slate-700'
+          : 'bg-slate-900/50 border-slate-800 opacity-60'
+      }`}
+    >
+      {/* Drag Handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 left-2 cursor-grab active:cursor-grabbing p-1.5 hover:bg-slate-700 rounded transition-colors"
+        title="Drag to reorder"
+      >
+        <span className="material-symbols-outlined text-base text-slate-400">
+          drag_indicator
+        </span>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="absolute top-2 right-2 flex gap-1">
+        <button
+          onClick={() => updateBrand(brand.id, 'active', !isActive)}
+          className={`p-1.5 rounded transition-colors ${
+            isActive
+              ? 'hover:bg-orange-900/20 text-slate-400 hover:text-orange-400'
+              : 'hover:bg-green-900/20 text-slate-400 hover:text-green-400'
+          }`}
+          title={isActive ? 'Disable brand' : 'Enable brand'}
+        >
+          <span className="material-symbols-outlined text-base">
+            {isActive ? 'visibility_off' : 'visibility'}
+          </span>
+        </button>
+        <button
+          onClick={() => removeBrand(brand.id)}
+          className="p-1.5 hover:bg-red-900/20 text-slate-400 hover:text-red-400 rounded transition-colors"
+          title="Delete brand"
+        >
+          <span className="material-symbols-outlined text-base">delete</span>
+        </button>
+      </div>
+
+      {/* Logo */}
+      <div className="flex justify-center mb-2">
+        {brand.logo_url ? (
+          <img
+            src={brand.logo_url}
+            alt={brand.name || 'Brand logo'}
+            className="h-10 w-16 object-contain bg-white p-1 rounded"
+          />
+        ) : (
+          <div className="h-10 w-16 bg-slate-700 rounded flex items-center justify-center">
+            <span className="material-symbols-outlined text-slate-500 text-sm">image</span>
+          </div>
+        )}
+      </div>
+
+      {/* Brand Name */}
+      <h4 className="text-xs font-bold text-white text-center truncate px-6 mb-2">
+        {brand.name || 'Unnamed Brand'}
+      </h4>
+
+      {/* Status Indicators */}
+      <div className="flex items-center justify-center gap-1 mb-2 flex-wrap">
+        {showInCarousel && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400" title="Visible">
+            ✓
+          </span>
+        )}
+        {!isActive && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400" title="Disabled">
+            ✕
+          </span>
+        )}
+        {brand.authorized && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary-300" title="Authorized">
+            ★
+          </span>
+        )}
+      </div>
+
+      {/* Expandable Details */}
+      <details className="group">
+        <summary className="cursor-pointer text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider list-none flex items-center justify-center gap-1">
+          <span className="material-symbols-outlined text-xs group-open:rotate-90 transition-transform">
+            chevron_right
+          </span>
+          Edit
+        </summary>
+
+        <div className="mt-2 pt-2 border-t border-slate-700 space-y-2">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Name</label>
+            <input
+              type="text"
+              value={brand.name}
+              onChange={(e) => updateBrand(brand.id, 'name', e.target.value)}
+              className="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-white focus:border-primary focus:outline-none"
+              placeholder="Brand name"
+              maxLength={100}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Logo</label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              onChange={(e) => handleBrandLogoUpload(brand.id, e.target.files[0])}
+              className="block w-full text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+            />
+            <p className="text-[9px] text-slate-500 mt-0.5">
+              Uploads to Digital Ocean Spaces
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded">
+            <label className="text-[10px] font-bold text-slate-400">Authorized</label>
+            <button
+              type="button"
+              onClick={() => updateBrand(brand.id, 'authorized', !brand.authorized)}
+              className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
+                brand.authorized ? 'bg-primary' : 'bg-slate-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${
+                  brand.authorized ? 'translate-x-4' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
 
 export default function GlobalTab() {
   const [formData, setFormData] = useState(null);
@@ -12,6 +178,15 @@ export default function GlobalTab() {
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState(null);
+
+  // Drag and drop sensor configuration
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts
+      },
+    })
+  );
 
   // Fetch settings on mount
   useEffect(() => {
@@ -136,6 +311,39 @@ export default function GlobalTab() {
     } catch (error) {
       console.error('Failed to update brand:', error);
       showNotification('Failed to update brand: ' + error.message, 'error');
+    }
+  };
+
+  // Handle drag end event
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = brands.findIndex((b) => b.id === active.id);
+    const newIndex = brands.findIndex((b) => b.id === over.id);
+
+    // Reorder locally first for immediate UI feedback
+    const reordered = arrayMove(brands, oldIndex, newIndex);
+    setBrands(reordered);
+
+    // Update order values and send to backend
+    try {
+      const updates = reordered.map((brand, index) => ({
+        id: brand.id,
+        order: index,
+      }));
+
+      await brandsAPI.reorder(updates);
+      showNotification('Brand order updated!', 'success');
+    } catch (error) {
+      console.error('Failed to reorder brands:', error);
+      showNotification('Failed to save brand order: ' + error.message, 'error');
+      // Revert on error
+      const data = await brandsAPI.list(false);
+      setBrands(data);
     }
   };
 
@@ -537,9 +745,9 @@ export default function GlobalTab() {
           <div className="flex gap-3">
             <span className="material-symbols-outlined text-blue-400">info</span>
             <div className="flex-1 text-sm text-blue-300">
-              <p className="font-bold mb-1">Managing Brand Visibility</p>
+              <p className="font-bold mb-1">Managing Brand Order & Visibility</p>
               <p className="text-blue-400">
-                Click the eye icon to toggle visibility. Only active brands with logos appear on your website (in creation order).
+                Drag brands to reorder carousel display. Click the eye icon to toggle visibility. Only active brands with logos appear on your website.
               </p>
             </div>
           </div>
@@ -555,147 +763,26 @@ export default function GlobalTab() {
         </div>
       )}
 
-      {/* Brand Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {brands.map((brand) => {
-            const hasLogo = brand.logo_url && brand.logo_url.trim() !== '';
-            const isActive = brand.active !== false;
-            const showInCarousel = hasLogo && isActive;
-
-            return (
-              <div
+      {/* Brand Cards Grid with Drag & Drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={brands.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {brands.map((brand) => (
+              <SortableBrandCard
                 key={brand.id}
-                className={`relative p-3 rounded-lg border transition-all ${
-                  showInCarousel
-                    ? 'bg-slate-800 border-slate-700'
-                    : 'bg-slate-900/50 border-slate-800 opacity-60'
-                }`}
-              >
-                {/* Action Buttons */}
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <button
-                    onClick={() => updateBrand(brand.id, 'active', !isActive)}
-                    className={`p-1.5 rounded transition-colors ${
-                      isActive
-                        ? 'hover:bg-orange-900/20 text-slate-400 hover:text-orange-400'
-                        : 'hover:bg-green-900/20 text-slate-400 hover:text-green-400'
-                    }`}
-                    title={isActive ? 'Disable brand' : 'Enable brand'}
-                  >
-                    <span className="material-symbols-outlined text-base">
-                      {isActive ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => removeBrand(brand.id)}
-                    className="p-1.5 hover:bg-red-900/20 text-slate-400 hover:text-red-400 rounded transition-colors"
-                    title="Delete brand"
-                  >
-                    <span className="material-symbols-outlined text-base">delete</span>
-                  </button>
-                </div>
-
-                {/* Logo */}
-                <div className="flex justify-center mb-2">
-                  {brand.logo_url ? (
-                    <img
-                      src={brand.logo_url}
-                      alt={brand.name || 'Brand logo'}
-                      className="h-10 w-16 object-contain bg-white p-1 rounded"
-                    />
-                  ) : (
-                    <div className="h-10 w-16 bg-slate-700 rounded flex items-center justify-center">
-                      <span className="material-symbols-outlined text-slate-500 text-sm">image</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Brand Name */}
-                <h4 className="text-xs font-bold text-white text-center truncate px-6 mb-2">
-                  {brand.name || 'Unnamed Brand'}
-                </h4>
-
-                {/* Status Indicators */}
-                <div className="flex items-center justify-center gap-1 mb-2 flex-wrap">
-                  {showInCarousel && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400" title="Visible">
-                      ✓
-                    </span>
-                  )}
-                  {!isActive && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400" title="Disabled">
-                      ✕
-                    </span>
-                  )}
-                  {brand.authorized && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary-300" title="Authorized">
-                      ★
-                    </span>
-                  )}
-                </div>
-
-                {/* Expandable Details */}
-                <details className="group">
-                  <summary className="cursor-pointer text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider list-none flex items-center justify-center gap-1">
-                    <span className="material-symbols-outlined text-xs group-open:rotate-90 transition-transform">
-                      chevron_right
-                    </span>
-                    Edit
-                  </summary>
-
-                  <div className="mt-2 pt-2 border-t border-slate-700 space-y-2">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Name</label>
-                      <input
-                        type="text"
-                        value={brand.name}
-                        onChange={(e) => {
-                          setBrands((prev) =>
-                            prev.map((b) => (b.id === brand.id ? { ...b, name: e.target.value } : b))
-                          );
-                        }}
-                        onBlur={(e) => updateBrand(brand.id, 'name', e.target.value)}
-                        className="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-white focus:border-primary focus:outline-none"
-                        placeholder="Brand name"
-                        maxLength={100}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-0.5">Logo</label>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                        onChange={(e) => handleBrandLogoUpload(brand.id, e.target.files[0])}
-                        className="block w-full text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
-                      />
-                      <p className="text-[9px] text-slate-500 mt-0.5">
-                        Uploads to Digital Ocean Spaces
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between p-1.5 bg-slate-900 rounded">
-                      <label className="text-[10px] font-bold text-slate-400">Authorized</label>
-                      <button
-                        type="button"
-                        onClick={() => updateBrand(brand.id, 'authorized', !brand.authorized)}
-                        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
-                          brand.authorized ? 'bg-primary' : 'bg-slate-700'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform ${
-                            brand.authorized ? 'translate-x-4' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </details>
-              </div>
-            );
-          })}
-      </div>
+                brand={brand}
+                updateBrand={updateBrand}
+                removeBrand={removeBrand}
+                handleBrandLogoUpload={handleBrandLogoUpload}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }

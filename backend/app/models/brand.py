@@ -7,6 +7,7 @@ class BrandCreate(BaseModel):
     logo_url: str = Field(default="placeholder-logo.png")
     active: bool = True
     authorized: bool = False
+    order: int = Field(default=0)
 
 
 class BrandUpdate(BaseModel):
@@ -14,6 +15,7 @@ class BrandUpdate(BaseModel):
     logo_url: Optional[str] = None
     active: Optional[bool] = None
     authorized: Optional[bool] = None
+    order: Optional[int] = None
 
 
 class Brand(BrandCreate):
@@ -28,6 +30,7 @@ class Brand(BrandCreate):
                 "logo_url": "ingersoll-rand-logo.png",
                 "active": True,
                 "authorized": False,
+                "order": 0,
             }
         }
 
@@ -38,3 +41,4 @@ class BrandResponse(BaseModel):
     logo_url: Optional[str] = None
     active: bool
     authorized: bool = False
+    order: int = 0
