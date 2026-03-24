@@ -151,19 +151,35 @@ async def update_brand(
 
 @router.delete("/{brand_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_brand(brand_id: str):
-    """Delete a brand (soft delete)"""
+    """Delete a brand permanently and remove logo from storage"""
 
     db = get_database()
 
     try:
-        result = await db.brands.update_one(
-            {"_id": ObjectId(brand_id)},
-            {"$set": {"active": False}}
-        )
+        # Get brand to retrieve logo URL before deletion
+        brand = await db.brands.find_one({"_id": ObjectId(brand_id)})
+
+        if not brand:
+            raise HTTPException(status_code=404, detail="Brand not found")
+
+        # Delete logo from storage if it exists
+        if brand.get("logo_url"):
+            try:
+                deleted = await delete_file(brand["logo_url"])
+                if not deleted:
+                    print(f"Warning: Could not delete logo: {brand['logo_url']}")
+            except Exception as e:
+                print(f"Error deleting logo: {str(e)}")
+
+        # Delete brand from database (hard delete)
+        result = await db.brands.delete_one({"_id": ObjectId(brand_id)})
+
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=500, detail="Failed to delete brand")
+
+        return None
+
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid brand ID format")
-
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Brand not found")
-
-    return None
