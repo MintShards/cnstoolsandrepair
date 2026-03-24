@@ -96,6 +96,36 @@ async def get_brand(brand_id: str):
     return BrandResponse(**brand)
 
 
+@router.put("/reorder", status_code=200, dependencies=[Depends(require_admin)])
+async def reorder_brands(brands: List[BrandOrderUpdate]):
+    """Update the order of multiple brands for carousel display"""
+
+    db = get_database()
+
+    if not brands:
+        raise HTTPException(status_code=400, detail="No brands provided")
+
+    # Update each brand's order
+    updated_count = 0
+    for brand_update in brands:
+        try:
+            result = await db.brands.update_one(
+                {"_id": ObjectId(brand_update.id)},
+                {"$set": {"order": brand_update.order}}
+            )
+            if result.matched_count > 0:
+                updated_count += 1
+        except Exception as e:
+            print(f"Error updating brand {brand_update.id}: {str(e)}")
+            continue
+
+    return {
+        "success": True,
+        "updated_count": updated_count,
+        "message": f"Successfully updated order for {updated_count} brands"
+    }
+
+
 @router.put("/{brand_id}", response_model=BrandResponse, dependencies=[Depends(require_admin)])
 async def update_brand(
     brand_id: str,
@@ -194,33 +224,3 @@ async def delete_brand(brand_id: str):
         raise
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid brand ID format")
-
-
-@router.put("/reorder", status_code=200, dependencies=[Depends(require_admin)])
-async def reorder_brands(brands: List[BrandOrderUpdate]):
-    """Update the order of multiple brands for carousel display"""
-
-    db = get_database()
-
-    if not brands:
-        raise HTTPException(status_code=400, detail="No brands provided")
-
-    # Update each brand's order
-    updated_count = 0
-    for brand_update in brands:
-        try:
-            result = await db.brands.update_one(
-                {"_id": ObjectId(brand_update.id)},
-                {"$set": {"order": brand_update.order}}
-            )
-            if result.matched_count > 0:
-                updated_count += 1
-        except Exception as e:
-            print(f"Error updating brand {brand_update.id}: {str(e)}")
-            continue
-
-    return {
-        "success": True,
-        "updated_count": updated_count,
-        "message": f"Successfully updated order for {updated_count} brands"
-    }
