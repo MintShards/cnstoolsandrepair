@@ -198,5 +198,17 @@ CNS Tools and Repair | {city}, {province}
             print(f"⚠️  {len(attachment_errors)} photo(s) failed to attach but email sent successfully")
         return True
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
+        print(f"❌ Failed to send email: {str(e)}")
+        print(f"📋 Email Details:")
+        print(f"   From: {app_settings.sendgrid_from_email}")
+        print(f"   To: {app_settings.notification_email}")
+        print(f"   Subject: New Request #{quote.request_number}: {subject_name} - {tool_summary}")
+        print(f"📋 Full Error Traceback:\n{traceback.format_exc()}")
+
+        # Check for SendGrid specific errors
+        if hasattr(e, 'body'):
+            print(f"📋 SendGrid Error Body: {e.body}")
+        if hasattr(e, 'status_code'):
+            print(f"📋 SendGrid Status Code: {e.status_code}")
+
         return False
