@@ -1,5 +1,5 @@
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition
+from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition, Content
 from app.config import settings as app_settings
 from app.models.quote import Quote
 from app.routers.settings import DEFAULT_SETTINGS
@@ -201,8 +201,8 @@ CNS Tools and Repair | {city}, {province}
             business_email=business_email
         )
 
-        # Update email body with final content
-        message.plain_text_content = body
+        # Update email body with final content (use Content object for proper SendGrid API)
+        message.content = [Content("text/plain", body)]
 
         # Send email via SendGrid
         sg = SendGridAPIClient(app_settings.sendgrid_api_key)
