@@ -103,12 +103,11 @@ CNS Tools and Repair | {city}, {province}
 """
 
     try:
-        # Create SendGrid message with initial content
+        # Create SendGrid message (content will be set after processing attachments)
         message = Mail(
             from_email=app_settings.sendgrid_from_email,
             to_emails=app_settings.notification_email,
-            subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}",
-            plain_text_content="Processing quote notification..."
+            subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}"
         )
 
         # Set Reply-To to customer's email for easy response
@@ -201,8 +200,8 @@ CNS Tools and Repair | {city}, {province}
             business_email=business_email
         )
 
-        # Update email body with final content (use Content object for proper SendGrid API)
-        message.content = [Content("text/plain", body)]
+        # Set email body content (required by SendGrid, must be set exactly once)
+        message.content = Content("text/plain", body)
 
         # Send email via SendGrid
         sg = SendGridAPIClient(app_settings.sendgrid_api_key)
