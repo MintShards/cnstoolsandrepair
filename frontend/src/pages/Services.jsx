@@ -232,7 +232,7 @@ export default function Services() {
                   <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
                   <h2 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools We Repair</h2>
                   <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
-                    Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, and lifting equipment. All major brands serviced including Ingersoll Rand, DeWalt, and Chicago Pneumatic.
+                    Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, and lifting equipment—supporting a wide range of industrial applications.
                   </p>
                 </div>
 
