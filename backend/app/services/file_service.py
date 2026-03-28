@@ -82,8 +82,8 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
 
         # Verify image format matches extension
         expected_formats = {
-            'jpg': ['jpeg', 'jpg'],
-            'jpeg': ['jpeg', 'jpg'],
+            'jpg': ['jpeg', 'jpg', 'mpo'],
+            'jpeg': ['jpeg', 'jpg', 'mpo'],
             'png': ['png'],
             'webp': ['webp']
         }
