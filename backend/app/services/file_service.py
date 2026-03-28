@@ -85,16 +85,17 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
             if image_format not in expected_formats[file_ext]:
                 return False
 
-        # Verify image
-        image.verify()
-
-        # Check dimensions (reject suspiciously small images)
+        # Check dimensions BEFORE verify() — after verify() the image object is unusable
+        # (Pillow docs: the image can no longer be used after verify() is called)
         if image.width < 10 or image.height < 10:
             return False
 
-        # Check dimensions (reject suspiciously large images - potential DOS)
         if image.width > 10000 or image.height > 10000:
             return False
+
+        # Verify image integrity on a fresh image object
+        verify_image = Image.open(BytesIO(contents))
+        verify_image.verify()
 
         return True
     except Exception as e:
