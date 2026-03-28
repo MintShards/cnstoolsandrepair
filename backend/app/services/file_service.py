@@ -83,19 +83,20 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
 
         if file_ext in expected_formats:
             if image_format not in expected_formats[file_ext]:
+                print(f"Image validation failed: format mismatch ext={file_ext} format={image_format}")
                 return False
 
-        # Check dimensions BEFORE verify() — after verify() the image object is unusable
-        # (Pillow docs: the image can no longer be used after verify() is called)
+        # Check dimensions BEFORE any integrity check
         if image.width < 10 or image.height < 10:
             return False
 
         if image.width > 10000 or image.height > 10000:
             return False
 
-        # Verify image integrity on a fresh image object
-        verify_image = Image.open(BytesIO(contents))
-        verify_image.verify()
+        # Use load() instead of verify() — verify() is too strict for real-world phone photos
+        # (phone JPEGs often have trailing data or non-standard markers that verify() rejects)
+        # load() actually decodes the pixel data which is a reliable integrity check
+        image.load()
 
         return True
     except Exception as e:
