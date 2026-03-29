@@ -257,26 +257,32 @@ export default function Quote() {
           } else if (error.code === 'file-invalid-type') {
             const ext = file.name.split('.').pop()?.toUpperCase() || 'unknown';
             dropErrors.push(`"${file.name}" is a ${ext} file — only JPG, PNG, and WebP images are accepted.`);
+          } else if (error.code === 'too-many-files') {
+            // Handled below with the combined count check
           }
         });
       });
 
-      // Check for max files limit
-      const totalFiles = photos.length + acceptedFiles.length;
-      if (totalFiles > 5) {
-        dropErrors.push(`You can upload up to 5 photos total. You already have ${photos.length} and tried to add ${acceptedFiles.length} more.`);
+      // Check how many slots are available
+      const slotsAvailable = 5 - photos.length;
+
+      if (slotsAvailable <= 0) {
+        dropErrors.push('You already have 5 photos — remove one before adding more.');
         setPhotoErrors(dropErrors);
         return;
       }
 
+      if (acceptedFiles.length > slotsAvailable) {
+        const kept = acceptedFiles.slice(0, slotsAvailable);
+        const skipped = acceptedFiles.length - slotsAvailable;
+        dropErrors.push(`Only ${slotsAvailable} photo slot${slotsAvailable > 1 ? 's' : ''} remaining — added ${kept.length}, skipped ${skipped}.`);
+        setPhotos(prev => [...prev, ...kept]);
+      } else if (acceptedFiles.length > 0) {
+        setPhotos(prev => [...prev, ...acceptedFiles]);
+      }
+
       if (dropErrors.length > 0) {
         setPhotoErrors(dropErrors);
-        // Still accept the valid files
-        if (acceptedFiles.length > 0) {
-          setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 5));
-        }
-      } else {
-        setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 5));
       }
     }
   });
@@ -752,9 +758,17 @@ export default function Quote() {
                 cloud_upload
               </span>
               <p className="font-bold text-slate-600 dark:text-slate-400">
-                {isDragActive ? 'Drop photos here' : 'Click or drag photos here'}
+                {photos.length >= 5
+                  ? 'Maximum photos reached — remove one to add more'
+                  : isDragActive
+                  ? 'Drop photos here'
+                  : 'Click or drag photos here'}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">Max 5 photos, 10MB each (JPG, PNG, WebP)</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+                {photos.length > 0
+                  ? `${photos.length}/5 photos added — ${5 - photos.length} slot${5 - photos.length !== 1 ? 's' : ''} remaining (10MB each, JPG, PNG, WebP)`
+                  : 'Max 5 photos, 10MB each (JPG, PNG, WebP)'}
+              </p>
             </div>
 
             {/* Photo validation errors */}
