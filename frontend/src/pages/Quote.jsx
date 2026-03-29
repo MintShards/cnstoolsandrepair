@@ -390,9 +390,26 @@ export default function Quote() {
         progressInterval = null;
       }
 
+      let errorMessage;
+      if (!navigator.onLine) {
+        errorMessage = 'No internet connection. Please check your network and try again.';
+      } else if (error.response?.status === 413) {
+        errorMessage = 'Your photos are too large to upload. Try removing some photos or using smaller images.';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Too many requests. Please wait a moment and try again.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Our server is temporarily unavailable. Please try again in a few minutes.';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'Unable to reach our server. Please check your connection and try again.';
+      } else {
+        errorMessage = 'Something went wrong while submitting your request. Please try again — if the issue persists, call us directly.';
+      }
+
       setSubmitStatus({
         type: 'error',
-        message: error.response?.data?.detail || 'Failed to submit repair request. Please try again.'
+        message: errorMessage
       });
 
       // Focus on error message for screen readers
@@ -853,7 +870,18 @@ export default function Quote() {
               role="alert"
               aria-live="assertive"
             >
-              {submitStatus.message}
+              <div className="flex items-start gap-3">
+                {submitStatus.type === 'error' && (
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-xl shrink-0 mt-0.5">error</span>
+                )}
+                {submitStatus.type === 'warning' && (
+                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-xl shrink-0 mt-0.5">warning</span>
+                )}
+                {submitStatus.type === 'success' && (
+                  <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-xl shrink-0 mt-0.5">check_circle</span>
+                )}
+                <span className="font-bold">{submitStatus.message}</span>
+              </div>
             </div>
           )}
 
