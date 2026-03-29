@@ -16,7 +16,7 @@ try:
     BOTO3_AVAILABLE = True
 except ImportError:
     BOTO3_AVAILABLE = False
-    print("Warning: boto3 not installed. Spaces integration disabled.")
+    logger.warning("boto3 not installed. Spaces integration disabled.")
 
 
 def get_spaces_client():
@@ -72,13 +72,10 @@ def sanitize_filename(filename: str) -> str:
 async def validate_image_file(contents: bytes, file_ext: str) -> bool:
     """Validate that file is actually an image by checking content"""
     try:
-        logger.warning(f"[UPLOAD DEBUG] validate_image_file: ext={file_ext} size={len(contents)}")
-
         # Try to open as image
         image = Image.open(BytesIO(contents))
 
         image_format = image.format.lower() if image.format else ""
-        logger.warning(f"[UPLOAD DEBUG] PIL format={image_format} size={image.size}")
 
         # Verify image format matches extension
         expected_formats = {
@@ -90,25 +87,24 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
 
         if file_ext in expected_formats:
             if image_format not in expected_formats[file_ext]:
-                logger.warning(f"[UPLOAD DEBUG] FAIL: format mismatch ext={file_ext} format={image_format}")
+                logger.info(f"Image validation failed: format mismatch ext={file_ext} format={image_format}")
                 return False
 
         # Check dimensions BEFORE any integrity check
         if image.width < 10 or image.height < 10:
-            logger.warning(f"[UPLOAD DEBUG] FAIL: image too small {image.width}x{image.height}")
+            logger.info(f"Image validation failed: image too small {image.width}x{image.height}")
             return False
 
         if image.width > 10000 or image.height > 10000:
-            logger.warning(f"[UPLOAD DEBUG] FAIL: image too large {image.width}x{image.height}")
+            logger.info(f"Image validation failed: image too large {image.width}x{image.height}")
             return False
 
         # Decode pixel data as integrity check
         image.load()
 
-        logger.warning(f"[UPLOAD DEBUG] PASS: image valid {image.width}x{image.height} {image_format}")
         return True
     except Exception as e:
-        logger.warning(f"[UPLOAD DEBUG] FAIL: exception {type(e).__name__}: {str(e)}")
+        logger.info(f"Image validation failed: {type(e).__name__}: {str(e)}")
         return False
 
 
@@ -200,10 +196,10 @@ async def delete_file_from_spaces(file_url: str) -> bool:
         s3_client.delete_object(Bucket=settings.spaces_bucket, Key=key)
         return True
     except ClientError as e:
-        print(f"Delete from Spaces failed: {str(e)}")
+        logger.error(f"Delete from Spaces failed: {str(e)}")
         return False
     except Exception as e:
-        print(f"Unexpected error deleting from Spaces: {str(e)}")
+        logger.error(f"Unexpected error deleting from Spaces: {str(e)}")
         return False
 
 

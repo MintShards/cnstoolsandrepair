@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
@@ -9,10 +10,10 @@ from app.services.email_service import format_pst_datetime
 from app.routers.settings import DEFAULT_SETTINGS
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from bson import ObjectId
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger(__name__)
 
 
 class ContactMessage(BaseModel):
@@ -64,17 +65,14 @@ async def send_contact_message(request: Request, contact: ContactMessage):
         if business_settings and "contact" in business_settings and "address" in business_settings["contact"]:
             city = business_settings["contact"]["address"]["city"]
             province = business_settings["contact"]["address"]["province"]
-            business_email = business_settings["contact"]["email"]
         else:
             # Fallback to DEFAULT_SETTINGS if settings not found or incomplete
             city = DEFAULT_SETTINGS["contact"]["address"]["city"]
             province = DEFAULT_SETTINGS["contact"]["address"]["province"]
-            business_email = DEFAULT_SETTINGS["contact"]["email"]
     except (KeyError, TypeError):
         # Fallback if settings structure is invalid
         city = DEFAULT_SETTINGS["contact"]["address"]["city"]
         province = DEFAULT_SETTINGS["contact"]["address"]["province"]
-        business_email = DEFAULT_SETTINGS["contact"]["email"]
 
     # Store message in database
     message_dict = contact.model_dump()
@@ -85,7 +83,7 @@ async def send_contact_message(request: Request, contact: ContactMessage):
     try:
         result = await db.contact_messages.insert_one(message_dict)
     except Exception as e:
-        print(f"Failed to store contact message: {str(e)}")
+        logger.error(f"Failed to store contact message: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to save message")
 
     # Format submission time in PST
@@ -109,16 +107,13 @@ MESSAGE:
   {contact.message}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CNS Tools and Repair | {city}, {province}
-{business_email}
-
-Message ID: {str(result.inserted_id)}
+CNS Tool Repair | {city}, {province}
 """
 
     try:
         # Create SendGrid message
         message = Mail(
-            from_email=settings.sendgrid_from_email,
+            from_email=Email("message@cnstoolrepair.com", "Message"),
             to_emails=settings.notification_email,
             subject=f"Contact Form: {contact.subject}",
             plain_text_content=email_body
@@ -131,11 +126,9 @@ Message ID: {str(result.inserted_id)}
         sg = SendGridAPIClient(settings.sendgrid_api_key)
         response = sg.send(message)
 
-        print(f"Contact form email sent! Status code: {response.status_code}")
-        print(f"Contact: {contact.name} | Subject: {contact.subject}")
+        logger.info(f"Contact form email sent. Status: {response.status_code} | {contact.name} | {contact.subject}")
     except Exception as e:
-        print(f"Failed to send contact email: {str(e)}")
-        # Don't fail the request if email fails, message is already stored
+        logger.error(f"Failed to send contact email: {str(e)}")
 
     return {
         "success": True,

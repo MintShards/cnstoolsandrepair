@@ -50,21 +50,21 @@ export default function Home() {
         <title>{seoData.title}</title>
         <meta name="description" content={seoData.description} />
         <meta name="keywords" content={seoData.keywords} />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/" />
+        <link rel="canonical" href="https://cnstoolrepair.com/" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/" />
+        <meta property="og:url" content="https://cnstoolrepair.com/" />
         <meta property="og:title" content={seoData.title} />
         <meta property="og:description" content={seoData.description} />
-        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://cnstoolsandrepair.com/" />
+        <meta name="twitter:url" content="https://cnstoolrepair.com/" />
         <meta name="twitter:title" content={seoData.title} />
         <meta name="twitter:description" content={seoData.description} />
-        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
       <main className="relative">
       {/* Sticky Mobile CTA - Shows after Hero scrolls out */}

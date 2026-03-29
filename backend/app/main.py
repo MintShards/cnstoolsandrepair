@@ -1,3 +1,5 @@
+import logging
+import traceback
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +14,10 @@ from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
 from app.routers import quotes, tools, brands, industries, contact, gallery
 from app.routers import settings as settings_router, auth, about_content, home_content, industries_content, contact_content
+from app.logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -45,8 +51,8 @@ def get_csrf_config():
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
-    title="CNS Tools and Repair API",
-    description="Backend API for CNS Tools and Repair website",
+    title="CNS Tool Repair API",
+    description="Backend API for CNS Tool Repair website",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -63,16 +69,13 @@ async def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    print(f"Incoming request: {request.method} {request.url}")
+    logger.debug(f"Incoming request: {request.method} {request.url}")
     try:
         response = await call_next(request)
-        print(f"Response status: {response.status_code}")
+        logger.debug(f"Response status: {response.status_code}")
         return response
     except Exception as e:
-        import traceback
-        print(f"Request error: {str(e)}")
-        print("Full traceback:")
-        traceback.print_exc()
+        logger.error(f"Request error: {str(e)}\n{traceback.format_exc()}")
         raise
 
 # CORS middleware
@@ -88,7 +91,7 @@ app.add_middleware(
 try:
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 except Exception as e:
-    print(f"Failed to mount uploads directory: {str(e)}")
+    logger.warning(f"Failed to mount uploads directory: {str(e)}")
 
 # Include routers
 app.include_router(quotes.router)
@@ -116,8 +119,7 @@ async def get_csrf_token(request: Request):
         csrf_protect.set_csrf_cookie(signed_token, response)
         return response
     except Exception as e:
-        # Fallback if CSRF protection fails (development mode)
-        print(f"CSRF token generation failed: {str(e)}")
+        logger.warning(f"CSRF token generation failed: {str(e)}")
         return {"csrf_token": "dev-token"}
 
 
@@ -125,7 +127,7 @@ async def get_csrf_token(request: Request):
 async def root():
     """Root endpoint"""
     return {
-        "message": "CNS Tools and Repair API",
+        "message": "CNS Tool Repair API",
         "version": "1.0.0",
         "docs": "/docs"
     }

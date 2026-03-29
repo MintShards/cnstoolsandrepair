@@ -19,7 +19,7 @@ DEFAULT_SETTINGS = {
     "contact": {
         "phone": "(604) 555-0123",
         "phoneLink": "6045550123",
-        "email": "contact@cnstoolsandrepair.com",
+        "email": "contact@cnstoolrepair.com",
         "address": {
             "street": "Surrey, BC, Canada",
             "city": "Surrey",
@@ -139,9 +139,6 @@ async def update_settings(settings_data: BusinessSettingsUpdate):
 
     # Convert ObjectId to string
     updated_settings = convert_objectid_to_str(updated_settings)
-
-    # TODO: Invalidate cache here if caching is implemented
-    # Example: await cache.delete("business_settings")
 
     return BusinessSettingsResponse(**updated_settings)
 

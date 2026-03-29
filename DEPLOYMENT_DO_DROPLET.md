@@ -1,6 +1,6 @@
 # Digital Ocean Droplet Deployment Guide
 
-Complete step-by-step guide for deploying CNS Tools and Repair to production on Digital Ocean Droplet.
+Complete step-by-step guide for deploying CNS Tool Repair to production on Digital Ocean Droplet.
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -312,8 +312,8 @@ CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
 # SendGrid - Production Keys
 SENDGRID_API_KEY=SG.your_actual_production_key_here
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # Digital Ocean Spaces - Your Actual Credentials
 USE_SPACES=true
@@ -354,8 +354,8 @@ MONGODB_URL=mongodb+srv://cns_prod_user:<PASSWORD>@cluster.mongodb.net/cnstoolsa
 DATABASE_NAME=cnstoolsandrepair_db_prod
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 SENDGRID_API_KEY=SG.your_actual_key
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 JWT_SECRET_KEY=your_generated_jwt_secret
 USE_SPACES=true
 SPACES_KEY=DO00XXXXXXXXXXXXX
@@ -814,4 +814,4 @@ Before going live:
 
 **Deployment complete!** 🚀
 
-Your CNS Tools and Repair website is now live in production.
+Your CNS Tool Repair website is now live in production.

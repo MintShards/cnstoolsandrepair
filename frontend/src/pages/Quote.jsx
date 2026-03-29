@@ -378,21 +378,21 @@ export default function Quote() {
           name="keywords"
           content="tool repair request Surrey, pneumatic tool repair service, industrial tool repair BC, air tool diagnostic, tool repair assessment Surrey"
         />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/repair-request" />
+        <link rel="canonical" href="https://cnstoolrepair.com/repair-request" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/repair-request" />
+        <meta property="og:url" content="https://cnstoolrepair.com/repair-request" />
         <meta property="og:title" content="Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC" />
         <meta property="og:description" content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool and provide a detailed quote." />
-        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://cnstoolsandrepair.com/repair-request" />
+        <meta name="twitter:url" content="https://cnstoolrepair.com/repair-request" />
         <meta name="twitter:title" content="Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC" />
         <meta name="twitter:description" content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool and provide a detailed quote." />
-        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
 
       <SuccessModal

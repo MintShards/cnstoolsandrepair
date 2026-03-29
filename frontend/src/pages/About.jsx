@@ -62,7 +62,7 @@ export default function About() {
   return (
     <>
       <Helmet>
-        <title>Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tools and Repair</title>
+        <title>Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tool Repair</title>
         <meta
           name="description"
           content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools for automotive, fleet, manufacturing, construction, oil & gas, aerospace, marine, mining, and MRO sectors."
@@ -71,21 +71,21 @@ export default function About() {
           name="keywords"
           content="pneumatic tool repair Surrey, industrial tool repair Surrey BC, pneumatic tool repair specialists, certified technicians BC, OEM parts Surrey, air tool repair Surrey"
         />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/about" />
+        <link rel="canonical" href="https://cnstoolrepair.com/about" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/about" />
-        <meta property="og:title" content="Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tools and Repair" />
+        <meta property="og:url" content="https://cnstoolrepair.com/about" />
+        <meta property="og:title" content="Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tool Repair" />
         <meta property="og:description" content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools." />
-        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://cnstoolsandrepair.com/about" />
-        <meta name="twitter:title" content="Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tools and Repair" />
+        <meta name="twitter:url" content="https://cnstoolrepair.com/about" />
+        <meta name="twitter:title" content="Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tool Repair" />
         <meta name="twitter:description" content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools." />
-        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
 
       {/* Section 1: Our Story */}

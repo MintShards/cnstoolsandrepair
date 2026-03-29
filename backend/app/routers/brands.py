@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from typing import List, Optional
 from bson import ObjectId
@@ -9,6 +10,7 @@ from app.services.file_service import save_upload_file, delete_file
 from app.dependencies.auth import require_admin
 
 router = APIRouter(prefix="/api/brands", tags=["brands"])
+logger = logging.getLogger(__name__)
 
 
 class BrandOrderUpdate(BaseModel):
@@ -116,7 +118,7 @@ async def reorder_brands(brands: List[BrandOrderUpdate]):
             if result.matched_count > 0:
                 updated_count += 1
         except Exception as e:
-            print(f"Error updating brand {brand_update.id}: {str(e)}")
+            logger.warning(f"Error updating brand {brand_update.id}: {str(e)}")
             continue
 
     return {
@@ -157,11 +159,9 @@ async def update_brand(
                 old_logo_url = current_brand["logo_url"]
                 deleted = await delete_file(old_logo_url)
                 if not deleted:
-                    # Log warning but don't fail update
-                    print(f"Warning: Could not delete old logo: {old_logo_url}")
+                    logger.warning(f"Could not delete old logo: {old_logo_url}")
         except Exception as e:
-            # Log error but continue with upload
-            print(f"Error deleting old logo: {str(e)}")
+            logger.error(f"Error deleting old logo: {str(e)}")
 
         # Upload new logo
         logo_url = await save_upload_file(logo, folder="brands")
@@ -208,9 +208,9 @@ async def delete_brand(brand_id: str):
             try:
                 deleted = await delete_file(brand["logo_url"])
                 if not deleted:
-                    print(f"Warning: Could not delete logo: {brand['logo_url']}")
+                    logger.warning(f"Could not delete logo: {brand['logo_url']}")
             except Exception as e:
-                print(f"Error deleting logo: {str(e)}")
+                logger.error(f"Error deleting logo: {str(e)}")
 
         # Delete brand from database (hard delete)
         result = await db.brands.delete_one({"_id": ObjectId(brand_id)})

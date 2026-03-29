@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# CNS Tools and Repair - Production Deployment Script
+# CNS Tool Repair - Production Deployment Script
 ################################################################################
 # This script automates the deployment process for Digital Ocean Droplet
 # Usage: bash scripts/deploy.sh
@@ -19,8 +19,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_DIR="/opt/apps/cnstoolsandrepair"
-DOMAIN="cnstoolsandrepair.com"
-WWW_DOMAIN="www.cnstoolsandrepair.com"
+DOMAIN="cnstoolrepair.com"
+WWW_DOMAIN="www.cnstoolrepair.com"
 
 ################################################################################
 # Helper Functions
@@ -186,8 +186,8 @@ configure_environment() {
     DATABASE_NAME=${DATABASE_NAME:-cnstoolsandrepair_db_prod}
 
     read -p "SendGrid API Key: " SENDGRID_API_KEY
-    read -p "SendGrid From Email [noreply@cnstoolsandrepair.com]: " SENDGRID_FROM_EMAIL
-    SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-noreply@cnstoolsandrepair.com}
+    read -p "SendGrid From Email [noreply@cnstoolrepair.com]: " SENDGRID_FROM_EMAIL
+    SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-noreply@cnstoolrepair.com}
     read -p "Notification Email: " NOTIFICATION_EMAIL
 
     read -p "Digital Ocean Spaces Region [nyc3]: " SPACES_REGION
@@ -360,7 +360,7 @@ show_menu() {
     clear
     echo -e "${BLUE}"
     echo "=========================================="
-    echo "  CNS Tools and Repair Deployment"
+    echo "  CNS Tool Repair Deployment"
     echo "=========================================="
     echo -e "${NC}"
     echo "1. Full Installation (First Time)"

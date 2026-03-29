@@ -1,3 +1,7 @@
+import logging
+import base64
+import requests
+import traceback
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition, Content
 from app.config import settings as app_settings
@@ -5,9 +9,8 @@ from app.models.quote import Quote
 from app.routers.settings import DEFAULT_SETTINGS
 from datetime import timedelta
 from zoneinfo import ZoneInfo
-import base64
-import requests
-import traceback
+
+logger = logging.getLogger(__name__)
 
 
 def format_pst_datetime(utc_dt) -> str:
@@ -51,16 +54,13 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
         if business_settings and "contact" in business_settings and "address" in business_settings["contact"]:
             city = business_settings["contact"]["address"]["city"]
             province = business_settings["contact"]["address"]["province"]
-            business_email = business_settings["contact"]["email"]
         else:
             city = DEFAULT_SETTINGS["contact"]["address"]["city"]
             province = DEFAULT_SETTINGS["contact"]["address"]["province"]
-            business_email = DEFAULT_SETTINGS["contact"]["email"]
     except (KeyError, TypeError):
         # Fallback if settings structure is invalid
         city = DEFAULT_SETTINGS["contact"]["address"]["city"]
         province = DEFAULT_SETTINGS["contact"]["address"]["province"]
-        business_email = DEFAULT_SETTINGS["contact"]["email"]
 
     # Format submission time
     submitted_time = format_pst_datetime(quote.created_at)
@@ -108,14 +108,13 @@ PHOTOS:
 {photo_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CNS Tools and Repair | {city}, {province}
-{business_email}
+CNS Tool Repair | {city}, {province}
 """
 
     try:
         # Create SendGrid message (content will be set after processing attachments)
         message = Mail(
-            from_email=app_settings.sendgrid_from_email,
+            from_email=Email("request@cnstoolrepair.com", "Request"),
             to_emails=app_settings.notification_email,
             subject=f"New Request #{quote.request_number}: {subject_name} - {tool_summary}"
         )
@@ -165,11 +164,10 @@ CNS Tools and Repair | {city}, {province}
                     attachments.append(attachment)
 
                 except Exception as e:
-                    # Log detailed error for debugging production issues
-                    error_msg = f"Failed to attach photo {photo}: {str(e)}"
-                    print(f"⚠️ Photo Attachment Error: {error_msg}")
-                    print(f"📍 Photo URL attempted: {photo_url if 'photo_url' in locals() else 'URL not constructed'}")
-                    print(f"📋 Traceback:\n{traceback.format_exc()}")
+                    url_attempted = photo_url if 'photo_url' in locals() else 'URL not constructed'
+                    logger.error(
+                        f"Failed to attach photo {photo}: {str(e)} | URL: {url_attempted}\n{traceback.format_exc()}"
+                    )
 
                     # Track failed photos
                     attachment_errors.append(photo)
@@ -207,7 +205,6 @@ CNS Tools and Repair | {city}, {province}
             photo_text=photo_text,
             city=city,
             province=province,
-            business_email=business_email
         )
 
         # Set email body content (required by SendGrid, must be set exactly once)
@@ -217,23 +214,17 @@ CNS Tools and Repair | {city}, {province}
         sg = SendGridAPIClient(app_settings.sendgrid_api_key)
         response = sg.send(message)
 
-        print(f"✅ Email sent! Status code: {response.status_code}")
-        print(f"📧 Request: #{quote.request_number} | Customer: {subject_name}")
+        logger.info(f"Email sent. Status: {response.status_code} | Request: #{quote.request_number} | Customer: {subject_name}")
         if attachment_errors:
-            print(f"⚠️  {len(attachment_errors)} photo(s) failed to attach but email sent successfully")
+            logger.warning(f"{len(attachment_errors)} photo(s) failed to attach but email sent successfully")
         return True
     except Exception as e:
-        print(f"❌ Failed to send email: {str(e)}")
-        print(f"📋 Email Details:")
-        print(f"   From: {app_settings.sendgrid_from_email}")
-        print(f"   To: {app_settings.notification_email}")
-        print(f"   Subject: New Request #{quote.request_number}: {subject_name} - {tool_summary}")
-        print(f"📋 Full Error Traceback:\n{traceback.format_exc()}")
-
-        # Check for SendGrid specific errors
+        extra = ""
         if hasattr(e, 'body'):
-            print(f"📋 SendGrid Error Body: {e.body}")
+            extra += f" | SendGrid body: {e.body}"
         if hasattr(e, 'status_code'):
-            print(f"📋 SendGrid Status Code: {e.status_code}")
-
+            extra += f" | SendGrid status: {e.status_code}"
+        logger.error(
+            f"Failed to send email for request #{quote.request_number}: {str(e)}{extra}\n{traceback.format_exc()}"
+        )
         return False

@@ -1,6 +1,9 @@
+import logging
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import settings
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 client: AsyncIOMotorClient = None
 database: AsyncIOMotorDatabase = None
@@ -18,7 +21,7 @@ async def close_mongo_connection():
     global client
     if client:
         client.close()
-        print("Closed MongoDB connection")
+        logger.info("Closed MongoDB connection")
 
 
 def get_database() -> AsyncIOMotorDatabase:

@@ -1,6 +1,6 @@
 # Production Deployment Guide
 
-Complete guide for deploying CNS Tools and Repair to production.
+Complete guide for deploying CNS Tool Repair to production.
 
 ## Quick Start
 
@@ -32,7 +32,7 @@ Complete guide for deploying CNS Tools and Repair to production.
 5. Configure CORS: Bucket → Settings → CORS:
 ```json
 [{
-  "AllowedOrigins": ["https://cnstoolsandrepair.com", "https://www.cnstoolsandrepair.com"],
+  "AllowedOrigins": ["https://cnstoolrepair.com", "https://www.cnstoolrepair.com"],
   "AllowedMethods": ["GET"],
   "AllowedHeaders": ["*"],
   "MaxAgeSeconds": 3000
@@ -74,12 +74,12 @@ DATABASE_NAME=cnstoolsandrepair_db_prod
 
 # Security
 JWT_SECRET_KEY=<32+ char secret from above>
-CORS_ORIGINS=https://cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com
 
 # Email
 SENDGRID_API_KEY=<your_key>
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # Spaces
 USE_SPACES=true
@@ -91,7 +91,7 @@ SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
 
 # Config
 ENVIRONMENT=production
-UPLOAD_BASE_URL=https://cnstoolsandrepair.com
+UPLOAD_BASE_URL=https://cnstoolrepair.com
 ```
 
 **Verify**:
@@ -117,7 +117,7 @@ grep -E "your_|REPLACE_|example" backend/.env
 ### 4. Manual Verification (15 min)
 
 **Test quote submission**:
-1. Visit https://cnstoolsandrepair.com/quote
+1. Visit https://cnstoolrepair.com/quote
 2. Fill form + upload photo → Submit
 3. Check email notification received
 4. Verify photo in Spaces dashboard (`quotes/` folder)
@@ -158,7 +158,7 @@ grep -E "your_|REPLACE_|example" backend/.env
 ## 📊 Architecture
 
 ```
-User Browser (cnstoolsandrepair.com)
+User Browser (cnstoolrepair.com)
     ↓
 Digital Ocean App Platform
 ├── React Frontend (SPA)
@@ -216,7 +216,7 @@ Digital Ocean App Platform
 curl -X POST https://api.sendgrid.com/v3/mail/send \
   -H "Authorization: Bearer $SENDGRID_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"personalizations":[{"to":[{"email":"test@example.com"}]}],"from":{"email":"noreply@cnstoolsandrepair.com"},"subject":"Test","content":[{"type":"text/plain","value":"Test"}]}'
+  -d '{"personalizations":[{"to":[{"email":"test@example.com"}]}],"from":{"email":"noreply@cnstoolrepair.com"},"subject":"Test","content":[{"type":"text/plain","value":"Test"}]}'
 ```
 
 ### Can't login to admin

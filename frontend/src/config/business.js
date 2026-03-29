@@ -7,13 +7,13 @@
 
 export const BUSINESS_INFO = {
   // Company Details
-  name: 'CNS Tools and Repair',
+  name: 'CNS Tool Repair',
   tagline: 'Expert Pneumatic Tool Repair & Maintenance',
 
   // Contact Information (fallback values)
   phone: '(604) 581-8930',
   phoneLink: '6045818930',
-  email: 'contact@cnstoolsandrepair.com',
+  email: 'contact@cnstoolrepair.com',
 
   // Location (fallback values)
   address: {

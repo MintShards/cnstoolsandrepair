@@ -1,6 +1,6 @@
-# 🚀 CNS Tools and Repair - Deployment Ready Guide
+# 🚀 CNS Tool Repair - Deployment Ready Guide
 
-**Domain**: cnstoolsandrepair.com
+**Domain**: cnstoolrepair.com
 **Infrastructure Status**: ✅ All services provisioned and ready
 
 ---
@@ -12,7 +12,7 @@ You have confirmed the following are ready:
 - [x] **MongoDB Atlas** - Production database created
 - [x] **Digital Ocean Spaces** - Storage bucket configured
 - [x] **SendGrid** - Email service ready
-- [x] **Domain** - cnstoolsandrepair.com registered
+- [x] **Domain** - cnstoolrepair.com registered
 
 ---
 
@@ -38,7 +38,7 @@ Before deploying, collect these credentials from your services:
 #### **SendGrid**
 - [ ] API Key (starts with `SG.`)
   - Get from: SendGrid Dashboard → Settings → API Keys
-- [ ] Verified sender email: `noreply@cnstoolsandrepair.com`
+- [ ] Verified sender email: `noreply@cnstoolrepair.com`
 - [ ] Notification email: Your business email
 
 #### **Digital Ocean Droplet**
@@ -79,7 +79,7 @@ Follow this guide for a streamlined deployment process.
 
 ### 2. Configure DNS
 
-**Update DNS for cnstoolsandrepair.com:**
+**Update DNS for cnstoolrepair.com:**
 
 | Type | Name | Value | TTL |
 |------|------|-------|-----|
@@ -88,7 +88,7 @@ Follow this guide for a streamlined deployment process.
 
 **Wait 15-30 minutes for DNS propagation**, then verify:
 ```bash
-nslookup cnstoolsandrepair.com
+nslookup cnstoolrepair.com
 ```
 
 ---
@@ -150,11 +150,11 @@ MONGODB_URL=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/cnstoolsandrepai
 DATABASE_NAME=cnstoolsandrepair_db_prod
 
 # CORS - Production Domain
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 
 # SendGrid - Email Service
 SENDGRID_API_KEY=SG.YOUR_SENDGRID_API_KEY_HERE
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=your-business-email@example.com
 
 # Digital Ocean Spaces
@@ -172,7 +172,7 @@ JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=8
 
 # Frontend API URL
-VITE_API_URL=https://cnstoolsandrepair.com
+VITE_API_URL=https://cnstoolrepair.com
 
 # File Upload
 MAX_FILE_SIZE=5242880
@@ -211,11 +211,11 @@ Replace these placeholders:
 cd /opt/apps/cnstoolsandrepair/frontend
 
 # Edit nginx.prod.conf to use your domain
-sed -i 's/yourdomain\.com/cnstoolsandrepair.com/g' nginx.prod.conf
+sed -i 's/yourdomain\.com/cnstoolrepair.com/g' nginx.prod.conf
 
 # Verify changes
 grep "server_name" nginx.prod.conf
-# Should show: server_name cnstoolsandrepair.com www.cnstoolsandrepair.com;
+# Should show: server_name cnstoolrepair.com www.cnstoolrepair.com;
 ```
 
 ---
@@ -230,8 +230,8 @@ systemctl stop nginx 2>/dev/null || true
 **Get Let's Encrypt certificate:**
 ```bash
 certbot certonly --standalone \
-  -d cnstoolsandrepair.com \
-  -d www.cnstoolsandrepair.com \
+  -d cnstoolrepair.com \
+  -d www.cnstoolrepair.com \
   --non-interactive \
   --agree-tos \
   --email your-email@example.com
@@ -322,14 +322,14 @@ docker logs -f cns-backend-prod
 ### 2. Test Website
 
 **Open in browser:**
-- [ ] https://cnstoolsandrepair.com - Homepage loads with SSL
+- [ ] https://cnstoolrepair.com - Homepage loads with SSL
 - [ ] All pages load (Services, Industries, About, Contact, Gallery)
 - [ ] No mixed content warnings
 - [ ] Green padlock in browser
 
 ### 3. Test Quote Submission
 
-1. Navigate to: https://cnstoolsandrepair.com/repair-request
+1. Navigate to: https://cnstoolrepair.com/repair-request
 2. Fill out form with test data
 3. Add tool and upload test photo
 4. Click Submit
@@ -341,7 +341,7 @@ docker logs -f cns-backend-prod
 
 ### 4. Test Admin Panel
 
-1. Navigate to: https://cnstoolsandrepair.com/admin/login
+1. Navigate to: https://cnstoolrepair.com/admin/login
 2. Login with admin credentials
 3. **Verify:**
    - [ ] Login successful
@@ -352,7 +352,7 @@ docker logs -f cns-backend-prod
 
 ```bash
 # From your local machine or droplet
-curl https://cnstoolsandrepair.com/api/settings/health
+curl https://cnstoolrepair.com/api/settings/health
 
 # Expected response: {"status":"ok"}
 ```
@@ -378,7 +378,7 @@ docker-compose -f docker-compose.prod.yml restart backend
 **Fix:**
 ```bash
 # Verify certificate exists
-ls -la /etc/letsencrypt/live/cnstoolsandrepair.com/
+ls -la /etc/letsencrypt/live/cnstoolrepair.com/
 
 # Check nginx config
 docker exec cns-frontend-prod nginx -t
@@ -492,7 +492,7 @@ du -sh /var/lib/docker/
 
 2. **Uptime Monitoring** (Free tier available)
    - UptimeRobot: https://uptimerobot.com
-   - Monitor: https://cnstoolsandrepair.com
+   - Monitor: https://cnstoolrepair.com
    - Alert email if site down > 5 minutes
 
 ---
@@ -544,9 +544,9 @@ scp root@<DROPLET_IP>:/root/env-backup-*.txt .
 
 ## 🎉 Deployment Complete!
 
-Your CNS Tools and Repair website is now live at:
+Your CNS Tool Repair website is now live at:
 
-**🌐 https://cnstoolsandrepair.com**
+**🌐 https://cnstoolrepair.com**
 
 ### Next Steps:
 
@@ -562,7 +562,7 @@ Your CNS Tools and Repair website is now live at:
 
 - **Deployment Guide**: DEPLOYMENT_DO_DROPLET.md
 - **Code Documentation**: CLAUDE.md
-- **API Documentation**: https://cnstoolsandrepair.com/docs
+- **API Documentation**: https://cnstoolrepair.com/docs
 
 **Need help?** Check troubleshooting section in DEPLOYMENT_DO_DROPLET.md
 

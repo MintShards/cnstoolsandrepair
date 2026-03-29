@@ -42,21 +42,21 @@ export default function Industries() {
           name="keywords"
           content="automotive tool repair, fleet maintenance pneumatic tools, manufacturing tool service, construction air tools, oil gas industrial tools, aerospace tool repair Surrey BC"
         />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/industries" />
+        <link rel="canonical" href="https://cnstoolrepair.com/industries" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/industries" />
+        <meta property="og:url" content="https://cnstoolrepair.com/industries" />
         <meta property="og:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey" />
         <meta property="og:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
-        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://cnstoolsandrepair.com/industries" />
+        <meta name="twitter:url" content="https://cnstoolrepair.com/industries" />
         <meta name="twitter:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey" />
         <meta name="twitter:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
-        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
       <main className="relative">
         {/* Hero + Industries Grid - Combined Section */}

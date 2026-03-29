@@ -65,7 +65,7 @@ export default function Gallery() {
   return (
     <>
       <Helmet>
-        <title>Professional Workshop Gallery | CNS Tools and Repair Surrey BC</title>
+        <title>Professional Workshop Gallery | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
           content="Browse photos of our Surrey BC pneumatic tool repair facility. See our specialized equipment, diagnostic stations, and industrial tools we service for automotive, manufacturing, construction, and aerospace companies."
@@ -74,17 +74,17 @@ export default function Gallery() {
           name="keywords"
           content="pneumatic tool repair Surrey BC, industrial tool workshop, air tool repair facility, B2B tool repair, professional workshop Surrey, tool repair equipment"
         />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/gallery" />
+        <link rel="canonical" href="https://cnstoolrepair.com/gallery" />
 
         {/* Open Graph */}
-        <meta property="og:title" content="Professional Workshop Gallery | CNS Tools and Repair" />
+        <meta property="og:title" content="Professional Workshop Gallery | CNS Tool Repair" />
         <meta property="og:description" content="Browse photos of our Surrey BC pneumatic tool repair facility and specialized equipment." />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/gallery" />
+        <meta property="og:url" content="https://cnstoolrepair.com/gallery" />
         <meta property="og:type" content="website" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Professional Workshop Gallery | CNS Tools and Repair" />
+        <meta name="twitter:title" content="Professional Workshop Gallery | CNS Tool Repair" />
         <meta name="twitter:description" content="Browse photos of our Surrey BC pneumatic tool repair facility and specialized equipment." />
       </Helmet>
 

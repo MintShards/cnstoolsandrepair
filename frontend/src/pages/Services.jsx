@@ -42,21 +42,21 @@ export default function Services() {
           name="keywords"
           content="pneumatic tool repair services, air tool maintenance, tool rental Surrey, industrial equipment repair, used pneumatic tools, impact wrench repair, pneumatic grinder repair, air drill service, tool service Surrey BC, electric tool repair, lifting equipment repair"
         />
-        <link rel="canonical" href="https://cnstoolsandrepair.com/services" />
+        <link rel="canonical" href="https://cnstoolrepair.com/services" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://cnstoolsandrepair.com/services" />
+        <meta property="og:url" content="https://cnstoolrepair.com/services" />
         <meta property="og:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tools Surrey" />
         <meta property="og:description" content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors." />
-        <meta property="og:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://cnstoolsandrepair.com/services" />
+        <meta name="twitter:url" content="https://cnstoolrepair.com/services" />
         <meta name="twitter:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tools Surrey" />
         <meta name="twitter:description" content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors." />
-        <meta name="twitter:image" content="https://cnstoolsandrepair.com/og-image.jpg" />
+        <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
       <main className="relative min-h-screen">
         {/* Our Services Section */}

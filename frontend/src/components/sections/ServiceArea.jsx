@@ -13,7 +13,7 @@ export default function ServiceArea({
   // Build description dynamically from city list (template approach)
   const buildDescription = () => {
     const cityList = content.highlightedCities.join(', ');
-    return `Based in Surrey, BC, CNS Tools and Repair provides industrial pneumatic tool repair services to businesses across ${cityList}, and the Lower Mainland.`;
+    return `Based in Surrey, BC, CNS Tool Repair provides industrial pneumatic tool repair services to businesses across ${cityList}, and the Lower Mainland.`;
   };
 
   const description = buildDescription();

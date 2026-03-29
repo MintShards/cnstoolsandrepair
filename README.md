@@ -1,4 +1,4 @@
-# CNS Tools and Repair
+# CNS Tool Repair
 
 **B2B industrial pneumatic tool repair website** serving Surrey, BC and surrounding areas. Built with the FARM stack (FastAPI + React + MongoDB).
 
@@ -189,8 +189,8 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000  # Add production domai
 
 # SendGrid Email (required)
 SENDGRID_API_KEY=<your_sendgrid_api_key>  # Get from https://app.sendgrid.com/settings/api_keys
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com  # Must be verified sender
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com  # Receives quote/contact notifications
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com  # Must be verified sender
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com  # Receives quote/contact notifications
 
 # JWT Authentication (required for admin)
 JWT_SECRET_KEY=<generate_with_secrets.token_urlsafe(32)>  # Run: python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -277,7 +277,7 @@ source venv/bin/activate
 python scripts/create_admin.py
 
 # Follow prompts:
-# Email: admin@cnstoolsandrepair.com
+# Email: admin@cnstoolrepair.com
 # Password: [secure password]
 ```
 
@@ -652,4 +652,4 @@ For questions or issues, contact the development team.
 
 ## License
 
-Proprietary - CNS Tools and Repair © 2024
+Proprietary - CNS Tool Repair © 2024

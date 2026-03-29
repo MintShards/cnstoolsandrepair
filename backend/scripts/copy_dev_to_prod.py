@@ -159,8 +159,8 @@ async def main():
             print("\n✅ DATA COPY COMPLETE!")
             print("\n🎉 Your production database now has content!")
             print("\n📋 Next Steps:")
-            print("  1. Refresh homepage: https://cnstoolsandrepair.com")
-            print("  2. Check admin dashboard: https://cnstoolsandrepair.com/admin/login")
+            print("  1. Refresh homepage: https://cnstoolrepair.com")
+            print("  2. Check admin dashboard: https://cnstoolrepair.com/admin/login")
             print("  3. Verify all pages load correctly")
             print("  4. Test quote submission")
         else:

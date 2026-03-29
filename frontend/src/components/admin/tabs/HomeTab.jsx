@@ -907,7 +907,7 @@ export default function HomeTab() {
           Description is auto-generated from your city list
         </p>
         <p className="text-slate-300 text-sm italic">
-          Template: "Based in Surrey, BC, CNS Tools and Repair provides industrial pneumatic tool repair services to businesses across <span className="text-primary font-bold">[City List]</span>, and the Lower Mainland."
+          Template: "Based in Surrey, BC, CNS Tool Repair provides industrial pneumatic tool repair services to businesses across <span className="text-primary font-bold">[City List]</span>, and the Lower Mainland."
         </p>
       </div>
 

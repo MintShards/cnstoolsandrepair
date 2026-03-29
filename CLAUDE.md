@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**CNS Tools and Repair** - B2B industrial pneumatic tool repair website for Surrey, BC
+**CNS Tool Repair** - B2B industrial pneumatic tool repair website for Surrey, BC
 - **Stack**: FARM (FastAPI + React + MongoDB)
 - **Architecture**: Backend API + Frontend SPA
 - **Business Model**: Local on-site service (customers bring tools for diagnosis)
@@ -48,10 +48,12 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 ### Backend (FastAPI)
 - **Async-first** using Motor driver (all DB ops use `await`)
 - **Structure**: `app/main.py` (FastAPI app) → `routers/` (API endpoints) → `services/` (business logic) → `database.py` (MongoDB connection)
+- **Logging**: `app/logging_config.py` — JSON in production, human-readable in dev. All modules use `logging.getLogger(__name__)`. Never use `print()`.
 - **Key patterns**:
   - ObjectId conversion: `convert_objectid_to_str()` + rename `_id` to `id` before returning to frontend
   - File uploads: `multipart/form-data` with `UploadFile`, saved to `uploads/` with UUID filenames
   - Email: Non-blocking SendGrid notifications (don't block quote creation)
+  - Email senders: `request@cnstoolrepair.com` (display: "Request") for repair requests, `message@cnstoolrepair.com` (display: "Message") for contact form. Reply-To is always set to customer email.
   - Middleware: Request logging, CORS, static file serving (`/uploads`)
 
 ### Frontend (React)
@@ -109,7 +111,7 @@ created_quote["id"] = created_quote.pop("_id")
 return QuoteResponse(**created_quote)
 ```
 
-### Multi-Tool Quote System (NEW)
+### Multi-Tool Quote System
 ```python
 # Quote now supports multiple tools with auto-capitalization
 tools_data = json.loads(tools)  # Parse JSON array from form
@@ -167,8 +169,8 @@ MONGODB_URL=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>?retryWrites=t
 DATABASE_NAME=cnstoolsandrepair_db_dev
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 SENDGRID_API_KEY=<key>
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 JWT_SECRET_KEY=<generate_with_secrets.token_urlsafe(32)>
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=8
@@ -195,10 +197,10 @@ VITE_API_URL=http://localhost:8000
 
 ### Quote Submission Test (Multi-Tool)
 1. Start backend (WSL: `--host 0.0.0.0`) + frontend
-2. Navigate to `/repair-request` (route renamed from `/quote`)
+2. Navigate to `/repair-request`
 3. Fill form: customer info + add multiple tools (collapsible UI)
 4. Upload photos (max 5, 5MB each, jpg/png/webp)
-5. Verify backend logs: "Email sent! Status code: 202"
+5. Verify backend logs: `Email sent. Status: 202`
 6. Check `/api/quotes/` for request with `request_number` (e.g., "REQ-2026-0001")
 7. Verify photos in `/uploads/quotes/{uuid}.ext`
 8. Email should show all tools formatted with brands/models capitalized
@@ -240,8 +242,9 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 
 ### Email not sending
 - Verify `SENDGRID_API_KEY` in `.env`
-- Check logs for "Email sent! Status code: 202"
+- Check logs for `Email sent. Status: 202`
 - Free tier: 100 emails/day limit
+- Domain authentication for `cnstoolrepair.com` is configured in SendGrid (required for deliverability)
 
 ## Security Features
 
@@ -254,21 +257,7 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 - **Filename sanitization**: UUID-based filenames prevent path traversal attacks
 - **Auto-capitalization**: Tool fields (type/brand/model) auto-capitalize to prevent injection
 
-**Security implementation example:**
-```python
-# Rate limiting on quote endpoint
-@router.post("/", response_model=QuoteResponse, status_code=201)
-@limiter.limit("5/hour")
-async def create_quote(request: Request, ...):
-    # Idempotency check
-    if idempotency_key and idempotency_key in idempotency_cache:
-        return cached_response
-
-    # File validation happens in save_upload_file()
-    # - Max size check (5MB)
-    # - Extension whitelist (.jpg, .jpeg, .png, .webp)
-    # - Deep image verification with Pillow.Image.verify()
-```
+**File validation** (in `save_upload_file()`): size check (5MB), extension whitelist, deep Pillow image verification — accepts MPO format (iPhone Live Photos map to JPEG).
 
 **Production requirements:**
 - Enable `cookie_secure=True` for CSRF (requires HTTPS)

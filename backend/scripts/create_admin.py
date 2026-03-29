@@ -2,7 +2,7 @@
 """
 Admin User Creation Script
 
-Creates an admin user for CNS Tools and Repair backend.
+Creates an admin user for CNS Tool Repair backend.
 Usage: python scripts/create_admin.py
 """
 import asyncio
@@ -21,7 +21,7 @@ from datetime import datetime
 async def create_admin_user():
     """Create admin user interactively"""
     print("=" * 60)
-    print("CNS Tools and Repair - Admin User Creation")
+    print("CNS Tool Repair - Admin User Creation")
     print("=" * 60)
     print()
 

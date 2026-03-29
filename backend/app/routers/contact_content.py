@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/contact-content", tags=["contact-content"])
 DEFAULT_CONTACT_CONTENT = {
     "hero": {
         "label": "Get In Touch",
-        "heading": "Contact CNS Tools and Repair",
+        "heading": "Contact CNS Tool Repair",
         "description": "Have questions about pneumatic tool repair or maintenance? Contact our Surrey workshop or request a repair assessment below."
     }
 }

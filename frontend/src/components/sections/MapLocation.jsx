@@ -43,7 +43,7 @@ export default function MapLocation() {
                 allowFullScreen=""
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title={`CNS Tools and Repair Location - ${contact.address.city}, ${contact.address.province}`}
+                title={`CNS Tool Repair Location - ${contact.address.city}, ${contact.address.province}`}
                 className="absolute inset-0"
               />
             </div>
@@ -65,7 +65,7 @@ export default function MapLocation() {
                   </div>
                 </div>
                 <div className="flex-grow">
-                  <h4 className="text-base sm:text-lg lg:text-xl font-black uppercase tracking-tight mb-1 sm:mb-2">CNS Tools and Repair</h4>
+                  <h4 className="text-base sm:text-lg lg:text-xl font-black uppercase tracking-tight mb-1 sm:mb-2">CNS Tool Repair</h4>
                   {/* Plain-text NAP format for Google Maps SEO */}
                   <div className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 font-medium space-y-0.5">
                     <p>{contact.address.street}</p>

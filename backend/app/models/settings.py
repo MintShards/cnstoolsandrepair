@@ -107,7 +107,7 @@ class BusinessSettings(BusinessSettingsUpdate):
                 "contact": {
                     "phone": "(604) 555-0123",
                     "phoneLink": "6045550123",
-                    "email": "info@cnstoolsandrepair.com",
+                    "email": "info@cnstoolrepair.com",
                     "address": {
                         "street": "Surrey, BC, Canada",
                         "city": "Surrey",

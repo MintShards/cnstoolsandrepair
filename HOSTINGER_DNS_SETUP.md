@@ -1,6 +1,6 @@
 # Hostinger DNS Configuration for Digital Ocean App Platform
 
-**Domain**: cnstoolsandrepair.com (registered on Hostinger)
+**Domain**: cnstoolrepair.com (registered on Hostinger)
 **Target**: Digital Ocean App Platform
 **Goal**: Point custom domain to deployed application with SSL
 
@@ -39,9 +39,9 @@ Connect your Hostinger domain to Digital Ocean App Platform:
 4. Click "Add Domain"
 
 5. Add your domains:
-   - First: `cnstoolsandrepair.com`
+   - First: `cnstoolrepair.com`
    - Click "Add Domain"
-   - Second: `www.cnstoolsandrepair.com`
+   - Second: `www.cnstoolrepair.com`
    - Click "Add Domain"
 
 6. App Platform will show DNS records
@@ -57,7 +57,7 @@ Connect your Hostinger domain to Digital Ocean App Platform:
 **If App Platform shows A records:**
 
 1. Login to Hostinger: https://hpanel.hostinger.com
-2. Go to "Domains" → Click `cnstoolsandrepair.com`
+2. Go to "Domains" → Click `cnstoolrepair.com`
 3. Click "DNS / Name Servers"
 4. Click "Manage" under DNS Records
 
@@ -83,7 +83,7 @@ Connect your Hostinger domain to Digital Ocean App Platform:
 
 **If App Platform shows CNAME records:**
 
-1. **For Root Domain** (`cnstoolsandrepair.com`):
+1. **For Root Domain** (`cnstoolrepair.com`):
    ```
    Type: CNAME
    Name: @
@@ -93,7 +93,7 @@ Connect your Hostinger domain to Digital Ocean App Platform:
 
    **Note**: Some DNS providers don't allow CNAME on root. If Hostinger rejects, use A record instead.
 
-2. **For WWW** (`www.cnstoolsandrepair.com`):
+2. **For WWW** (`www.cnstoolrepair.com`):
    ```
    Type: CNAME
    Name: www
@@ -118,11 +118,11 @@ A       www     64.225.xx.xx (Same IP)      3600
 Use online tools:
 
 **Tool 1**: https://dnschecker.org/
-- Enter: `cnstoolsandrepair.com`
+- Enter: `cnstoolrepair.com`
 - Check A record points to correct IP globally
 
 **Tool 2**: https://www.whatsmydns.net/
-- Enter: `cnstoolsandrepair.com`
+- Enter: `cnstoolrepair.com`
 - Verify DNS propagated worldwide
 
 **Propagation time**: 5 minutes to 48 hours (usually 30 minutes)
@@ -149,19 +149,19 @@ Use online tools:
 ### After DNS Propagates:
 
 **Test 1: HTTP Redirect**
-- Visit: `http://cnstoolsandrepair.com`
-- Should redirect to: `https://cnstoolsandrepair.com`
+- Visit: `http://cnstoolrepair.com`
+- Should redirect to: `https://cnstoolrepair.com`
 
 **Test 2: WWW Version**
-- Visit: `https://www.cnstoolsandrepair.com`
+- Visit: `https://www.cnstoolrepair.com`
 - Should work and show your site
 
 **Test 3: API Endpoints**
-- Visit: `https://cnstoolsandrepair.com/health`
+- Visit: `https://cnstoolrepair.com/health`
 - Should return: `{"status":"healthy"}`
 
 **Test 4: Quote Submission**
-- Go to: `https://cnstoolsandrepair.com/repair-request`
+- Go to: `https://cnstoolrepair.com/repair-request`
 - Submit test quote
 - Verify no CORS errors in browser console (F12)
 
@@ -172,7 +172,7 @@ Use online tools:
 ### CORS Configuration
 Your environment variables should have:
 ```
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 ```
 
 ### Hostinger Name Servers
@@ -196,7 +196,7 @@ If you have email with Hostinger:
 
 **Check DNS**:
 ```bash
-nslookup cnstoolsandrepair.com
+nslookup cnstoolrepair.com
 ```
 
 Should show App Platform IP.
@@ -235,7 +235,7 @@ Should show App Platform IP.
 **Check**:
 - A record for `www` exists in Hostinger DNS
 - Points to same IP as root domain
-- App Platform has `www.cnstoolsandrepair.com` added as domain
+- App Platform has `www.cnstoolrepair.com` added as domain
 
 **Fix**:
 - Add www A record in Hostinger
@@ -265,8 +265,8 @@ Domain is working when:
 - [ ] DNS propagation complete (dnschecker.org shows correct IP)
 - [ ] App Platform shows domains as "Active" with green checkmark
 - [ ] SSL certificate issued (padlock in browser)
-- [ ] `https://cnstoolsandrepair.com` loads site
-- [ ] `https://www.cnstoolsandrepair.com` loads site
+- [ ] `https://cnstoolrepair.com` loads site
+- [ ] `https://www.cnstoolrepair.com` loads site
 - [ ] `/health` endpoint returns healthy
 - [ ] No CORS errors when submitting quote
 - [ ] Email notifications working
@@ -295,10 +295,10 @@ Type: A, Name: www, Value: [App Platform IP], TTL: 3600
 
 **What's in your environment variables**:
 ```
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 ```
 
-**Final URL**: `https://cnstoolsandrepair.com` 🎉
+**Final URL**: `https://cnstoolrepair.com` 🎉
 
 ---
 

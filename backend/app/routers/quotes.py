@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Request
 from typing import List
 from bson import ObjectId
@@ -15,6 +16,7 @@ from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger(__name__)
 
 # In-memory cache for idempotency (use Redis in production)
 idempotency_cache = {}
@@ -51,7 +53,7 @@ async def create_quote(
     # Check for duplicate submission using idempotency key
     if idempotency_key and idempotency_key in idempotency_cache:
         timestamp, cached_response = idempotency_cache[idempotency_key]
-        print(f"Duplicate submission detected with key: {idempotency_key}")
+        logger.info(f"Duplicate submission detected with key: {idempotency_key}")
         return cached_response
 
     db = get_database()
@@ -252,14 +254,13 @@ async def delete_quote(quote_id: str):
                 deleted_count += 1
             else:
                 failed_count += 1
-                print(f"Failed to delete photo: {photo}")
+                logger.warning(f"Failed to delete photo: {photo}")
         except Exception as e:
             failed_count += 1
-            print(f"Error deleting photo {photo}: {str(e)}")
+            logger.error(f"Error deleting photo {photo}: {str(e)}")
 
     # Log photo cleanup results
     if failed_count > 0:
-        from app.logging_config import logger
         logger.warning(
             f"Photo cleanup incomplete for quote {quote.get('request_number', 'unknown')}",
             extra={

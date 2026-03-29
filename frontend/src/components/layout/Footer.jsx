@@ -168,9 +168,9 @@ export default function Footer() {
 
           {/* Column 1: Logo & Social */}
           <div>
-            <h2 className="font-logo text-xl font-bold tracking-wide uppercase mb-3">
+            <h2 className="font-logo text-2xl font-bold tracking-wide uppercase mb-3">
               <span className="text-accent-orange">CNS</span>{' '}
-              <span className="text-slate-900 dark:text-white">Tools and Repair</span>
+              <span className="text-slate-900 dark:text-white">Tool Repair</span>
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
               Professional pneumatic and air tool repair services for industrial businesses across Metro Vancouver.
@@ -287,11 +287,11 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href={`mailto:${settings?.contact?.email || 'contact@cnstoolsandrepair.com'}`}
+                  href={`mailto:${settings?.contact?.email || 'contact@cnstoolrepair.com'}`}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
                   <span className="material-symbols-outlined text-base text-primary">mail</span>
-                  {settings?.contact?.email || 'contact@cnstoolsandrepair.com'}
+                  {settings?.contact?.email || 'contact@cnstoolrepair.com'}
                 </a>
               </li>
               <li>
@@ -316,7 +316,7 @@ export default function Footer() {
         {/* Bottom Bar - Copyright & Legal */}
         <div className="pt-8 pb-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
           <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-            © {new Date().getFullYear()} CNS Tools and Repair. All rights reserved.
+            © {new Date().getFullYear()} CNS Tool Repair. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs sm:text-sm">
             <Link

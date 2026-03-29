@@ -19,7 +19,7 @@ Your actual credentials are in `backend/.env.production` (local file, gitignored
 ### What You'll Deploy
 - **Platform**: Digital Ocean App Platform
 - **Stack**: FARM (FastAPI + React + MongoDB Atlas)
-- **Custom Domain**: cnstoolsandrepair.com (Hostinger)
+- **Custom Domain**: cnstoolrepair.com (Hostinger)
 - **SSL**: Auto-generated via Let's Encrypt (free)
 - **Cost**: ~$12/month (App Platform only, Spaces disabled)
 
@@ -79,12 +79,12 @@ MONGODB_URL=your_production_mongodb_connection_string_here
 DATABASE_NAME=cnstoolsandrepair_db_prod
 
 # CORS Configuration (update with actual domain)
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 
 # Email Configuration (SendGrid)
 SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # File Upload Configuration
 MAX_FILE_SIZE=5242880
@@ -206,7 +206,7 @@ Should return: `{"status":"healthy"}`
 
 **Verify**:
 - Form submits successfully
-- Email received at `cnstoolsandrepair@gmail.com`
+- Email received at `cnstoolrepair@gmail.com`
 - Quote appears in database
 
 ### Test 3: Admin Login

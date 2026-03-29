@@ -57,13 +57,13 @@ async def main():
 
         default_settings = {
             # Company Information
-            "company_name": "CNS Tools and Repair",
+            "company_name": "CNS Tool Repair",
             "tagline": "Expert Pneumatic Tool Repair & Maintenance",
 
             # Contact Information
             "phone": "(604) 581-8930",
-            "email": "contact@cnstoolsandrepair.com",
-            "notification_email": "cnstoolsandrepair@gmail.com",
+            "email": "contact@cnstoolrepair.com",
+            "notification_email": "cnstoolrepair@gmail.com",
 
             # Address
             "address": {
@@ -115,7 +115,7 @@ async def main():
             # About Section
             "about": {
                 "headline": "Your Trusted Partner for Industrial Tool Repair",
-                "description": "CNS Tools and Repair specializes in professional pneumatic tool repair and maintenance services. Our factory-trained technicians provide expert diagnosis and repair for a wide range of industrial tools, serving businesses across Metro Vancouver.",
+                "description": "CNS Tool Repair specializes in professional pneumatic tool repair and maintenance services. Our factory-trained technicians provide expert diagnosis and repair for a wide range of industrial tools, serving businesses across Metro Vancouver.",
                 "points": [
                     "Factory-trained technicians with years of experience",
                     "Comprehensive repair services for all major brands",
@@ -193,8 +193,8 @@ async def main():
             print("\n✅ SETTINGS INITIALIZED!")
             print("\n🎉 Your website should now load correctly!")
             print("\n📋 Next Steps:")
-            print("  1. Refresh homepage: https://cnstoolsandrepair.com")
-            print("  2. Check admin dashboard: https://cnstoolsandrepair.com/admin/login")
+            print("  1. Refresh homepage: https://cnstoolrepair.com")
+            print("  2. Check admin dashboard: https://cnstoolrepair.com/admin/login")
             print("  3. Customize settings in admin panel")
         else:
             print("❌ Failed to create settings")

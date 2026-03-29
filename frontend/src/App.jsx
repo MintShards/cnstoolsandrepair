@@ -23,7 +23,7 @@ function App() {
     <HelmetProvider>
       {/* Default meta tags (overridden by page-specific Helmet components) */}
       <Helmet>
-        <title>CNS Tools and Repair | Industrial Pneumatic Tool Repair Surrey BC</title>
+        <title>CNS Tool Repair | Industrial Pneumatic Tool Repair Surrey BC</title>
         <meta
           name="description"
           content="Industrial pneumatic tool repair services in Surrey, BC. Professional diagnostics, OEM parts, and expert service for automotive, fleet, manufacturing, and construction industries."

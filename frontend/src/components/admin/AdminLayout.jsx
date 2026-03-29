@@ -22,7 +22,7 @@ export default function AdminLayout({ children, title = 'Admin Settings' }) {
             <div className="flex items-center gap-4">
               <Link to="/" className="font-logo text-2xl font-bold leading-none tracking-wide uppercase">
                 <span className="text-accent-orange">CNS</span>{' '}
-                <span className="text-white">Tools and Repair</span>
+                <span className="text-white">Tool Repair</span>
               </Link>
               <div className="h-8 w-px bg-slate-700"></div>
               <div>
@@ -64,7 +64,7 @@ export default function AdminLayout({ children, title = 'Admin Settings' }) {
         <div className="max-w-screen-2xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between text-xs text-slate-500">
             <p>⚠️ Admin Panel - Changes affect live website immediately</p>
-            <p>CNS Tools and Repair © {new Date().getFullYear()}</p>
+            <p>CNS Tool Repair © {new Date().getFullYear()}</p>
           </div>
         </div>
       </footer>

@@ -1,10 +1,10 @@
-# robots.txt for CNS Tools and Repair
+# robots.txt for CNS Tool Repair
 
 User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://cnstoolsandrepair.com/sitemap.xml
+Sitemap: https://cnstoolrepair.com/sitemap.xml
 
 # Disallow admin areas (if/when implemented)
 Disallow: /admin/

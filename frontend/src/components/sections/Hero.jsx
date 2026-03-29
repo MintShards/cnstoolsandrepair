@@ -79,7 +79,7 @@ export default function Hero({
   // Default hero content (fallback)
   const defaultData = {
     headline: "Industrial Pneumatic Tool Repair & Maintenance in Surrey, BC",
-    subheadline: "CNS Tools and Repair provides industrial pneumatic tool repair and maintenance services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.",
+    subheadline: "CNS Tool Repair provides industrial pneumatic tool repair and maintenance services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.",
     industriesBadge: "Automotive • Construction • Manufacturing",
     locationText: "On-Site Service (No Shipping)",
     primaryButtonText: "Request a Repair Assessment",

@@ -44,12 +44,12 @@ MONGODB_URL=mongodb+srv://your_db_user:your_db_password@prod-cluster.t8ewwml.mon
 **Variable**: `CORS_ORIGINS`
 
 **What to use**:
-- **Custom domain**: `https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com`
+- **Custom domain**: `https://cnstoolrepair.com,https://www.cnstoolrepair.com`
 - **App Platform URL**: `https://your-app-name.ondigitalocean.app`
 
 **Example**:
 ```
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 ```
 
 ---
@@ -61,8 +61,8 @@ These are standard values (customize if needed):
 | Variable | Value | Notes |
 |----------|-------|-------|
 | `DATABASE_NAME` | `cnstoolsandrepair_db_prod` | Production database name |
-| `SENDGRID_FROM_EMAIL` | `noreply@cnstoolsandrepair.com` | Email sender address |
-| `NOTIFICATION_EMAIL` | `cnstoolsandrepair@gmail.com` | Quote notification recipient |
+| `SENDGRID_FROM_EMAIL` | `noreply@cnstoolrepair.com` | Email sender address |
+| `NOTIFICATION_EMAIL` | `cnstoolrepair@gmail.com` | Quote notification recipient |
 | `MAX_FILE_SIZE` | `5242880` | 5MB file upload limit |
 | `ALLOWED_EXTENSIONS` | `jpg,jpeg,png,webp` | Image formats allowed |
 | `UPLOAD_DIR` | `uploads` | Upload directory path |
@@ -141,7 +141,7 @@ Copy this to `backend/.env.production` and fill in placeholders:
 
 ```bash
 # ========================================
-# CNS Tools and Repair - Production Config
+# CNS Tool Repair - Production Config
 # ========================================
 # SECURITY: This file is gitignored - never commit to version control
 # Date: 2026-03-21
@@ -152,12 +152,12 @@ MONGODB_URL=your_production_mongodb_connection_string_here
 DATABASE_NAME=cnstoolsandrepair_db_prod
 
 # CORS Configuration (update with actual domain)
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 
 # Email Configuration (SendGrid)
 SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@cnstoolsandrepair.com
-NOTIFICATION_EMAIL=cnstoolsandrepair@gmail.com
+SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # File Upload Configuration
 MAX_FILE_SIZE=5242880

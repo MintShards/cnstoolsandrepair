@@ -1,6 +1,6 @@
 # Production Deployment Checklist
 
-Complete step-by-step checklist for deploying CNS Tools and Repair to production.
+Complete step-by-step checklist for deploying CNS Tool Repair to production.
 
 **Total Time**: ~2 hours (setup + deployment + validation)
 **Target Platform**: Digital Ocean App Platform
@@ -104,14 +104,14 @@ Add all 20 variables:
 ```
 MONGODB_URL=...
 DATABASE_NAME=cnstoolsandrepair_db_prod
-CORS_ORIGINS=https://cnstoolsandrepair.com,https://www.cnstoolsandrepair.com
+CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 SENDGRID_API_KEY=...
 SENDGRID_FROM_EMAIL=...
 NOTIFICATION_EMAIL=...
 MAX_FILE_SIZE=5242880
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 UPLOAD_DIR=uploads
-UPLOAD_BASE_URL=https://cnstoolsandrepair.com
+UPLOAD_BASE_URL=https://cnstoolrepair.com
 USE_SPACES=true
 SPACES_REGION=nyc3
 SPACES_BUCKET=cnstoolsandrepair-photos
@@ -149,8 +149,8 @@ JWT_EXPIRATION_HOURS=8
 - `/uploads` → `backend` service (file serving)
 
 **Custom Domain** (optional, recommended):
-- Add: `cnstoolsandrepair.com`
-- Add: `www.cnstoolsandrepair.com`
+- Add: `cnstoolrepair.com`
+- Add: `www.cnstoolrepair.com`
 - Enable HTTPS (automatic Let's Encrypt)
 
 ---
@@ -179,7 +179,7 @@ JWT_EXPIRATION_HOURS=8
 
 4. **Verify DNS**:
    ```bash
-   nslookup cnstoolsandrepair.com
+   nslookup cnstoolrepair.com
    ```
 
 ---
@@ -242,7 +242,7 @@ python scripts/create_indexes.py
 ### ☐ End-to-End Testing (15 min)
 
 #### Test 1: Quote Submission
-1. Visit: `https://cnstoolsandrepair.com/repair-request`
+1. Visit: `https://cnstoolrepair.com/repair-request`
 2. Fill form with test data:
    - Company: Test Industries Ltd
    - Contact: John Doe
@@ -269,7 +269,7 @@ python scripts/create_indexes.py
 ---
 
 #### Test 2: Admin Login
-1. Visit: `https://cnstoolsandrepair.com/admin/login`
+1. Visit: `https://cnstoolrepair.com/admin/login`
 2. Login with credentials from database initialization
 3. Navigate to **Quotes** tab
 
@@ -286,7 +286,7 @@ python scripts/create_indexes.py
 #### Test 3: Gallery Upload
 1. Admin → **Gallery** tab
 2. Upload test photo
-3. Visit: `https://cnstoolsandrepair.com/gallery`
+3. Visit: `https://cnstoolrepair.com/gallery`
 
 **Verify**:
 - [ ] Upload successful
@@ -297,7 +297,7 @@ python scripts/create_indexes.py
 ---
 
 #### Test 4: Contact Form
-1. Visit: `https://cnstoolsandrepair.com/contact`
+1. Visit: `https://cnstoolrepair.com/contact`
 2. Fill and submit contact form
 
 **Verify**:
@@ -339,9 +339,9 @@ python scripts/create_indexes.py
 
 #### Google Search Console
 1. Visit: https://search.google.com/search-console
-2. Add property: `https://cnstoolsandrepair.com`
+2. Add property: `https://cnstoolrepair.com`
 3. Verify ownership (DNS TXT record)
-4. Submit sitemap: `https://cnstoolsandrepair.com/sitemap.xml`
+4. Submit sitemap: `https://cnstoolrepair.com/sitemap.xml`
 
 **Verify**:
 - [ ] Sitemap submitted successfully
@@ -351,7 +351,7 @@ python scripts/create_indexes.py
 #### Social Media Preview
 **Test Open Graph tags**:
 1. Visit: https://www.opengraph.xyz/
-2. Enter: `https://cnstoolsandrepair.com`
+2. Enter: `https://cnstoolrepair.com`
 3. Check preview
 
 **Verify**:
@@ -377,7 +377,7 @@ python scripts/create_indexes.py
 
 **Free options**:
 - UptimeRobot: https://uptimerobot.com
-- Monitor: `https://cnstoolsandrepair.com/health`
+- Monitor: `https://cnstoolrepair.com/health`
 - Check interval: 5 minutes
 - Alert when down
 

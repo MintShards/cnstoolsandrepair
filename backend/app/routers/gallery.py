@@ -1,3 +1,5 @@
+import logging
+import traceback
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from typing import List
 from bson import ObjectId
@@ -6,6 +8,8 @@ from app.database import get_database
 from app.models.gallery import GalleryPhotoCreate, GalleryPhotoResponse, GalleryPhotoUpdate
 from app.services.file_service import save_upload_file, delete_file
 from app.utils.helpers import convert_objectid_to_str
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/gallery", tags=["gallery"])
 
@@ -40,9 +44,9 @@ async def upload_gallery_photo(
             raise HTTPException(status_code=400, detail="No photo provided")
 
         # Save uploaded photo (to 'gallery' folder in Spaces or local)
-        print(f"Attempting to upload photo: {photo.filename}")
+        logger.info(f"Uploading gallery photo: {photo.filename}")
         filename = await save_upload_file(photo, folder="gallery")
-        print(f"Upload successful, returned: {filename}")
+        logger.info(f"Gallery photo uploaded: {filename}")
 
         # Create gallery photo document
         photo_data = GalleryPhotoCreate(
@@ -64,9 +68,7 @@ async def upload_gallery_photo(
 
         return GalleryPhotoResponse(**created_photo)
     except Exception as e:
-        import traceback
-        print(f"Gallery upload error: {str(e)}")
-        traceback.print_exc()
+        logger.error(f"Gallery upload error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -121,7 +123,6 @@ async def delete_gallery_photo(photo_id: str):
     try:
         await delete_file(photo["image_url"])
     except Exception as e:
-        # Log warning but continue - file may already be deleted
-        print(f"Warning: Failed to delete file {photo['image_url']}: {e}")
+        logger.warning(f"Failed to delete file {photo['image_url']}: {e}")
 
     return None

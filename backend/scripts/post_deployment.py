@@ -213,13 +213,13 @@ async def send_test_email():
             subject='[CNS Tools] Production Deployment Successful',
             html_content=f"""
             <h2>Production Deployment Complete</h2>
-            <p>Your CNS Tools and Repair website has been successfully deployed to production.</p>
+            <p>Your CNS Tool Repair website has been successfully deployed to production.</p>
             <p><strong>Deployment Time:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
             <p><strong>Environment:</strong> {settings.environment}</p>
             <p><strong>Database:</strong> {settings.database_name}</p>
             <hr>
             <p>This is an automated test email to verify SendGrid configuration.</p>
-            <p><em>CNS Tools and Repair - Automated Deployment System</em></p>
+            <p><em>CNS Tool Repair - Automated Deployment System</em></p>
             """
         )
 
