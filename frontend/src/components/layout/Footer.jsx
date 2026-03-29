@@ -313,26 +313,11 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar - Copyright & Legal */}
-        <div className="pt-8 pb-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-3">
+        {/* Bottom Bar - Copyright */}
+        <div className="pt-8 pb-4 border-t border-slate-200 dark:border-slate-800 text-center">
           <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">
             © {new Date().getFullYear()} CNS Tool Repair. All rights reserved.
           </p>
-          <div className="flex flex-wrap justify-center gap-4 text-xs sm:text-sm">
-            <Link
-              to="/privacy"
-              className="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
-            >
-              Privacy Policy
-            </Link>
-            <span className="text-slate-400 dark:text-slate-600">|</span>
-            <Link
-              to="/terms-conditions"
-              className="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
-            >
-              Terms &amp; Conditions
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

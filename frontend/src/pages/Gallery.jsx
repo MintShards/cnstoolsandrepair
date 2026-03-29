@@ -77,14 +77,14 @@ export default function Gallery() {
         <link rel="canonical" href="https://cnstoolrepair.com/gallery" />
 
         {/* Open Graph */}
-        <meta property="og:title" content="Professional Workshop Gallery | CNS Tool Repair" />
+        <meta property="og:title" content="Professional Workshop Gallery | CNS Tool Repair Surrey BC" />
         <meta property="og:description" content="Browse photos of our Surrey BC pneumatic tool repair facility and specialized equipment." />
         <meta property="og:url" content="https://cnstoolrepair.com/gallery" />
         <meta property="og:type" content="website" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Professional Workshop Gallery | CNS Tool Repair" />
+        <meta name="twitter:title" content="Professional Workshop Gallery | CNS Tool Repair Surrey BC" />
         <meta name="twitter:description" content="Browse photos of our Surrey BC pneumatic tool repair facility and specialized equipment." />
       </Helmet>
 

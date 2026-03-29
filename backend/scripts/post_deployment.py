@@ -210,7 +210,7 @@ async def send_test_email():
         message = Mail(
             from_email=settings.sendgrid_from_email,
             to_emails=settings.notification_email,
-            subject='[CNS Tools] Production Deployment Successful',
+            subject='[CNS Tool Repair] Production Deployment Successful',
             html_content=f"""
             <h2>Production Deployment Complete</h2>
             <p>Your CNS Tool Repair website has been successfully deployed to production.</p>

@@ -15,7 +15,7 @@ router = APIRouter(
 # Default home page content (fallback when no DB document exists)
 DEFAULT_HOME_CONTENT = {
     "seo": {
-        "title": "Industrial Pneumatic Tool Repair in Surrey BC | CNS Tools",
+        "title": "Industrial Pneumatic Tool Repair in Surrey BC | CNS Tool Repair",
         "description": "Industrial pneumatic tool repair in Surrey, BC. B2B service with professional diagnostics, OEM-compatible parts, and in-shop industrial repairs for automotive, fleet, manufacturing, construction, oil & gas, aerospace, marine, mining, and MRO sectors.",
         "keywords": "pneumatic tool repair Surrey, industrial tool repair BC, air tool repair Vancouver, fleet maintenance tools, automotive tool repair, construction pneumatic tools, oil gas tool service",
     },

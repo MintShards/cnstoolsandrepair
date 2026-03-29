@@ -95,28 +95,28 @@ export default function Contact() {
   return (
     <>
       <Helmet>
-        <title>Contact CNS Tools | Pneumatic Tool Repair Surrey BC | Phone & Location</title>
+        <title>Contact CNS Tool Repair | Pneumatic Tool Repair Surrey BC | Phone & Location</title>
         <meta
           name="description"
           content="Contact CNS Tool Repair in Surrey, BC. Get in touch for industrial pneumatic tool repair services. Phone, email, and location information for Metro Vancouver's premier tool repair specialists."
         />
         <meta
           name="keywords"
-          content="contact CNS Tools, pneumatic tool repair contact Surrey, tool repair phone number BC, industrial tool service location, Surrey tool repair address"
+          content="contact CNS Tool Repair, pneumatic tool repair contact Surrey, tool repair phone number BC, industrial tool service location, Surrey tool repair address"
         />
         <link rel="canonical" href="https://cnstoolrepair.com/contact" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolrepair.com/contact" />
-        <meta property="og:title" content="Contact CNS Tools | Pneumatic Tool Repair Surrey BC | Phone & Location" />
+        <meta property="og:title" content="Contact CNS Tool Repair | Pneumatic Tool Repair Surrey BC | Phone & Location" />
         <meta property="og:description" content="Contact CNS Tool Repair in Surrey, BC. Phone, email, and location information for Metro Vancouver's premier tool repair specialists." />
         <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolrepair.com/contact" />
-        <meta name="twitter:title" content="Contact CNS Tools | Pneumatic Tool Repair Surrey BC | Phone & Location" />
+        <meta name="twitter:title" content="Contact CNS Tool Repair | Pneumatic Tool Repair Surrey BC | Phone & Location" />
         <meta name="twitter:description" content="Contact CNS Tool Repair in Surrey, BC. Phone, email, and location information for Metro Vancouver's premier tool repair specialists." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>

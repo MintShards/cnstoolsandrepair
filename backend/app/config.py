@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     notification_email: str
 
     # File Upload
-    max_file_size: int = 5242880  # 5MB
+    max_file_size: int = 10485760  # 10MB
     allowed_extensions: str = "jpg,jpeg,png,webp"
     upload_dir: str = "uploads"
     upload_base_url: str = "http://localhost:8000"  # For production: https://yourdomain.com or Digital Ocean Spaces URL

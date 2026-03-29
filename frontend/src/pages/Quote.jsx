@@ -74,6 +74,7 @@ function SuccessModal({ isOpen, onClose, onNewQuote }) {
 export default function Quote() {
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm();
   const [tools, setTools] = useState([{ tool_type: '', tool_brand: '', tool_model: '', quantity: 1, problem_description: '' }]);
+  const [toolErrors, setToolErrors] = useState([{}]);
   const [collapsedTools, setCollapsedTools] = useState([false]); // First tool expanded by default
   const [photos, setPhotos] = useState([]);
   const [photoErrors, setPhotoErrors] = useState([]);
@@ -160,10 +161,29 @@ export default function Quote() {
     });
   };
 
+  // Tool validation helpers
+  const validateToolField = (index, field, value) => {
+    let error = '';
+    if (field === 'tool_type' && !value.trim()) error = 'Tool type is required';
+    else if (field === 'tool_brand' && !value.trim()) error = 'Brand is required';
+    else if (field === 'tool_model' && !value.trim()) error = 'Model is required';
+    else if (field === 'quantity' && (value < 1 || !value)) error = 'Quantity must be at least 1';
+    else if (field === 'problem_description') {
+      if (!value.trim()) error = 'Problem description is required';
+      else if (value.trim().length < 10) error = 'Problem description must be at least 10 characters';
+    }
+    setToolErrors(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: error };
+      return updated;
+    });
+  };
+
   // Tool management functions
   const addTool = () => {
     if (tools.length < 5) {
       setTools([...tools, { tool_type: '', tool_brand: '', tool_model: '', quantity: 1, problem_description: '' }]);
+      setToolErrors([...toolErrors, {}]);
       setCollapsedTools([...collapsedTools, false]); // New tool starts expanded
     }
   };
@@ -171,6 +191,7 @@ export default function Quote() {
   const removeTool = (index) => {
     if (tools.length > 1) {
       setTools(tools.filter((_, i) => i !== index));
+      setToolErrors(toolErrors.filter((_, i) => i !== index));
       setCollapsedTools(collapsedTools.filter((_, i) => i !== index));
     }
   };
@@ -188,6 +209,14 @@ export default function Quote() {
       updatedTools[index][field] = value;
     }
     setTools(updatedTools);
+    // Clear the error for this field as user types
+    if (toolErrors[index]?.[field]) {
+      setToolErrors(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: '' };
+        return updated;
+      });
+    }
   };
 
   const toggleToolCollapse = (index) => {
@@ -213,35 +242,41 @@ export default function Quote() {
     accept: {
       'image/*': ['.jpg', '.jpeg', '.png', '.webp']
     },
-    maxFiles: 5,
-    maxSize: 5242880, // 5MB
+    maxFiles: 10,
+    maxSize: 10485760, // 10MB
     onDrop: (acceptedFiles, rejectedFiles) => {
       setPhotoErrors([]);
-      const errors = [];
+      const dropErrors = [];
 
-      // Check for file size errors
+      // Check for file-level errors with specific messages
       rejectedFiles.forEach(({ file, errors: fileErrors }) => {
         fileErrors.forEach(error => {
           if (error.code === 'file-too-large') {
-            errors.push(`${file.name} is too large (max 5MB)`);
+            const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+            dropErrors.push(`"${file.name}" is ${sizeMB}MB — exceeds the 10MB limit. Try compressing or resizing the image.`);
           } else if (error.code === 'file-invalid-type') {
-            errors.push(`${file.name} is not a valid image format`);
+            const ext = file.name.split('.').pop()?.toUpperCase() || 'unknown';
+            dropErrors.push(`"${file.name}" is a ${ext} file — only JPG, PNG, and WebP images are accepted.`);
           }
         });
       });
 
       // Check for max files limit
       const totalFiles = photos.length + acceptedFiles.length;
-      if (totalFiles > 5) {
-        errors.push(`Maximum 5 photos allowed (you selected ${totalFiles})`);
-        setPhotoErrors(errors);
+      if (totalFiles > 10) {
+        dropErrors.push(`You can upload up to 10 photos total. You already have ${photos.length} and tried to add ${acceptedFiles.length} more.`);
+        setPhotoErrors(dropErrors);
         return;
       }
 
-      if (errors.length > 0) {
-        setPhotoErrors(errors);
+      if (dropErrors.length > 0) {
+        setPhotoErrors(dropErrors);
+        // Still accept the valid files
+        if (acceptedFiles.length > 0) {
+          setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 10));
+        }
       } else {
-        setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 5));
+        setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 10));
       }
     }
   });
@@ -267,15 +302,23 @@ export default function Quote() {
 
     try {
       // Validate tools before submission
-      const hasInvalidTools = tools.some(tool =>
-        !tool.tool_type || !tool.tool_brand || !tool.tool_model || !tool.quantity || !tool.problem_description || tool.problem_description.length < 10
-      );
-
-      if (hasInvalidTools) {
-        setSubmitStatus({
-          type: 'error',
-          message: 'Please fill in all tool fields. Problem description must be at least 10 characters.'
-        });
+      const newToolErrors = tools.map(tool => {
+        const errs = {};
+        if (!tool.tool_type.trim()) errs.tool_type = 'Tool type is required';
+        if (!tool.tool_brand.trim()) errs.tool_brand = 'Brand is required';
+        if (!tool.tool_model.trim()) errs.tool_model = 'Model is required';
+        if (!tool.quantity || tool.quantity < 1) errs.quantity = 'Quantity must be at least 1';
+        if (!tool.problem_description.trim()) errs.problem_description = 'Problem description is required';
+        else if (tool.problem_description.trim().length < 10) errs.problem_description = 'Problem description must be at least 10 characters';
+        return errs;
+      });
+      const toolsValid = newToolErrors.every(errs => Object.keys(errs).length === 0);
+      if (!toolsValid) {
+        setToolErrors(newToolErrors);
+        // Expand any collapsed tools that have errors
+        setCollapsedTools(prev => prev.map((collapsed, i) => {
+          return collapsed && Object.keys(newToolErrors[i] || {}).length > 0 ? false : collapsed;
+        }));
         setIsSubmitting(false);
         return;
       }
@@ -332,6 +375,7 @@ export default function Quote() {
       reset();
       setPhotos([]);
       setTools([{ tool_type: '', tool_brand: '', tool_model: '', quantity: 1, problem_description: '' }]);
+      setToolErrors([{}]);
       setCollapsedTools([false]);
     } catch (error) {
       // Clear progress interval on error
@@ -362,6 +406,7 @@ export default function Quote() {
     reset();
     setPhotos([]);
     setTools([{ tool_type: '', tool_brand: '', tool_model: '', quantity: 1, problem_description: '' }]);
+    setToolErrors([{}]);
     setCollapsedTools([false]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -369,7 +414,7 @@ export default function Quote() {
   return (
     <>
       <Helmet>
-        <title>Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC</title>
+        <title>Submit Pneumatic Tool Repair Request | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
           content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool, provide a detailed quote, and complete professional repairs. Serving automotive, fleet, manufacturing, and construction industries."
@@ -383,14 +428,14 @@ export default function Quote() {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolrepair.com/repair-request" />
-        <meta property="og:title" content="Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC" />
+        <meta property="og:title" content="Submit Pneumatic Tool Repair Request | CNS Tool Repair Surrey BC" />
         <meta property="og:description" content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool and provide a detailed quote." />
         <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolrepair.com/repair-request" />
-        <meta name="twitter:title" content="Submit Pneumatic Tool Repair Request | CNS Tools Surrey BC" />
+        <meta name="twitter:title" content="Submit Pneumatic Tool Repair Request | CNS Tool Repair Surrey BC" />
         <meta name="twitter:description" content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool and provide a detailed quote." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
@@ -446,12 +491,15 @@ export default function Quote() {
                 </label>
                 <input
                   id="contact_person"
-                  {...register('contact_person', { required: 'Contact person is required' })}
+                  {...register('contact_person', {
+                    required: 'Contact person is required',
+                    minLength: { value: 2, message: 'Name must be at least 2 characters' }
+                  })}
                   onChange={(e) => {
                     const capitalized = capitalizeFirstLetters(e.target.value);
                     setValue('contact_person', capitalized);
                   }}
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className={`w-full px-4 py-3 rounded-lg border ${errors.contact_person ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                   placeholder="Enter Name"
                   aria-required="true"
                   aria-invalid={errors.contact_person ? 'true' : 'false'}
@@ -474,9 +522,9 @@ export default function Quote() {
                     type="email"
                     {...register('email', {
                       required: 'Email is required',
-                      pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' }
+                      pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email address' }
                     })}
-                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.email ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Enter Email"
                     aria-required="true"
                     aria-invalid={errors.email ? 'true' : 'false'}
@@ -497,13 +545,14 @@ export default function Quote() {
                     id="phone"
                     type="tel"
                     {...register('phone', {
-                      required: 'Phone is required'
+                      required: 'Phone is required',
+                      pattern: { value: /^\d{3}-\d{3}-\d{4}$/, message: 'Please enter a complete phone number (###-###-####)' }
                     })}
                     onChange={(e) => {
                       const formatted = formatPhoneNumber(e.target.value);
-                      setValue('phone', formatted);
+                      setValue('phone', formatted, { shouldValidate: false });
                     }}
-                    className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.phone ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Enter Phone"
                     aria-required="true"
                     aria-invalid={errors.phone ? 'true' : 'false'}
@@ -584,10 +633,14 @@ export default function Quote() {
                           type="text"
                           value={tool.tool_type}
                           onChange={(e) => updateTool(index, 'tool_type', e.target.value)}
-                          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                          onBlur={(e) => validateToolField(index, 'tool_type', e.target.value)}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_type ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Type"
-                          required
+                          aria-invalid={!!toolErrors[index]?.tool_type}
                         />
+                        {toolErrors[index]?.tool_type && (
+                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_type}</p>
+                        )}
                       </div>
 
                       <div>
@@ -598,10 +651,14 @@ export default function Quote() {
                           type="text"
                           value={tool.tool_brand}
                           onChange={(e) => updateTool(index, 'tool_brand', e.target.value)}
-                          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                          onBlur={(e) => validateToolField(index, 'tool_brand', e.target.value)}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_brand ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Brand"
-                          required
+                          aria-invalid={!!toolErrors[index]?.tool_brand}
                         />
+                        {toolErrors[index]?.tool_brand && (
+                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_brand}</p>
+                        )}
                       </div>
                     </div>
 
@@ -614,10 +671,14 @@ export default function Quote() {
                           type="text"
                           value={tool.tool_model}
                           onChange={(e) => updateTool(index, 'tool_model', e.target.value)}
-                          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                          onBlur={(e) => validateToolField(index, 'tool_model', e.target.value)}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_model ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Model"
-                          required
+                          aria-invalid={!!toolErrors[index]?.tool_model}
                         />
+                        {toolErrors[index]?.tool_model && (
+                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_model}</p>
+                        )}
                       </div>
 
                       <div>
@@ -628,11 +689,15 @@ export default function Quote() {
                           type="number"
                           value={tool.quantity}
                           onChange={(e) => updateTool(index, 'quantity', parseInt(e.target.value) || 1)}
-                          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                          onBlur={(e) => validateToolField(index, 'quantity', parseInt(e.target.value) || 0)}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.quantity ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Quantity"
                           min="1"
-                          required
+                          aria-invalid={!!toolErrors[index]?.quantity}
                         />
+                        {toolErrors[index]?.quantity && (
+                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].quantity}</p>
+                        )}
                       </div>
                     </div>
 
@@ -643,12 +708,22 @@ export default function Quote() {
                       <textarea
                         value={tool.problem_description}
                         onChange={(e) => updateTool(index, 'problem_description', e.target.value)}
-                        className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        onBlur={(e) => validateToolField(index, 'problem_description', e.target.value)}
+                        className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.problem_description ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                         rows={4}
-                        placeholder="Enter Problem Description"
-                        minLength={10}
-                        required
+                        placeholder="Enter Problem Description (min. 10 characters)"
+                        aria-invalid={!!toolErrors[index]?.problem_description}
                       />
+                      <div className="flex items-center justify-between mt-1">
+                        {toolErrors[index]?.problem_description ? (
+                          <p className="text-red-500 text-sm" role="alert">{toolErrors[index].problem_description}</p>
+                        ) : (
+                          <span />
+                        )}
+                        <span className={`text-xs ${tool.problem_description.length < 10 && tool.problem_description.length > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                          {tool.problem_description.length}/2000
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -664,6 +739,8 @@ export default function Quote() {
               className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
                 isDragActive
                   ? 'border-primary bg-primary/5'
+                  : photoErrors.length > 0
+                  ? 'border-red-500 hover:border-red-400'
                   : 'border-slate-300 dark:border-slate-700 hover:border-primary'
               }`}
               role="button"
@@ -677,16 +754,22 @@ export default function Quote() {
               <p className="font-bold text-slate-600 dark:text-slate-400">
                 {isDragActive ? 'Drop photos here' : 'Click or drag photos here'}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">Max 5 photos, 5MB each (JPG, PNG, WebP)</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">Max 10 photos, 10MB each (JPG, PNG, WebP)</p>
             </div>
 
             {/* Photo validation errors */}
             {photoErrors.length > 0 && (
-              <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg" role="alert">
-                <p className="font-bold text-red-800 dark:text-red-200 mb-2">Upload Error:</p>
-                <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300">
+              <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-500 rounded-lg" role="alert">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-lg">error</span>
+                  <p className="font-bold text-red-800 dark:text-red-200">{photoErrors.length === 1 ? 'Upload Error' : `${photoErrors.length} Upload Errors`}</p>
+                </div>
+                <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
                   {photoErrors.map((error, idx) => (
-                    <li key={idx}>{error}</li>
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-red-400 mt-0.5">&#8226;</span>
+                      <span>{error}</span>
+                    </li>
                   ))}
                 </ul>
               </div>

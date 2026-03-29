@@ -62,7 +62,7 @@ export default function About() {
   return (
     <>
       <Helmet>
-        <title>Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tool Repair</title>
+        <title>About Us | Industrial Pneumatic Tool Repair & Maintenance | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
           content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools for automotive, fleet, manufacturing, construction, oil & gas, aerospace, marine, mining, and MRO sectors."
@@ -76,14 +76,14 @@ export default function About() {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolrepair.com/about" />
-        <meta property="og:title" content="Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tool Repair" />
+        <meta property="og:title" content="About Us | Industrial Pneumatic Tool Repair & Maintenance | CNS Tool Repair Surrey BC" />
         <meta property="og:description" content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools." />
         <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolrepair.com/about" />
-        <meta name="twitter:title" content="Industrial pneumatic tool repair and maintenance services in Surrey, BC | CNS Tool Repair" />
+        <meta name="twitter:title" content="About Us | Industrial Pneumatic Tool Repair & Maintenance | CNS Tool Repair Surrey BC" />
         <meta name="twitter:description" content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>

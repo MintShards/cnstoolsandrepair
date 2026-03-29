@@ -12,7 +12,6 @@ class GalleryPhotoBase(BaseModel):
 
 class GalleryPhotoCreate(GalleryPhotoBase):
     """Schema for creating a new gallery photo"""
-    pass
 
 
 class GalleryPhotoUpdate(BaseModel):

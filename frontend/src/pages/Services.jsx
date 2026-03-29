@@ -33,7 +33,7 @@ export default function Services() {
   return (
     <>
       <Helmet>
-        <title>Pneumatic Tool Services & Repair | Tools We Repair | CNS Tools Surrey</title>
+        <title>Pneumatic Tool Services & Repair | Tools We Repair | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
           content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors. Complete repair services for air tools, electric tools, and lifting equipment."
@@ -47,14 +47,14 @@ export default function Services() {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolrepair.com/services" />
-        <meta property="og:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tools Surrey" />
+        <meta property="og:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tool Repair Surrey BC" />
         <meta property="og:description" content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors." />
         <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolrepair.com/services" />
-        <meta name="twitter:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tools Surrey" />
+        <meta name="twitter:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tool Repair Surrey BC" />
         <meta name="twitter:description" content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>

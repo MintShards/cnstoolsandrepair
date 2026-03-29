@@ -174,7 +174,7 @@ NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 JWT_SECRET_KEY=<generate_with_secrets.token_urlsafe(32)>
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=8
-MAX_FILE_SIZE=5242880
+MAX_FILE_SIZE=10485760
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 ```
 
@@ -199,7 +199,7 @@ VITE_API_URL=http://localhost:8000
 1. Start backend (WSL: `--host 0.0.0.0`) + frontend
 2. Navigate to `/repair-request`
 3. Fill form: customer info + add multiple tools (collapsible UI)
-4. Upload photos (max 5, 5MB each, jpg/png/webp)
+4. Upload photos (max 10, 10MB each, jpg/png/webp)
 5. Verify backend logs: `Email sent. Status: 202`
 6. Check `/api/quotes/` for request with `request_number` (e.g., "REQ-2026-0001")
 7. Verify photos in `/uploads/quotes/{uuid}.ext`
@@ -257,7 +257,7 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 - **Filename sanitization**: UUID-based filenames prevent path traversal attacks
 - **Auto-capitalization**: Tool fields (type/brand/model) auto-capitalize to prevent injection
 
-**File validation** (in `save_upload_file()`): size check (5MB), extension whitelist, deep Pillow image verification — accepts MPO format (iPhone Live Photos map to JPEG).
+**File validation** (in `save_upload_file()`): size check (10MB), extension whitelist, deep Pillow image verification — accepts MPO format (iPhone Live Photos map to JPEG).
 
 **Production requirements:**
 - Enable `cookie_secure=True` for CSRF (requires HTTPS)

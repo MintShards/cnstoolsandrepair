@@ -254,7 +254,7 @@ export default function Testimonials({ data = null, loading = false }) {
         </Swiper>
 
         {/* Trust Badge */}
-        {/* ⚠️ TODO: Verify "100+ Industrial Clients" claim before production or remove */}
+        {/* Trust Badge */}
         <div className="mt-12 lg:mt-16 p-5 lg:p-6 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/20">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
             <div className="flex items-center gap-2">

@@ -33,7 +33,7 @@ export default function Industries() {
   return (
     <>
       <Helmet>
-        <title>Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey</title>
+        <title>Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
           content="Pneumatic tool repair for 10 major industrial sectors: Automotive, Fleet Maintenance, Manufacturing, Metal Fabrication, Construction, Oil & Gas, Aerospace, Marine, Mining, and MRO. Serving Surrey and Lower Mainland businesses."
@@ -47,14 +47,14 @@ export default function Industries() {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolrepair.com/industries" />
-        <meta property="og:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey" />
+        <meta property="og:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tool Repair Surrey BC" />
         <meta property="og:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
         <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolrepair.com/industries" />
-        <meta name="twitter:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tools Surrey" />
+        <meta name="twitter:title" content="Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tool Repair Surrey BC" />
         <meta name="twitter:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
