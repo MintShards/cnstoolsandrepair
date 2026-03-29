@@ -123,9 +123,13 @@ CNS Tool Repair | {city}, {province}
         message.reply_to = Email(quote.email, quote.contact_person)
 
         # Attach photos as email attachments (with fallback for production)
+        # SendGrid has a 30MB total email limit; cap attachments at 20MB raw (base64 adds ~33%)
+        MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # 20MB raw = ~27MB base64
         attachment_errors = []
+        skipped_photos = 0
         if quote.photos:
             attachments = []
+            total_attachment_bytes = 0
             for idx, photo in enumerate(quote.photos, start=1):
                 try:
                     # Get photo URL (handle both Spaces URLs and local paths)
@@ -140,6 +144,14 @@ CNS Tool Repair | {city}, {province}
                     response_photo = requests.get(photo_url, timeout=30)
                     response_photo.raise_for_status()
                     photo_data = response_photo.content
+
+                    # Check if adding this photo would exceed the attachment limit
+                    if total_attachment_bytes + len(photo_data) > MAX_ATTACHMENT_BYTES:
+                        skipped_photos += 1
+                        logger.info(f"Skipping photo {idx} ({len(photo_data)} bytes) - would exceed email size limit")
+                        continue
+
+                    total_attachment_bytes += len(photo_data)
 
                     # Encode as base64
                     encoded = base64.b64encode(photo_data).decode()
@@ -180,18 +192,21 @@ CNS Tool Repair | {city}, {province}
 
         # Build photo section for email body (after attachment processing)
         if quote.photos:
-            successful_count = len(quote.photos) - len(attachment_errors)
+            successful_count = len(quote.photos) - len(attachment_errors) - skipped_photos
             failed_count = len(attachment_errors)
 
-            if failed_count == 0:
+            if failed_count == 0 and skipped_photos == 0:
                 # All photos attached successfully
                 photo_text = f"  📎 {successful_count} photo{'s' if successful_count > 1 else ''} attached"
             elif successful_count > 0:
-                # Some photos attached, some failed
-                photo_text = f"  📎 {successful_count} photo{'s' if successful_count > 1 else ''} attached\n"
-                photo_text += f"  ⚠️  {failed_count} photo{'s' if failed_count > 1 else ''} could not be attached - view in admin dashboard"
+                # Some photos attached, some failed or skipped
+                photo_text = f"  📎 {successful_count} photo{'s' if successful_count > 1 else ''} attached"
+                if skipped_photos > 0:
+                    photo_text += f"\n  ℹ️  {skipped_photos} photo{'s' if skipped_photos > 1 else ''} too large for email - view in admin dashboard"
+                if failed_count > 0:
+                    photo_text += f"\n  ⚠️  {failed_count} photo{'s' if failed_count > 1 else ''} could not be attached - view in admin dashboard"
             else:
-                # All photos failed
+                # All photos failed or skipped
                 photo_text = f"  ⚠️  {len(quote.photos)} photo{'s' if len(quote.photos) > 1 else ''} uploaded but could not be attached - view in admin dashboard"
         else:
             photo_text = "  📷 No photos"
