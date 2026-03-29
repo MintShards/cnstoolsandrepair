@@ -199,7 +199,7 @@ VITE_API_URL=http://localhost:8000
 1. Start backend (WSL: `--host 0.0.0.0`) + frontend
 2. Navigate to `/repair-request`
 3. Fill form: customer info + add multiple tools (collapsible UI)
-4. Upload photos (max 10, 10MB each, jpg/png/webp)
+4. Upload photos (max 5, 10MB each, jpg/png/webp)
 5. Verify backend logs: `Email sent. Status: 202`
 6. Check `/api/quotes/` for request with `request_number` (e.g., "REQ-2026-0001")
 7. Verify photos in `/uploads/quotes/{uuid}.ext`

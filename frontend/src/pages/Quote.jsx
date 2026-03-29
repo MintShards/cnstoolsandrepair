@@ -242,7 +242,7 @@ export default function Quote() {
     accept: {
       'image/*': ['.jpg', '.jpeg', '.png', '.webp']
     },
-    maxFiles: 10,
+    maxFiles: 5,
     maxSize: 10485760, // 10MB
     onDrop: (acceptedFiles, rejectedFiles) => {
       setPhotoErrors([]);
@@ -263,8 +263,8 @@ export default function Quote() {
 
       // Check for max files limit
       const totalFiles = photos.length + acceptedFiles.length;
-      if (totalFiles > 10) {
-        dropErrors.push(`You can upload up to 10 photos total. You already have ${photos.length} and tried to add ${acceptedFiles.length} more.`);
+      if (totalFiles > 5) {
+        dropErrors.push(`You can upload up to 5 photos total. You already have ${photos.length} and tried to add ${acceptedFiles.length} more.`);
         setPhotoErrors(dropErrors);
         return;
       }
@@ -273,10 +273,10 @@ export default function Quote() {
         setPhotoErrors(dropErrors);
         // Still accept the valid files
         if (acceptedFiles.length > 0) {
-          setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 10));
+          setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 5));
         }
       } else {
-        setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 10));
+        setPhotos(prev => [...prev, ...acceptedFiles].slice(0, 5));
       }
     }
   });
@@ -754,7 +754,7 @@ export default function Quote() {
               <p className="font-bold text-slate-600 dark:text-slate-400">
                 {isDragActive ? 'Drop photos here' : 'Click or drag photos here'}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">Max 10 photos, 10MB each (JPG, PNG, WebP)</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">Max 5 photos, 10MB each (JPG, PNG, WebP)</p>
             </div>
 
             {/* Photo validation errors */}
