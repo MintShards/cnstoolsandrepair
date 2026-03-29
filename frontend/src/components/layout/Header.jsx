@@ -13,7 +13,7 @@ export default function Header() {
       <div className="flex items-center justify-between p-4 max-w-screen-xl mx-auto">
         <div className="flex items-center">
           <Link to="/">
-            <h2 className="font-logo text-2xl md:text-3xl font-bold leading-none tracking-wide uppercase">
+            <h2 className="font-logo text-xl md:text-2xl font-bold leading-none tracking-wide uppercase">
               <span className="text-accent-orange">CNS</span>{' '}
               <span className="text-slate-900 dark:text-white">Tool Repair</span>
             </h2>

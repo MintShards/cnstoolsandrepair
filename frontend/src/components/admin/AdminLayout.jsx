@@ -20,7 +20,7 @@ export default function AdminLayout({ children, title = 'Admin Settings' }) {
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
             <div className="flex items-center gap-4">
-              <Link to="/" className="font-logo text-2xl font-bold leading-none tracking-wide uppercase">
+              <Link to="/" className="font-logo text-xl font-bold leading-none tracking-wide uppercase">
                 <span className="text-accent-orange">CNS</span>{' '}
                 <span className="text-white">Tool Repair</span>
               </Link>
