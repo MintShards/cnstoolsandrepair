@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { useDropzone } from 'react-dropzone';
@@ -884,6 +885,14 @@ export default function Quote() {
               </div>
             </div>
           )}
+
+          {/* Consent Notice */}
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+            By submitting, you agree to our{' '}
+            <Link to="/privacy-policy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>
+            {' '}and{' '}
+            <Link to="/terms-of-service" className="underline hover:text-primary transition-colors">Terms of Service</Link>.
+          </p>
 
           {/* Submit Button */}
           <button

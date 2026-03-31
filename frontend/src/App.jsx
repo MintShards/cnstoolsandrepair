@@ -14,6 +14,8 @@ import Quote from './pages/Quote';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Gallery from './pages/Gallery';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminSettings from './pages/admin/AdminSettings';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
@@ -67,6 +69,8 @@ function App() {
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/gallery" element={<Gallery />} />
+                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                      <Route path="/terms-of-service" element={<TermsOfService />} />
                     </Routes>
                     <Footer />
                     <BottomNav />

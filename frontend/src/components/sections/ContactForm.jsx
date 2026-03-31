@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { contactFormAPI } from '../../services/api';
 
@@ -178,6 +179,12 @@ export default function ContactForm() {
 
           <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-4">
             * Required fields
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-2">
+            By submitting, you agree to our{' '}
+            <Link to="/privacy-policy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>
+            {' '}and{' '}
+            <Link to="/terms-of-service" className="underline hover:text-primary transition-colors">Terms of Service</Link>.
           </p>
         </form>
       </div>
