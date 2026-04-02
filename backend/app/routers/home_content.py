@@ -21,9 +21,7 @@ DEFAULT_HOME_CONTENT = {
     },
     "hero": {
         "headline": "Industrial Pneumatic Tool Repair & Maintenance in Surrey, BC",
-        "subheadline": "CNS Tool Repair provides industrial pneumatic tool repair, maintenance, and calibration services for mid to large businesses across Metro Vancouver. Professional on-site service for automotive, fleet, manufacturing, construction, oil & gas, aerospace, marine, mining, and MRO operations.",
-        "industriesBadge": "Automotive • Fleet • Manufacturing • Construction",
-        "locationText": "Surrey, BC - On-Site Industrial Service",
+        "subheadline": "Professional diagnostics and in-shop repair for air-powered tools used in demanding industrial operations. Supporting automotive, fleet, manufacturing, and metal fabrication businesses across Surrey and the Lower Mainland.",
         "primaryButtonText": "Request a Free Quote",
         "secondaryButtonText": "Call Us Today",
     },

@@ -406,24 +406,6 @@ export default function HomeTab() {
           helperText="Supporting text below headline"
         />
         <AdminInput
-          label="Industries Badge"
-          value={formData.hero.industriesBadge}
-          onChange={(v) => updateField('hero.industriesBadge', v)}
-          required
-          maxLength={200}
-          placeholder="Automotive • Fleet • Manufacturing • Construction"
-          helperText="Industry tags shown in badge (use • for separation)"
-        />
-        <AdminInput
-          label="Location Text"
-          value={formData.hero.locationText}
-          onChange={(v) => updateField('hero.locationText', v)}
-          required
-          maxLength={200}
-          placeholder="On-Site Service (No Shipping)"
-          helperText="Service model description"
-        />
-        <AdminInput
           label="Primary Button Text"
           value={formData.hero.primaryButtonText}
           onChange={(v) => updateField('hero.primaryButtonText', v)}

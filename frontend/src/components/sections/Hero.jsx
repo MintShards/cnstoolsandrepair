@@ -38,9 +38,6 @@ export default function Hero({
           >
             <div className="max-w-screen-xl mx-auto w-full">
               <div className="flex flex-col gap-4 lg:gap-6 max-w-lg lg:max-w-2xl">
-                {/* Industries Badge Skeleton */}
-                <div className="h-6 w-72 bg-white/10 rounded-full animate-pulse"></div>
-
                 {/* Title/Heading Skeleton */}
                 <div className="space-y-3">
                   <div className="h-10 lg:h-14 w-full bg-white/10 rounded animate-pulse"></div>
@@ -50,12 +47,8 @@ export default function Hero({
                 {/* Description Skeleton */}
                 <div className="space-y-2">
                   <div className="h-5 lg:h-6 w-full bg-white/10 rounded animate-pulse"></div>
-                  <div className="h-5 lg:h-6 w-full bg-white/10 rounded animate-pulse"></div>
                   <div className="h-5 lg:h-6 w-3/4 bg-white/10 rounded animate-pulse"></div>
                 </div>
-
-                {/* Location Badge Skeleton */}
-                <div className="h-8 w-80 bg-white/10 rounded-lg animate-pulse"></div>
               </div>
 
               {/* CTA Buttons Skeleton */}
@@ -74,14 +67,10 @@ export default function Hero({
     );
   }
 
-  const { contact } = settings;
-
   // Default hero content (fallback)
   const defaultData = {
     headline: "Industrial Pneumatic Tool Repair & Maintenance in Surrey, BC",
-    subheadline: "CNS Tool Repair provides industrial pneumatic tool repair and maintenance services in Surrey, British Columbia. We support businesses that rely on air-powered tools for daily operations, offering professional diagnostics and in-shop repair services for industrial applications.",
-    industriesBadge: "Automotive • Construction • Manufacturing",
-    locationText: "On-Site Service (No Shipping)",
+    subheadline: "Professional diagnostics and in-shop repair for air-powered tools used in demanding industrial operations. Supporting automotive, fleet, manufacturing, and metal fabrication businesses across Surrey and the Lower Mainland.",
     primaryButtonText: "Request a Repair Assessment",
     secondaryButtonText: "View Pneumatic Tool Repair Services",
   };
@@ -99,20 +88,12 @@ export default function Hero({
         >
           <div className="max-w-screen-xl mx-auto w-full">
             <div className="flex flex-col gap-4 lg:gap-6 max-w-lg lg:max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-orange/20 border border-accent-orange/30 text-accent-orange text-[10px] lg:text-xs font-black uppercase tracking-widest w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                <span className="size-2 rounded-full bg-accent-orange animate-pulse"></span>
-                {content.industriesBadge}
-              </div>
               <h1 className="text-white text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tight uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
                 {content.headline}
               </h1>
               <p className="text-slate-300 text-base lg:text-lg font-medium leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 {content.subheadline}
               </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/15 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 text-white text-xs lg:text-sm font-bold w-fit drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                <span className="material-symbols-outlined text-sm lg:text-base">location_on</span>
-                {contact.address.city}, {contact.address.province} | {content.locationText}
-              </div>
             </div>
             {/* Mobile-First CTA Buttons - Optimized for thumb reach */}
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-3 lg:gap-4 mt-6 sm:mt-6">

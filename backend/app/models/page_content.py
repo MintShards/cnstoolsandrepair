@@ -55,8 +55,6 @@ class HeroSectionModel(BaseModel):
     """Hero section content"""
     headline: str = Field(..., min_length=1, max_length=300)
     subheadline: str = Field(..., min_length=1, max_length=500)
-    industries_badge: str = Field(..., min_length=1, max_length=200, alias="industriesBadge")
-    location_text: str = Field(..., min_length=1, max_length=200, alias="locationText")
     primary_button_text: str = Field(..., min_length=1, max_length=100, alias="primaryButtonText")
     secondary_button_text: str = Field(..., min_length=1, max_length=100, alias="secondaryButtonText")
 
