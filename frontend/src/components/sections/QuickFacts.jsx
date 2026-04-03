@@ -30,11 +30,6 @@ export default function QuickFacts({
             ))}
           </div>
 
-          {/* SEO Text Skeleton */}
-          <div className="text-center mt-6">
-            <div className="h-4 w-96 max-w-full bg-white/5 rounded mx-auto animate-pulse"></div>
-          </div>
-
           {/* Trust Badges Row Skeleton */}
           <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 pt-6 border-t border-slate-200 dark:border-slate-800">
             {[1, 2, 3, 4].map((i) => (
@@ -49,7 +44,7 @@ export default function QuickFacts({
     );
   }
 
-  const { claims, contact } = settings;
+  const { claims } = settings;
 
   const facts = [
     {
@@ -58,28 +53,28 @@ export default function QuickFacts({
       description: 'Serviced',
     },
     {
-      icon: 'workspace_premium',
-      label: claims.qualityStandard,
-      description: 'Workmanship',
-    },
-    {
       icon: 'verified',
       label: claims.technicians,
       description: 'Technicians',
     },
     {
-      icon: 'location_on',
-      label: `${contact.address.city}, ${contact.address.province}`,
-      description: 'Local Service',
+      icon: 'door_front',
+      label: 'Walk-In',
+      description: 'Welcome',
+    },
+    {
+      icon: 'air',
+      label: 'Pneumatic',
+      description: 'Specialists',
     },
   ];
 
   // Default trust badges (fallback)
   const defaultTrustBadges = [
-    { icon: 'verified', label: 'OEM Certified', color: 'text-green-400', display_order: 1 },
-    { icon: 'workspace_premium', label: '15+ Years', color: 'text-blue-400', display_order: 2 },
-    { icon: 'security', label: 'Licensed', color: 'text-purple-400', display_order: 3 },
-    { icon: 'thumb_up', label: 'BBB Rated', color: 'text-yellow-400', display_order: 4 },
+    { icon: 'badge', label: 'Certified Technicians', color: 'text-green-400', display_order: 1 },
+    { icon: 'storefront', label: 'Locally Owned', color: 'text-blue-400', display_order: 2 },
+    { icon: 'troubleshoot', label: 'Full Diagnostics', color: 'text-purple-400', display_order: 3 },
+    { icon: 'precision_manufacturing', label: 'B2B Focused', color: 'text-yellow-400', display_order: 4 },
   ];
 
   // Use data-driven trust badges with fallback
@@ -114,11 +109,6 @@ export default function QuickFacts({
             </div>
           ))}
         </div>
-
-        {/* SEO Context Text */}
-        <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm text-center mt-6 font-medium">
-          Serving Surrey and Lower Mainland businesses with industrial pneumatic tool repair services.
-        </p>
 
         {/* Trust Badges Row - Fully Responsive */}
         <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 pt-6 border-t border-slate-200 dark:border-slate-800">

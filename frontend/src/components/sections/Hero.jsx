@@ -31,7 +31,7 @@ export default function Hero({
       <section className="@container">
         <div className="relative overflow-hidden">
           <div
-            className="flex min-h-[580px] lg:min-h-[680px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-16 sm:pb-20 lg:pb-24 pt-24"
+            className="flex min-h-[480px] lg:min-h-[560px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-12 sm:pb-16 lg:pb-20 pt-24"
             style={{
               backgroundImage: getBackgroundImage(),
             }}
@@ -81,7 +81,7 @@ export default function Hero({
     <section className="@container">
       <div className="relative overflow-hidden">
         <div
-          className="flex min-h-[580px] lg:min-h-[680px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-16 sm:pb-20 lg:pb-24 pt-24"
+          className="flex min-h-[480px] lg:min-h-[560px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-12 sm:pb-16 lg:pb-20 pt-24"
           style={{
             backgroundImage: getBackgroundImage(),
           }}
