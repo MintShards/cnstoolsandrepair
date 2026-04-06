@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
 from app.routers import quotes, tools, brands, industries, contact, gallery
 from app.routers import settings as settings_router, auth, about_content, home_content, industries_content, contact_content
+from app.routers import repairs, customers as customers_router
 from app.logging_config import setup_logging
 
 setup_logging()
@@ -106,6 +107,8 @@ app.include_router(about_content.router)
 app.include_router(home_content.router)
 app.include_router(industries_content.router)
 app.include_router(contact_content.router)
+app.include_router(repairs.router)
+app.include_router(customers_router.router)
 
 
 @app.get("/api/csrf-token")

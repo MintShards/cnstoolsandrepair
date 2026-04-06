@@ -8,7 +8,6 @@ import GalleryTab from '../../components/admin/tabs/GalleryTab';
 import AboutTab from '../../components/admin/tabs/AboutTab';
 import ContactTab from '../../components/admin/tabs/ContactTab';
 import GlobalTab from '../../components/admin/tabs/GlobalTab';
-import QuotesTab from '../../components/admin/tabs/QuotesTab';
 
 export default function AdminSettings() {
   const { settings, loading: settingsLoading } = useSettings();
@@ -32,7 +31,6 @@ export default function AdminSettings() {
     { id: 'services', label: 'Services Page', icon: 'build' },
     { id: 'industries', label: 'Industries Page', icon: 'factory' },
     { id: 'gallery', label: 'Gallery Page', icon: 'photo_library' },
-    { id: 'quotes', label: 'Repair Requests', icon: 'request_quote' },
     { id: 'about', label: 'About Page', icon: 'info' },
     { id: 'contact', label: 'Contact Page', icon: 'contact_mail' },
     { id: 'global', label: 'Global Settings', icon: 'settings' },
@@ -113,10 +111,6 @@ export default function AdminSettings() {
 
             {activeTab === 'gallery' && (
               <GalleryTab />
-            )}
-
-            {activeTab === 'quotes' && (
-              <QuotesTab />
             )}
 
             {activeTab === 'about' && (

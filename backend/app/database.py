@@ -58,3 +58,32 @@ async def get_next_request_number(year: int = None) -> str:
     request_number = f"REQ-{year}-{seq:04d}"
 
     return request_number
+
+
+async def get_next_work_order_number(year: int = None) -> str:
+    """
+    Generate next work order number in format WO-YYYY-XXXX
+    Used for repair jobs (both manual walk-ins and converted requests).
+    Separate counter from REQ numbers.
+
+    Args:
+        year: Year for the work order (defaults to current year)
+
+    Returns:
+        Work order number string like "WO-2026-0001"
+    """
+    if year is None:
+        year = datetime.utcnow().year
+
+    db = get_database()
+    counter_id = f"workorder_{year}"
+
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+
+    seq = result["seq"]
+    return f"WO-{year}-{seq:04d}"

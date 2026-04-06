@@ -257,4 +257,86 @@ export const industriesContentAPI = {
   },
 };
 
+// Customers API (admin only)
+export const customersAPI = {
+  list: async (params = {}) => {
+    const response = await api.get('/api/customers/', { params });
+    return response.data;
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/customers/${id}`);
+    return response.data;
+  },
+  getJobs: async (id) => {
+    const response = await api.get(`/api/customers/${id}/jobs`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/customers/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/customers/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/customers/${id}`);
+  },
+  searchByEmail: async (email) => {
+    const response = await api.get('/api/customers/search/by-email', { params: { email } });
+    return response.data;
+  },
+};
+
+// Repairs API (admin only)
+export const repairsAPI = {
+  list: async (params = {}) => {
+    const response = await api.get('/api/repairs/', { params });
+    return response.data;
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/repairs/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/repairs/', data);
+    return response.data;
+  },
+  convertFromRequest: async (quoteId) => {
+    const response = await api.post(`/api/repairs/from-request/${quoteId}`);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/repairs/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/repairs/${id}`);
+  },
+  addTool: async (jobId, toolData) => {
+    const response = await api.post(`/api/repairs/${jobId}/tools`, toolData);
+    return response.data;
+  },
+  updateTool: async (jobId, toolId, toolData) => {
+    const response = await api.put(`/api/repairs/${jobId}/tools/${toolId}`, toolData);
+    return response.data;
+  },
+  updateToolStatus: async (jobId, toolId, statusData) => {
+    const response = await api.put(`/api/repairs/${jobId}/tools/${toolId}/status`, statusData);
+    return response.data;
+  },
+  uploadToolPhoto: async (jobId, toolId, photoFile) => {
+    const formData = new FormData();
+    formData.append('photo', photoFile);
+    const response = await api.post(`/api/repairs/${jobId}/tools/${toolId}/photos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  removeTool: async (jobId, toolId) => {
+    const response = await api.delete(`/api/repairs/${jobId}/tools/${toolId}`);
+    return response.data;
+  },
+};
+
 export default api;

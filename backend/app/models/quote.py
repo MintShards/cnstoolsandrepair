@@ -10,6 +10,7 @@ class QuoteStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     QUOTED = "quoted"
     COMPLETED = "completed"
+    CONVERTED = "converted"
 
 
 class ToolEntry(BaseModel):

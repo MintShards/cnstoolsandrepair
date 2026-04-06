@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react';
-import { quotesAPI } from '../../../services/api';
+import { quotesAPI, repairsAPI } from '../../../services/api';
+import { useToast } from '../../../pages/admin/RepairTracker';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export default function QuotesTab() {
+export default function RepairRequestsTab({ onConvertSuccess }) {
+  const showToast = useToast();
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusMessage, setStatusMessage] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => {
     const saved = localStorage.getItem('quotesPageSize');
     return saved ? parseInt(saved) : 10;
   });
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [convertingId, setConvertingId] = useState(null);
+  const [convertConfirm, setConvertConfirm] = useState(null);
 
   useEffect(() => {
     fetchQuotes();
@@ -28,9 +31,8 @@ export default function QuotesTab() {
       const params = statusFilter ? { status: statusFilter } : {};
       const data = await quotesAPI.list(params);
       setQuotes(data);
-    } catch (error) {
-      console.error('Failed to fetch quotes:', error);
-      setStatusMessage({ type: 'error', text: 'Failed to load repair requests' });
+    } catch {
+      showToast('error', 'Failed to load repair requests');
     } finally {
       setLoading(false);
     }
@@ -39,20 +41,35 @@ export default function QuotesTab() {
   const handleStatusUpdate = async (quoteId, newStatus) => {
     try {
       await quotesAPI.update(quoteId, { status: newStatus });
-      setStatusMessage({ type: 'success', text: 'Status updated successfully' });
-
-      // Update local state
-      setQuotes(quotes.map(q =>
-        q.id === quoteId ? { ...q, status: newStatus } : q
-      ));
-
-      // Update selected quote if it's open
+      showToast('success', 'Status updated successfully');
+      setQuotes(quotes.map(q => q.id === quoteId ? { ...q, status: newStatus } : q));
       if (selectedQuote?.id === quoteId) {
         setSelectedQuote({ ...selectedQuote, status: newStatus });
       }
+    } catch {
+      showToast('error', 'Failed to update status');
+    }
+  };
+
+  const handleConvertClick = (quote) => {
+    setConvertConfirm(quote);
+  };
+
+  const handleConvertConfirm = async () => {
+    if (!convertConfirm) return;
+    setConvertingId(convertConfirm.id);
+    try {
+      await repairsAPI.convertFromRequest(convertConfirm.id);
+      setQuotes(quotes.map(q => q.id === convertConfirm.id ? { ...q, status: 'converted' } : q));
+      showToast('success', `Request ${convertConfirm.request_number} converted to Work Order. Find it in the Repair Jobs tab.`);
+      setConvertConfirm(null);
+      setSelectedQuote(null);
+      if (onConvertSuccess) onConvertSuccess();
     } catch (error) {
-      console.error('Failed to update status:', error);
-      setStatusMessage({ type: 'error', text: 'Failed to update status' });
+      showToast('error', error.response?.data?.detail || 'Failed to convert repair request');
+      setConvertConfirm(null);
+    } finally {
+      setConvertingId(null);
     }
   };
 
@@ -62,37 +79,22 @@ export default function QuotesTab() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteConfirmId) return;
-
     try {
       await quotesAPI.delete(deleteConfirmId.id);
-      setStatusMessage({ type: 'success', text: 'Repair request deleted successfully' });
-
-      // Remove from local state
+      showToast('success', 'Repair request deleted successfully');
       setQuotes(quotes.filter(q => q.id !== deleteConfirmId.id));
-
-      // Close modals
       setDeleteConfirmId(null);
-      if (selectedQuote?.id === deleteConfirmId.id) {
-        setSelectedQuote(null);
-      }
-    } catch (error) {
-      console.error('Failed to delete quote:', error);
-      setStatusMessage({ type: 'error', text: 'Failed to delete repair request' });
+      if (selectedQuote?.id === deleteConfirmId.id) setSelectedQuote(null);
+    } catch {
+      showToast('error', 'Failed to delete repair request');
       setDeleteConfirmId(null);
     }
   };
 
-  const handleDeleteCancel = () => {
-    setDeleteConfirmId(null);
-  };
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
@@ -102,6 +104,7 @@ export default function QuotesTab() {
       in_progress: { bg: 'bg-blue-900/30', text: 'text-blue-400', border: 'border-blue-700', label: 'In Progress' },
       quoted: { bg: 'bg-purple-900/30', text: 'text-purple-400', border: 'border-purple-700', label: 'Quote Provided' },
       completed: { bg: 'bg-green-900/30', text: 'text-green-400', border: 'border-green-700', label: 'Completed' },
+      converted: { bg: 'bg-cyan-900/30', text: 'text-cyan-400', border: 'border-cyan-700', label: 'Converted to WO' },
     };
     const config = statusConfig[status] || statusConfig.pending;
     return (
@@ -122,19 +125,14 @@ export default function QuotesTab() {
     );
   });
 
-  // Reset to page 1 when search/filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter]);
 
-  // Pagination calculations
   const totalResults = filteredQuotes.length;
   const totalPages = Math.ceil(totalResults / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedQuotes = filteredQuotes.slice(startIndex, endIndex);
 
-  // Pagination handlers
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -146,62 +144,36 @@ export default function QuotesTab() {
     localStorage.setItem('quotesPageSize', newSize);
   };
 
-  // Generate page numbers to display
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
-
     if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       if (currentPage <= 3) {
         for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
+        pages.push('...'); pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
+        pages.push(1); pages.push('...');
         for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
       } else {
-        pages.push(1);
-        pages.push('...');
+        pages.push(1); pages.push('...');
         for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
+        pages.push('...'); pages.push(totalPages);
       }
     }
-
     return pages;
   };
 
   return (
     <div>
       <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-6">
-        Repair Requests
+        Online Repair Requests
       </h2>
-
-      {/* Status Message */}
-      {statusMessage && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          statusMessage.type === 'success'
-            ? 'bg-green-900/20 border-green-700 text-green-300'
-            : 'bg-red-900/20 border-red-700 text-red-300'
-        }`}>
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined">
-              {statusMessage.type === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <p>{statusMessage.text}</p>
-          </div>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="mb-6 p-6 bg-slate-800 rounded-lg border border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
           <div>
             <label className="block text-sm font-bold text-slate-300 mb-2">Search</label>
             <input
@@ -212,8 +184,6 @@ export default function QuotesTab() {
               className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-
-          {/* Status Filter */}
           <div>
             <label className="block text-sm font-bold text-slate-300 mb-2">Filter by Status</label>
             <select
@@ -226,16 +196,15 @@ export default function QuotesTab() {
               <option value="in_progress">In Progress</option>
               <option value="quoted">Quote Provided</option>
               <option value="completed">Completed</option>
+              <option value="converted">Converted to WO</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Repair Requests Table */}
+      {/* Table */}
       <div className="p-6 bg-slate-800 rounded-lg border border-slate-700">
-        <h3 className="text-lg font-bold text-white mb-4">
-          Requests ({totalResults})
-        </h3>
+        <h3 className="text-lg font-bold text-white mb-4">Requests ({totalResults})</h3>
 
         {loading ? (
           <div className="text-center py-8">
@@ -258,7 +227,6 @@ export default function QuotesTab() {
                   <th className="py-3 px-4">Company/Contact</th>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Tools</th>
-                  <th className="py-3 px-4">Photos</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -266,29 +234,16 @@ export default function QuotesTab() {
               <tbody className="divide-y divide-slate-700">
                 {paginatedQuotes.map((quote) => (
                   <tr key={quote.id} className="hover:bg-slate-700/50 transition-colors">
-                    <td className="py-3 px-4 text-slate-300 font-mono text-xs">
-                      {quote.request_number}
-                    </td>
+                    <td className="py-3 px-4 text-slate-300 font-mono text-xs">{quote.request_number}</td>
                     <td className="py-3 px-4">
-                      <div className="text-slate-300 font-bold">
-                        {quote.company_name || quote.contact_person}
-                      </div>
-                      {quote.company_name && (
-                        <div className="text-slate-400 text-xs">{quote.contact_person}</div>
-                      )}
+                      <div className="text-slate-300 font-bold">{quote.company_name || quote.contact_person}</div>
+                      {quote.company_name && <div className="text-slate-400 text-xs">{quote.contact_person}</div>}
                     </td>
-                    <td className="py-3 px-4 text-slate-400 text-xs">
-                      {formatDate(quote.created_at)}
-                    </td>
+                    <td className="py-3 px-4 text-slate-400 text-xs">{formatDate(quote.created_at)}</td>
                     <td className="py-3 px-4 text-slate-300">
                       {quote.tools.length} tool{quote.tools.length !== 1 ? 's' : ''}
                     </td>
-                    <td className="py-3 px-4 text-slate-300">
-                      {quote.photos.length} photo{quote.photos.length !== 1 ? 's' : ''}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(quote.status)}
-                    </td>
+                    <td className="py-3 px-4">{getStatusBadge(quote.status)}</td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -298,6 +253,16 @@ export default function QuotesTab() {
                           <span className="material-symbols-outlined text-sm">visibility</span>
                           View
                         </button>
+                        {quote.status !== 'converted' && (
+                          <button
+                            onClick={() => handleConvertClick(quote)}
+                            disabled={convertingId === quote.id}
+                            className="inline-flex items-center gap-1 px-3 py-2 bg-orange-700 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-sm">build</span>
+                            Convert
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDeleteClick(quote)}
                           className="inline-flex items-center gap-1 px-3 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded-lg text-xs font-bold transition-all"
@@ -314,19 +279,15 @@ export default function QuotesTab() {
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         {!loading && totalResults > 0 && (
           <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
-            {/* Results Counter */}
             <div className="text-sm text-slate-400">
               Showing <span className="text-white font-bold">{startIndex + 1}</span> to{' '}
               <span className="text-white font-bold">{Math.min(endIndex, totalResults)}</span> of{' '}
               <span className="text-white font-bold">{totalResults}</span> results
             </div>
-
-            {/* Page Controls */}
             <div className="flex items-center gap-2">
-              {/* Previous Button */}
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
@@ -334,8 +295,6 @@ export default function QuotesTab() {
               >
                 <span className="material-symbols-outlined text-sm">chevron_left</span>
               </button>
-
-              {/* Page Numbers */}
               <div className="flex items-center gap-1">
                 {getPageNumbers().map((page, idx) => (
                   page === '...' ? (
@@ -345,9 +304,7 @@ export default function QuotesTab() {
                       key={page}
                       onClick={() => handlePageChange(page)}
                       className={`px-3 py-2 rounded-lg font-bold text-sm transition-all ${
-                        currentPage === page
-                          ? 'bg-primary text-white'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        currentPage === page ? 'bg-primary text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                       }`}
                     >
                       {page}
@@ -355,8 +312,6 @@ export default function QuotesTab() {
                   )
                 ))}
               </div>
-
-              {/* Next Button */}
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
@@ -365,8 +320,6 @@ export default function QuotesTab() {
                 <span className="material-symbols-outlined text-sm">chevron_right</span>
               </button>
             </div>
-
-            {/* Page Size Selector */}
             <div className="flex items-center gap-2">
               <label className="text-sm text-slate-400">Show:</label>
               <select
@@ -384,7 +337,7 @@ export default function QuotesTab() {
         )}
       </div>
 
-      {/* Repair Request Detail Modal */}
+      {/* Detail Modal */}
       {selectedQuote && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 overflow-y-auto"
@@ -394,25 +347,29 @@ export default function QuotesTab() {
             className="bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-white uppercase">
                   Repair Request {selectedQuote.request_number}
                 </h3>
-                <p className="text-sm text-slate-400 mt-1">
-                  Submitted {formatDate(selectedQuote.created_at)}
-                </p>
+                <p className="text-sm text-slate-400 mt-1">Submitted {formatDate(selectedQuote.created_at)}</p>
               </div>
-              <button
-                onClick={() => setSelectedQuote(null)}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <span className="material-symbols-outlined text-3xl">close</span>
-              </button>
+              <div className="flex items-center gap-3">
+                {selectedQuote.status !== 'converted' && (
+                  <button
+                    onClick={() => { setSelectedQuote(null); handleConvertClick(selectedQuote); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-700 hover:bg-orange-600 text-white rounded-lg text-sm font-bold transition-all"
+                  >
+                    <span className="material-symbols-outlined text-sm">build</span>
+                    Convert to Work Order
+                  </button>
+                )}
+                <button onClick={() => setSelectedQuote(null)} className="text-slate-400 hover:text-white transition-colors">
+                  <span className="material-symbols-outlined text-3xl">close</span>
+                </button>
+              </div>
             </div>
 
-            {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Status Update */}
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
@@ -445,24 +402,18 @@ export default function QuotesTab() {
                   </div>
                   <div>
                     <span className="text-slate-400">Email:</span>
-                    <a href={`mailto:${selectedQuote.email}`} className="ml-2 text-primary hover:underline">
-                      {selectedQuote.email}
-                    </a>
+                    <a href={`mailto:${selectedQuote.email}`} className="ml-2 text-primary hover:underline">{selectedQuote.email}</a>
                   </div>
                   <div>
                     <span className="text-slate-400">Phone:</span>
-                    <a href={`tel:${selectedQuote.phone}`} className="ml-2 text-primary hover:underline">
-                      {selectedQuote.phone}
-                    </a>
+                    <a href={`tel:${selectedQuote.phone}`} className="ml-2 text-primary hover:underline">{selectedQuote.phone}</a>
                   </div>
                 </div>
               </div>
 
-              {/* Tools List */}
+              {/* Tools */}
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-                <h4 className="text-sm font-bold text-white uppercase mb-3">
-                  Tools ({selectedQuote.tools.length})
-                </h4>
+                <h4 className="text-sm font-bold text-white uppercase mb-3">Tools ({selectedQuote.tools.length})</h4>
                 <div className="space-y-3">
                   {selectedQuote.tools.map((tool, idx) => (
                     <div key={idx} className="bg-slate-800 rounded-lg p-3 border border-slate-700">
@@ -471,18 +422,9 @@ export default function QuotesTab() {
                         <div className="text-xs text-slate-400">Qty: {tool.quantity}</div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm mb-2">
-                        <div>
-                          <span className="text-slate-400">Type:</span>
-                          <span className="ml-2 text-white">{tool.tool_type}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Brand:</span>
-                          <span className="ml-2 text-white">{tool.tool_brand}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Model:</span>
-                          <span className="ml-2 text-white">{tool.tool_model}</span>
-                        </div>
+                        <div><span className="text-slate-400">Type:</span><span className="ml-2 text-white">{tool.tool_type}</span></div>
+                        <div><span className="text-slate-400">Brand:</span><span className="ml-2 text-white">{tool.tool_brand}</span></div>
+                        <div><span className="text-slate-400">Model:</span><span className="ml-2 text-white">{tool.tool_model}</span></div>
                       </div>
                       <div className="text-sm">
                         <span className="text-slate-400">Problem:</span>
@@ -493,19 +435,13 @@ export default function QuotesTab() {
                 </div>
               </div>
 
-              {/* Photos Gallery */}
+              {/* Photos */}
               {selectedQuote.photos.length > 0 && (
                 <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-                  <h4 className="text-sm font-bold text-white uppercase mb-3">
-                    Photos ({selectedQuote.photos.length})
-                  </h4>
+                  <h4 className="text-sm font-bold text-white uppercase mb-3">Photos ({selectedQuote.photos.length})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {selectedQuote.photos.map((photo, idx) => (
-                      <div
-                        key={idx}
-                        className="aspect-square cursor-pointer group relative"
-                        onClick={() => setSelectedPhoto(photo)}
-                      >
+                      <div key={idx} className="aspect-square cursor-pointer group relative" onClick={() => setSelectedPhoto(photo)}>
                         <img
                           src={photo.startsWith('http') ? photo : `${API_BASE_URL}/uploads/${photo}`}
                           alt={`Tool photo ${idx + 1}`}
@@ -526,14 +462,8 @@ export default function QuotesTab() {
 
       {/* Photo Lightbox */}
       {selectedPhoto && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <button
-            className="absolute top-4 right-4 text-white hover:text-slate-300 transition-colors"
-            onClick={() => setSelectedPhoto(null)}
-          >
+        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-slate-300 transition-colors" onClick={() => setSelectedPhoto(null)}>
             <span className="material-symbols-outlined text-4xl">close</span>
           </button>
           <img
@@ -545,72 +475,72 @@ export default function QuotesTab() {
         </div>
       )}
 
+      {/* Convert Confirmation Modal */}
+      {convertConfirm && (
+        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => setConvertConfirm(null)}>
+          <div className="bg-slate-800 rounded-lg max-w-md w-full p-6 border border-orange-700" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-orange-900/30 p-3 rounded-full">
+                <span className="material-symbols-outlined text-4xl text-orange-400">build</span>
+              </div>
+            </div>
+            <h3 className="text-xl font-black text-white uppercase text-center mb-2">Convert to Work Order</h3>
+            <div className="mb-6 space-y-3">
+              <p className="text-slate-300 text-center">
+                Convert request <span className="font-bold text-white">{convertConfirm.request_number}</span> into a tracked Work Order?
+              </p>
+              <div className="bg-slate-900 rounded-lg p-3 border border-slate-700 text-sm space-y-1">
+                <div><span className="text-slate-400">Customer:</span><span className="ml-2 text-white">{convertConfirm.company_name || convertConfirm.contact_person}</span></div>
+                <div><span className="text-slate-400">Tools:</span><span className="ml-2 text-white">{convertConfirm.tools.length}</span></div>
+              </div>
+              <p className="text-slate-400 text-sm text-center">
+                Customer info and tool details will be copied. You can add serial numbers and additional info in the Repair Jobs tab.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConvertConfirm(null)} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">
+                Cancel
+              </button>
+              <button
+                onClick={handleConvertConfirm}
+                disabled={!!convertingId}
+                className="flex-1 px-4 py-3 bg-orange-700 hover:bg-orange-600 text-white rounded-lg font-bold transition-all disabled:opacity-50"
+              >
+                {convertingId ? 'Converting...' : 'Convert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
-          onClick={handleDeleteCancel}
-        >
-          <div
-            className="bg-slate-800 rounded-lg max-w-md w-full p-6 border border-red-700"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Warning Icon */}
+        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-slate-800 rounded-lg max-w-md w-full p-6 border border-red-700" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-center mb-4">
               <div className="bg-red-900/30 p-3 rounded-full">
                 <span className="material-symbols-outlined text-4xl text-red-400">warning</span>
               </div>
             </div>
-
-            {/* Title */}
-            <h3 className="text-xl font-black text-white uppercase text-center mb-2">
-              Confirm Deletion
-            </h3>
-
-            {/* Warning Message */}
+            <h3 className="text-xl font-black text-white uppercase text-center mb-2">Confirm Deletion</h3>
             <div className="mb-6 space-y-3">
               <p className="text-slate-300 text-center">
-                Are you sure you want to delete request{' '}
-                <span className="font-bold text-white">{deleteConfirmId.request_number}</span>?
+                Are you sure you want to delete request <span className="font-bold text-white">{deleteConfirmId.request_number}</span>?
               </p>
-
-              {/* Customer Info */}
-              <div className="bg-slate-900 rounded-lg p-3 border border-slate-700">
-                <div className="text-sm space-y-1">
-                  <div>
-                    <span className="text-slate-400">Customer:</span>
-                    <span className="ml-2 text-white">
-                      {deleteConfirmId.company_name || deleteConfirmId.contact_person}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Tools:</span>
-                    <span className="ml-2 text-white">{deleteConfirmId.tools.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Photos:</span>
-                    <span className="ml-2 text-white">{deleteConfirmId.photos.length}</span>
-                  </div>
-                </div>
+              <div className="bg-slate-900 rounded-lg p-3 border border-slate-700 text-sm space-y-1">
+                <div><span className="text-slate-400">Customer:</span><span className="ml-2 text-white">{deleteConfirmId.company_name || deleteConfirmId.contact_person}</span></div>
+                <div><span className="text-slate-400">Tools:</span><span className="ml-2 text-white">{deleteConfirmId.tools.length}</span></div>
+                <div><span className="text-slate-400">Photos:</span><span className="ml-2 text-white">{deleteConfirmId.photos.length}</span></div>
               </div>
-
               <p className="text-red-300 text-sm text-center font-bold">
                 This action is permanent and will delete all associated photos from storage.
               </p>
             </div>
-
-            {/* Action Buttons */}
             <div className="flex gap-3">
-              <button
-                onClick={handleDeleteCancel}
-                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all"
-              >
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">
                 Cancel
               </button>
-              <button
-                onClick={handleDeleteConfirm}
-                className="flex-1 px-4 py-3 bg-red-900 hover:bg-red-800 text-white rounded-lg font-bold transition-all"
-              >
+              <button onClick={handleDeleteConfirm} className="flex-1 px-4 py-3 bg-red-900 hover:bg-red-800 text-white rounded-lg font-bold transition-all">
                 Delete
               </button>
             </div>

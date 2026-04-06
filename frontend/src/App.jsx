@@ -18,6 +18,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminSettings from './pages/admin/AdminSettings';
+import RepairTracker from './pages/admin/RepairTracker';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
 
 function App() {
@@ -48,6 +49,14 @@ function App() {
                 element={
                   <ProtectedAdminRoute>
                     <AdminSettings />
+                  </ProtectedAdminRoute>
+                }
+              />
+              <Route
+                path="/admin/repair-tracker"
+                element={
+                  <ProtectedAdminRoute>
+                    <RepairTracker />
                   </ProtectedAdminRoute>
                 }
               />

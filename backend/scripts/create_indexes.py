@@ -128,6 +128,96 @@ async def create_users_indexes():
     print("  ✅ User indexes created!")
 
 
+async def create_customers_indexes():
+    """Create indexes for customers collection"""
+    print("\n👥 Creating indexes for customers...")
+
+    db = get_database()
+
+    print("  Creating unique index: email...")
+    await db.customers.create_index(
+        "email",
+        unique=True,
+        name="customers_email_unique_idx"
+    )
+    print("  ✓ Created customers_email_unique_idx")
+
+    print("  Creating index: company_name...")
+    await db.customers.create_index(
+        "company_name",
+        name="customers_company_name_idx"
+    )
+    print("  ✓ Created customers_company_name_idx")
+
+    print("  Creating index: contact_person...")
+    await db.customers.create_index(
+        "contact_person",
+        name="customers_contact_person_idx"
+    )
+    print("  ✓ Created customers_contact_person_idx")
+
+    print("  Creating index: created_at...")
+    await db.customers.create_index(
+        [("created_at", -1)],
+        name="customers_created_at_idx"
+    )
+    print("  ✓ Created customers_created_at_idx")
+
+    print("  ✅ Customer indexes created!")
+
+
+async def create_repairs_indexes():
+    """Create indexes for repairs collection"""
+    print("\n🔧 Creating indexes for repairs...")
+
+    db = get_database()
+
+    print("  Creating unique index: request_number...")
+    await db.repairs.create_index(
+        "request_number",
+        unique=True,
+        name="repairs_request_number_unique_idx"
+    )
+    print("  ✓ Created repairs_request_number_unique_idx")
+
+    print("  Creating index: created_at...")
+    await db.repairs.create_index(
+        [("created_at", -1)],
+        name="repairs_created_at_idx"
+    )
+    print("  ✓ Created repairs_created_at_idx")
+
+    print("  Creating index: tools.status...")
+    await db.repairs.create_index(
+        "tools.status",
+        name="repairs_tool_status_idx"
+    )
+    print("  ✓ Created repairs_tool_status_idx")
+
+    print("  Creating index: email...")
+    await db.repairs.create_index(
+        "email",
+        name="repairs_email_idx"
+    )
+    print("  ✓ Created repairs_email_idx")
+
+    print("  Creating index: company_name...")
+    await db.repairs.create_index(
+        "company_name",
+        name="repairs_company_name_idx"
+    )
+    print("  ✓ Created repairs_company_name_idx")
+
+    print("  Creating index: customer_id...")
+    await db.repairs.create_index(
+        "customer_id",
+        name="repairs_customer_id_idx"
+    )
+    print("  ✓ Created repairs_customer_id_idx")
+
+    print("  ✅ Repair indexes created!")
+
+
 async def create_all_indexes():
     """Create all production indexes"""
     print("\n" + "=" * 60)
@@ -139,6 +229,8 @@ async def create_all_indexes():
         await create_quotes_indexes()
         await create_users_indexes()
         await create_contact_indexes()
+        await create_repairs_indexes()
+        await create_customers_indexes()
 
         print("\n" + "=" * 60)
         print("✅ ALL PRODUCTION INDEXES CREATED SUCCESSFULLY!")
@@ -160,7 +252,9 @@ async def verify_indexes():
     collections = [
         ("quotes", "📋"),
         ("users", "👤"),
-        ("contact_messages", "📧")
+        ("customers", "👥"),
+        ("contact_messages", "📧"),
+        ("repairs", "🔧")
     ]
 
     total_indexes = 0
