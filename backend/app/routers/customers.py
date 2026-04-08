@@ -7,10 +7,11 @@ from datetime import datetime
 
 from app.database import get_database
 from app.models.customer import CustomerCreate, CustomerUpdate, CustomerResponse
-from app.models.repair import RepairJobResponse, ToolItemResponse
+from app.models.repair import RepairJobResponse
 from app.models.auth import User
 from app.dependencies.auth import require_admin
 from app.utils.helpers import convert_objectid_to_str
+from app.routers.repairs import _migrate_tool_parts, _build_job_response
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
 logger = logging.getLogger(__name__)
@@ -21,27 +22,6 @@ def _build_customer_response(doc: dict) -> CustomerResponse:
     doc["id"] = doc.pop("_id")
     return CustomerResponse(**doc)
 
-
-def _migrate_tool_parts(tool: dict) -> dict:
-    """Migrate old parts_needed string to parts list for backward compat"""
-    if "parts_needed" in tool and "parts" not in tool:
-        old = tool.pop("parts_needed", None)
-        if old and isinstance(old, str) and old.strip():
-            tool["parts"] = [{"name": old.strip(), "quantity": 1, "unit_cost": None, "status": "pending"}]
-        else:
-            tool["parts"] = []
-    elif "parts" not in tool:
-        tool["parts"] = []
-    tool.pop("parts_needed", None)
-    return tool
-
-
-def _build_job_response(job: dict) -> RepairJobResponse:
-    """Convert a repair job dict from DB into a RepairJobResponse"""
-    job["id"] = job.pop("_id")
-    tools = [ToolItemResponse(**_migrate_tool_parts(t)) for t in job.get("tools", [])]
-    job["tools"] = tools
-    return RepairJobResponse(**job)
 
 
 # ──────────────────────────────────────────────
@@ -81,7 +61,8 @@ async def list_customers(
         escaped = re.escape(search)
         query["$or"] = [
             {"company_name": {"$regex": escaped, "$options": "i"}},
-            {"contact_person": {"$regex": escaped, "$options": "i"}},
+            {"first_name": {"$regex": escaped, "$options": "i"}},
+            {"last_name": {"$regex": escaped, "$options": "i"}},
             {"email": {"$regex": escaped, "$options": "i"}},
         ]
 

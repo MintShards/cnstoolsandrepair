@@ -11,7 +11,7 @@ from app.models.repair import (
     RepairJobCreate, RepairJobUpdate, RepairJobResponse,
     ToolItemCreate, ToolItemUpdate, ToolStatusUpdate,
     ToolItem, ToolItemResponse, RepairStatus, RepairSource,
-    StatusHistoryEntry
+    StatusHistoryEntry, ALLOWED_TRANSITIONS, validate_status_transition
 )
 from app.models.auth import User
 from app.dependencies.auth import require_admin
@@ -82,7 +82,8 @@ async def list_repair_jobs(
         escaped = re.escape(search)
         query["$or"] = [
             {"company_name": {"$regex": escaped, "$options": "i"}},
-            {"contact_person": {"$regex": escaped, "$options": "i"}},
+            {"first_name": {"$regex": escaped, "$options": "i"}},
+            {"last_name": {"$regex": escaped, "$options": "i"}},
             {"email": {"$regex": escaped, "$options": "i"}},
             {"request_number": {"$regex": escaped, "$options": "i"}},
         ]
@@ -116,7 +117,8 @@ async def _resolve_customer(db, job_data_dict: dict) -> dict:
         return {
             "customer_id": customer_id,
             "company_name": customer.get("company_name"),
-            "contact_person": customer.get("contact_person"),
+            "first_name": customer.get("first_name"),
+            "last_name": customer.get("last_name"),
             "email": customer.get("email"),
             "phone": customer.get("phone"),
             "address": customer.get("address"),
@@ -125,10 +127,10 @@ async def _resolve_customer(db, job_data_dict: dict) -> dict:
     else:
         # Inline customer fields — find or create
         email = str(job_data_dict.get("email", "")).lower().strip()
-        if not email or not job_data_dict.get("contact_person") or not job_data_dict.get("phone"):
+        if not email or not job_data_dict.get("first_name") or not job_data_dict.get("last_name") or not job_data_dict.get("phone"):
             raise HTTPException(
                 status_code=422,
-                detail="Either customer_id or contact_person + email + phone are required"
+                detail="Either customer_id or first_name + last_name + email + phone are required"
             )
         existing = await db.customers.find_one({"email": email})
         if existing:
@@ -137,7 +139,8 @@ async def _resolve_customer(db, job_data_dict: dict) -> dict:
             now = datetime.utcnow()
             new_customer = {
                 "company_name": job_data_dict.get("company_name"),
-                "contact_person": job_data_dict.get("contact_person"),
+                "first_name": job_data_dict.get("first_name"),
+                "last_name": job_data_dict.get("last_name"),
                 "email": email,
                 "phone": job_data_dict.get("phone"),
                 "address": job_data_dict.get("address"),
@@ -150,7 +153,8 @@ async def _resolve_customer(db, job_data_dict: dict) -> dict:
         return {
             "customer_id": cid,
             "company_name": job_data_dict.get("company_name"),
-            "contact_person": job_data_dict.get("contact_person"),
+            "first_name": job_data_dict.get("first_name"),
+            "last_name": job_data_dict.get("last_name"),
             "email": email,
             "phone": job_data_dict.get("phone"),
             "address": job_data_dict.get("address"),
@@ -250,7 +254,7 @@ async def convert_from_request(
             "hourly_rate": None,
             "priority": "standard",
             "warranty": False,
-            "zoho_quote_ref": None,
+            "zoho_ref": None,
             "assigned_technician": None,
             "photos": [],
             "status": RepairStatus.RECEIVED.value,
@@ -272,14 +276,16 @@ async def convert_from_request(
         customer_id = str(existing_customer["_id"])
     else:
         # Only create a customer record if quote has the required fields in valid format
-        contact_person = quote.get("contact_person", "").strip()
+        first_name = quote.get("first_name", "").strip()
+        last_name = quote.get("last_name", "").strip()
         phone = quote.get("phone", "").strip()
         phone_pattern = r'^\d{3}-\d{3}-\d{4}$'
-        if email and contact_person and re.match(phone_pattern, phone):
+        if email and first_name and last_name and re.match(phone_pattern, phone):
             now = datetime.utcnow()
             new_customer = {
                 "company_name": quote.get("company_name") or None,
-                "contact_person": contact_person,
+                "first_name": first_name,
+                "last_name": last_name,
                 "email": email,
                 "phone": phone,
                 "address": None,
@@ -296,7 +302,8 @@ async def convert_from_request(
         "request_number": request_number,
         "customer_id": customer_id,
         "company_name": quote.get("company_name"),
-        "contact_person": quote.get("contact_person", ""),
+        "first_name": quote.get("first_name", ""),
+        "last_name": quote.get("last_name", ""),
         "email": email,
         "phone": quote.get("phone", ""),
         "address": None,
@@ -526,6 +533,16 @@ async def update_tool_status(
     if tool_index is None:
         raise HTTPException(status_code=404, detail="Tool not found in this repair job")
 
+    current_status = tools[tool_index].get("status", "received")
+    new_status = status_update.status.value
+    if not validate_status_transition(current_status, new_status):
+        allowed = sorted(ALLOWED_TRANSITIONS.get(current_status, set()))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot change from '{current_status}' to '{new_status}'. "
+                   f"Allowed: {', '.join(allowed) if allowed else 'none (terminal status)'}"
+        )
+
     now = datetime.utcnow()
     history_entry = {
         "status": status_update.status.value,
@@ -596,6 +613,58 @@ async def upload_tool_photo(
         {"_id": object_id},
         {
             "$push": {f"tools.{tool_index}.photos": filename},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+
+    updated_job = await db.repairs.find_one({"_id": object_id})
+    updated_job = convert_objectid_to_str(updated_job)
+    return _build_job_response(updated_job)
+
+
+# ──────────────────────────────────────────────
+# DELETE TOOL PHOTO
+# ──────────────────────────────────────────────
+
+@router.delete("/{job_id}/tools/{tool_id}/photos", response_model=RepairJobResponse)
+async def delete_tool_photo(
+    job_id: str,
+    tool_id: str,
+    photo_url: str = Query(..., description="Full photo URL or filename to delete"),
+    current_user: User = Depends(require_admin)
+):
+    """Delete a specific photo from a tool in a repair job"""
+    db = get_database()
+
+    try:
+        object_id = ObjectId(job_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
+    job = await db.repairs.find_one({"_id": object_id})
+    if not job:
+        raise HTTPException(status_code=404, detail="Repair job not found")
+
+    tools = job.get("tools", [])
+    tool_index = next((i for i, t in enumerate(tools) if t.get("tool_id") == tool_id), None)
+    if tool_index is None:
+        raise HTTPException(status_code=404, detail="Tool not found in this repair job")
+
+    photos = tools[tool_index].get("photos", [])
+    if photo_url not in photos:
+        raise HTTPException(status_code=404, detail="Photo not found on this tool")
+
+    # Delete file from storage (Spaces or local)
+    try:
+        await delete_file(photo_url)
+    except Exception as e:
+        logger.warning(f"Failed to delete photo file {photo_url}: {str(e)}")
+
+    # Remove from database
+    await db.repairs.update_one(
+        {"_id": object_id},
+        {
+            "$pull": {f"tools.{tool_index}.photos": photo_url},
             "$set": {"updated_at": datetime.utcnow()}
         }
     )

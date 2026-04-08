@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import json
 from pydantic import ValidationError
 from app.database import get_database, get_next_request_number
-from app.models.quote import QuoteCreate, QuoteResponse, Quote, ToolEntry, QuoteUpdate
+from app.models.quote import QuoteCreate, QuoteResponse, Quote, ToolEntry
 from app.services.file_service import save_upload_file, delete_file
 from app.services.email_service import send_quote_notification
 from app.utils.helpers import convert_objectid_to_str
@@ -38,7 +38,8 @@ def clean_expired_idempotency_keys():
 async def create_quote(
     request: Request,
     company_name: str | None = Form(None),
-    contact_person: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
     tools: str = Form(...),  # JSON string array of tools
@@ -79,7 +80,8 @@ async def create_quote(
     try:
         quote_data = QuoteCreate(
             company_name=company_name if company_name and company_name.strip() else None,
-            contact_person=contact_person,
+            first_name=first_name,
+            last_name=last_name,
             email=email,
             phone=phone,
             tools=tool_entries,
@@ -187,43 +189,6 @@ async def list_quotes(
         quote["id"] = quote.pop("_id")
     return [QuoteResponse(**quote) for quote in quotes]
 
-
-@router.put("/{quote_id}", response_model=QuoteResponse)
-async def update_quote(quote_id: str, quote_update: QuoteUpdate):
-    """Update quote status"""
-
-    db = get_database()
-
-    try:
-        object_id = ObjectId(quote_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid quote ID format")
-
-    # Check if quote exists
-    existing_quote = await db.quotes.find_one({"_id": object_id})
-    if not existing_quote:
-        raise HTTPException(status_code=404, detail="Quote not found")
-
-    # Update status and updated_at timestamp
-    update_data = {
-        "status": quote_update.status.value,
-        "updated_at": datetime.utcnow()
-    }
-
-    result = await db.quotes.update_one(
-        {"_id": object_id},
-        {"$set": update_data}
-    )
-
-    if result.modified_count == 0:
-        raise HTTPException(status_code=500, detail="Failed to update quote")
-
-    # Fetch updated quote
-    updated_quote = await db.quotes.find_one({"_id": object_id})
-    updated_quote = convert_objectid_to_str(updated_quote)
-    updated_quote["id"] = updated_quote.pop("_id")
-
-    return QuoteResponse(**updated_quote)
 
 
 @router.delete("/{quote_id}", status_code=204)

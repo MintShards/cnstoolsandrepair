@@ -6,7 +6,8 @@ import re
 
 class CustomerCreate(BaseModel):
     company_name: Optional[str] = Field(None, max_length=200)
-    contact_person: str = Field(..., min_length=1, max_length=100)
+    first_name: str = Field(..., min_length=1, max_length=50)
+    last_name: str = Field(..., min_length=1, max_length=50)
     email: EmailStr
     phone: str = Field(..., min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
@@ -30,7 +31,8 @@ class CustomerCreate(BaseModel):
 
 class CustomerUpdate(BaseModel):
     company_name: Optional[str] = Field(None, max_length=200)
-    contact_person: Optional[str] = Field(None, min_length=1, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
@@ -57,7 +59,8 @@ class CustomerUpdate(BaseModel):
 class CustomerResponse(BaseModel):
     id: str
     company_name: Optional[str] = None
-    contact_person: str
+    first_name: str
+    last_name: str
     email: str
     phone: str
     address: Optional[str] = None

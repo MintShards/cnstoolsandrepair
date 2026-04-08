@@ -8,19 +8,42 @@ import uuid
 
 class RepairStatus(str, Enum):
     RECEIVED = "received"
-    DISMANTLED = "dismantled"
-    QUOTATION_SENT = "quotation_sent"
+    DIAGNOSED = "diagnosed"
+    QUOTED = "quoted"
     APPROVED = "approved"
     DECLINED = "declined"
-    RETURNED = "returned"
-    CLOSED = "closed"
-    ABANDONED = "abandoned"
-    PARTS_ORDERED = "parts_ordered"
-    PARTS_RECEIVED = "parts_received"
+    PARTS_PENDING = "parts_pending"
     IN_REPAIR = "in_repair"
-    TESTING = "testing"
-    READY_FOR_PICKUP = "ready_for_pickup"
+    READY = "ready"
+    INVOICED = "invoiced"
     COMPLETED = "completed"
+    ABANDONED = "abandoned"
+    CLOSED = "closed"
+
+
+ALLOWED_TRANSITIONS = {
+    "received":      {"diagnosed", "abandoned"},
+    "diagnosed":     {"quoted", "received", "abandoned"},
+    "quoted":        {"approved", "declined", "diagnosed", "abandoned"},
+    "approved":      {"parts_pending", "in_repair", "quoted", "abandoned"},
+    "declined":      {"closed", "abandoned"},
+    "parts_pending": {"in_repair", "quoted", "approved", "abandoned"},
+    "in_repair":     {"ready", "parts_pending", "approved", "abandoned"},
+    "ready":         {"invoiced", "in_repair", "abandoned"},
+    "invoiced":      {"completed", "ready", "abandoned"},
+    "completed":     {"closed"},
+    "abandoned":     {"closed"},
+    "closed":        set(),
+}
+
+MAIN_STAGES = [
+    "received", "diagnosed", "quoted", "approved",
+    "parts_pending", "in_repair", "ready", "invoiced"
+]
+
+
+def validate_status_transition(current: str, new: str) -> bool:
+    return new in ALLOWED_TRANSITIONS.get(current, set())
 
 
 class RepairSource(str, Enum):
@@ -66,7 +89,7 @@ class ToolItemCreate(BaseModel):
     hourly_rate: Optional[float] = Field(None, ge=0)
     priority: Priority = Priority.STANDARD
     warranty: bool = False
-    zoho_quote_ref: Optional[str] = Field(None, max_length=100)
+    zoho_ref: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
     photos: List[str] = Field(default_factory=list)
     date_received: datetime = Field(default_factory=datetime.utcnow)
@@ -92,7 +115,7 @@ class ToolItemUpdate(BaseModel):
     hourly_rate: Optional[float] = Field(None, ge=0)
     priority: Optional[Priority] = None
     warranty: Optional[bool] = None
-    zoho_quote_ref: Optional[str] = Field(None, max_length=100)
+    zoho_ref: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
     estimated_completion: Optional[datetime] = None
 
@@ -130,7 +153,7 @@ class ToolItemResponse(BaseModel):
     hourly_rate: Optional[float] = None
     priority: Priority
     warranty: bool
-    zoho_quote_ref: Optional[str] = None
+    zoho_ref: Optional[str] = None
     assigned_technician: Optional[str] = None
     photos: List[str]
     status: RepairStatus
@@ -143,7 +166,8 @@ class ToolItemResponse(BaseModel):
 class RepairJobCreate(BaseModel):
     customer_id: Optional[str] = None
     company_name: Optional[str] = Field(None, max_length=200)
-    contact_person: Optional[str] = Field(None, min_length=1, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
@@ -166,7 +190,8 @@ class RepairJobCreate(BaseModel):
 class RepairJobUpdate(BaseModel):
     customer_id: Optional[str] = None
     company_name: Optional[str] = Field(None, max_length=200)
-    contact_person: Optional[str] = Field(None, min_length=1, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(None, min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
@@ -188,7 +213,8 @@ class RepairJobResponse(BaseModel):
     request_number: str
     customer_id: Optional[str] = None
     company_name: Optional[str] = None
-    contact_person: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None

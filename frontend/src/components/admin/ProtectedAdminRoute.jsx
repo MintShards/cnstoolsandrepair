@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 
 export default function ProtectedAdminRoute({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(null);
+  const location = useLocation();
 
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token');
@@ -59,7 +60,7 @@ export default function ProtectedAdminRoute({ children }) {
 
   // Redirect to login if not authorized
   if (!isAuthorized) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   // Render protected content

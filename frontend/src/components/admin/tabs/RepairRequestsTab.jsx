@@ -38,19 +38,6 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
     }
   };
 
-  const handleStatusUpdate = async (quoteId, newStatus) => {
-    try {
-      await quotesAPI.update(quoteId, { status: newStatus });
-      showToast('success', 'Status updated successfully');
-      setQuotes(quotes.map(q => q.id === quoteId ? { ...q, status: newStatus } : q));
-      if (selectedQuote?.id === quoteId) {
-        setSelectedQuote({ ...selectedQuote, status: newStatus });
-      }
-    } catch {
-      showToast('error', 'Failed to update status');
-    }
-  };
-
   const handleConvertClick = (quote) => {
     setConvertConfirm(quote);
   };
@@ -66,7 +53,11 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
       setSelectedQuote(null);
       if (onConvertSuccess) onConvertSuccess();
     } catch (error) {
-      showToast('error', error.response?.data?.detail || 'Failed to convert repair request');
+      const detail = error.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map(d => d.msg).join(', ')
+        : (detail || 'Failed to convert repair request');
+      showToast('error', msg);
       setConvertConfirm(null);
     } finally {
       setConvertingId(null);
@@ -101,9 +92,6 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-400', border: 'border-yellow-700', label: 'Pending' },
-      in_progress: { bg: 'bg-blue-900/30', text: 'text-blue-400', border: 'border-blue-700', label: 'In Progress' },
-      quoted: { bg: 'bg-purple-900/30', text: 'text-purple-400', border: 'border-purple-700', label: 'Quote Provided' },
-      completed: { bg: 'bg-green-900/30', text: 'text-green-400', border: 'border-green-700', label: 'Completed' },
       converted: { bg: 'bg-cyan-900/30', text: 'text-cyan-400', border: 'border-cyan-700', label: 'Converted to WO' },
     };
     const config = statusConfig[status] || statusConfig.pending;
@@ -119,7 +107,7 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
     const search = searchQuery.toLowerCase();
     return (
       quote.company_name?.toLowerCase().includes(search) ||
-      quote.contact_person.toLowerCase().includes(search) ||
+      `${quote.first_name} ${quote.last_name}`.toLowerCase().includes(search) ||
       quote.email.toLowerCase().includes(search) ||
       quote.request_number.toLowerCase().includes(search)
     );
@@ -193,9 +181,6 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="quoted">Quote Provided</option>
-              <option value="completed">Completed</option>
               <option value="converted">Converted to WO</option>
             </select>
           </div>
@@ -236,8 +221,8 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
                   <tr key={quote.id} className="hover:bg-slate-700/50 transition-colors">
                     <td className="py-3 px-4 text-slate-300 font-mono text-xs">{quote.request_number}</td>
                     <td className="py-3 px-4">
-                      <div className="text-slate-300 font-bold">{quote.company_name || quote.contact_person}</div>
-                      {quote.company_name && <div className="text-slate-400 text-xs">{quote.contact_person}</div>}
+                      <div className="text-slate-300 font-bold">{quote.company_name || `${quote.first_name} ${quote.last_name}`}</div>
+                      {quote.company_name && <div className="text-slate-400 text-xs">{quote.first_name} {quote.last_name}</div>}
                     </td>
                     <td className="py-3 px-4 text-slate-400 text-xs">{formatDate(quote.created_at)}</td>
                     <td className="py-3 px-4 text-slate-300">
@@ -371,21 +356,6 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Status Update */}
-              <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-                <label className="block text-sm font-bold text-slate-300 mb-2">Update Status</label>
-                <select
-                  value={selectedQuote.status}
-                  onChange={(e) => handleStatusUpdate(selectedQuote.id, e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="quoted">Quote Provided</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-
               {/* Customer Info */}
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
                 <h4 className="text-sm font-bold text-white uppercase mb-3">Customer Information</h4>
@@ -398,7 +368,7 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
                   )}
                   <div>
                     <span className="text-slate-400">Contact:</span>
-                    <span className="ml-2 text-white">{selectedQuote.contact_person}</span>
+                    <span className="ml-2 text-white">{selectedQuote.first_name} {selectedQuote.last_name}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">Email:</span>
@@ -490,7 +460,7 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
                 Convert request <span className="font-bold text-white">{convertConfirm.request_number}</span> into a tracked Work Order?
               </p>
               <div className="bg-slate-900 rounded-lg p-3 border border-slate-700 text-sm space-y-1">
-                <div><span className="text-slate-400">Customer:</span><span className="ml-2 text-white">{convertConfirm.company_name || convertConfirm.contact_person}</span></div>
+                <div><span className="text-slate-400">Customer:</span><span className="ml-2 text-white">{convertConfirm.company_name || `${convertConfirm.first_name} ${convertConfirm.last_name}`}</span></div>
                 <div><span className="text-slate-400">Tools:</span><span className="ml-2 text-white">{convertConfirm.tools.length}</span></div>
               </div>
               <p className="text-slate-400 text-sm text-center">
@@ -528,7 +498,7 @@ export default function RepairRequestsTab({ onConvertSuccess }) {
                 Are you sure you want to delete request <span className="font-bold text-white">{deleteConfirmId.request_number}</span>?
               </p>
               <div className="bg-slate-900 rounded-lg p-3 border border-slate-700 text-sm space-y-1">
-                <div><span className="text-slate-400">Customer:</span><span className="ml-2 text-white">{deleteConfirmId.company_name || deleteConfirmId.contact_person}</span></div>
+                <div><span className="text-slate-400">Customer:</span><span className="ml-2 text-white">{deleteConfirmId.company_name || `${deleteConfirmId.first_name} ${deleteConfirmId.last_name}`}</span></div>
                 <div><span className="text-slate-400">Tools:</span><span className="ml-2 text-white">{deleteConfirmId.tools.length}</span></div>
                 <div><span className="text-slate-400">Photos:</span><span className="ml-2 text-white">{deleteConfirmId.photos.length}</span></div>
               </div>

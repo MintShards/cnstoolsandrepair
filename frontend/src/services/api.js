@@ -333,6 +333,12 @@ export const repairsAPI = {
     });
     return response.data;
   },
+  deleteToolPhoto: async (jobId, toolId, photoUrl) => {
+    const response = await api.delete(`/api/repairs/${jobId}/tools/${toolId}/photos`, {
+      params: { photo_url: photoUrl },
+    });
+    return response.data;
+  },
   removeTool: async (jobId, toolId) => {
     const response = await api.delete(`/api/repairs/${jobId}/tools/${toolId}`);
     return response.data;

@@ -75,7 +75,8 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 {
   request_number: "REQ-2026-0001",  // Auto-generated via atomic counter
   company_name: string | null,
-  contact_person: string,
+  first_name: string,
+  last_name: string,
   email: string,
   phone: string,  // Format: ###-###-####
   tools: [{

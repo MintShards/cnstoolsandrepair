@@ -149,12 +149,12 @@ async def create_customers_indexes():
     )
     print("  ✓ Created customers_company_name_idx")
 
-    print("  Creating index: contact_person...")
+    print("  Creating index: last_name...")
     await db.customers.create_index(
-        "contact_person",
-        name="customers_contact_person_idx"
+        "last_name",
+        name="customers_last_name_idx"
     )
-    print("  ✓ Created customers_contact_person_idx")
+    print("  ✓ Created customers_last_name_idx")
 
     print("  Creating index: created_at...")
     await db.customers.create_index(

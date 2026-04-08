@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { repairsAPI, customersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
+import {
+  REPAIR_STATUSES, REPAIR_STATUSES_LIST,
+  getValidNextStatuses,
+} from '../../../constants/repairStatuses';
+import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -11,40 +16,24 @@ function formatPhone(raw) {
   return digits;
 }
 
-const REPAIR_STATUSES = [
-  { value: 'received', label: 'Received', color: 'bg-slate-700 text-slate-300 border-slate-600' },
-  { value: 'dismantled', label: 'Dismantled', color: 'bg-yellow-900/30 text-yellow-400 border-yellow-700' },
-  { value: 'quotation_sent', label: 'Quote Sent', color: 'bg-purple-900/30 text-purple-400 border-purple-700' },
-  { value: 'approved', label: 'Approved', color: 'bg-green-900/30 text-green-400 border-green-700' },
-  { value: 'declined', label: 'Declined', color: 'bg-red-900/30 text-red-400 border-red-700' },
-  { value: 'parts_ordered', label: 'Parts Ordered', color: 'bg-orange-900/30 text-orange-400 border-orange-700' },
-  { value: 'parts_received', label: 'Parts Received', color: 'bg-cyan-900/30 text-cyan-400 border-cyan-700' },
-  { value: 'in_repair', label: 'In Repair', color: 'bg-blue-900/30 text-blue-400 border-blue-700' },
-  { value: 'testing', label: 'Testing / QC', color: 'bg-indigo-900/30 text-indigo-400 border-indigo-700' },
-  { value: 'ready_for_pickup', label: 'Ready for Pickup', color: 'bg-emerald-900/30 text-emerald-400 border-emerald-700' },
-  { value: 'completed', label: 'Completed', color: 'bg-green-900/50 text-green-300 border-green-600' },
-  { value: 'returned', label: 'Returned', color: 'bg-slate-800/50 text-slate-300 border-slate-500' },
-  { value: 'closed', label: 'Closed', color: 'bg-slate-800/50 text-slate-400 border-slate-600' },
-  { value: 'abandoned', label: 'Abandoned', color: 'bg-rose-900/30 text-rose-400 border-rose-700' },
-];
-
 const PRIORITIES = [
   { value: 'standard', label: 'Standard', color: 'bg-slate-700 text-slate-300 border-slate-600' },
   { value: 'rush', label: 'Rush', color: 'bg-orange-900/30 text-orange-400 border-orange-700' },
   { value: 'urgent', label: 'Urgent', color: 'bg-red-900/30 text-red-400 border-red-700' },
 ];
 
-const getStatusConfig = (value) => REPAIR_STATUSES.find(s => s.value === value) || REPAIR_STATUSES[0];
+const getStatusConfig = (value) => REPAIR_STATUSES[value] || REPAIR_STATUSES['received'];
 const getPriorityConfig = (value) => PRIORITIES.find(p => p.value === value) || PRIORITIES[0];
 
-const StatusBadge = ({ status }) => {
-  const cfg = getStatusConfig(status);
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border ${cfg.color}`}>
-      {cfg.label}
-    </span>
+const PRIORITY_RANK = { urgent: 3, rush: 2, standard: 1 };
+const getHighestPriority = (tools) => {
+  if (!tools?.length) return 'standard';
+  return tools.reduce((highest, tool) =>
+    (PRIORITY_RANK[tool.priority] || 0) > (PRIORITY_RANK[highest] || 0) ? tool.priority : highest,
+    'standard'
   );
 };
+
 
 const PriorityBadge = ({ priority }) => {
   const cfg = getPriorityConfig(priority);
@@ -57,9 +46,10 @@ const PriorityBadge = ({ priority }) => {
 
 const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
-  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, unit_cost: '', status: 'pending' }],
+  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, status: 'pending' }],
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
-  zoho_quote_ref: '', assigned_technician: '', estimated_completion: ''
+  zoho_ref: '', assigned_technician: '', estimated_completion: '',
+  _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
 
 const getEmptyTool = () => ({
@@ -68,7 +58,7 @@ const getEmptyTool = () => ({
 });
 
 const getEmptyJob = () => ({
-  customer_id: null, company_name: '', contact_person: '', email: '', phone: '',
+  customer_id: null, company_name: '', first_name: '', last_name: '', email: '', phone: '',
   address: '', customer_notes: '', source: 'walk_in', tools: [getEmptyTool()]
 });
 
@@ -106,6 +96,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // New job form state
   const [newJobForm, setNewJobForm] = useState(getEmptyJob());
   const [savingJob, setSavingJob] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   // Two-step job creation: step 1 = customer, step 2 = tools
   const [newJobStep, setNewJobStep] = useState(1);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -158,7 +149,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       ...newJobForm,
       customer_id: customer.id,
       company_name: customer.company_name || '',
-      contact_person: customer.contact_person,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
       email: customer.email,
       phone: customer.phone,
       address: customer.address || '',
@@ -171,7 +163,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const clearSelectedCustomer = () => {
     setSelectedCustomerObj(null);
     setShowInlineCustomerForm(false);
-    setNewJobForm({ ...newJobForm, customer_id: null, company_name: '', contact_person: '', email: '', phone: '', address: '', customer_notes: '' });
+    setNewJobForm({ ...newJobForm, customer_id: null, company_name: '', first_name: '', last_name: '', email: '', phone: '', address: '', customer_notes: '' });
   };
 
   const handleOpenNewJob = () => {
@@ -258,7 +250,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const s = searchQuery.toLowerCase();
       return (
         job.company_name?.toLowerCase().includes(s) ||
-        job.contact_person.toLowerCase().includes(s) ||
+        `${job.first_name} ${job.last_name}`.toLowerCase().includes(s) ||
         job.email.toLowerCase().includes(s) ||
         job.request_number.toLowerCase().includes(s)
       );
@@ -313,7 +305,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     e.preventDefault();
     setSavingJob(true);
     try {
-      const tools = newJobForm.tools.map(t => ({
+      // Capture pending photos before stripping from payload
+      const pendingPhotosByIndex = newJobForm.tools.map(t => t._pendingPhotos || []);
+
+      const tools = newJobForm.tools.map(({ _pendingPhotos, ...t }) => ({
         ...t,
         quantity: parseInt(t.quantity) || 1,
         labour_hours: t.labour_hours ? parseFloat(t.labour_hours) : null,
@@ -321,14 +316,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         serial_number: t.serial_number || null,
         remarks: t.remarks || null,
         parts: (t.parts || []).filter(p => p.name.trim()),
-        zoho_quote_ref: t.zoho_quote_ref || null,
+        zoho_ref: t.zoho_ref || null,
         assigned_technician: t.assigned_technician || null,
         estimated_completion: t.estimated_completion || null,
       }));
 
       let payload;
       if (newJobForm.customer_id) {
-        // Existing customer — send customer_id + tools + source only
         payload = {
           customer_id: newJobForm.customer_id,
           customer_notes: newJobForm.customer_notes || null,
@@ -336,10 +330,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           tools,
         };
       } else {
-        // Inline new customer fields
         payload = {
           company_name: newJobForm.company_name || null,
-          contact_person: newJobForm.contact_person,
+          first_name: newJobForm.first_name,
+          last_name: newJobForm.last_name,
           email: newJobForm.email,
           phone: newJobForm.phone,
           address: newJobForm.address || null,
@@ -350,7 +344,38 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
 
       const created = await repairsAPI.create(payload);
-      setJobs([created, ...jobs]);
+
+      // Upload any staged photos sequentially after job is created
+      const hasPhotos = pendingPhotosByIndex.some(arr => arr.length > 0);
+      let finalJob = created;
+      if (hasPhotos) {
+        setUploadingPhotos(true);
+        const photoErrors = [];
+        for (let i = 0; i < pendingPhotosByIndex.length; i++) {
+          const files = pendingPhotosByIndex[i];
+          if (!files.length) continue;
+          const toolId = created.tools[i]?.tool_id;
+          if (!toolId) continue;
+          for (const file of files) {
+            try {
+              await repairsAPI.uploadToolPhoto(created.id, toolId, file);
+            } catch {
+              photoErrors.push(`${file.name} (Tool ${i + 1})`);
+            }
+          }
+        }
+        setUploadingPhotos(false);
+        // Re-fetch to get final state with photo URLs
+        try { finalJob = await repairsAPI.get(created.id); } catch { /* use created */ }
+        if (photoErrors.length > 0) {
+          setJobs([finalJob, ...jobs]);
+          handleCloseNewJob();
+          showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
+          return;
+        }
+      }
+
+      setJobs([finalJob, ...jobs]);
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
     } catch (error) {
@@ -361,6 +386,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       showToast('error', msg);
     } finally {
       setSavingJob(false);
+      setUploadingPhotos(false);
     }
   };
 
@@ -401,7 +427,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // ── STATUS UPDATE ────────────────────────────────────
   const openStatusUpdate = (tool) => {
     setStatusUpdateModal(tool);
-    setStatusUpdateForm({ status: tool.status, notes: '', estimated_completion: '' });
+    const validNext = getValidNextStatuses(tool.status);
+    setStatusUpdateForm({ status: validNext[0] || '', notes: '', estimated_completion: '' });
   };
 
   const handleStatusUpdate = async () => {
@@ -418,8 +445,12 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       setJobs(jobs.map(j => j.id === updated.id ? updated : j));
       setStatusUpdateModal(null);
       showToast('success', 'Tool status updated');
-    } catch {
-      showToast('error', 'Failed to update tool status');
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map(d => d.msg).join(', ')
+        : (detail || 'Failed to update tool status');
+      showToast('error', msg);
     } finally {
       setUpdatingStatus(false);
     }
@@ -435,12 +466,12 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       serial_number: tool.serial_number || '',
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
-      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p })) : [{ name: '', quantity: 1, unit_cost: '', status: 'pending' }],
+      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p })) : [{ name: '', quantity: 1, status: 'pending' }],
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
       priority: tool.priority || 'standard',
       warranty: tool.warranty || false,
-      zoho_quote_ref: tool.zoho_quote_ref || '',
+      zoho_ref: tool.zoho_ref || '',
       assigned_technician: tool.assigned_technician || '',
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
@@ -464,7 +495,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
         parts: (toolEditForm.parts || []).filter(p => p.name?.trim()),
-        zoho_quote_ref: toolEditForm.zoho_quote_ref || null,
+        zoho_ref: toolEditForm.zoho_ref || null,
         assigned_technician: toolEditForm.assigned_technician || null,
         estimated_completion: toolEditForm.estimated_completion || null,
       };
@@ -494,7 +525,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
         parts: (addToolForm.parts || []).filter(p => p.name.trim()),
-        zoho_quote_ref: addToolForm.zoho_quote_ref || null,
+        zoho_ref: addToolForm.zoho_ref || null,
         assigned_technician: addToolForm.assigned_technician || null,
         estimated_completion: addToolForm.estimated_completion || null,
       };
@@ -541,6 +572,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       showToast('error', 'Failed to upload photo');
     } finally {
       setUploadingPhoto(null);
+    }
+  };
+
+  // ── PHOTO DELETE ─────────────────────────────────────
+  const handleDeletePhoto = async (toolId, filename) => {
+    try {
+      const updated = await repairsAPI.deleteToolPhoto(selectedJob.id, toolId, filename);
+      setSelectedJob(updated);
+      setJobs(jobs.map(j => j.id === updated.id ? updated : j));
+      showToast('success', 'Photo deleted');
+    } catch {
+      showToast('error', 'Failed to delete photo');
     }
   };
 
@@ -594,7 +637,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">All Statuses</option>
-              {REPAIR_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {REPAIR_STATUSES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div>
@@ -635,6 +678,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   <th className="py-3 px-4">Work Order #</th>
                   <th className="py-3 px-4">Customer</th>
                   <th className="py-3 px-4">Tools</th>
+                  <th className="py-3 px-4">Priority</th>
                   <th className="py-3 px-4">Status Summary</th>
                   <th className="py-3 px-4">Created</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -650,11 +694,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="text-slate-300 font-bold">{job.company_name || job.contact_person}</div>
-                      {job.company_name && <div className="text-slate-400 text-xs">{job.contact_person}</div>}
+                      <div className="text-slate-300 font-bold">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
+                      {job.company_name && <div className="text-slate-400 text-xs">{job.first_name} {job.last_name}</div>}
                     </td>
                     <td className="py-3 px-4 text-slate-300">
                       {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
+                    </td>
+                    <td className="py-3 px-4">
+                      <PriorityBadge priority={getHighestPriority(job.tools)} />
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-1">
@@ -763,7 +810,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   {!editingJob ? (
                     <button onClick={() => { setEditingJob(true); setJobEditForm({
                       company_name: selectedJob.company_name || '',
-                      contact_person: selectedJob.contact_person,
+                      first_name: selectedJob.first_name || '',
+                      last_name: selectedJob.last_name || '',
                       email: selectedJob.email,
                       phone: selectedJob.phone,
                       address: selectedJob.address || '',
@@ -780,29 +828,68 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   )}
                 </div>
                 {editingJob ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {[
-                      { key: 'company_name', label: 'Company Name', placeholder: 'Optional' },
-                      { key: 'contact_person', label: 'Contact Person', required: true },
-                      { key: 'email', label: 'Email', required: true },
-                      { key: 'phone', label: 'Phone (###-###-####)', required: true },
-                      { key: 'address', label: 'Address', placeholder: 'Optional' },
-                    ].map(f => (
-                      <div key={f.key}>
-                        <label className="block text-xs text-slate-400 mb-1">{f.label}</label>
+                  <div className="space-y-3">
+                    {/* First Name | Last Name */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1.5">First Name</label>
                         <input
-                          value={jobEditForm[f.key] || ''}
-                          onChange={(e) => {
-                            const val = f.key === 'phone' ? formatPhone(e.target.value) : e.target.value;
-                            setJobEditForm({ ...jobEditForm, [f.key]: val });
-                          }}
-                          placeholder={f.placeholder}
+                          value={jobEditForm.first_name || ''}
+                          onChange={(e) => setJobEditForm({ ...jobEditForm, first_name: e.target.value })}
                           className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
-                    ))}
-                    <div className="md:col-span-2">
-                      <label className="block text-xs text-slate-400 mb-1">Internal Notes</label>
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1.5">Last Name</label>
+                        <input
+                          value={jobEditForm.last_name || ''}
+                          onChange={(e) => setJobEditForm({ ...jobEditForm, last_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-1.5">Company Name</label>
+                      <input
+                        value={jobEditForm.company_name || ''}
+                        onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })}
+                        placeholder="Optional"
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    {/* Email | Phone */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1.5">Email</label>
+                        <input
+                          value={jobEditForm.email || ''}
+                          onChange={(e) => setJobEditForm({ ...jobEditForm, email: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1.5">Phone (###-###-####)</label>
+                        <input
+                          value={jobEditForm.phone || ''}
+                          onChange={(e) => setJobEditForm({ ...jobEditForm, phone: formatPhone(e.target.value) })}
+                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                    {/* Address */}
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-1.5">Address</label>
+                      <input
+                        value={jobEditForm.address || ''}
+                        onChange={(e) => setJobEditForm({ ...jobEditForm, address: e.target.value })}
+                        placeholder="Optional"
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    {/* Internal Notes */}
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-1.5">Internal Notes</label>
                       <textarea
                         value={jobEditForm.customer_notes || ''}
                         onChange={(e) => setJobEditForm({ ...jobEditForm, customer_notes: e.target.value })}
@@ -817,7 +904,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     {selectedJob.company_name && (
                       <div><span className="text-slate-400">Company:</span><span className="ml-2 text-white font-bold">{selectedJob.company_name}</span></div>
                     )}
-                    <div><span className="text-slate-400">Contact:</span><span className="ml-2 text-white">{selectedJob.contact_person}</span></div>
+                    <div><span className="text-slate-400">Contact:</span><span className="ml-2 text-white">{selectedJob.first_name} {selectedJob.last_name}</span></div>
                     <div><span className="text-slate-400">Email:</span><a href={`mailto:${selectedJob.email}`} className="ml-2 text-primary hover:underline">{selectedJob.email}</a></div>
                     <div><span className="text-slate-400">Phone:</span><a href={`tel:${selectedJob.phone}`} className="ml-2 text-primary hover:underline">{selectedJob.phone}</a></div>
                     {selectedJob.address && <div className="md:col-span-2"><span className="text-slate-400">Address:</span><span className="ml-2 text-white">{selectedJob.address}</span></div>}
@@ -855,6 +942,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
+                            <StepBadge status={tool.status} />
                             <PriorityBadge priority={tool.priority} />
                             {tool.warranty && (
                               <span className="hidden sm:inline px-2 py-1 rounded text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700">Warranty</span>
@@ -899,12 +987,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </div>
 
                       {/* Current Status bar (always visible) */}
-                      <div className="px-4 py-3 bg-slate-800/50 border-b border-slate-700 flex items-center gap-3 flex-wrap">
-                        <StatusBadge status={tool.status} />
-                        <div className="text-xs text-slate-400">
-                          Received: {formatDateShort(tool.date_received)}
-                          {tool.date_completed && ` • Completed: ${formatDateShort(tool.date_completed)}`}
+                      <div className="px-4 pt-3 pb-1 bg-slate-800/50 border-b border-slate-700">
+                        <div className="flex items-center gap-3 flex-wrap mb-1">
+                          <StatusBadge status={tool.status} />
+                          <div className="text-xs text-slate-400">
+                            Received: {formatDateShort(tool.date_received)}
+                            {tool.date_completed && ` • Completed: ${formatDateShort(tool.date_completed)}`}
+                          </div>
                         </div>
+                        <ProgressStepper status={tool.status} />
                       </div>
 
                       {editingToolId === tool.tool_id && toolEditForm ? (
@@ -966,7 +1057,6 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 <div key={pi} className="flex items-center gap-3 text-sm">
                                   <span className="text-slate-300">{p.name}</span>
                                   <span className="text-slate-500">x{p.quantity}</span>
-                                  {p.unit_cost != null && <span className="text-slate-400">${parseFloat(p.unit_cost).toFixed(2)}</span>}
                                   <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                                     p.status === 'installed' ? 'bg-green-900/40 text-green-400' :
                                     p.status === 'received' ? 'bg-cyan-900/40 text-cyan-400' :
@@ -975,10 +1065,6 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                   }`}>{p.status}</span>
                                 </div>
                               ))}
-                              {tool.parts.some(p => p.unit_cost != null) && (() => {
-                                const total = tool.parts.reduce((sum, p) => p.unit_cost != null ? sum + (parseFloat(p.unit_cost) * (p.quantity || 1)) : sum, 0);
-                                return <p className="text-xs text-slate-400 mt-1">Parts Total: <span className="text-white font-bold">${total.toFixed(2)}</span></p>;
-                              })()}
                             </div>
                           ) : (
                             <p className="mt-0.5 text-slate-600 italic">No parts listed</p>
@@ -1008,9 +1094,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             </p>
                           </div>
                           <div>
-                            <span className="text-slate-400 text-xs uppercase tracking-wide">Zoho Quote Ref</span>
-                            <p className={`mt-0.5 ${tool.zoho_quote_ref ? 'text-slate-300' : 'text-slate-600 italic'}`}>
-                              {tool.zoho_quote_ref || 'None'}
+                            <span className="text-slate-400 text-xs uppercase tracking-wide">Zoho Ref</span>
+                            <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-300' : 'text-slate-600 italic'}`}>
+                              {tool.zoho_ref || 'None'}
                             </p>
                           </div>
                         </div>
@@ -1042,6 +1128,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                                   <span className="material-symbols-outlined text-white text-xl">zoom_in</span>
                                 </div>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeletePhoto(tool.tool_id, photo); }}
+                                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Delete photo"
+                                >
+                                  <span className="material-symbols-outlined text-white text-xs" style={{ fontSize: '14px' }}>close</span>
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -1092,18 +1185,24 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   <span className="text-xs text-slate-400">Current:</span>
                   <StatusBadge status={statusUpdateModal.status} />
                 </div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">New Status</label>
-                <select
-                  value={statusUpdateForm.status}
-                  onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, status: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {REPAIR_STATUSES.map(s => (
-                    <option key={s.value} value={s.value} disabled={s.value === statusUpdateModal.status}>
-                      {s.label}{s.value === statusUpdateModal.status ? ' (current)' : ''}
-                    </option>
-                  ))}
-                </select>
+                {getValidNextStatuses(statusUpdateModal.status).length === 0 ? (
+                  <p className="text-sm text-slate-400 py-2 italic">This tool is in a terminal status and cannot be changed.</p>
+                ) : (
+                  <>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">New Status</label>
+                    <select
+                      value={statusUpdateForm.status}
+                      onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, status: e.target.value })}
+                      className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      {REPAIR_STATUSES_LIST
+                        .filter(s => getValidNextStatuses(statusUpdateModal.status).includes(s.value))
+                        .map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                    </select>
+                  </>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-300 mb-2">Notes (optional)</label>
@@ -1127,7 +1226,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleStatusUpdate} disabled={updatingStatus} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
+              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
                 {updatingStatus ? 'Updating...' : 'Update Status'}
               </button>
             </div>
@@ -1154,18 +1253,38 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       {/* ── NEW JOB FORM MODAL (TWO-STEP) ───────────────── */}
       {showNewJobForm && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-start justify-center p-4 overflow-y-auto" onClick={handleCloseNewJob}>
-          <div className="bg-slate-800 rounded-lg max-w-3xl w-full my-8" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-slate-800 rounded-lg max-w-5xl w-full my-4" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-white uppercase">New Repair Job</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${newJobStep === 1 ? 'bg-primary text-white' : 'bg-slate-600 text-slate-400'}`}>1 Customer</span>
-                  <span className="text-slate-600">→</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${newJobStep === 2 ? 'bg-primary text-white' : 'bg-slate-600 text-slate-400'}`}>2 Tools</span>
-                </div>
+            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between gap-4">
+              <h3 className="text-lg font-black text-white uppercase flex-shrink-0">New Repair Job</h3>
+              {/* 4-step progress stepper */}
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                {[
+                  { n: 1, label: 'Customer' },
+                  { n: 2, label: 'Tool Info' },
+                  { n: 3, label: 'Job Details' },
+                  { n: 4, label: 'Cost & Schedule' },
+                ].map(({ n, label }, i) => {
+                  const done = newJobStep > n;
+                  const active = newJobStep === n;
+                  return (
+                    <div key={n} className="flex items-center gap-1 min-w-0">
+                      {i > 0 && <div className={`h-px w-4 flex-shrink-0 ${done ? 'bg-primary' : 'bg-slate-700'}`} />}
+                      <button
+                        type="button"
+                        onClick={() => done && setNewJobStep(n)}
+                        className={`flex items-center gap-1 flex-shrink-0 ${done ? 'cursor-pointer' : 'cursor-default'}`}
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-colors ${done ? 'bg-primary text-white hover:bg-blue-500' : active ? 'bg-primary text-white ring-2 ring-primary/40' : 'bg-slate-700 text-slate-500'}`}>
+                          {done ? <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check</span> : n}
+                        </div>
+                        <span className={`text-xs font-bold hidden sm:block ${active ? 'text-white' : done ? 'text-primary hover:text-blue-400' : 'text-slate-500'}`}>{label}</span>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-              <button onClick={handleCloseNewJob} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={handleCloseNewJob} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
                 <span className="material-symbols-outlined text-3xl">close</span>
               </button>
             </div>
@@ -1204,7 +1323,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             >
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-white font-bold text-sm">{c.contact_person}</p>
+                                  <p className="text-white font-bold text-sm">{c.first_name} {c.last_name}</p>
                                   {c.company_name && <p className="text-slate-400 text-xs">{c.company_name}</p>}
                                 </div>
                                 <p className="text-slate-400 text-xs">{c.email}</p>
@@ -1242,31 +1361,80 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <span className="material-symbols-outlined text-lg">close</span>
                           </button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {[
-                            { key: 'company_name', label: 'Company Name', placeholder: 'Optional', required: false },
-                            { key: 'contact_person', label: 'Contact Person', required: true },
-                            { key: 'email', label: 'Email', type: 'email', required: true },
-                            { key: 'phone', label: 'Phone (###-###-####)', required: true },
-                            { key: 'address', label: 'Address', placeholder: 'Optional', required: false },
-                          ].map(f => (
-                            <div key={f.key} className={f.key === 'address' ? 'md:col-span-2' : ''}>
+                        <div className="space-y-3">
+                          {/* First Name | Last Name */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
                               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
-                                {f.label}{f.required && <span className="text-red-400 ml-1">*</span>}
+                                First Name<span className="text-red-400 ml-1">*</span>
                               </label>
                               <input
-                                type={f.type || 'text'}
-                                placeholder={f.placeholder}
-                                value={newJobForm[f.key] || ''}
-                                onChange={(e) => {
-                                  const val = f.key === 'phone' ? formatPhone(e.target.value) : e.target.value;
-                                  setNewJobForm({ ...newJobForm, [f.key]: val });
-                                }}
+                                value={newJobForm.first_name || ''}
+                                onChange={(e) => setNewJobForm({ ...newJobForm, first_name: e.target.value })}
                                 className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                               />
                             </div>
-                          ))}
-                          <div className="md:col-span-2">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
+                                Last Name<span className="text-red-400 ml-1">*</span>
+                              </label>
+                              <input
+                                value={newJobForm.last_name || ''}
+                                onChange={(e) => setNewJobForm({ ...newJobForm, last_name: e.target.value })}
+                                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+                          </div>
+                          {/* Company Name */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
+                              Company Name
+                            </label>
+                            <input
+                              placeholder="Optional"
+                              value={newJobForm.company_name || ''}
+                              onChange={(e) => setNewJobForm({ ...newJobForm, company_name: e.target.value })}
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+                          {/* Email | Phone */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
+                                Email<span className="text-red-400 ml-1">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                value={newJobForm.email || ''}
+                                onChange={(e) => setNewJobForm({ ...newJobForm, email: e.target.value })}
+                                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
+                                Phone (###-###-####)<span className="text-red-400 ml-1">*</span>
+                              </label>
+                              <input
+                                value={newJobForm.phone || ''}
+                                onChange={(e) => setNewJobForm({ ...newJobForm, phone: formatPhone(e.target.value) })}
+                                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+                          </div>
+                          {/* Address */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">
+                              Address
+                            </label>
+                            <input
+                              placeholder="Optional"
+                              value={newJobForm.address || ''}
+                              onChange={(e) => setNewJobForm({ ...newJobForm, address: e.target.value })}
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+                          {/* Internal Notes */}
+                          <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Internal Notes</label>
                             <textarea
                               value={newJobForm.customer_notes || ''}
@@ -1289,7 +1457,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           <span className="material-symbols-outlined text-primary text-lg">person</span>
                         </div>
                         <div>
-                          <p className="text-white font-bold">{selectedCustomerObj.contact_person}</p>
+                          <p className="text-white font-bold">{selectedCustomerObj.first_name} {selectedCustomerObj.last_name}</p>
                           {selectedCustomerObj.company_name && <p className="text-slate-400 text-sm">{selectedCustomerObj.company_name}</p>}
                           <p className="text-slate-400 text-xs mt-0.5">{selectedCustomerObj.email} · {selectedCustomerObj.phone}</p>
                         </div>
@@ -1313,8 +1481,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       if (selectedCustomerObj) {
                         setNewJobStep(2);
                       } else if (showInlineCustomerForm) {
-                        if (!newJobForm.contact_person || !newJobForm.email || !newJobForm.phone) {
-                          showToast('error', 'Contact person, email, and phone are required');
+                        if (!newJobForm.first_name || !newJobForm.last_name || !newJobForm.email || !newJobForm.phone) {
+                          showToast('error', 'First name, last name, email, and phone are required');
                           return;
                         }
                         setNewJobStep(2);
@@ -1331,27 +1499,29 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </div>
             )}
 
-            {/* Step 2: Tools */}
-            {newJobStep === 2 && (
-              <form onSubmit={handleCreateJob} className="p-6 space-y-6">
-                {/* Customer summary (read-only) */}
-                <div className="bg-slate-900 rounded-lg border border-slate-700 p-3 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-lg">person</span>
-                  <div>
-                    <p className="text-white text-sm font-bold">
-                      {selectedCustomerObj?.contact_person || newJobForm.contact_person}
-                      {(selectedCustomerObj?.company_name || newJobForm.company_name) && (
-                        <span className="text-slate-400 font-normal"> — {selectedCustomerObj?.company_name || newJobForm.company_name}</span>
-                      )}
-                    </p>
-                    <p className="text-slate-400 text-xs">{selectedCustomerObj?.email || newJobForm.email}</p>
-                  </div>
-                  <button type="button" onClick={() => setNewJobStep(1)} className="ml-auto text-slate-400 hover:text-white text-xs font-bold transition-colors flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">arrow_back</span>
-                    Change
-                  </button>
+            {/* Customer summary bar — shown on steps 2–4 */}
+            {newJobStep >= 2 && (
+              <div className="bg-slate-900 border-b border-slate-700 px-6 py-2 flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-lg">person</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-bold truncate">
+                    {selectedCustomerObj ? `${selectedCustomerObj.first_name} ${selectedCustomerObj.last_name}` : `${newJobForm.first_name} ${newJobForm.last_name}`}
+                    {(selectedCustomerObj?.company_name || newJobForm.company_name) && (
+                      <span className="text-slate-400 font-normal"> — {selectedCustomerObj?.company_name || newJobForm.company_name}</span>
+                    )}
+                  </p>
+                  <p className="text-slate-400 text-xs truncate">{selectedCustomerObj?.email || newJobForm.email}</p>
                 </div>
+                <button type="button" onClick={() => setNewJobStep(1)} className="text-slate-400 hover:text-white text-xs font-bold transition-colors flex items-center gap-1 flex-shrink-0">
+                  <span className="material-symbols-outlined text-sm">arrow_back</span>
+                  Change
+                </button>
+              </div>
+            )}
 
+            {/* Step 2: Tool Info (identification + photos) */}
+            {newJobStep === 2 && (
+              <div className="p-6 space-y-6">
                 {/* Tools */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -1373,19 +1543,93 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             </button>
                           )}
                         </div>
-                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={2} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
                       </div>
                     ))}
                   </div>
                 </div>
-
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setNewJobStep(1)} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const missing = newJobForm.tools.some(t => !t.tool_type?.trim() || !t.brand?.trim() || !t.model_number?.trim());
+                      if (missing) {
+                        showToast('error', 'Tool type, brand, and model number are required for each tool');
+                        return;
+                      }
+                      setNewJobStep(3);
+                    }}
+                    className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+                  >
+                    Next: Job Details
+                    <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Job Details (description + parts) */}
+            {newJobStep === 3 && (
+              <div className="p-6 space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-white uppercase mb-3">Tools to Repair</h4>
+                  <div className="space-y-4">
+                    {newJobForm.tools.map((tool, idx) => (
+                      <div key={idx} className="bg-slate-900 rounded-lg border border-slate-700 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h5 className="font-bold text-white">Tool {idx + 1}</h5>
+                            <p className="text-slate-400 text-xs">{tool.brand} {tool.model_number}</p>
+                          </div>
+                        </div>
+                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={3} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setNewJobStep(2)} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">arrow_back</span>
+                    Back
+                  </button>
+                  <button type="button" onClick={() => setNewJobStep(4)} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+                    Next: Cost & Schedule
+                    <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Cost & Schedule + submit */}
+            {newJobStep === 4 && (
+              <form onSubmit={handleCreateJob} className="p-6 space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-white uppercase mb-3">Tools to Repair</h4>
+                  <div className="space-y-4">
+                    {newJobForm.tools.map((tool, idx) => (
+                      <div key={idx} className="bg-slate-900 rounded-lg border border-slate-700 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h5 className="font-bold text-white">Tool {idx + 1}</h5>
+                            <p className="text-slate-400 text-xs">{tool.brand} {tool.model_number}</p>
+                          </div>
+                        </div>
+                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={4} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setNewJobStep(3)} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">arrow_back</span>
+                    Back
+                  </button>
                   <button type="submit" disabled={savingJob} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
-                    {savingJob ? 'Creating...' : 'Create Repair Job'}
+                    {savingJob ? (uploadingPhotos ? 'Uploading Photos...' : 'Creating...') : 'Create Repair Job'}
                   </button>
                 </div>
               </form>
@@ -1435,7 +1679,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 }
 
 // ── TOOL FORM (reusable for new job form and add tool modal) ──
-function ToolForm({ toolData, onChange, isNewJobForm, idx, newJobForm, setNewJobForm }) {
+// wizardStep: 2 = Tool Identification + Photos, 3 = Job Details + Parts, 4 = Labour & Scheduling
+// Omit wizardStep (or isNewJobForm=false) to render all sections (add tool modal / edit mode)
+function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm }) {
   const handleChange = (field, value) => {
     if (isNewJobForm) {
       const updatedTools = newJobForm.tools.map((t, i) => i === idx ? { ...t, [field]: value } : t);
@@ -1447,96 +1693,154 @@ function ToolForm({ toolData, onChange, isNewJobForm, idx, newJobForm, setNewJob
 
   const data = toolData;
 
-  const inputCls = "w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary";
-  const sectionHdr = "text-xs text-slate-500 uppercase tracking-wide font-bold mb-3 pb-2 border-b border-slate-700";
+  const inputCls = "w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
+  const sectionHdr = "text-sm text-slate-500 uppercase tracking-wide font-bold mb-4 pb-2 border-b border-slate-700";
+
+  // Which sections to show: no wizardStep (or non-wizard) = show all
+  const showSection = (sections) => !isNewJobForm || !wizardStep || sections.includes(wizardStep);
 
   return (
-    <div className="space-y-5 text-sm">
+    <div className="space-y-6 text-base">
       {/* Section 1 — Tool Identification */}
-      <div>
-        <p className={sectionHdr}>Tool Identification</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Tool Type <span className="text-red-400">*</span></label>
-            <input required value={data.tool_type || ''} onChange={(e) => handleChange('tool_type', e.target.value)}
-              placeholder="e.g., Impact Wrench" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Brand <span className="text-red-400">*</span></label>
-            <input required value={data.brand || ''} onChange={(e) => handleChange('brand', e.target.value)}
-              placeholder="e.g., Ingersoll Rand" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Model Number <span className="text-red-400">*</span></label>
-            <input required value={data.model_number || ''} onChange={(e) => handleChange('model_number', e.target.value)}
-              placeholder="e.g., 2135TIMAX" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Serial Number</label>
-            <input value={data.serial_number || ''} onChange={(e) => handleChange('serial_number', e.target.value)}
-              placeholder="Optional" className={inputCls} />
+      {showSection([2]) && (
+        <div>
+          <p className={sectionHdr}>Tool Identification</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
+              <input required value={data.tool_type || ''} onChange={(e) => handleChange('tool_type', e.target.value)}
+                placeholder="e.g., Impact Wrench" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
+              <input required value={data.brand || ''} onChange={(e) => handleChange('brand', e.target.value)}
+                placeholder="e.g., Ingersoll Rand" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
+              <input required value={data.model_number || ''} onChange={(e) => handleChange('model_number', e.target.value)}
+                placeholder="e.g., 2135TIMAX" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Serial Number</label>
+              <input value={data.serial_number || ''} onChange={(e) => handleChange('serial_number', e.target.value)}
+                placeholder="Optional" className={inputCls} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Section 2 — Job Details */}
-      <div>
-        <p className={sectionHdr}>Job Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Quantity</label>
-            <input type="number" min="1" value={data.quantity || 1} onChange={(e) => handleChange('quantity', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Priority</label>
-            <select value={data.priority || 'standard'} onChange={(e) => handleChange('priority', e.target.value)} className={inputCls}>
-              <option value="standard">Standard</option>
-              <option value="rush">Rush</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400 mb-1">Remarks / Description</label>
-            <textarea value={data.remarks || ''} onChange={(e) => handleChange('remarks', e.target.value)}
-              rows={2} placeholder="Customer's description of the problem"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
-          </div>
-          <div className="md:col-span-2 flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={data.warranty || false} onChange={(e) => handleChange('warranty', e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary" />
-              <span className="text-sm text-slate-300">Warranty Repair</span>
-            </label>
+      {showSection([3]) && (
+        <div>
+          <p className={sectionHdr}>Job Details</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Quantity</label>
+              <input type="number" min="1" value={data.quantity || 1} onChange={(e) => handleChange('quantity', e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Priority</label>
+              <select value={data.priority || 'standard'} onChange={(e) => handleChange('priority', e.target.value)} className={inputCls}>
+                <option value="standard">Standard</option>
+                <option value="rush">Rush</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-slate-400 mb-1.5">Remarks / Description</label>
+              <textarea value={data.remarks || ''} onChange={(e) => handleChange('remarks', e.target.value)}
+                rows={3} placeholder="Customer's description of the problem"
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+            </div>
+            <div className="md:col-span-2 flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={data.warranty || false} onChange={(e) => handleChange('warranty', e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary" />
+                <span className="text-sm text-slate-300">Warranty Repair</span>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Section 3 — Parts */}
-      <div>
+      {/* Section 3 — Photos (wizard step 2 only) */}
+      {showSection([2]) && isNewJobForm && (
+        <div>
+          <p className={sectionHdr}>Photos</p>
+          <div className="space-y-3">
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-bold cursor-pointer transition-all">
+              <span className="material-symbols-outlined text-sm">add_a_photo</span>
+              Add Photos
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) {
+                    handleChange('_pendingPhotos', [
+                      ...(data._pendingPhotos || []),
+                      ...Array.from(e.target.files),
+                    ]);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            {(data._pendingPhotos?.length > 0) && (
+              <>
+                <p className="text-xs text-slate-400">
+                  {data._pendingPhotos.length} photo{data._pendingPhotos.length !== 1 ? 's' : ''} selected
+                </p>
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                  {data._pendingPhotos.map((file, fi) => (
+                    <div key={fi} className="aspect-square group relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-full object-cover rounded border border-slate-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleChange('_pendingPhotos', data._pendingPhotos.filter((_, i) => i !== fi))}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove photo"
+                      >
+                        <span className="material-symbols-outlined text-white" style={{ fontSize: '14px' }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Section 4 — Parts */}
+      {showSection([3]) && <div>
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-700">
-          <p className="text-xs text-slate-500 uppercase tracking-wide font-bold">Parts</p>
-          <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', quantity: 1, unit_cost: '', status: 'pending' }])}
-            className="text-xs text-primary hover:text-blue-400 font-bold flex items-center gap-0.5 transition-colors">
-            <span className="material-symbols-outlined text-sm">add</span> Add Part
+          <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
+          <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', quantity: 1, status: 'pending' }])}
+            className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-1 transition-colors">
+            <span className="material-symbols-outlined text-base">add</span> Add Part
           </button>
         </div>
         {(data.parts || []).length > 0 && (
           <div className="space-y-2">
             {data.parts.map((part, pi) => (
-              <div key={pi} className="flex items-start gap-2 bg-slate-900/50 rounded-lg p-2 border border-slate-700">
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div key={pi} className="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                <div className="flex-1 flex gap-3">
                   <input placeholder="Part name *" value={part.name} onChange={(e) => {
                     const updated = [...data.parts]; updated[pi] = { ...part, name: e.target.value }; handleChange('parts', updated);
-                  }} className="col-span-2 md:col-span-1 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
-                  <input type="number" min="1" placeholder="Qty" value={part.quantity} onChange={(e) => {
-                    const updated = [...data.parts]; updated[pi] = { ...part, quantity: parseInt(e.target.value) || 1 }; handleChange('parts', updated);
-                  }} className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
-                  <input type="number" step="0.01" min="0" placeholder="Unit $" value={part.unit_cost ?? ''} onChange={(e) => {
-                    const updated = [...data.parts]; updated[pi] = { ...part, unit_cost: e.target.value === '' ? null : parseFloat(e.target.value) }; handleChange('parts', updated);
-                  }} className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="w-[70%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => {
+                    const updated = [...data.parts]; updated[pi] = { ...part, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }; handleChange('parts', updated);
+                  }} className="w-[15%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
                   <select value={part.status} onChange={(e) => {
                     const updated = [...data.parts]; updated[pi] = { ...part, status: e.target.value }; handleChange('parts', updated);
-                  }} className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary">
+                  }} className="w-[15%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="pending">Pending</option>
                     <option value="ordered">Ordered</option>
                     <option value="received">Received</option>
@@ -1545,56 +1849,60 @@ function ToolForm({ toolData, onChange, isNewJobForm, idx, newJobForm, setNewJob
                 </div>
                 <button type="button" onClick={() => {
                   const updated = data.parts.filter((_, i) => i !== pi); handleChange('parts', updated);
-                }} className="text-red-400 hover:text-red-300 mt-1 transition-colors">
+                }} className="text-red-400 hover:text-red-300 transition-colors">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Section 4 — Labour & Cost */}
-      <div>
-        <p className={sectionHdr}>Labour & Cost</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Labour Hours</label>
-            <input type="number" step="0.5" min="0" value={data.labour_hours || ''} onChange={(e) => handleChange('labour_hours', e.target.value)}
-              placeholder="e.g., 2.5" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Hourly Rate ($)</label>
-            <input type="number" step="0.01" min="0" value={data.hourly_rate || ''} onChange={(e) => handleChange('hourly_rate', e.target.value)}
-              placeholder="e.g., 95.00" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Zoho Quote Reference</label>
-            <input value={data.zoho_quote_ref || ''} onChange={(e) => handleChange('zoho_quote_ref', e.target.value)}
-              placeholder="Optional" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Assigned Technician</label>
-            <input value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
-              placeholder="Optional" className={inputCls} />
+      {/* Section 5 — Labour & Cost */}
+      {showSection([4]) && (
+        <div>
+          <p className={sectionHdr}>Labour & Cost</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Labour Hours</label>
+              <input type="number" step="0.5" min="0" value={data.labour_hours || ''} onChange={(e) => handleChange('labour_hours', e.target.value)}
+                placeholder="e.g., 2.5" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Hourly Rate ($)</label>
+              <input type="number" step="0.01" min="0" value={data.hourly_rate || ''} onChange={(e) => handleChange('hourly_rate', e.target.value)}
+                placeholder="e.g., 95.00" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Zoho Reference</label>
+              <input value={data.zoho_ref || ''} onChange={(e) => handleChange('zoho_ref', e.target.value)}
+                placeholder="Optional" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Assigned Technician</label>
+              <input value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
+                placeholder="Optional" className={inputCls} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Section 5 — Scheduling */}
-      <div>
-        <p className={sectionHdr}>Scheduling</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Date Received</label>
-            <input type="date" value={data.date_received ? data.date_received.split('T')[0] : ''} onChange={(e) => handleChange('date_received', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Est. Completion Date</label>
-            <input type="date" value={data.estimated_completion || ''} onChange={(e) => handleChange('estimated_completion', e.target.value)} className={inputCls} />
+      {/* Section 6 — Scheduling */}
+      {showSection([4]) && (
+        <div>
+          <p className={sectionHdr}>Scheduling</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Date Received</label>
+              <input type="date" value={data.date_received ? data.date_received.split('T')[0] : ''} onChange={(e) => handleChange('date_received', e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Est. Completion Date</label>
+              <input type="date" value={data.estimated_completion || ''} onChange={(e) => handleChange('estimated_completion', e.target.value)} className={inputCls} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

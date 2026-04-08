@@ -7,9 +7,6 @@ import re
 
 class QuoteStatus(str, Enum):
     PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    QUOTED = "quoted"
-    COMPLETED = "completed"
     CONVERTED = "converted"
 
 
@@ -24,7 +21,8 @@ class ToolEntry(BaseModel):
 
 class QuoteCreate(BaseModel):
     company_name: Optional[str] = Field(None, max_length=200)
-    contact_person: str = Field(..., min_length=1, max_length=100)
+    first_name: str = Field(..., min_length=1, max_length=50)
+    last_name: str = Field(..., min_length=1, max_length=50)
     email: EmailStr
     phone: str = Field(..., min_length=12, max_length=12, pattern=r'^\d{3}-\d{3}-\d{4}$')
     tools: List[ToolEntry] = Field(..., min_length=1, max_length=5, description="List of tools (1-5)")
@@ -53,7 +51,8 @@ class Quote(QuoteCreate):
             "example": {
                 "_id": "507f1f77bcf86cd799439011",
                 "company_name": "Apex Manufacturing",
-                "contact_person": "John Smith",
+                "first_name": "John",
+                "last_name": "Smith",
                 "email": "john@apexmfg.com",
                 "phone": "604-555-0123",
                 "tools": [
@@ -80,16 +79,13 @@ class Quote(QuoteCreate):
         }
 
 
-class QuoteUpdate(BaseModel):
-    """Model for updating quote status"""
-    status: QuoteStatus
-
 
 class QuoteResponse(BaseModel):
     id: str
     request_number: str = "REQ-LEGACY"  # Default for legacy quotes without request numbers
     company_name: Optional[str] = None
-    contact_person: str
+    first_name: str
+    last_name: str
     email: str
     phone: str
     tools: List[ToolEntry] = []  # Default to empty list for legacy quotes

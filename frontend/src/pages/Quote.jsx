@@ -332,7 +332,8 @@ export default function Quote() {
 
       const formData = new FormData();
       formData.append('company_name', data.company_name || '');
-      formData.append('contact_person', data.contact_person);
+      formData.append('first_name', data.first_name);
+      formData.append('last_name', data.last_name);
       formData.append('email', data.email);
       formData.append('phone', data.phone);
 
@@ -481,10 +482,67 @@ export default function Quote() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
-          {/* Company Information */}
+          {/* Contact Information */}
           <div className="mb-8">
-            <h3 className="text-lg font-black mb-4 uppercase tracking-tight">Company Information</h3>
+            <h3 className="text-lg font-black mb-4 uppercase tracking-tight">Contact Information</h3>
             <div className="space-y-4">
+              {/* First Name | Last Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="first_name" className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                    First Name *
+                  </label>
+                  <input
+                    id="first_name"
+                    {...register('first_name', {
+                      required: 'First name is required',
+                      minLength: { value: 2, message: 'Must be at least 2 characters' }
+                    })}
+                    onChange={(e) => {
+                      const capitalized = capitalizeFirstLetters(e.target.value);
+                      setValue('first_name', capitalized);
+                    }}
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.first_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                    placeholder="First Name"
+                    aria-required="true"
+                    aria-invalid={errors.first_name ? 'true' : 'false'}
+                    aria-describedby={errors.first_name ? 'first_name-error' : undefined}
+                  />
+                  {errors.first_name && (
+                    <p id="first_name-error" className="text-red-500 text-sm mt-1" role="alert">
+                      {errors.first_name.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="last_name" className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                    Last Name *
+                  </label>
+                  <input
+                    id="last_name"
+                    {...register('last_name', {
+                      required: 'Last name is required',
+                      minLength: { value: 2, message: 'Must be at least 2 characters' }
+                    })}
+                    onChange={(e) => {
+                      const capitalized = capitalizeFirstLetters(e.target.value);
+                      setValue('last_name', capitalized);
+                    }}
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.last_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                    placeholder="Last Name"
+                    aria-required="true"
+                    aria-invalid={errors.last_name ? 'true' : 'false'}
+                    aria-describedby={errors.last_name ? 'last_name-error' : undefined}
+                  />
+                  {errors.last_name && (
+                    <p id="last_name-error" className="text-red-500 text-sm mt-1" role="alert">
+                      {errors.last_name.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Company Name */}
               <div>
                 <label htmlFor="company_name" className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
                   Company Name
@@ -505,33 +563,6 @@ export default function Quote() {
                 {errors.company_name && (
                   <p id="company_name-error" className="text-red-500 text-sm mt-1" role="alert">
                     {errors.company_name.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="contact_person" className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
-                  Contact Person *
-                </label>
-                <input
-                  id="contact_person"
-                  {...register('contact_person', {
-                    required: 'Contact person is required',
-                    minLength: { value: 2, message: 'Name must be at least 2 characters' }
-                  })}
-                  onChange={(e) => {
-                    const capitalized = capitalizeFirstLetters(e.target.value);
-                    setValue('contact_person', capitalized);
-                  }}
-                  className={`w-full px-4 py-3 rounded-lg border ${errors.contact_person ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
-                  placeholder="Enter Name"
-                  aria-required="true"
-                  aria-invalid={errors.contact_person ? 'true' : 'false'}
-                  aria-describedby={errors.contact_person ? 'contact_person-error' : undefined}
-                />
-                {errors.contact_person && (
-                  <p id="contact_person-error" className="text-red-500 text-sm mt-1" role="alert">
-                    {errors.contact_person.message}
                   </p>
                 )}
               </div>

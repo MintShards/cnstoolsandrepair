@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,8 +23,9 @@ export default function AdminLogin() {
       localStorage.setItem('admin_token', response.access_token);
       localStorage.setItem('admin_login_time', Date.now().toString());
 
-      // Redirect to admin settings
-      navigate('/admin/settings');
+      // Redirect to intended page or settings
+      const from = location.state?.from?.pathname || '/admin/settings';
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password');
     } finally {

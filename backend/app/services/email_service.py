@@ -69,7 +69,7 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
     customer_section = "CUSTOMER:\n"
     if quote.company_name:
         customer_section += f"  Company: {quote.company_name}\n"
-    customer_section += f"  Contact: {quote.contact_person}\n"
+    customer_section += f"  Contact: {quote.first_name} {quote.last_name}\n"
     customer_section += f"  Phone: {quote.phone}\n"
     customer_section += f"  Email: {quote.email}"
 
@@ -87,16 +87,13 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
     photo_text = ""
 
     # Subject line (use company if available, otherwise contact person)
-    subject_name = quote.company_name if quote.company_name else quote.contact_person
+    subject_name = quote.company_name if quote.company_name else f"{quote.first_name} {quote.last_name}"
 
     # Subject includes tool count
     tool_count = len(quote.tools)
     tool_summary = f"{tool_count} tool{'s' if tool_count > 1 else ''}"
 
-    # Initialize photo text (will be updated after processing attachments)
-    photo_text_initial = "  ⏳ Processing photos..."
-
-    # Build initial email body (will be updated with final photo status)
+    # Build email body (photo_text filled in after attachment processing)
     body_template = """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REQUEST #{request_number}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -120,7 +117,7 @@ CNS Tool Repair | {city}, {province}
         )
 
         # Set Reply-To to customer's email for easy response
-        message.reply_to = Email(quote.email, quote.contact_person)
+        message.reply_to = Email(quote.email, f"{quote.first_name} {quote.last_name}")
 
         # Attach photos as email attachments (with fallback for production)
         # SendGrid has a 30MB total email limit; cap attachments at 20MB raw (base64 adds ~33%)

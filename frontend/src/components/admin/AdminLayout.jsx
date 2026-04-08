@@ -4,11 +4,8 @@ export default function AdminLayout({ children, title = 'Admin Settings' }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Clear session data
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_login_time');
-
-    // Redirect to login
     navigate('/admin/login');
   };
 
@@ -26,10 +23,8 @@ export default function AdminLayout({ children, title = 'Admin Settings' }) {
               </Link>
               <div className="h-8 w-px bg-slate-700"></div>
               <div>
-                <h1 className="text-lg font-black text-white uppercase tracking-tight">
-                  {title}
-                </h1>
-                <p className="text-xs text-slate-400">Business Settings Management</p>
+                <h1 className="text-lg font-black text-white uppercase tracking-tight">{title}</h1>
+                <p className="text-xs text-slate-400">Website Content Management</p>
               </div>
             </div>
 

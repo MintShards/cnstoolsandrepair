@@ -1,53 +1,32 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { customersAPI, repairsAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
+import {
+  REPAIR_STATUSES, REPAIR_STATUSES_LIST,
+  getValidNextStatuses,
+} from '../../../constants/repairStatuses';
+import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const REPAIR_STATUSES = {
-  received: { label: 'Received', color: 'bg-slate-700 text-slate-300 border-slate-600' },
-  dismantled: { label: 'Dismantled', color: 'bg-yellow-900/30 text-yellow-400 border-yellow-700' },
-  quotation_sent: { label: 'Quote Sent', color: 'bg-purple-900/30 text-purple-400 border-purple-700' },
-  approved: { label: 'Approved', color: 'bg-green-900/30 text-green-400 border-green-700' },
-  declined: { label: 'Declined', color: 'bg-red-900/30 text-red-400 border-red-700' },
-  parts_ordered: { label: 'Parts Ordered', color: 'bg-orange-900/30 text-orange-400 border-orange-700' },
-  parts_received: { label: 'Parts Received', color: 'bg-cyan-900/30 text-cyan-400 border-cyan-700' },
-  in_repair: { label: 'In Repair', color: 'bg-blue-900/30 text-blue-400 border-blue-700' },
-  testing: { label: 'Testing / QC', color: 'bg-indigo-900/30 text-indigo-400 border-indigo-700' },
-  ready_for_pickup: { label: 'Ready for Pickup', color: 'bg-emerald-900/30 text-emerald-400 border-emerald-700' },
-  completed: { label: 'Completed', color: 'bg-green-900/50 text-green-300 border-green-600' },
-  returned: { label: 'Returned', color: 'bg-slate-800/50 text-slate-300 border-slate-500' },
-  closed: { label: 'Closed', color: 'bg-slate-800/50 text-slate-400 border-slate-600' },
-  abandoned: { label: 'Abandoned', color: 'bg-rose-900/30 text-rose-400 border-rose-700' },
-};
-
 const EMPTY_CUSTOMER = {
   company_name: '',
-  contact_person: '',
+  first_name: '',
+  last_name: '',
   email: '',
   phone: '',
   address: '',
   customer_notes: '',
 };
 
-function StatusBadge({ status }) {
-  const cfg = REPAIR_STATUSES[status] || { label: status, color: 'bg-slate-700 text-slate-300 border-slate-600' };
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border ${cfg.color}`}>
-      {cfg.label}
-    </span>
-  );
-}
 
-const REPAIR_STATUSES_LIST = [
-  { value: 'received', label: 'Received' }, { value: 'dismantled', label: 'Dismantled' },
-  { value: 'quotation_sent', label: 'Quote Sent' }, { value: 'approved', label: 'Approved' },
-  { value: 'declined', label: 'Declined' }, { value: 'parts_ordered', label: 'Parts Ordered' },
-  { value: 'parts_received', label: 'Parts Received' }, { value: 'in_repair', label: 'In Repair' },
-  { value: 'testing', label: 'Testing / QC' }, { value: 'ready_for_pickup', label: 'Ready for Pickup' },
-  { value: 'completed', label: 'Completed' }, { value: 'returned', label: 'Returned' },
-  { value: 'closed', label: 'Closed' }, { value: 'abandoned', label: 'Abandoned' },
-];
+const getErrorMessage = (err, fallback) => {
+  const detail = err.response?.data?.detail;
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+  return fallback;
+};
 
 const PRIORITIES = {
   standard: { label: 'Standard', color: 'bg-slate-700 text-slate-300' },
@@ -66,9 +45,9 @@ function PriorityBadge({ priority }) {
 
 const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
-  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, unit_cost: '', status: 'pending' }],
+  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, status: 'pending' }],
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
-  zoho_quote_ref: '', assigned_technician: '', estimated_completion: ''
+  zoho_ref: '', assigned_technician: '', estimated_completion: ''
 };
 
 const getEmptyTool = () => ({
@@ -178,7 +157,8 @@ export default function CustomersTab({ onNewJob }) {
   const handleStartEdit = () => {
     setEditForm({
       company_name: selectedCustomer.company_name || '',
-      contact_person: selectedCustomer.contact_person,
+      first_name: selectedCustomer.first_name,
+      last_name: selectedCustomer.last_name,
       email: selectedCustomer.email,
       phone: selectedCustomer.phone,
       address: selectedCustomer.address || '',
@@ -196,7 +176,7 @@ export default function CustomersTab({ onNewJob }) {
       setEditing(false);
       showToast('success', 'Customer updated successfully');
     } catch (err) {
-      showToast('error', err.response?.data?.detail || 'Failed to update customer');
+      showToast('error', getErrorMessage(err, 'Failed to update customer'));
     } finally {
       setSaving(false);
     }
@@ -210,10 +190,10 @@ export default function CustomersTab({ onNewJob }) {
       setCustomers([created, ...customers]);
       setShowNewForm(false);
       setNewForm(EMPTY_CUSTOMER);
-      showToast('success', `Customer ${created.contact_person} created successfully`);
+      showToast('success', `Customer ${created.first_name} ${created.last_name} created successfully`);
       openCustomer(created);
     } catch (err) {
-      showToast('error', err.response?.data?.detail || 'Failed to create customer');
+      showToast('error', getErrorMessage(err, 'Failed to create customer'));
     } finally {
       setCreating(false);
     }
@@ -228,7 +208,7 @@ export default function CustomersTab({ onNewJob }) {
       setDeleteConfirm(null);
       showToast('success', 'Customer deleted successfully');
     } catch (err) {
-      showToast('error', err.response?.data?.detail || 'Failed to delete customer');
+      showToast('error', getErrorMessage(err, 'Failed to delete customer'));
       setDeleteConfirm(null);
     }
   };
@@ -262,7 +242,8 @@ export default function CustomersTab({ onNewJob }) {
 
   const openStatusUpdate = (tool) => {
     setStatusUpdateModal(tool);
-    setStatusUpdateForm({ status: tool.status, notes: '', estimated_completion: '' });
+    const validNext = getValidNextStatuses(tool.status);
+    setStatusUpdateForm({ status: validNext[0] || '', notes: '', estimated_completion: '' });
   };
 
   const handleStatusUpdate = async () => {
@@ -279,8 +260,9 @@ export default function CustomersTab({ onNewJob }) {
       setCustomerJobs(customerJobs.map(j => j.id === updated.id ? updated : j));
       setStatusUpdateModal(null);
       showToast('success', 'Tool status updated');
-    } catch {
-      showToast('error', 'Failed to update tool status');
+    } catch (err) {
+      const detail = err?.response?.data?.detail || 'Failed to update tool status';
+      showToast('error', detail);
     } finally {
       setUpdatingStatus(false);
     }
@@ -297,7 +279,7 @@ export default function CustomersTab({ onNewJob }) {
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
         parts: (addToolForm.parts || []).filter(p => p.name.trim()),
-        zoho_quote_ref: addToolForm.zoho_quote_ref || null,
+        zoho_ref: addToolForm.zoho_ref || null,
         assigned_technician: addToolForm.assigned_technician || null,
         estimated_completion: addToolForm.estimated_completion || null,
       };
@@ -321,12 +303,12 @@ export default function CustomersTab({ onNewJob }) {
       serial_number: tool.serial_number || '',
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
-      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p })) : [{ name: '', quantity: 1, unit_cost: '', status: 'pending' }],
+      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p })) : [{ name: '', quantity: 1, status: 'pending' }],
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
       priority: tool.priority || 'standard',
       warranty: tool.warranty || false,
-      zoho_quote_ref: tool.zoho_quote_ref || '',
+      zoho_ref: tool.zoho_ref || '',
       assigned_technician: tool.assigned_technician || '',
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
@@ -350,7 +332,7 @@ export default function CustomersTab({ onNewJob }) {
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
         parts: (toolEditForm.parts || []).filter(p => p.name?.trim()),
-        zoho_quote_ref: toolEditForm.zoho_quote_ref || null,
+        zoho_ref: toolEditForm.zoho_ref || null,
         assigned_technician: toolEditForm.assigned_technician || null,
         estimated_completion: toolEditForm.estimated_completion || null,
       };
@@ -402,6 +384,18 @@ export default function CustomersTab({ onNewJob }) {
     }
   };
 
+  const handleDeletePhoto = async (toolId, photoUrl) => {
+    if (!expandedJobData) return;
+    try {
+      const updated = await repairsAPI.deleteToolPhoto(expandedJobData.id, toolId, photoUrl);
+      setExpandedJobData(updated);
+      setCustomerJobs(customerJobs.map(j => j.id === updated.id ? updated : j));
+      showToast('success', 'Photo deleted');
+    } catch {
+      showToast('error', 'Failed to delete photo');
+    }
+  };
+
   const formatDate = (d) => new Date(d).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric'
   });
@@ -425,7 +419,7 @@ export default function CustomersTab({ onNewJob }) {
             </button>
             <span className="text-slate-700">›</span>
             <h2 className="text-xl font-black text-white uppercase">
-              {selectedCustomer.company_name || selectedCustomer.contact_person}
+              {selectedCustomer.company_name || `${selectedCustomer.first_name} ${selectedCustomer.last_name}`}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -474,27 +468,32 @@ export default function CustomersTab({ onNewJob }) {
 
               {editing ? (
                 <div className="space-y-3">
-                  {[
-                    { key: 'company_name', label: 'Company', required: false },
-                    { key: 'contact_person', label: 'Contact Person', required: true },
-                    { key: 'email', label: 'Email', required: true, type: 'email' },
-                    { key: 'phone', label: 'Phone', required: true, placeholder: '###-###-####' },
-                    { key: 'address', label: 'Address', required: false },
-                  ].map(({ key, label, required, type, placeholder }) => (
-                    <div key={key}>
-                      <label className="block text-xs font-bold text-slate-400 mb-1">{label}{required && ' *'}</label>
-                      <input
-                        type={type || 'text'}
-                        value={editForm[key]}
-                        onChange={(e) => {
-                          const val = key === 'phone' ? formatPhone(e.target.value) : e.target.value;
-                          setEditForm({ ...editForm, [key]: val });
-                        }}
-                        placeholder={placeholder}
-                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">First Name *</label>
+                      <input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                     </div>
-                  ))}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">Last Name *</label>
+                      <input value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">Company</label>
+                    <input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">Email *</label>
+                    <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">Phone *</label>
+                    <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })} placeholder="###-###-####" className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1">Address</label>
+                    <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 mb-1">Notes (Internal)</label>
                     <textarea
@@ -515,7 +514,7 @@ export default function CustomersTab({ onNewJob }) {
                   )}
                   <div>
                     <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Contact</div>
-                    <div className="text-white">{selectedCustomer.contact_person}</div>
+                    <div className="text-white">{selectedCustomer.first_name} {selectedCustomer.last_name}</div>
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 uppercase tracking-wide mb-0.5">Email</div>
@@ -639,6 +638,7 @@ export default function CustomersTab({ onNewJob }) {
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <StepBadge status={tool.status} />
                                         <PriorityBadge priority={tool.priority} />
                                         {tool.warranty && (
                                           <span className="hidden sm:inline px-1.5 py-0.5 rounded text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700">Warranty</span>
@@ -683,12 +683,15 @@ export default function CustomersTab({ onNewJob }) {
                                   </div>
 
                                   {/* Status Bar */}
-                                  <div className="px-3 py-2 bg-slate-900/50 border-b border-slate-700 flex items-center gap-2 flex-wrap text-xs">
-                                    <StatusBadge status={tool.status} />
-                                    <span className="text-slate-400">
-                                      Received: {formatDate(tool.date_received)}
-                                      {tool.date_completed && ` · Done: ${formatDate(tool.date_completed)}`}
-                                    </span>
+                                  <div className="px-3 pt-2 pb-1 bg-slate-900/50 border-b border-slate-700">
+                                    <div className="flex items-center gap-2 flex-wrap text-xs mb-1">
+                                      <StatusBadge status={tool.status} />
+                                      <span className="text-slate-400">
+                                        Received: {formatDate(tool.date_received)}
+                                        {tool.date_completed && ` · Done: ${formatDate(tool.date_completed)}`}
+                                      </span>
+                                    </div>
+                                    <ProgressStepper status={tool.status} />
                                   </div>
 
                                   {editingToolId === tool.tool_id && toolEditForm ? (
@@ -750,7 +753,6 @@ export default function CustomersTab({ onNewJob }) {
                                             <div key={pi} className="flex items-center gap-2 text-xs">
                                               <span className="text-slate-300">{p.name}</span>
                                               <span className="text-slate-500">x{p.quantity}</span>
-                                              {p.unit_cost != null && <span className="text-slate-400">${parseFloat(p.unit_cost).toFixed(2)}</span>}
                                               <span className={`px-1.5 py-0.5 rounded-full font-bold ${
                                                 p.status === 'installed' ? 'bg-green-900/40 text-green-400' :
                                                 p.status === 'received' ? 'bg-cyan-900/40 text-cyan-400' :
@@ -759,10 +761,6 @@ export default function CustomersTab({ onNewJob }) {
                                               }`}>{p.status}</span>
                                             </div>
                                           ))}
-                                          {tool.parts.some(p => p.unit_cost != null) && (() => {
-                                            const total = tool.parts.reduce((sum, p) => p.unit_cost != null ? sum + (parseFloat(p.unit_cost) * (p.quantity || 1)) : sum, 0);
-                                            return <p className="text-xs text-slate-400 mt-1">Parts Total: <span className="text-white font-bold">${total.toFixed(2)}</span></p>;
-                                          })()}
                                         </div>
                                       ) : (
                                         <p className="mt-0.5 text-xs text-slate-600 italic">No parts listed</p>
@@ -793,8 +791,8 @@ export default function CustomersTab({ onNewJob }) {
                                       </div>
                                       <div>
                                         <span className="text-slate-400 uppercase tracking-wide">Zoho Ref</span>
-                                        <p className={`mt-0.5 ${tool.zoho_quote_ref ? 'text-slate-300' : 'text-slate-600 italic'}`}>
-                                          {tool.zoho_quote_ref || 'None'}
+                                        <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-300' : 'text-slate-600 italic'}`}>
+                                          {tool.zoho_ref || 'None'}
                                         </p>
                                       </div>
                                     </div>
@@ -828,6 +826,13 @@ export default function CustomersTab({ onNewJob }) {
                                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                                               <span className="material-symbols-outlined text-white text-lg">zoom_in</span>
                                             </div>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleDeletePhoto(tool.tool_id, photo); }}
+                                              className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                              title="Delete photo"
+                                            >
+                                              <span className="material-symbols-outlined text-white text-xs" style={{ fontSize: '14px' }}>close</span>
+                                            </button>
                                           </div>
                                         ))}
                                       </div>
@@ -879,7 +884,7 @@ export default function CustomersTab({ onNewJob }) {
               </div>
               <h3 className="text-xl font-black text-white uppercase text-center mb-2">Delete Customer</h3>
               <p className="text-slate-300 text-center mb-2">
-                Delete <span className="font-bold text-white">{deleteConfirm.company_name || deleteConfirm.contact_person}</span>?
+                Delete <span className="font-bold text-white">{deleteConfirm.company_name || `${deleteConfirm.first_name} ${deleteConfirm.last_name}`}</span>?
               </p>
               <p className="text-red-300 text-sm text-center mb-6">This cannot be undone. Customers with linked repair jobs cannot be deleted.</p>
               <div className="flex gap-3">
@@ -900,14 +905,26 @@ export default function CustomersTab({ onNewJob }) {
               </p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">New Status</label>
-                  <select
-                    value={statusUpdateForm.status}
-                    onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, status: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {REPAIR_STATUSES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-slate-400">Current:</span>
+                    <StatusBadge status={statusUpdateModal.status} />
+                  </div>
+                  {getValidNextStatuses(statusUpdateModal.status).length === 0 ? (
+                    <p className="text-sm text-slate-400 py-2 italic">This tool is in a terminal status and cannot be changed.</p>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-bold text-slate-300 mb-2">New Status</label>
+                      <select
+                        value={statusUpdateForm.status}
+                        onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, status: e.target.value })}
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {REPAIR_STATUSES_LIST
+                          .filter(s => getValidNextStatuses(statusUpdateModal.status).includes(s.value))
+                          .map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">Notes (optional)</label>
@@ -931,7 +948,7 @@ export default function CustomersTab({ onNewJob }) {
               </div>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">Cancel</button>
-                <button onClick={handleStatusUpdate} disabled={updatingStatus} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
+                <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
                   {updatingStatus ? 'Updating...' : 'Update Status'}
                 </button>
               </div>
@@ -1023,6 +1040,7 @@ export default function CustomersTab({ onNewJob }) {
                     <th className="py-3 px-4">Company / Contact</th>
                     <th className="py-3 px-4">Email</th>
                     <th className="py-3 px-4">Phone</th>
+                    <th className="py-3 px-4">Address</th>
                     <th className="py-3 px-4">Since</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
@@ -1035,11 +1053,12 @@ export default function CustomersTab({ onNewJob }) {
                       onClick={() => openCustomer(customer)}
                     >
                       <td className="py-3 px-4">
-                        <div className="text-white font-bold">{customer.company_name || customer.contact_person}</div>
-                        {customer.company_name && <div className="text-slate-400 text-xs">{customer.contact_person}</div>}
+                        <div className="text-white font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</div>
+                        {customer.company_name && <div className="text-slate-400 text-xs">{customer.first_name} {customer.last_name}</div>}
                       </td>
                       <td className="py-3 px-4 text-slate-300">{customer.email}</td>
                       <td className="py-3 px-4 text-slate-300">{customer.phone}</td>
+                      <td className="py-3 px-4 text-slate-400 text-xs">{customer.address || <span className="text-slate-600">—</span>}</td>
                       <td className="py-3 px-4 text-slate-400 text-xs">{formatDate(customer.created_at)}</td>
                       <td className="py-3 px-4 text-right">
                         <button
@@ -1087,27 +1106,39 @@ export default function CustomersTab({ onNewJob }) {
               </button>
             </div>
             <form onSubmit={handleCreateCustomer} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-1">Company Name</label>
-                  <input
-                    type="text"
-                    value={newForm.company_name}
-                    onChange={(e) => setNewForm({ ...newForm, company_name: e.target.value })}
-                    placeholder="Optional"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-1">Contact Person *</label>
+                  <label className="block text-sm font-bold text-slate-300 mb-1">First Name *</label>
                   <input
                     type="text"
                     required
-                    value={newForm.contact_person}
-                    onChange={(e) => setNewForm({ ...newForm, contact_person: e.target.value })}
+                    value={newForm.first_name}
+                    onChange={(e) => setNewForm({ ...newForm, first_name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-300 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newForm.last_name}
+                    onChange={(e) => setNewForm({ ...newForm, last_name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-1">Company Name</label>
+                <input
+                  type="text"
+                  value={newForm.company_name}
+                  onChange={(e) => setNewForm({ ...newForm, company_name: e.target.value })}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-300 mb-1">Email *</label>
                   <input
@@ -1136,6 +1167,7 @@ export default function CustomersTab({ onNewJob }) {
                   type="text"
                   value={newForm.address}
                   onChange={(e) => setNewForm({ ...newForm, address: e.target.value })}
+                  placeholder="Optional"
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -1168,28 +1200,28 @@ export default function CustomersTab({ onNewJob }) {
 function InlineToolForm({ toolData, onChange }) {
   const h = (field, value) => onChange({ ...toolData, [field]: value });
   const d = toolData;
-  const ic = "w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary";
-  const sh = "text-xs text-slate-500 uppercase tracking-wide font-bold mb-3 pb-2 border-b border-slate-700";
+  const ic = "w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
+  const sh = "text-sm text-slate-500 uppercase tracking-wide font-bold mb-4 pb-2 border-b border-slate-700";
   return (
-    <div className="space-y-5 text-sm">
+    <div className="space-y-6 text-base">
       {/* Section 1 — Tool Identification */}
       <div>
         <p className={sh}>Tool Identification</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Tool Type <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
             <input required value={d.tool_type || ''} onChange={(e) => h('tool_type', e.target.value)} placeholder="e.g., Impact Wrench" className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Brand <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
             <input required value={d.brand || ''} onChange={(e) => h('brand', e.target.value)} placeholder="e.g., Ingersoll Rand" className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Model Number <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
             <input required value={d.model_number || ''} onChange={(e) => h('model_number', e.target.value)} placeholder="e.g., 2135TIMAX" className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Serial Number</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Serial Number</label>
             <input value={d.serial_number || ''} onChange={(e) => h('serial_number', e.target.value)} placeholder="Optional" className={ic} />
           </div>
         </div>
@@ -1198,13 +1230,13 @@ function InlineToolForm({ toolData, onChange }) {
       {/* Section 2 — Job Details */}
       <div>
         <p className={sh}>Job Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Quantity</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Quantity</label>
             <input type="number" min="1" value={d.quantity || 1} onChange={(e) => h('quantity', e.target.value)} className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Priority</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Priority</label>
             <select value={d.priority || 'standard'} onChange={(e) => h('priority', e.target.value)} className={ic}>
               <option value="standard">Standard</option>
               <option value="rush">Rush</option>
@@ -1212,16 +1244,16 @@ function InlineToolForm({ toolData, onChange }) {
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs text-slate-400 mb-1">Remarks / Description</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Remarks / Description</label>
             <textarea value={d.remarks || ''} onChange={(e) => h('remarks', e.target.value)}
-              rows={2} placeholder="Customer's description of the problem"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+              rows={3} placeholder="Customer's description of the problem"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={d.warranty || false} onChange={(e) => h('warranty', e.target.checked)}
                 className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary" />
-              <span className="text-sm text-slate-300">Warranty Repair</span>
+              <span className="text-base text-slate-300">Warranty Repair</span>
             </label>
           </div>
         </div>
@@ -1229,30 +1261,27 @@ function InlineToolForm({ toolData, onChange }) {
 
       {/* Section 3 — Parts */}
       <div>
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-700">
-          <p className="text-xs text-slate-500 uppercase tracking-wide font-bold">Parts</p>
-          <button type="button" onClick={() => h('parts', [...(d.parts || []), { name: '', quantity: 1, unit_cost: '', status: 'pending' }])}
-            className="text-xs text-primary hover:text-blue-400 font-bold flex items-center gap-0.5 transition-colors">
+        <div className="flex items-center justify-between pb-2 mb-4 border-b border-slate-700">
+          <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
+          <button type="button" onClick={() => h('parts', [...(d.parts || []), { name: '', quantity: 1, status: 'pending' }])}
+            className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-0.5 transition-colors">
             <span className="material-symbols-outlined text-sm">add</span> Add Part
           </button>
         </div>
         {(d.parts || []).length > 0 && (
           <div className="space-y-2">
             {d.parts.map((part, pi) => (
-              <div key={pi} className="flex items-start gap-2 bg-slate-900/50 rounded-lg p-2 border border-slate-700">
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div key={pi} className="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                <div className="flex-1 flex gap-3">
                   <input placeholder="Part name *" value={part.name} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, name: e.target.value }; h('parts', updated);
-                  }} className="col-span-2 md:col-span-1 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
-                  <input type="number" min="1" placeholder="Qty" value={part.quantity} onChange={(e) => {
-                    const updated = [...d.parts]; updated[pi] = { ...part, quantity: parseInt(e.target.value) || 1 }; h('parts', updated);
-                  }} className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
-                  <input type="number" step="0.01" min="0" placeholder="Unit $" value={part.unit_cost ?? ''} onChange={(e) => {
-                    const updated = [...d.parts]; updated[pi] = { ...part, unit_cost: e.target.value === '' ? null : parseFloat(e.target.value) }; h('parts', updated);
-                  }} className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="w-[70%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => {
+                    const updated = [...d.parts]; updated[pi] = { ...part, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }; h('parts', updated);
+                  }} className="w-[15%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
                   <select value={part.status} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, status: e.target.value }; h('parts', updated);
-                  }} className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-primary">
+                  }} className="w-[15%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="pending">Pending</option>
                     <option value="ordered">Ordered</option>
                     <option value="received">Received</option>
@@ -1260,7 +1289,7 @@ function InlineToolForm({ toolData, onChange }) {
                   </select>
                 </div>
                 <button type="button" onClick={() => { h('parts', d.parts.filter((_, i) => i !== pi)); }}
-                  className="text-red-400 hover:text-red-300 mt-1 transition-colors">
+                  className="text-red-400 hover:text-red-300 transition-colors">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
               </div>
@@ -1272,21 +1301,21 @@ function InlineToolForm({ toolData, onChange }) {
       {/* Section 4 — Labour & Cost */}
       <div>
         <p className={sh}>Labour & Cost</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Labour Hours</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Labour Hours</label>
             <input type="number" step="0.5" min="0" value={d.labour_hours || ''} onChange={(e) => h('labour_hours', e.target.value)} placeholder="e.g., 2.5" className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Hourly Rate ($)</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Hourly Rate ($)</label>
             <input type="number" step="0.01" min="0" value={d.hourly_rate || ''} onChange={(e) => h('hourly_rate', e.target.value)} placeholder="e.g., 95.00" className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Zoho Quote Reference</label>
-            <input value={d.zoho_quote_ref || ''} onChange={(e) => h('zoho_quote_ref', e.target.value)} placeholder="Optional" className={ic} />
+            <label className="block text-sm text-slate-400 mb-1.5">Zoho Reference</label>
+            <input value={d.zoho_ref || ''} onChange={(e) => h('zoho_ref', e.target.value)} placeholder="Optional" className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Assigned Technician</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Assigned Technician</label>
             <input value={d.assigned_technician || ''} onChange={(e) => h('assigned_technician', e.target.value)} placeholder="Optional" className={ic} />
           </div>
         </div>
@@ -1295,13 +1324,13 @@ function InlineToolForm({ toolData, onChange }) {
       {/* Section 5 — Scheduling */}
       <div>
         <p className={sh}>Scheduling</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Date Received</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Date Received</label>
             <input type="date" value={d.date_received ? d.date_received.split('T')[0] : ''} onChange={(e) => h('date_received', e.target.value)} className={ic} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Est. Completion Date</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Est. Completion Date</label>
             <input type="date" value={d.estimated_completion || ''} onChange={(e) => h('estimated_completion', e.target.value)} className={ic} />
           </div>
         </div>
