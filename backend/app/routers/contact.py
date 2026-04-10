@@ -1,9 +1,8 @@
 import logging
+import requests as http_requests
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email
 from app.config import settings
 from app.database import get_database
 from app.services.email_service import format_pst_datetime
@@ -111,21 +110,21 @@ CNS Tool Repair | {city}, {province}
 """
 
     try:
-        # Create SendGrid message
-        message = Mail(
-            from_email=Email("message@cnstoolrepair.com", "Message"),
-            to_emails=settings.notification_email,
-            subject=f"Contact Form: {contact.subject}",
-            plain_text_content=email_body
+        response = http_requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "Message <message@cnstoolrepair.com>",
+                "to": [settings.notification_email],
+                "reply_to": f"{contact.name} <{contact.email}>",
+                "subject": f"Contact Form: {contact.subject}",
+                "text": email_body,
+            },
+            timeout=30,
         )
-
-        # Set Reply-To to customer's email for easy response
-        message.reply_to = Email(contact.email, contact.name)
-
-        # Send email via SendGrid
-        sg = SendGridAPIClient(settings.sendgrid_api_key)
-        response = sg.send(message)
-
         logger.info(f"Contact form email sent. Status: {response.status_code} | {contact.name} | {contact.subject}")
     except Exception as e:
         logger.error(f"Failed to send contact email: {str(e)}")
