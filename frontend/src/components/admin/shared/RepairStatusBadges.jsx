@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import { REPAIR_STATUSES, MAIN_STAGES, getStepInfo } from '../../../constants/repairStatuses';
 
 export const StatusBadge = ({ status, count }) => {
-  const cfg = REPAIR_STATUSES[status] || { label: status, color: 'bg-slate-700/60 text-slate-300 border-slate-500', dot: 'bg-slate-400' };
+  const cfg = REPAIR_STATUSES[status] || { label: status, color: 'bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-700/60 dark:text-slate-300 dark:border-slate-500', dot: 'bg-slate-400 dark:bg-slate-400' };
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${cfg.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
@@ -16,7 +16,7 @@ export const StepBadge = ({ status }) => {
   const info = getStepInfo(status);
   if (!info) return null;
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-700/50 border border-slate-600 text-xs text-slate-400 font-mono tabular-nums">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
       {info.current}/{info.total}
     </span>
   );
@@ -42,7 +42,7 @@ export const ProgressStepper = ({ status }) => {
           return (
             <Fragment key={stage}>
               {i > 0 && (
-                <div className={`h-1 flex-1 min-w-[8px] transition-all duration-300 ${isCompleted ? 'bg-blue-500' : 'bg-slate-700'}`} />
+                <div className={`h-1 flex-1 min-w-[8px] transition-all duration-300 ${isCompleted ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
               )}
               <div
                 title={stageCfg?.label}
@@ -51,7 +51,7 @@ export const ProgressStepper = ({ status }) => {
                     ? 'bg-blue-500 text-white shadow-md shadow-blue-500/30'
                     : isCompleted
                       ? 'bg-blue-500/80 text-white'
-                      : 'bg-slate-800 text-slate-600 border border-slate-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-300 dark:border-slate-700'
                   }`}
               >
                 {isCurrent && (
@@ -80,7 +80,7 @@ export const ProgressStepper = ({ status }) => {
               {i > 0 && <div className="flex-1 min-w-[8px]" />}
               <div className={`w-8 flex flex-col items-center flex-shrink-0`}>
                 <span className={`text-[9px] font-bold text-center leading-tight mt-0.5 ${
-                  isCurrent ? 'text-blue-400' : isCompleted ? 'text-slate-500' : 'text-slate-600'
+                  isCurrent ? 'text-blue-500 dark:text-blue-400' : isCompleted ? 'text-slate-400 dark:text-slate-500' : 'text-slate-400 dark:text-slate-600'
                 }`}>
                   {shortLabels[i]}
                 </span>

@@ -30,9 +30,9 @@ const getErrorMessage = (err, fallback) => {
 };
 
 const PRIORITIES = {
-  standard: { label: 'Standard', color: 'bg-slate-700 text-slate-300 border-slate-600' },
-  rush: { label: 'Rush', color: 'bg-orange-900/30 text-orange-400 border-orange-700' },
-  urgent: { label: 'Urgent', color: 'bg-red-900/30 text-red-400 border-red-700' },
+  standard: { label: 'Standard', color: 'bg-slate-200 text-slate-600 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600' },
+  rush:     { label: 'Rush',     color: 'bg-orange-100 text-orange-700 border-orange-400 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700' },
+  urgent:   { label: 'Urgent',   color: 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700' },
 };
 
 const getToolStatusSummary = (tools) => {
@@ -489,18 +489,18 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setSelectedCustomer(null); setEditing(false); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-400 hover:text-white rounded-xl transition-all text-sm font-bold"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
               <span>Customers</span>
             </button>
-            <span className="text-slate-600 text-sm">/</span>
+            <span className="text-slate-400 dark:text-slate-600 text-sm">/</span>
             <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
               <span className="text-primary font-black text-sm">
                 {(selectedCustomer.first_name || selectedCustomer.company_name || '?')[0].toUpperCase()}
               </span>
             </div>
-            <h2 className="text-lg font-black text-white uppercase truncate leading-tight">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase truncate leading-tight">
               {selectedCustomer.company_name || `${selectedCustomer.first_name} ${selectedCustomer.last_name}`}
             </h2>
           </div>
@@ -516,7 +516,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
             )}
             <button
               onClick={() => setDeleteConfirm(selectedCustomer)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-900/20 hover:bg-red-900/40 border border-red-800/30 hover:border-red-700/50 text-red-400 hover:text-red-300 rounded-xl text-sm font-bold transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 border border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/50 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-xl text-sm font-bold transition-all"
             >
               <span className="material-symbols-outlined text-sm">delete</span>
               Delete
@@ -527,22 +527,22 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
         <div className="space-y-6">
           {/* Customer Info Card */}
           <div>
-            <div className="bg-slate-800/80 rounded-xl border border-slate-700/60 shadow-lg shadow-black/20 overflow-hidden">
+            <div className="bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
               {/* Card header */}
-              <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-800/40 flex items-center gap-2 flex-wrap">
+              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 flex items-center gap-2 flex-wrap">
                 <div className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-primary" style={{ fontSize: '13px' }}>person</span>
                 </div>
-                <h3 className="text-xs font-black text-white uppercase tracking-wide">Customer Info</h3>
-                <span className="text-slate-700 text-xs select-none">·</span>
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wide">Customer Info</h3>
+                <span className="text-slate-500 dark:text-slate-700 text-xs select-none">·</span>
                 <div className="flex items-center gap-1 text-xs text-slate-500">
-                  <span className="material-symbols-outlined text-slate-600" style={{ fontSize: '12px' }}>calendar_month</span>
+                  <span className="material-symbols-outlined text-slate-400 dark:text-slate-600" style={{ fontSize: '12px' }}>calendar_month</span>
                   Since {formatDate(selectedCustomer.created_at)}
                 </div>
                 <div className="ml-auto">
                   <button
                     onClick={handleStartEdit}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>edit</span>
                     Edit
@@ -557,23 +557,23 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
                         <span className="text-xs text-slate-500">Company:</span>
-                        <span className="text-sm text-white font-bold">{selectedCustomer.company_name}</span>
+                        <span className="text-sm text-slate-900 dark:text-white font-bold">{selectedCustomer.company_name}</span>
                       </div>
-                      <span className="text-slate-700 text-xs select-none">|</span>
+                      <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                     </>
                   )}
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
                     <span className="text-xs text-slate-500">Contact:</span>
-                    <span className="text-sm text-white">{selectedCustomer.first_name} {selectedCustomer.last_name}</span>
+                    <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.first_name} {selectedCustomer.last_name}</span>
                   </div>
-                  <span className="text-slate-700 text-xs select-none">|</span>
+                  <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
                     <span className="text-xs text-slate-500">Email:</span>
                     <a href={`mailto:${selectedCustomer.email}`} className="text-sm text-primary hover:underline">{selectedCustomer.email}</a>
                   </div>
-                  <span className="text-slate-700 text-xs select-none">|</span>
+                  <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>phone</span>
                     <span className="text-xs text-slate-500">Phone:</span>
@@ -581,20 +581,20 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   </div>
                   {selectedCustomer.address && (
                     <>
-                      <span className="text-slate-700 text-xs select-none">|</span>
+                      <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
                         <span className="text-xs text-slate-500">Address:</span>
-                        <span className="text-sm text-white">{selectedCustomer.address}</span>
+                        <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.address}</span>
                       </div>
                     </>
                   )}
                 </div>
                 {selectedCustomer.customer_notes && (
-                  <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-slate-700/40">
+                  <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/40">
                     <span className="material-symbols-outlined text-slate-500 mt-0.5" style={{ fontSize: '13px' }}>sticky_note_2</span>
                     <span className="text-xs text-slate-500">Notes:</span>
-                    <span className="text-xs text-slate-300">{selectedCustomer.customer_notes}</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-300">{selectedCustomer.customer_notes}</span>
                   </div>
                 )}
               </div>
@@ -603,15 +603,15 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
           {/* Repair Jobs */}
           <div>
-            <div className="bg-slate-800/80 rounded-xl border border-slate-700/60 shadow-lg shadow-black/20 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-700/60 bg-slate-800/40 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-slate-700/60 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-slate-400 text-sm">build_circle</span>
+            <div className="bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-slate-500 dark:text-slate-400 text-sm">build_circle</span>
                 </div>
-                <h3 className="text-xs font-black text-white uppercase tracking-wide">
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wide">
                   Repair Jobs
                 </h3>
-                <span className="text-xs font-bold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full">
+                <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">
                   {loadingJobs ? '…' : customerJobs.length}
                 </span>
               </div>
@@ -621,11 +621,11 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                 </div>
               ) : customerJobs.length === 0 ? (
                 <div className="text-center py-12 px-5">
-                  <div className="w-16 h-16 bg-slate-700/40 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <div className="w-16 h-16 bg-slate-200/40 dark:bg-slate-700/40 rounded-2xl flex items-center justify-center mx-auto mb-3">
                     <span className="material-symbols-outlined text-3xl text-slate-500">build_circle</span>
                   </div>
-                  <p className="text-slate-400 text-sm font-medium">No repair jobs yet</p>
-                  <p className="text-slate-600 text-xs mt-1">Create the first job for this customer</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No repair jobs yet</p>
+                  <p className="text-slate-400 dark:text-slate-600 text-xs mt-1">Create the first job for this customer</p>
                   {onNewJob && (
                     <button
                       onClick={() => onNewJob(selectedCustomer)}
@@ -641,7 +641,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="bg-slate-800/80 border-b border-slate-700/60">
+                      <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60">
                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Work Order #</th>
                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Tools</th>
                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Priority</th>
@@ -650,15 +650,15 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         <th className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-700/40">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
                   {paginatedJobs.map((job) => (
                         <tr
                           key={job.id}
-                          className="group cursor-pointer transition-colors duration-150 hover:bg-slate-700/30"
+                          className="group cursor-pointer transition-colors duration-150 hover:bg-slate-100 dark:hover:bg-slate-700/30"
                           onClick={() => openWoDialog(job)}
                         >
                           <td className="py-3.5 px-4">
-                            <div className="text-white font-mono font-bold text-xs tracking-wide">{job.request_number}</div>
+                            <div className="text-slate-900 dark:text-white font-mono font-bold text-xs tracking-wide">{job.request_number}</div>
                             {job.source === 'online_request' && (
                               <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
                                 <span className="material-symbols-outlined text-xs" style={{fontSize:'11px'}}>public</span>
@@ -667,7 +667,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                             )}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className="inline-flex items-center gap-1 text-slate-300 text-xs font-medium">
+                            <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-xs font-medium">
                               <span className="material-symbols-outlined text-slate-500" style={{fontSize:'14px'}}>build</span>
                               {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
                             </span>
@@ -683,7 +683,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                               const tooltip = summary.map(s => `${REPAIR_STATUSES[s.status]?.label || s.status}: ${s.count}`).join(', ');
                               return (
                                 <div
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/40 border border-slate-700/50"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50"
                                   title={tooltip}
                                 >
                                   {summary.map(({ status }) => (
@@ -708,7 +708,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                               </button>
                               <button
                                 onClick={() => setDeleteJobConfirm(job)}
-                                className="p-1.5 bg-red-900/30 hover:bg-red-900/60 border border-red-800/40 hover:border-red-700 text-red-400 hover:text-red-300 rounded-lg transition-all"
+                                className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
                               >
                                 <span className="material-symbols-outlined text-sm">delete</span>
                               </button>
@@ -737,22 +737,22 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* Edit Customer Modal */}
         {editing && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-2xl border border-slate-700/50 max-w-lg w-full shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 max-w-lg w-full shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
-              <div className="px-6 py-4 border-b border-slate-700/60 flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined text-primary text-lg">edit</span>
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-white uppercase tracking-tight">Edit Customer</h3>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Edit Customer</h3>
                     <p className="text-xs text-slate-500 mt-0.5">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setEditing(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-all"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                 >
                   <span className="material-symbols-outlined text-base">close</span>
                 </button>
@@ -760,44 +760,44 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">First Name *</label>
-                    <input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">First Name *</label>
+                    <input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">Last Name *</label>
-                    <input value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Last Name *</label>
+                    <input value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Company</label>
-                  <input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Company</label>
+                  <input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">Email *</label>
-                    <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Email *</label>
+                    <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">Phone *</label>
-                    <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Phone *</label>
+                    <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Address</label>
-                  <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Address</label>
+                  <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Notes (Internal)</label>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Notes (Internal)</label>
                   <textarea
                     value={editForm.customer_notes}
                     onChange={(e) => setEditForm({ ...editForm, customer_notes: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none"
                   />
                 </div>
               </div>
               <div className="px-6 pb-6 flex gap-3">
-                <button onClick={() => setEditing(false)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold text-sm transition-all">
+                <button onClick={() => setEditing(false)} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold text-sm transition-all">
                   Cancel
                 </button>
                 <button onClick={handleSaveEdit} disabled={saving} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2">
@@ -811,23 +811,23 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* Delete Confirmation Modal */}
         {deleteConfirm && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-red-900/40 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-red-200 dark:border-red-900/40 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-red-600 via-red-400 to-red-600/30" />
               <div className="p-6">
                 <div className="flex items-center justify-center mb-5">
-                  <div className="w-16 h-16 bg-red-900/30 border border-red-800/40 rounded-2xl flex items-center justify-center">
-                    <span className="material-symbols-outlined text-4xl text-red-400">person_remove</span>
+                  <div className="w-16 h-16 bg-red-100 border border-red-300 dark:bg-red-900/30 dark:border-red-800/40 rounded-2xl flex items-center justify-center">
+                    <span className="material-symbols-outlined text-4xl text-red-600 dark:text-red-400">person_remove</span>
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-white uppercase text-center mb-2">Delete Customer</h3>
-                <p className="text-slate-300 text-center mb-1">
-                  Delete <span className="font-bold text-white">{deleteConfirm.company_name || `${deleteConfirm.first_name} ${deleteConfirm.last_name}`}</span>?
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase text-center mb-2">Delete Customer</h3>
+                <p className="text-slate-600 dark:text-slate-300 text-center mb-1">
+                  Delete <span className="font-bold text-slate-900 dark:text-white">{deleteConfirm.company_name || `${deleteConfirm.first_name} ${deleteConfirm.last_name}`}</span>?
                 </p>
-                <p className="text-red-300/80 text-sm text-center mb-6">Customers with linked repair jobs cannot be deleted.</p>
+                <p className="text-red-600/80 dark:text-red-300/80 text-sm text-center mb-6">Customers with linked repair jobs cannot be deleted.</p>
                 <div className="flex gap-3">
-                  <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold">Cancel</button>
-                  <button onClick={handleDeleteCustomer} className="flex-1 px-4 py-2.5 bg-red-900/60 hover:bg-red-800/80 border border-red-700/50 text-red-200 hover:text-white rounded-xl font-bold">Delete</button>
+                  <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold">Cancel</button>
+                  <button onClick={handleDeleteCustomer} className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 dark:bg-red-900/60 dark:hover:bg-red-800/80 border border-red-500 dark:border-red-700/50 text-white dark:text-red-200 rounded-xl font-bold">Delete</button>
                 </div>
               </div>
             </div>
@@ -836,27 +836,27 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* ── WO DETAIL DIALOG ─────────────────────────────── */}
         {woDialogJob && (
-          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-            <div className="bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-700/50 shadow-2xl shadow-black/50 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
               {/* Header */}
-              <div className="sticky top-0 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
+              <div className="sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-white">Work Order <span className="text-primary font-mono">{woDialogJob.request_number}</span></h3>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{woDialogJob.request_number}</span></h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-slate-500">Created {formatDate(woDialogJob.created_at)}</span>
                       {woDialogJob.source === 'online_request' && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-900/40 text-sky-400 border border-sky-700/50">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-300 dark:bg-sky-900/40 dark:text-sky-400 dark:border-sky-700/50">
                           <span className="material-symbols-outlined" style={{fontSize:'11px'}}>public</span>
                           Online Request
                         </span>
                       )}
                       {woDialogJob.source === 'walk_in' && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/50">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600/50">
                           <span className="material-symbols-outlined" style={{fontSize:'11px'}}>store</span>
                           Walk-in
                         </span>
@@ -864,7 +864,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setWoDialogJob(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <button onClick={() => setWoDialogJob(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
               </div>
@@ -874,9 +874,9 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400 text-base">build</span>
-                      <span className="text-sm font-black text-white uppercase tracking-tight">Tools</span>
-                      <span className="text-xs font-bold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full">{woDialogJob.tools.length}</span>
+                      <span className="material-symbols-outlined text-slate-500 dark:text-slate-400 text-base">build</span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Tools</span>
+                      <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{woDialogJob.tools.length}</span>
                     </div>
                     <button
                       onClick={() => setAddToolForm(getEmptyTool())}
@@ -888,20 +888,20 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   </div>
                   <div className="space-y-3">
                     {woDialogJob.tools.map((tool, idx) => (
-                      <div key={tool.tool_id} className="bg-slate-900/60 rounded-xl border border-slate-700/60 overflow-hidden">
+                      <div key={tool.tool_id} className="bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
                         {/* Tool Header */}
-                        <div className="p-4 border-b border-slate-700/60 bg-slate-800/40">
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black text-slate-400">
+                              <div className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black text-slate-500 dark:text-slate-400">
                                 {idx + 1}
                               </div>
                               <div>
-                                <div className="font-bold text-white text-sm">{tool.brand} {tool.model_number}</div>
+                                <div className="font-bold text-slate-900 dark:text-white text-sm">{tool.brand} {tool.model_number}</div>
                                 <div className="text-xs text-slate-500 mt-0.5">
                                   {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
-                                  {tool.serial_number && <><span className="mx-1 text-slate-700">·</span>S/N: {tool.serial_number}</>}
-                                  {tool.estimated_completion && <><span className="mx-1 text-slate-700">·</span>Est: {formatDate(tool.estimated_completion)}</>}
+                                  {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
+                                  {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDate(tool.estimated_completion)}</>}
                                 </div>
                               </div>
                             </div>
@@ -909,20 +909,20 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                               <StepBadge status={tool.status} />
                               <PriorityBadge priority={tool.priority} />
                               {tool.warranty && (
-                                <span className="hidden sm:inline px-2.5 py-1 rounded-full text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700/50">Warranty</span>
+                                <span className="hidden sm:inline px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                             {tool.warranty && (
-                              <span className="sm:hidden px-2.5 py-1 rounded-full text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700/50">Warranty</span>
+                              <span className="sm:hidden px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                             )}
-                            <button onClick={() => openStatusUpdate(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-300 rounded-lg text-xs font-bold transition-all">
+                            <button onClick={() => openStatusUpdate(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-xs font-bold transition-all">
                               <span className="material-symbols-outlined text-sm">update</span>
                               Update Status
                             </button>
                             {editingToolId !== tool.tool_id && (
-                              <button onClick={() => handleStartToolEdit(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-slate-400 hover:text-white rounded-lg text-xs font-bold transition-all">
+                              <button onClick={() => handleStartToolEdit(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all">
                                 <span className="material-symbols-outlined text-sm">edit</span>
                                 Edit
                               </button>
@@ -932,8 +932,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                 onClick={() => handleRemoveTool(tool.tool_id)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                                   removeConfirmId === tool.tool_id
-                                    ? 'bg-red-900/40 text-red-300 border-red-700/60'
-                                    : 'bg-slate-700/40 hover:bg-red-900/30 border-slate-600/40 hover:border-red-700/40 text-slate-500 hover:text-red-400'
+                                    ? 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700/60'
+                                    : 'bg-slate-200/40 dark:bg-slate-700/40 hover:bg-red-50 dark:hover:bg-red-900/30 border-slate-200 dark:border-slate-600/40 hover:border-red-300 dark:hover:border-red-700/40 text-slate-500 hover:text-red-600 dark:hover:text-red-400'
                                 }`}
                               >
                                 {removeConfirmId === tool.tool_id ? 'Confirm Remove?' : (
@@ -945,7 +945,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         </div>
 
                         {/* Status Bar + Stepper */}
-                        <div className="px-4 pt-3 pb-2 bg-slate-900/40 border-b border-slate-700/60">
+                        <div className="px-4 pt-3 pb-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700/60">
                           <div className="flex items-center gap-3 flex-wrap mb-1">
                             <StatusBadge status={tool.status} />
                             <div className="text-xs text-slate-500">
@@ -957,46 +957,46 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         </div>
 
                             {/* Tool Details — 3-column grid */}
-                            <div className="px-4 py-2.5 border-b border-slate-700/60">
+                            <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60">
                               <div className="grid grid-cols-3 gap-3 text-xs">
                                 {/* Left — Remarks */}
-                                <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700/40">
+                                <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
                                   <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Remarks</span>
-                                  <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-200' : 'text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
+                                  <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
                                 </div>
                                 {/* Middle — Parts */}
-                                <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700/40">
+                                <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
                                   <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
                                   {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                                     <div className="mt-1 space-y-1">
                                       {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
-                                        <div key={pi} className="flex items-center gap-1.5 bg-slate-900/60 rounded-md px-2 py-1 border border-slate-700/30">
-                                          <span className="text-slate-200 font-medium flex-1">{p.name}</span>
+                                        <div key={pi} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1 border border-slate-200/30 dark:border-slate-700/30">
+                                          <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}</span>
                                           <span className="text-slate-500">×{p.quantity}</span>
                                           <span className={`px-1.5 py-px rounded-full font-bold ${
-                                            p.status === 'installed' ? 'bg-green-900/40 text-green-400' :
-                                            p.status === 'received' ? 'bg-cyan-900/40 text-cyan-400' :
-                                            p.status === 'ordered' ? 'bg-orange-900/40 text-orange-400' :
-                                            'bg-slate-700 text-slate-400'
+                                            p.status === 'installed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                                            p.status === 'received' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' :
+                                            p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
+                                            'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                                           }`} style={{fontSize:'10px'}}>{p.status}</span>
                                         </div>
                                       ))}
                                     </div>
                                   ) : (
-                                    <p className="mt-1 text-slate-600 italic">No parts</p>
+                                    <p className="mt-1 text-slate-400 dark:text-slate-600 italic">No parts</p>
                                   )}
                                 </div>
                                 {/* Right — Labour / Technician / Zoho */}
-                                <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700/40 space-y-1.5">
+                                <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
                                   <div>
                                     <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Labour</span>
-                                    <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-200' : 'text-slate-600 italic'}`}>
+                                    <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
                                       {tool.labour_hours || tool.hourly_rate ? (
                                         <>
                                           {tool.labour_hours ? `${tool.labour_hours} hrs` : '—'}
                                           {tool.hourly_rate ? ` @ $${tool.hourly_rate}/hr` : ''}
                                           {tool.labour_hours && tool.hourly_rate && (
-                                            <> = <span className="text-white font-bold">${(parseFloat(tool.labour_hours) * parseFloat(tool.hourly_rate)).toFixed(2)}</span></>
+                                            <> = <span className="text-slate-900 dark:text-white font-bold">${(parseFloat(tool.labour_hours) * parseFloat(tool.hourly_rate)).toFixed(2)}</span></>
                                           )}
                                         </>
                                       ) : 'Not set'}
@@ -1004,27 +1004,27 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                   </div>
                                   <div>
                                     <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Technician</span>
-                                    <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-200' : 'text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
+                                    <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
                                   </div>
                                   <div>
                                     <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Zoho Ref</span>
-                                    <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-200' : 'text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
+                                    <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
                         {/* Photos */}
-                        <div className="px-4 pb-3 pt-3 border-t border-slate-700/60">
+                        <div className="px-4 pb-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <span className="material-symbols-outlined text-slate-500 text-sm">photo_library</span>
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Photos</span>
+                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Photos</span>
                               {tool.photos?.length > 0 && (
-                                <span className="text-xs font-bold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
+                                <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
                               )}
                             </div>
-                            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-500 text-slate-300 hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all">
+                            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all">
                               <span className="material-symbols-outlined text-sm">upload</span>
                               {uploadingPhoto === tool.tool_id ? 'Uploading...' : 'Add Photo'}
                               <input type="file" accept="image/*" className="hidden"
@@ -1039,17 +1039,17 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                   <img
                                     src={photo.startsWith('http') ? photo : `${API_BASE_URL}/uploads/${photo}`}
                                     alt={`Photo ${pidx + 1}`}
-                                    className="w-full h-full object-cover border border-slate-700 group-hover:border-primary/60 transition-all duration-200"
+                                    className="w-full h-full object-cover border border-slate-300 dark:border-slate-700 group-hover:border-primary/60 transition-all duration-200"
                                   />
                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-white text-lg">zoom_in</span>
+                                    <span className="material-symbols-outlined text-slate-900 dark:text-white text-lg">zoom_in</span>
                                   </div>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleDeletePhoto(tool.tool_id, photo); }}
                                     className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                     title="Delete photo"
                                   >
-                                    <span className="material-symbols-outlined text-white" style={{ fontSize: '12px' }}>close</span>
+                                    <span className="material-symbols-outlined text-slate-900 dark:text-white" style={{ fontSize: '12px' }}>close</span>
                                   </button>
                                 </div>
                               ))}
@@ -1059,27 +1059,27 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
                         {/* Status History */}
                         {tool.status_history?.length > 0 && (
-                          <details className="border-t border-slate-700/60 group/hist">
-                            <summary className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-800/40 transition-colors select-none list-none">
+                          <details className="border-t border-slate-200 dark:border-slate-700/60 group/hist">
+                            <summary className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-colors select-none list-none">
                               <span className="material-symbols-outlined text-slate-500 text-sm group-open/hist:rotate-90 transition-transform">chevron_right</span>
                               <span className="material-symbols-outlined text-slate-500 text-sm">history</span>
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Status History</span>
-                              <span className="text-xs font-bold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
+                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status History</span>
+                              <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
                             </summary>
                             <div className="px-4 pb-4 pt-2">
                               <div className="relative pl-5">
-                                <div className="absolute left-1.5 top-2 bottom-2 w-px bg-slate-700/60" />
+                                <div className="absolute left-1.5 top-2 bottom-2 w-px bg-slate-200/60 dark:bg-slate-700/60" />
                                 <div className="space-y-3">
                                   {[...tool.status_history].reverse().map((entry, hidx) => (
                                     <div key={hidx} className="relative flex items-start gap-3 text-xs">
-                                      <div className={`absolute -left-3.5 mt-1.5 w-2 h-2 rounded-full flex-shrink-0 border-2 border-slate-800 ${REPAIR_STATUSES[entry.status]?.dot || 'bg-slate-500'}`} />
+                                      <div className={`absolute -left-3.5 mt-1.5 w-2 h-2 rounded-full flex-shrink-0 border-2 border-slate-200 dark:border-slate-800 ${REPAIR_STATUSES[entry.status]?.dot || 'bg-slate-500'}`} />
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 flex-wrap">
                                           <StatusBadge status={entry.status} />
                                           <span className="text-slate-500">{formatDate(entry.timestamp)}</span>
                                         </div>
                                         {entry.notes && (
-                                          <p className="mt-1 text-slate-400 italic pl-0.5">"{entry.notes}"</p>
+                                          <p className="mt-1 text-slate-500 dark:text-slate-400 italic pl-0.5">"{entry.notes}"</p>
                                         )}
                                       </div>
                                     </div>
@@ -1100,18 +1100,18 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* Status Update Modal */}
         {statusUpdateModal && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-slate-700/50 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
-              <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-700/60">
+              <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
                 <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-primary text-lg">sync</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-black text-white uppercase">Update Status</h3>
-                  <p className="text-slate-400 text-xs truncate">{statusUpdateModal.brand} {statusUpdateModal.model_number}</p>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Update Status</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{statusUpdateModal.brand} {statusUpdateModal.model_number}</p>
                 </div>
-                <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all flex-shrink-0">
+                <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                   <span className="material-symbols-outlined text-base">close</span>
                 </button>
               </div>
@@ -1122,17 +1122,17 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                     <StatusBadge status={statusUpdateModal.status} />
                   </div>
                   {getValidNextStatuses(statusUpdateModal.status).length === 0 ? (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
                       <span className="material-symbols-outlined text-slate-500 text-base">info</span>
-                      <p className="text-sm text-slate-400 italic">Terminal status — cannot be changed.</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 italic">Terminal status — cannot be changed.</p>
                     </div>
                   ) : (
                     <>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">New Status</label>
+                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">New Status</label>
                       <select
                         value={statusUpdateForm.status}
                         onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, status: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                       >
                         {REPAIR_STATUSES_LIST
                           .filter(s => getValidNextStatuses(statusUpdateModal.status).includes(s.value))
@@ -1142,27 +1142,27 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Notes (optional)</label>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Notes (optional)</label>
                   <textarea
                     rows={2}
                     value={statusUpdateForm.notes}
                     onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, notes: e.target.value })}
                     placeholder="e.g., Parts arrived from supplier"
-                    className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Est. Completion Date (optional)</label>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Est. Completion Date (optional)</label>
                   <input
                     type="date"
                     value={statusUpdateForm.estimated_completion}
                     onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, estimated_completion: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
               </div>
               <div className="flex gap-3 px-6 pb-6">
-                <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                   {updatingStatus ? 'Updating...' : 'Update Status'}
                 </button>
@@ -1180,25 +1180,25 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
           const handleClose = () => { if (busy) return; isEdit ? handleCancelToolEdit() : setAddToolForm(null); };
           const handleSubmit = isEdit ? handleSaveToolEdit : handleAddToolToJob;
           return (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-            <div className="bg-slate-800 rounded-2xl max-w-4xl w-full my-8 border border-slate-700/50 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-4xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
-              <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-700/60">
+              <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
                 <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-primary text-lg">{isEdit ? 'edit' : 'build'}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-black text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
                   {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{formData.brand} {formData.model_number}</p>}
                 </div>
-                <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all flex-shrink-0">
+                <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                   <span className="material-symbols-outlined text-base">close</span>
                 </button>
               </div>
               <div className="p-6">
                 <InlineToolForm toolData={formData} onChange={setFormData} />
                 <div className="flex gap-3 mt-6">
-                  <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                  <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                   <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                     {busy ? (isEdit ? 'Saving...' : 'Adding...') : (isEdit ? 'Save Changes' : 'Add Tool')}
                   </button>
@@ -1211,23 +1211,23 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* Delete Job Confirm */}
         {deleteJobConfirm && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-red-900/40 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-red-200 dark:border-red-900/40 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-red-600 via-red-400 to-red-600/30" />
               <div className="p-6">
                 <div className="flex items-center justify-center mb-5">
-                  <div className="w-16 h-16 bg-red-900/30 border border-red-800/40 rounded-2xl flex items-center justify-center">
-                    <span className="material-symbols-outlined text-4xl text-red-400">delete_forever</span>
+                  <div className="w-16 h-16 bg-red-100 border border-red-300 dark:bg-red-900/30 dark:border-red-800/40 rounded-2xl flex items-center justify-center">
+                    <span className="material-symbols-outlined text-4xl text-red-600 dark:text-red-400">delete_forever</span>
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-white uppercase text-center mb-2">Delete Repair Job</h3>
-                <p className="text-slate-300 text-center mb-1">
-                  Delete job <span className="font-bold text-white font-mono">{deleteJobConfirm.request_number}</span>?
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase text-center mb-2">Delete Repair Job</h3>
+                <p className="text-slate-600 dark:text-slate-300 text-center mb-1">
+                  Delete job <span className="font-bold text-slate-900 dark:text-white font-mono">{deleteJobConfirm.request_number}</span>?
                 </p>
-                <p className="text-red-300/80 text-sm text-center mb-6">This will permanently delete all tool data and photos.</p>
+                <p className="text-red-600/80 dark:text-red-300/80 text-sm text-center mb-6">This will permanently delete all tool data and photos.</p>
                 <div className="flex gap-3">
-                  <button onClick={() => setDeleteJobConfirm(null)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all">Cancel</button>
-                  <button onClick={handleDeleteJob} className="flex-1 px-4 py-2.5 bg-red-900/60 hover:bg-red-800/80 border border-red-700/50 text-red-200 hover:text-white rounded-xl font-bold transition-all">
+                  <button onClick={() => setDeleteJobConfirm(null)} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all">Cancel</button>
+                  <button onClick={handleDeleteJob} className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 dark:bg-red-900/60 dark:hover:bg-red-800/80 border border-red-500 dark:border-red-700/50 text-white dark:text-red-200 rounded-xl font-bold transition-all">
                     Delete Permanently
                   </button>
                 </div>
@@ -1238,8 +1238,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* Photo Lightbox */}
         {selectedPhoto && (
-          <div className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4 cursor-pointer" onClick={() => setSelectedPhoto(null)}>
-            <button className="absolute top-4 right-4 text-white hover:text-slate-300 transition-colors">
+          <div className="fixed inset-0 z-[70] bg-black/90 dark:bg-black/95 flex items-center justify-center p-4 cursor-pointer" onClick={() => setSelectedPhoto(null)}>
+            <button className="absolute top-4 right-4 text-slate-900 dark:text-white hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
               <span className="material-symbols-outlined text-4xl">close</span>
             </button>
             <img
@@ -1259,7 +1259,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-black text-white uppercase tracking-tight">Customers</h2>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Customers</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manage customer profiles and repair history</p>
         </div>
         <button
@@ -1274,19 +1274,19 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
       {/* Search + Filter bar */}
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-lg">search</span>
           <input
             type="text"
             placeholder="Search by company, contact, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700/60 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/40 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/40 transition-all"
           />
         </div>
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-slate-300 rounded-xl text-xs font-bold transition-all"
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
           >
             <span className="material-symbols-outlined text-sm">close</span>
             Clear
@@ -1295,25 +1295,25 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
       </div>
 
       {/* Table */}
-      <div className="bg-slate-800/60 rounded-xl border border-slate-700/60 shadow-lg shadow-black/20 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-slate-700/60 bg-slate-800/40 flex items-center justify-between">
+      <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">All Customers</span>
-            <span className="text-xs font-bold bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{customers.length}</span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">All Customers</span>
+            <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">{customers.length}</span>
           </div>
         </div>
 
         {loading ? (
           <div className="text-center py-16">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">refresh</span>
-            <p className="mt-3 text-slate-400">Loading customers...</p>
+            <p className="mt-3 text-slate-500 dark:text-slate-400">Loading customers...</p>
           </div>
         ) : customers.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-16 h-16 bg-slate-700/40 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <div className="w-16 h-16 bg-slate-200/40 dark:bg-slate-700/40 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-3xl text-slate-500">group</span>
             </div>
-            <p className="text-slate-400 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
               {searchQuery ? 'No customers match your search' : 'No customers yet'}
             </p>
             {!searchQuery && (
@@ -1330,7 +1330,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase text-slate-500 bg-slate-800/50 border-b border-slate-700/60">
+                <thead className="text-xs uppercase text-slate-500 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60">
                   <tr>
                     <th className="py-3 px-4 font-bold">Company / Contact</th>
                     <th className="py-3 px-4 font-bold">Email</th>
@@ -1340,25 +1340,25 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                     <th className="py-3 px-4 text-right font-bold">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-700/40">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
                   {paginated.map((customer) => (
                     <tr
                       key={customer.id}
-                      className="hover:bg-slate-700/30 transition-colors cursor-pointer group"
+                      className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
                       onClick={() => openCustomer(customer)}
                     >
                       <td className="py-3.5 px-4">
-                        <div className="text-white font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</div>
-                        {customer.company_name && <div className="text-slate-400 text-xs mt-0.5">{customer.first_name} {customer.last_name}</div>}
+                        <div className="text-slate-900 dark:text-white font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</div>
+                        {customer.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{customer.first_name} {customer.last_name}</div>}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-300">{customer.email}</td>
-                      <td className="py-3.5 px-4 text-slate-300">{customer.phone}</td>
-                      <td className="py-3.5 px-4 text-slate-400 text-xs">{customer.address || <span className="text-slate-600">—</span>}</td>
-                      <td className="py-3.5 px-4 text-slate-400 text-xs">{formatDate(customer.created_at)}</td>
+                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{customer.email}</td>
+                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{customer.phone}</td>
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{customer.address || <span className="text-slate-400 dark:text-slate-600">—</span>}</td>
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{formatDate(customer.created_at)}</td>
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={(e) => { e.stopPropagation(); openCustomer(customer); }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-700/60 group-hover:bg-primary/20 group-hover:border-primary/30 hover:text-primary border border-slate-600/50 text-slate-300 rounded-lg text-xs font-bold transition-all"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 group-hover:bg-primary/20 group-hover:border-primary/30 hover:text-primary border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold transition-all"
                         >
                           <span className="material-symbols-outlined text-sm">open_in_new</span>
                           Open
@@ -1385,96 +1385,96 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
       {/* New Customer Modal */}
       {showNewForm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-800 rounded-2xl max-w-lg w-full border border-slate-700/50 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
-            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-700/60">
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
               <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <span className="material-symbols-outlined text-primary text-lg">person_add</span>
               </div>
-              <h3 className="text-base font-black text-white uppercase flex-1">New Customer</h3>
-              <button onClick={() => setShowNewForm(false)} className="w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all">
+              <h3 className="text-base font-black text-slate-900 dark:text-white uppercase flex-1">New Customer</h3>
+              <button onClick={() => setShowNewForm(false)} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
             <form onSubmit={handleCreateCustomer} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-1">First Name *</label>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">First Name *</label>
                   <input
                     type="text"
                     required
                     value={newForm.first_name}
                     onChange={(e) => setNewForm({ ...newForm, first_name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-1">Last Name *</label>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Last Name *</label>
                   <input
                     type="text"
                     required
                     value={newForm.last_name}
                     onChange={(e) => setNewForm({ ...newForm, last_name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-1">Company Name</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Company Name</label>
                 <input
                   type="text"
                   value={newForm.company_name}
                   onChange={(e) => setNewForm({ ...newForm, company_name: e.target.value })}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-1">Email *</label>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Email *</label>
                   <input
                     type="email"
                     required
                     value={newForm.email}
                     onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-1">Phone *</label>
+                  <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Phone *</label>
                   <input
                     type="text"
                     required
                     value={newForm.phone}
                     onChange={(e) => setNewForm({ ...newForm, phone: formatPhone(e.target.value) })}
                     placeholder="###-###-####"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-1">Address</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Address</label>
                 <input
                   type="text"
                   value={newForm.address}
                   onChange={(e) => setNewForm({ ...newForm, address: e.target.value })}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-1">Internal Notes</label>
+                <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Internal Notes</label>
                 <textarea
                   value={newForm.customer_notes}
                   onChange={(e) => setNewForm({ ...newForm, customer_notes: e.target.value })}
                   rows={3}
                   placeholder="e.g., Net 30, VIP customer"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowNewForm(false)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all">
+                <button type="button" onClick={() => setShowNewForm(false)} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all">
                   Cancel
                 </button>
                 <button type="submit" disabled={creating} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
@@ -1492,8 +1492,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 function InlineToolForm({ toolData, onChange }) {
   const h = (field, value) => onChange({ ...toolData, [field]: value });
   const d = toolData;
-  const ic = "w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
-  const sh = "text-sm text-slate-500 uppercase tracking-wide font-bold mb-4 pb-2 border-b border-slate-700";
+  const ic = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
+  const sh = "text-sm text-slate-500 uppercase tracking-wide font-bold mb-4 pb-2 border-b border-slate-300 dark:border-slate-700";
   return (
     <div className="space-y-6 text-base">
       {/* Section 1 — Tool Identification */}
@@ -1501,19 +1501,19 @@ function InlineToolForm({ toolData, onChange }) {
         <p className={sh}>Tool Identification</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
             <input required value={d.tool_type || ''} onChange={(e) => h('tool_type', e.target.value)} placeholder="e.g., Impact Wrench" className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
             <input required value={d.brand || ''} onChange={(e) => h('brand', e.target.value)} placeholder="e.g., Ingersoll Rand" className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
             <input required value={d.model_number || ''} onChange={(e) => h('model_number', e.target.value)} placeholder="e.g., 2135TIMAX" className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Serial Number</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Serial Number</label>
             <input value={d.serial_number || ''} onChange={(e) => h('serial_number', e.target.value)} placeholder="Optional" className={ic} />
           </div>
         </div>
@@ -1524,11 +1524,11 @@ function InlineToolForm({ toolData, onChange }) {
         <p className={sh}>Job Details</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Quantity</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Quantity</label>
             <input type="number" min="1" value={d.quantity || 1} onChange={(e) => h('quantity', e.target.value)} className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Priority</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Priority</label>
             <select value={d.priority || 'standard'} onChange={(e) => h('priority', e.target.value)} className={ic}>
               <option value="standard">Standard</option>
               <option value="rush">Rush</option>
@@ -1536,16 +1536,16 @@ function InlineToolForm({ toolData, onChange }) {
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm text-slate-400 mb-1.5">Remarks / Description</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Remarks / Description</label>
             <textarea value={d.remarks || ''} onChange={(e) => h('remarks', e.target.value)}
               rows={3} placeholder="Customer's description of the problem"
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={d.warranty || false} onChange={(e) => h('warranty', e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary" />
-              <span className="text-base text-slate-300">Warranty Repair</span>
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-primary focus:ring-primary" />
+              <span className="text-base text-slate-600 dark:text-slate-300">Warranty Repair</span>
             </label>
           </div>
         </div>
@@ -1553,7 +1553,7 @@ function InlineToolForm({ toolData, onChange }) {
 
       {/* Section 3 — Parts */}
       <div>
-        <div className="flex items-center justify-between pb-2 mb-4 border-b border-slate-700">
+        <div className="flex items-center justify-between pb-2 mb-4 border-b border-slate-300 dark:border-slate-700">
           <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
           <button type="button" onClick={() => h('parts', [...(d.parts || []), { name: '', quantity: 1, status: 'pending' }])}
             className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-0.5 transition-colors">
@@ -1563,17 +1563,17 @@ function InlineToolForm({ toolData, onChange }) {
         {(d.parts || []).length > 0 && (
           <div className="space-y-2">
             {d.parts.map((part, pi) => (
-              <div key={pi} className="flex items-center gap-3 bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+              <div key={pi} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-300 dark:border-slate-700">
                 <div className="flex-1 flex gap-3">
                   <input placeholder="Part name *" value={part.name} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, name: e.target.value }; h('parts', updated);
-                  }} className="w-[70%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="w-[70%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
                   <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }; h('parts', updated);
-                  }} className="w-[15%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="w-[15%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
                   <select value={part.status} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, status: e.target.value }; h('parts', updated);
-                  }} className="w-[15%] px-4 py-2 bg-slate-800 border border-slate-600 rounded text-white text-base focus:outline-none focus:ring-1 focus:ring-primary">
+                  }} className="w-[15%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="pending">Pending</option>
                     <option value="ordered">Ordered</option>
                     <option value="received">Received</option>
@@ -1581,7 +1581,7 @@ function InlineToolForm({ toolData, onChange }) {
                   </select>
                 </div>
                 <button type="button" onClick={() => { h('parts', d.parts.filter((_, i) => i !== pi)); }}
-                  className="text-red-400 hover:text-red-300 transition-colors">
+                  className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
                   <span className="material-symbols-outlined text-sm">close</span>
                 </button>
               </div>
@@ -1595,19 +1595,19 @@ function InlineToolForm({ toolData, onChange }) {
         <p className={sh}>Labour & Cost</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Labour Hours</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Labour Hours</label>
             <input type="number" step="0.5" min="0" value={d.labour_hours || ''} onChange={(e) => h('labour_hours', e.target.value)} placeholder="e.g., 2.5" className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Hourly Rate ($)</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Hourly Rate ($)</label>
             <input type="number" step="0.01" min="0" value={d.hourly_rate || ''} onChange={(e) => h('hourly_rate', e.target.value)} placeholder="e.g., 95.00" className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Zoho Reference</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Reference</label>
             <input value={d.zoho_ref || ''} onChange={(e) => h('zoho_ref', e.target.value)} placeholder="Optional" className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Assigned Technician</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
             <input value={d.assigned_technician || ''} onChange={(e) => h('assigned_technician', e.target.value)} placeholder="Optional" className={ic} />
           </div>
         </div>
@@ -1618,11 +1618,11 @@ function InlineToolForm({ toolData, onChange }) {
         <p className={sh}>Scheduling</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Date Received</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Date Received</label>
             <input type="date" value={d.date_received ? d.date_received.split('T')[0] : ''} onChange={(e) => h('date_received', e.target.value)} className={ic} />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Est. Completion Date</label>
+            <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Est. Completion Date</label>
             <input type="date" value={d.estimated_completion || ''} onChange={(e) => h('estimated_completion', e.target.value)} className={ic} />
           </div>
         </div>
