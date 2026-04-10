@@ -6,8 +6,17 @@ import {
   getValidNextStatuses,
 } from '../../../constants/repairStatuses';
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
+import PaginationBar from '../shared/PaginationBar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const getErrorMessage = (err, fallback) => {
+  const detail = err?.response?.data?.detail;
+  if (!detail) return err?.message || fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+  return fallback;
+};
 
 function formatPhone(raw) {
   const digits = raw.replace(/\D/g, '').slice(0, 10);
@@ -62,7 +71,7 @@ const getEmptyJob = () => ({
   address: '', customer_notes: '', source: 'walk_in', tools: [getEmptyTool()]
 });
 
-export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed }) {
+export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate }) {
   const showToast = useToast();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +85,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Detail view state
+  const [jobCustomer, setJobCustomer] = useState(null); // linked customer record (single source of truth)
   const [editingJob, setEditingJob] = useState(false);
+  const [savingJobEdit, setSavingJobEdit] = useState(false);
   const [jobEditForm, setJobEditForm] = useState({});
   const [statusUpdateModal, setStatusUpdateModal] = useState(null); // tool object
   const [statusUpdateForm, setStatusUpdateForm] = useState({ status: '', notes: '', estimated_completion: '' });
@@ -207,13 +218,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       if (e.key !== 'Escape') return;
       if (selectedPhoto) { setSelectedPhoto(null); return; }
       if (statusUpdateModal && !updatingStatus) { setStatusUpdateModal(null); return; }
+      if (editingToolId && !savingToolEdit) { handleCancelToolEdit(); return; }
       if (addToolForm && !addingTool) { setAddToolForm(null); return; }
+      if (editingJob) { setEditingJob(false); return; }
       if (deleteConfirmId) { setDeleteConfirmId(null); return; }
       if (selectedJob) { setSelectedJob(null); return; }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, addToolForm, addingTool, deleteConfirmId, selectedJob]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, editingJob, deleteConfirmId, selectedJob]);
 
   const fetchJobs = async () => {
     try {
@@ -222,6 +235,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       if (statusFilter) params.status = statusFilter;
       const data = await repairsAPI.list(params);
       setJobs(data);
+      if (onCountUpdate) onCountUpdate(data.length);
     } catch {
       showToast('error', 'Failed to load repair jobs');
     } finally {
@@ -260,23 +274,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   });
 
   const totalResults = filteredJobs.length;
-  const totalPages = Math.ceil(totalResults / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
 
-  const getPageNumbers = () => {
-    const pages = [];
-    if (totalPages <= 5) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else if (currentPage <= 3) {
-      pages.push(1, 2, 3, 4, '...', totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
-    } else {
-      pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
-    }
-    return pages;
-  };
 
   // Summary of tool statuses for list view
   const getToolStatusSummary = (tools) => {
@@ -284,6 +284,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     const counts = {};
     tools.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
     return Object.entries(counts).map(([status, count]) => ({ status, count }));
+  };
+
+  // Priority order for dot sorting: most actionable first
+  const STATUS_PRIORITY = ['abandoned', 'declined', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
+  const byStatusPriority = (a, b) => {
+    const ai = STATUS_PRIORITY.indexOf(a.status);
+    const bi = STATUS_PRIORITY.indexOf(b.status);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   };
 
   // ── CREATE NEW JOB ───────────────────────────────────
@@ -343,9 +351,17 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         };
       }
 
-      const created = await repairsAPI.create(payload);
+      let created;
+      try {
+        created = await repairsAPI.create(payload);
+      } catch (err) {
+        console.error('handleCreateJob API failed:', err);
+        showToast('error', getErrorMessage(err, 'Failed to create repair job'));
+        setSavingJob(false);
+        return;
+      }
 
-      // Upload any staged photos sequentially after job is created
+      // API succeeded — upload staged photos then update UI
       const hasPhotos = pendingPhotosByIndex.some(arr => arr.length > 0);
       let finalJob = created;
       if (hasPhotos) {
@@ -354,7 +370,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         for (let i = 0; i < pendingPhotosByIndex.length; i++) {
           const files = pendingPhotosByIndex[i];
           if (!files.length) continue;
-          const toolId = created.tools[i]?.tool_id;
+          const toolId = created.tools?.[i]?.tool_id;
           if (!toolId) continue;
           for (const file of files) {
             try {
@@ -365,25 +381,23 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           }
         }
         setUploadingPhotos(false);
-        // Re-fetch to get final state with photo URLs
         try { finalJob = await repairsAPI.get(created.id); } catch { /* use created */ }
         if (photoErrors.length > 0) {
-          setJobs([finalJob, ...jobs]);
+          setJobs(prev => [finalJob, ...prev]);
           handleCloseNewJob();
           showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
+          setSavingJob(false);
           return;
         }
       }
 
-      setJobs([finalJob, ...jobs]);
+      setJobs(prev => [finalJob, ...prev]);
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
-    } catch (error) {
-      const detail = error.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map(d => d.msg).join(', ')
-        : (detail || 'Failed to create repair job');
-      showToast('error', msg);
+      setSavingJob(false);
+    } catch (err) {
+      console.error('handleCreateJob unexpected error:', err);
+      showToast('error', getErrorMessage(err, 'Failed to create repair job'));
     } finally {
       setSavingJob(false);
       setUploadingPhotos(false);
@@ -396,6 +410,17 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const fresh = await repairsAPI.get(job.id);
       setSelectedJob(fresh);
       setEditingJob(false);
+      // Fetch linked customer record (single source of truth)
+      if (fresh.customer_id) {
+        try {
+          const cust = await customersAPI.get(fresh.customer_id);
+          setJobCustomer(cust);
+        } catch {
+          setJobCustomer(null);
+        }
+      } else {
+        setJobCustomer(null);
+      }
     } catch {
       showToast('error', 'Failed to load repair job');
     }
@@ -413,14 +438,58 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   };
 
   const handleSaveJobEdit = async () => {
+    setSavingJobEdit(true);
     try {
-      const updated = await repairsAPI.update(selectedJob.id, jobEditForm);
-      setSelectedJob(updated);
-      setJobs(jobs.map(j => j.id === updated.id ? updated : j));
+      if (selectedJob.customer_id) {
+        // Write 1: update customer record (single source of truth)
+        let updatedCustomer;
+        try {
+          updatedCustomer = await customersAPI.update(selectedJob.customer_id, jobEditForm);
+        } catch (err) {
+          console.error('handleSaveJobEdit customer update failed:', err);
+          showToast('error', getErrorMessage(err, 'Failed to update customer'));
+          return;
+        }
+        // Write 2: sync denormalized fields on the job
+        const jobUpdate = {
+          company_name: updatedCustomer.company_name,
+          first_name: updatedCustomer.first_name,
+          last_name: updatedCustomer.last_name,
+          email: updatedCustomer.email,
+          phone: updatedCustomer.phone,
+          address: updatedCustomer.address,
+          customer_notes: updatedCustomer.customer_notes,
+        };
+        let updatedJob;
+        try {
+          updatedJob = await repairsAPI.update(selectedJob.id, jobUpdate);
+        } catch (err) {
+          console.error('handleSaveJobEdit job sync failed:', err);
+          // Customer was already saved — report partial success
+          setJobCustomer(updatedCustomer);
+          showToast('success', 'Customer updated. Job sync failed — refresh to see latest.');
+          setEditingJob(false);
+          return;
+        }
+        setJobCustomer(updatedCustomer);
+        setSelectedJob(updatedJob);
+        setJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
+      } else {
+        let updated;
+        try {
+          updated = await repairsAPI.update(selectedJob.id, jobEditForm);
+        } catch (err) {
+          console.error('handleSaveJobEdit job update failed:', err);
+          showToast('error', getErrorMessage(err, 'Failed to update customer'));
+          return;
+        }
+        setSelectedJob(updated);
+        setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+      }
       setEditingJob(false);
-      showToast('success', 'Job details updated');
-    } catch {
-      showToast('error', 'Failed to update job');
+      showToast('success', 'Customer details updated');
+    } finally {
+      setSavingJobEdit(false);
     }
   };
 
@@ -434,26 +503,25 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const handleStatusUpdate = async () => {
     if (!statusUpdateModal) return;
     setUpdatingStatus(true);
+    let updated;
     try {
       const payload = {
         status: statusUpdateForm.status,
         notes: statusUpdateForm.notes || null,
         estimated_completion: statusUpdateForm.estimated_completion || null,
       };
-      const updated = await repairsAPI.updateToolStatus(selectedJob.id, statusUpdateModal.tool_id, payload);
-      setSelectedJob(updated);
-      setJobs(jobs.map(j => j.id === updated.id ? updated : j));
-      setStatusUpdateModal(null);
-      showToast('success', 'Tool status updated');
+      updated = await repairsAPI.updateToolStatus(selectedJob.id, statusUpdateModal.tool_id, payload);
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map(d => d.msg).join(', ')
-        : (detail || 'Failed to update tool status');
-      showToast('error', msg);
-    } finally {
+      console.error('handleStatusUpdate failed:', err);
+      showToast('error', getErrorMessage(err, 'Failed to update tool status'));
       setUpdatingStatus(false);
+      return;
     }
+    setSelectedJob(updated);
+    setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+    setStatusUpdateModal(null);
+    showToast('success', 'Tool status updated');
+    setUpdatingStatus(false);
   };
 
   // ── EDIT TOOL DETAILS ───────────────────────────────
@@ -486,6 +554,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const handleSaveToolEdit = async () => {
     if (!editingToolId || !toolEditForm) return;
     setSavingToolEdit(true);
+    let updated;
     try {
       const payload = {
         ...toolEditForm,
@@ -499,23 +568,26 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         assigned_technician: toolEditForm.assigned_technician || null,
         estimated_completion: toolEditForm.estimated_completion || null,
       };
-      const updated = await repairsAPI.updateTool(selectedJob.id, editingToolId, payload);
-      setSelectedJob(updated);
-      setJobs(jobs.map(j => j.id === updated.id ? updated : j));
-      setEditingToolId(null);
-      setToolEditForm(null);
-      showToast('success', 'Tool details updated');
-    } catch {
-      showToast('error', 'Failed to update tool');
-    } finally {
+      updated = await repairsAPI.updateTool(selectedJob.id, editingToolId, payload);
+    } catch (err) {
+      console.error('handleSaveToolEdit failed:', err);
+      showToast('error', getErrorMessage(err, 'Failed to update tool'));
       setSavingToolEdit(false);
+      return;
     }
+    setSelectedJob(updated);
+    setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+    setEditingToolId(null);
+    setToolEditForm(null);
+    showToast('success', 'Tool details updated');
+    setSavingToolEdit(false);
   };
 
   // ── ADD TOOL TO EXISTING JOB ─────────────────────────
   const handleAddTool = async () => {
     if (!addToolForm) return;
     setAddingTool(true);
+    let updated;
     try {
       const payload = {
         ...addToolForm,
@@ -529,16 +601,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         assigned_technician: addToolForm.assigned_technician || null,
         estimated_completion: addToolForm.estimated_completion || null,
       };
-      const updated = await repairsAPI.addTool(selectedJob.id, payload);
-      setSelectedJob(updated);
-      setJobs(jobs.map(j => j.id === updated.id ? updated : j));
-      setAddToolForm(null);
-      showToast('success', 'Tool added to repair job');
-    } catch {
-      showToast('error', 'Failed to add tool');
-    } finally {
+      updated = await repairsAPI.addTool(selectedJob.id, payload);
+    } catch (err) {
+      console.error('handleAddTool failed:', err);
+      showToast('error', getErrorMessage(err, 'Failed to add tool'));
       setAddingTool(false);
+      return;
     }
+    setSelectedJob(updated);
+    setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+    setAddToolForm(null);
+    showToast('success', 'Tool added to repair job');
+    setAddingTool(false);
   };
 
   const handleRemoveTool = async (toolId) => {
@@ -606,126 +680,186 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Repair Jobs</h2>
+        <div>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Repair Jobs</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Manage work orders and tool repairs</p>
+        </div>
         <button
           onClick={handleOpenNewJob}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30"
         >
-          <span className="material-symbols-outlined text-sm">add</span>
+          <span className="material-symbols-outlined text-base">add</span>
           New Repair Job
         </button>
       </div>
 
       {/* Filters */}
-      <div className="mb-6 p-6 bg-slate-800 rounded-lg border border-slate-700">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-300 mb-2">Search</label>
+      <div className="mb-5 p-4 bg-slate-800/60 rounded-xl border border-slate-700/60 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">search</span>
             <input
               type="text"
-              placeholder="Company, contact, email, request #"
+              placeholder="Search company, contact, email, request #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
             />
           </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-300 mb-2">Filter by Tool Status</label>
+          {/* Status filter */}
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">label</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              className="pl-10 pr-8 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
             >
               <option value="">All Statuses</option>
               {REPAIR_STATUSES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-300 mb-2">Filter by Priority</label>
+          {/* Priority filter */}
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">flag</span>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              className="pl-10 pr-8 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
             >
               <option value="">All Priorities</option>
               {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
+          {/* Clear filters */}
+          {(searchQuery || statusFilter || priorityFilter) && (
+            <button
+              onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); }}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600 rounded-xl text-slate-400 hover:text-white text-sm font-bold transition-all"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
       {/* Jobs Table */}
-      <div className="p-6 bg-slate-800 rounded-lg border border-slate-700">
-        <h3 className="text-lg font-bold text-white mb-4">Jobs ({totalResults})</h3>
+      <div className="bg-slate-800/60 rounded-xl border border-slate-700/60 shadow-lg shadow-black/10 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-700/60 bg-slate-800/80">
+          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">
+            Work Orders
+            <span className="ml-2 px-2 py-0.5 bg-slate-700 rounded-full text-slate-400 font-bold">{totalResults}</span>
+          </h3>
+        </div>
 
         {loading ? (
-          <div className="text-center py-8">
-            <span className="material-symbols-outlined text-4xl text-primary animate-spin">refresh</span>
-            <p className="mt-2 text-slate-400">Loading repair jobs...</p>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="material-symbols-outlined text-5xl text-primary animate-spin">autorenew</span>
+            <p className="text-slate-400 text-sm">Loading repair jobs...</p>
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div className="text-center py-8">
-            <span className="material-symbols-outlined text-4xl text-slate-600">build</span>
-            <p className="mt-2 text-slate-400">
-              {searchQuery || statusFilter || priorityFilter ? 'No jobs match your filters' : 'No repair jobs yet. Create one or convert an online request.'}
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-slate-700/50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-4xl text-slate-500">build_circle</span>
+            </div>
+            <div className="text-center">
+              <p className="text-white font-bold text-base">
+                {searchQuery || statusFilter || priorityFilter ? 'No jobs match your filters' : 'No repair jobs yet'}
+              </p>
+              <p className="text-slate-500 text-sm mt-1">
+                {searchQuery || statusFilter || priorityFilter
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'Create a new job or convert an online repair request'}
+              </p>
+            </div>
+            {!searchQuery && !statusFilter && !priorityFilter && (
+              <button
+                onClick={handleOpenNewJob}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+                New Repair Job
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-400 border-b border-slate-700">
-                <tr>
-                  <th className="py-3 px-4">Work Order #</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Tools</th>
-                  <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">Status Summary</th>
-                  <th className="py-3 px-4">Created</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+              <thead>
+                <tr className="bg-slate-800/80 border-b border-slate-700/60">
+                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Work Order #</th>
+                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Customer</th>
+                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Tools</th>
+                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Priority</th>
+                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Status</th>
+                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Created</th>
+                  <th className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-slate-700/40">
                 {paginatedJobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-slate-700/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="text-slate-300 font-mono text-xs">{job.request_number}</div>
+                  <tr
+                    key={job.id}
+                    className="group hover:bg-slate-700/30 transition-colors duration-150 cursor-pointer"
+                    onClick={() => openJob(job)}
+                  >
+                    <td className="py-3.5 px-4">
+                      <div className="text-white font-mono font-bold text-xs tracking-wide">{job.request_number}</div>
                       {job.source === 'online_request' && (
-                        <span className="text-xs text-slate-500">Online</span>
+                        <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
+                          <span className="material-symbols-outlined text-xs" style={{fontSize:'11px'}}>public</span>
+                          Online
+                        </span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="text-slate-300 font-bold">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
+                    <td className="py-3.5 px-4">
+                      <div className="text-white font-semibold text-sm">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
                       {job.company_name && <div className="text-slate-400 text-xs">{job.first_name} {job.last_name}</div>}
                     </td>
-                    <td className="py-3 px-4 text-slate-300">
-                      {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1 text-slate-300 text-xs font-medium">
+                        <span className="material-symbols-outlined text-slate-500" style={{fontSize:'14px'}}>build</span>
+                        {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
+                      </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <PriorityBadge priority={getHighestPriority(job.tools)} />
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {getToolStatusSummary(job.tools)?.map(({ status, count }) => (
-                          <span key={status} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border ${getStatusConfig(status).color}`}>
-                            {count > 1 && <span>{count}×</span>}
-                            {getStatusConfig(status).label}
-                          </span>
-                        ))}
-                      </div>
+                    <td className="py-3.5 px-4">
+                      {job.tools?.length === 1 ? (
+                        <StatusBadge status={job.tools[0].status} />
+                      ) : (() => {
+                        const summary = (getToolStatusSummary(job.tools) || []).sort(byStatusPriority);
+                        const tooltip = summary.map(s => `${REPAIR_STATUSES[s.status]?.label || s.status}: ${s.count}`).join(', ');
+                        return (
+                          <div
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/40 border border-slate-700/50"
+                            title={tooltip}
+                          >
+                            {summary.map(({ status }) => (
+                              <span
+                                key={status}
+                                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${REPAIR_STATUSES[status]?.dot || 'bg-slate-400'}`}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
-                    <td className="py-3 px-4 text-slate-400 text-xs">{formatDateShort(job.created_at)}</td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">{formatDateShort(job.created_at)}</td>
+                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openJob(job)}
-                          className="inline-flex items-center gap-1 px-3 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm"
                         >
-                          <span className="material-symbols-outlined text-sm">visibility</span>
-                          Manage
+                          <span className="material-symbols-outlined text-sm">open_in_new</span>
+                          Open
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(job)}
-                          className="inline-flex items-center gap-1 px-3 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded-lg text-xs font-bold transition-all"
+                          className="p-1.5 bg-red-900/30 hover:bg-red-900/60 border border-red-800/40 hover:border-red-700 text-red-400 hover:text-red-300 rounded-lg transition-all"
                         >
                           <span className="material-symbols-outlined text-sm">delete</span>
                         </button>
@@ -739,176 +873,127 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         )}
 
         {/* Pagination */}
-        {!loading && totalResults > pageSize && (
-          <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
-            <div className="text-sm text-slate-400">
-              Showing <span className="text-white font-bold">{startIndex + 1}</span> to{' '}
-              <span className="text-white font-bold">{Math.min(startIndex + pageSize, totalResults)}</span> of{' '}
-              <span className="text-white font-bold">{totalResults}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                className="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <span className="material-symbols-outlined text-sm">chevron_left</span>
-              </button>
-              {getPageNumbers().map((page, idx) => (
-                page === '...' ? (
-                  <span key={`e-${idx}`} className="px-3 py-2 text-slate-500">...</span>
-                ) : (
-                  <button key={page} onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded-lg font-bold text-sm transition-all ${currentPage === page ? 'bg-primary text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
-                    {page}
-                  </button>
-                )
-              ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <span className="material-symbols-outlined text-sm">chevron_right</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-slate-400">Show:</label>
-              <select value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-          </div>
+        {!loading && (
+          <PaginationBar
+            currentPage={currentPage}
+            totalItems={totalResults}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+
+          />
         )}
       </div>
 
       {/* ── JOB DETAIL MODAL ─────────────────────────────── */}
       {selectedJob && (
-        <div role="dialog" aria-modal="true" aria-labelledby="wo-dialog-title" className="fixed inset-0 z-50 bg-black/90 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setSelectedJob(null)}>
-          <div className="bg-slate-800 rounded-lg max-w-5xl w-full my-8" onClick={(e) => e.stopPropagation()}>
+        <div role="dialog" aria-modal="true" aria-labelledby="wo-dialog-title" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-700/50 shadow-2xl shadow-black/50 animate-fadeInScale overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Colored top-border accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
             {/* Header */}
-            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex items-center justify-between z-10">
-              <div>
-                <h3 id="wo-dialog-title" className="text-xl font-black text-white uppercase">Work Order {selectedJob.request_number}</h3>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-sm text-slate-400">Created {formatDateShort(selectedJob.created_at)}</span>
-                  {selectedJob.source === 'online_request' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">Online Request</span>
-                  )}
-                  {selectedJob.source === 'walk_in' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-600">Walk-in</span>
-                  )}
+            <div className="sticky top-0 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
+                </div>
+                <div>
+                  <h3 id="wo-dialog-title" className="text-lg font-black text-white">Work Order <span className="text-primary font-mono">{selectedJob.request_number}</span></h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-slate-500">Created {formatDateShort(selectedJob.created_at)}</span>
+                    {selectedJob.source === 'online_request' && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-900/40 text-sky-400 border border-sky-700/50">
+                        <span className="material-symbols-outlined" style={{fontSize:'11px'}}>public</span>
+                        Online Request
+                      </span>
+                    )}
+                    {selectedJob.source === 'walk_in' && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-400 border border-slate-600/50">
+                        <span className="material-symbols-outlined" style={{fontSize:'11px'}}>store</span>
+                        Walk-in
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} className="text-slate-400 hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-3xl">close</span>
+              <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <span className="material-symbols-outlined text-xl">close</span>
               </button>
             </div>
 
             <div className="p-6 space-y-6">
               {/* Customer Info */}
-              <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-bold text-white uppercase">Customer / Company</h4>
-                  {!editingJob ? (
-                    <button onClick={() => { setEditingJob(true); setJobEditForm({
-                      company_name: selectedJob.company_name || '',
-                      first_name: selectedJob.first_name || '',
-                      last_name: selectedJob.last_name || '',
-                      email: selectedJob.email,
-                      phone: selectedJob.phone,
-                      address: selectedJob.address || '',
-                      customer_notes: selectedJob.customer_notes || '',
-                    }); }} className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition-all">
-                      <span className="material-symbols-outlined text-sm">edit</span>
+              <div className="bg-slate-900/60 rounded-xl border border-slate-700/60 overflow-hidden">
+                <div className="flex items-center gap-2 flex-wrap px-4 py-2.5 border-b border-slate-700/60 bg-slate-800/40">
+                  <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '14px' }}>person</span>
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide">Customer</h4>
+                  <div className="ml-auto">
+                    <button onClick={() => { const src = jobCustomer || selectedJob; setEditingJob(true); setJobEditForm({
+                      company_name: src.company_name || '',
+                      first_name: src.first_name || '',
+                      last_name: src.last_name || '',
+                      email: src.email,
+                      phone: src.phone,
+                      address: src.address || '',
+                      customer_notes: src.customer_notes || '',
+                    }); }} className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-slate-400 hover:text-white rounded-lg text-xs font-bold transition-all">
+                      <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>edit</span>
                       Edit
                     </button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditingJob(false)} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition-all">Cancel</button>
-                      <button onClick={handleSaveJobEdit} className="px-3 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all">Save</button>
-                    </div>
-                  )}
-                </div>
-                {editingJob ? (
-                  <div className="space-y-3">
-                    {/* First Name | Last Name */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1.5">First Name</label>
-                        <input
-                          value={jobEditForm.first_name || ''}
-                          onChange={(e) => setJobEditForm({ ...jobEditForm, first_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1.5">Last Name</label>
-                        <input
-                          value={jobEditForm.last_name || ''}
-                          onChange={(e) => setJobEditForm({ ...jobEditForm, last_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                    </div>
-                    {/* Company Name */}
-                    <div>
-                      <label className="block text-sm text-slate-400 mb-1.5">Company Name</label>
-                      <input
-                        value={jobEditForm.company_name || ''}
-                        onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })}
-                        placeholder="Optional"
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    {/* Email | Phone */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1.5">Email</label>
-                        <input
-                          value={jobEditForm.email || ''}
-                          onChange={(e) => setJobEditForm({ ...jobEditForm, email: e.target.value })}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1.5">Phone (###-###-####)</label>
-                        <input
-                          value={jobEditForm.phone || ''}
-                          onChange={(e) => setJobEditForm({ ...jobEditForm, phone: formatPhone(e.target.value) })}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                    </div>
-                    {/* Address */}
-                    <div>
-                      <label className="block text-sm text-slate-400 mb-1.5">Address</label>
-                      <input
-                        value={jobEditForm.address || ''}
-                        onChange={(e) => setJobEditForm({ ...jobEditForm, address: e.target.value })}
-                        placeholder="Optional"
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    {/* Internal Notes */}
-                    <div>
-                      <label className="block text-sm text-slate-400 mb-1.5">Internal Notes</label>
-                      <textarea
-                        value={jobEditForm.customer_notes || ''}
-                        onChange={(e) => setJobEditForm({ ...jobEditForm, customer_notes: e.target.value })}
-                        rows={2}
-                        placeholder="Internal notes (not visible to customer)"
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                      />
-                    </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    {selectedJob.company_name && (
-                      <div><span className="text-slate-400">Company:</span><span className="ml-2 text-white font-bold">{selectedJob.company_name}</span></div>
-                    )}
-                    <div><span className="text-slate-400">Contact:</span><span className="ml-2 text-white">{selectedJob.first_name} {selectedJob.last_name}</span></div>
-                    <div><span className="text-slate-400">Email:</span><a href={`mailto:${selectedJob.email}`} className="ml-2 text-primary hover:underline">{selectedJob.email}</a></div>
-                    <div><span className="text-slate-400">Phone:</span><a href={`tel:${selectedJob.phone}`} className="ml-2 text-primary hover:underline">{selectedJob.phone}</a></div>
-                    {selectedJob.address && <div className="md:col-span-2"><span className="text-slate-400">Address:</span><span className="ml-2 text-white">{selectedJob.address}</span></div>}
-                    {selectedJob.customer_notes && <div className="md:col-span-2"><span className="text-slate-400">Notes:</span><span className="ml-2 text-slate-300 italic">{selectedJob.customer_notes}</span></div>}
+                </div>
+                {(
+                  <div className="px-4 py-2.5">
+                    {(() => { const cust = jobCustomer || selectedJob; return (
+                      <>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                          {cust.company_name && (
+                            <>
+                              <div className="flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
+                                <span className="text-xs text-slate-500">Company:</span>
+                                <span className="text-sm text-white font-bold">{cust.company_name}</span>
+                              </div>
+                              <span className="text-slate-700 text-xs select-none">|</span>
+                            </>
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
+                            <span className="text-xs text-slate-500">Contact:</span>
+                            <span className="text-sm text-white">{cust.first_name} {cust.last_name}</span>
+                          </div>
+                          <span className="text-slate-700 text-xs select-none">|</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
+                            <span className="text-xs text-slate-500">Email:</span>
+                            <a href={`mailto:${cust.email}`} className="text-sm text-primary hover:underline">{cust.email}</a>
+                          </div>
+                          <span className="text-slate-700 text-xs select-none">|</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>phone</span>
+                            <span className="text-xs text-slate-500">Phone:</span>
+                            <a href={`tel:${cust.phone}`} className="text-sm text-primary hover:underline">{cust.phone}</a>
+                          </div>
+                          {cust.address && (
+                            <>
+                              <span className="text-slate-700 text-xs select-none">|</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
+                                <span className="text-xs text-slate-500">Address:</span>
+                                <span className="text-sm text-white">{cust.address}</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        {cust.customer_notes && (
+                          <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-slate-700/40">
+                            <span className="material-symbols-outlined text-slate-500 mt-0.5" style={{ fontSize: '13px' }}>sticky_note_2</span>
+                            <span className="text-xs text-slate-500">Notes:</span>
+                            <span className="text-xs text-slate-300">{cust.customer_notes}</span>
+                          </div>
+                        )}
+                      </>
+                    ); })()}
                   </div>
                 )}
               </div>
@@ -916,46 +1001,55 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               {/* Tools */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-bold text-white uppercase">Tools ({selectedJob.tools.length})</h4>
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-400 text-base">build</span>
+                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide">Tools ({selectedJob.tools.length})</h4>
+                  </div>
                   <button
                     onClick={() => setAddToolForm(getEmptyTool())}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-primary/20"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
                     Add Tool
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {selectedJob.tools.map((tool, idx) => (
-                    <div key={tool.tool_id} className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
-                      {/* Tool Header */}
-                      <div className="p-4 border-b border-slate-700">
+                    <div key={tool.tool_id} className="bg-slate-900/60 rounded-xl border border-slate-700/60 overflow-hidden shadow-sm">
+                      {/* Tool Header — colored left border by status */}
+                      <div className="p-4 border-b border-slate-700/60 bg-slate-800/40">
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-bold text-white">
-                              Tool {idx + 1}: {tool.brand} {tool.model_number}
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black text-slate-400">
+                              {idx + 1}
                             </div>
-                            <div className="text-xs text-slate-400 mt-0.5">
-                              {tool.tool_type} • Qty: {tool.quantity}
-                              {tool.serial_number && ` • S/N: ${tool.serial_number}`}
+                            <div>
+                              <div className="font-bold text-white text-sm">
+                                {tool.brand} {tool.model_number}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
+                                {tool.serial_number && <><span className="mx-1 text-slate-700">·</span>S/N: {tool.serial_number}</>}
+                                {tool.estimated_completion && <><span className="mx-1 text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <StepBadge status={tool.status} />
                             <PriorityBadge priority={tool.priority} />
                             {tool.warranty && (
-                              <span className="hidden sm:inline px-2 py-1 rounded text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700">Warranty</span>
+                              <span className="hidden sm:inline px-2.5 py-1 rounded-full text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700/50">Warranty</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                           {tool.warranty && (
-                            <span className="sm:hidden px-2 py-1 rounded text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700">Warranty</span>
+                            <span className="sm:hidden px-2.5 py-1 rounded-full text-xs font-bold bg-teal-900/30 text-teal-400 border border-teal-700/50">Warranty</span>
                           )}
                           <button
                             onClick={() => openStatusUpdate(tool)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-300 rounded-lg text-xs font-bold transition-all"
                           >
                             <span className="material-symbols-outlined text-sm">update</span>
                             Update Status
@@ -963,7 +1057,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           {editingToolId !== tool.tool_id && (
                             <button
                               onClick={() => handleStartToolEdit(tool)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition-all"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-slate-400 hover:text-white rounded-lg text-xs font-bold transition-all"
                             >
                               <span className="material-symbols-outlined text-sm">edit</span>
                               Edit
@@ -972,10 +1066,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           {selectedJob.tools.length > 1 && (
                             <button
                               onClick={() => handleRemoveTool(tool.tool_id)}
-                              className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                                 removeConfirmId === tool.tool_id
-                                  ? 'bg-red-900/40 text-red-300 border border-red-700'
-                                  : 'p-1.5 text-red-400 hover:text-red-300'
+                                  ? 'bg-red-900/40 text-red-300 border-red-700/60'
+                                  : 'bg-slate-700/40 hover:bg-red-900/30 border-slate-600/40 hover:border-red-700/40 text-slate-500 hover:text-red-400'
                               }`}
                             >
                               {removeConfirmId === tool.tool_id ? 'Confirm Remove?' : (
@@ -987,153 +1081,111 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </div>
 
                       {/* Current Status bar (always visible) */}
-                      <div className="px-4 pt-3 pb-1 bg-slate-800/50 border-b border-slate-700">
+                      <div className="px-4 pt-3 pb-2 bg-slate-900/40 border-b border-slate-700/60">
                         <div className="flex items-center gap-3 flex-wrap mb-1">
                           <StatusBadge status={tool.status} />
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-slate-500">
                             Received: {formatDateShort(tool.date_received)}
-                            {tool.date_completed && ` • Completed: ${formatDateShort(tool.date_completed)}`}
+                            {tool.date_completed && ` · Completed: ${formatDateShort(tool.date_completed)}`}
                           </div>
                         </div>
                         <ProgressStepper status={tool.status} />
                       </div>
 
-                      {editingToolId === tool.tool_id && toolEditForm ? (
-                        /* ── EDIT MODE ── */
-                        <div className="p-4 border-b border-slate-700">
-                          <ToolForm toolData={toolEditForm} onChange={setToolEditForm} />
-                          <div className="flex gap-3 mt-4">
-                            <button onClick={handleCancelToolEdit} disabled={savingToolEdit} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">
-                              Cancel
-                            </button>
-                            <button onClick={handleSaveToolEdit} disabled={savingToolEdit} className="px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">
-                              {savingToolEdit ? 'Saving...' : 'Save Changes'}
-                            </button>
+                      {/* Tool Details — 3-column grid */}
+                      <div className="px-4 py-2.5 border-b border-slate-700/60">
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          {/* Left — Remarks */}
+                          <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700/40">
+                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Remarks</span>
+                            <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-200' : 'text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
                           </div>
-                        </div>
-                      ) : (
-                        /* ── VIEW MODE ── */
-                        <>
-                      {/* Scheduling & Meta */}
-                      <div className="px-4 py-3 border-b border-slate-700">
-                        <div className="flex items-center gap-4 flex-wrap text-xs">
-                          <div>
-                            <span className="text-slate-500">Est. Completion:</span>
-                            <span className={`ml-1 ${tool.estimated_completion ? 'text-slate-300' : 'text-slate-600'}`}>
-                              {tool.estimated_completion ? formatDateShort(tool.estimated_completion) : 'Not set'}
-                            </span>
+                          {/* Middle — Parts */}
+                          <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700/40">
+                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
+                            {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
+                              <div className="mt-1 space-y-1">
+                                {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
+                                  <div key={pi} className="flex items-center gap-1.5 bg-slate-900/60 rounded-md px-2 py-1 border border-slate-700/30">
+                                    <span className="text-slate-200 font-medium flex-1">{p.name}</span>
+                                    <span className="text-slate-500">×{p.quantity}</span>
+                                    <span className={`px-1.5 py-px rounded-full font-bold ${
+                                      p.status === 'installed' ? 'bg-green-900/40 text-green-400' :
+                                      p.status === 'received' ? 'bg-cyan-900/40 text-cyan-400' :
+                                      p.status === 'ordered' ? 'bg-orange-900/40 text-orange-400' :
+                                      'bg-slate-700 text-slate-400'
+                                    }`} style={{fontSize:'10px'}}>{p.status}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-slate-600 italic">No parts</p>
+                            )}
                           </div>
-                          <div>
-                            <span className="text-slate-500">Warranty:</span>
-                            <span className={`ml-1 ${tool.warranty ? 'text-teal-400 font-bold' : 'text-slate-600'}`}>
-                              {tool.warranty ? 'Yes' : 'No'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">S/N:</span>
-                            <span className={`ml-1 ${tool.serial_number ? 'text-slate-300' : 'text-slate-600'}`}>
-                              {tool.serial_number || 'Not set'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Tool Details */}
-                      <div className="p-4 space-y-4 text-sm">
-                        {/* Remarks */}
-                        <div>
-                          <span className="text-slate-400 text-xs uppercase tracking-wide">Remarks / Description</span>
-                          <p className={`mt-0.5 ${tool.remarks ? 'text-slate-300' : 'text-slate-600 italic'}`}>
-                            {tool.remarks || 'No remarks'}
-                          </p>
-                        </div>
-
-                        {/* Parts */}
-                        <div>
-                          <span className="text-slate-400 text-xs uppercase tracking-wide">Parts</span>
-                          {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
-                            <div className="mt-1 space-y-1">
-                              {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
-                                <div key={pi} className="flex items-center gap-3 text-sm">
-                                  <span className="text-slate-300">{p.name}</span>
-                                  <span className="text-slate-500">x{p.quantity}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                    p.status === 'installed' ? 'bg-green-900/40 text-green-400' :
-                                    p.status === 'received' ? 'bg-cyan-900/40 text-cyan-400' :
-                                    p.status === 'ordered' ? 'bg-orange-900/40 text-orange-400' :
-                                    'bg-slate-700 text-slate-400'
-                                  }`}>{p.status}</span>
-                                </div>
-                              ))}
+                          {/* Right — Labour / Technician / Zoho */}
+                          <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700/40 space-y-1.5">
+                            <div>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Labour</span>
+                              <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-200' : 'text-slate-600 italic'}`}>
+                                {tool.labour_hours || tool.hourly_rate ? (
+                                  <>
+                                    {tool.labour_hours ? `${tool.labour_hours} hrs` : '—'}
+                                    {tool.hourly_rate ? ` @ $${tool.hourly_rate}/hr` : ''}
+                                    {tool.labour_hours && tool.hourly_rate && (
+                                      <> = <span className="text-white font-bold">${(parseFloat(tool.labour_hours) * parseFloat(tool.hourly_rate)).toFixed(2)}</span></>
+                                    )}
+                                  </>
+                                ) : 'Not set'}
+                              </p>
                             </div>
-                          ) : (
-                            <p className="mt-0.5 text-slate-600 italic">No parts listed</p>
-                          )}
-                        </div>
-
-                        {/* Labour & Cost + Technician row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          <div>
-                            <span className="text-slate-400 text-xs uppercase tracking-wide">Labour</span>
-                            <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-300' : 'text-slate-600 italic'}`}>
-                              {tool.labour_hours || tool.hourly_rate ? (
-                                <>
-                                  {tool.labour_hours ? `${tool.labour_hours} hrs` : '— hrs'}
-                                  {tool.hourly_rate ? ` @ $${tool.hourly_rate}/hr` : ''}
-                                  {tool.labour_hours && tool.hourly_rate && (
-                                    <span className="ml-2 text-slate-400">= <span className="text-white font-bold">${(parseFloat(tool.labour_hours) * parseFloat(tool.hourly_rate)).toFixed(2)}</span></span>
-                                  )}
-                                </>
-                              ) : 'Not set'}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 text-xs uppercase tracking-wide">Technician</span>
-                            <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-300' : 'text-slate-600 italic'}`}>
-                              {tool.assigned_technician || 'Unassigned'}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 text-xs uppercase tracking-wide">Zoho Ref</span>
-                            <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-300' : 'text-slate-600 italic'}`}>
-                              {tool.zoho_ref || 'None'}
-                            </p>
+                            <div>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Technician</span>
+                              <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-200' : 'text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Zoho Ref</span>
+                              <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-200' : 'text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                        </>
-                      )}
 
                       {/* Photos */}
-                      <div className="px-4 pb-4">
+                      <div className="px-4 pb-3 pt-3 border-t border-slate-700/60">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Photos ({tool.photos?.length || 0})</span>
-                          <label className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-xs font-bold cursor-pointer transition-all">
-                            <span className="material-symbols-outlined text-xs">upload</span>
-                            {uploadingPhoto === tool.tool_id ? 'Uploading...' : 'Upload'}
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-slate-500 text-sm">photo_library</span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Photos</span>
+                            {tool.photos?.length > 0 && (
+                              <span className="text-xs font-bold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
+                            )}
+                          </div>
+                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-500 text-slate-300 hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all">
+                            <span className="material-symbols-outlined text-sm">upload</span>
+                            {uploadingPhoto === tool.tool_id ? 'Uploading...' : 'Add Photo'}
                             <input type="file" accept="image/*" className="hidden"
                               onChange={(e) => e.target.files?.[0] && handlePhotoUpload(tool.tool_id, e.target.files[0])}
                             />
                           </label>
                         </div>
                         {tool.photos?.length > 0 && (
-                          <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                          <div className="grid grid-cols-4 md:grid-cols-6 gap-1.5">
                             {tool.photos.map((photo, pidx) => (
-                              <div key={pidx} className="aspect-square cursor-pointer group relative" onClick={() => setSelectedPhoto(photo)}>
+                              <div key={pidx} className="aspect-square cursor-pointer group relative rounded-lg overflow-hidden" onClick={() => setSelectedPhoto(photo)}>
                                 <img
                                   src={photo.startsWith('http') ? photo : `${API_BASE_URL}/uploads/${photo}`}
                                   alt={`Photo ${pidx + 1}`}
-                                  className="w-full h-full object-cover rounded border border-slate-700 group-hover:border-primary transition-all"
+                                  className="w-full h-full object-cover border border-slate-700 group-hover:border-primary/60 transition-all duration-200"
                                 />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
-                                  <span className="material-symbols-outlined text-white text-xl">zoom_in</span>
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-white text-lg">zoom_in</span>
                                 </div>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleDeletePhoto(tool.tool_id, photo); }}
-                                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                   title="Delete photo"
                                 >
-                                  <span className="material-symbols-outlined text-white text-xs" style={{ fontSize: '14px' }}>close</span>
+                                  <span className="material-symbols-outlined text-white" style={{ fontSize: '12px' }}>close</span>
                                 </button>
                               </div>
                             ))}
@@ -1143,22 +1195,37 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
                       {/* Status History */}
                       {tool.status_history?.length > 0 && (
-                        <details className="border-t border-slate-700">
-                          <summary className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-300 select-none">
-                            Status History ({tool.status_history.length})
+                        <details className="border-t border-slate-700/60 group/hist">
+                          <summary className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-800/40 transition-colors select-none list-none">
+                            <span className="material-symbols-outlined text-slate-500 text-sm group-open/hist:rotate-90 transition-transform">chevron_right</span>
+                            <span className="material-symbols-outlined text-slate-500 text-sm">history</span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Status History</span>
+                            <span className="text-xs font-bold bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
                           </summary>
-                          <div className="px-4 pb-4 space-y-2 mt-2">
-                            {[...tool.status_history].reverse().map((entry, hidx) => (
-                              <div key={hidx} className="flex items-start gap-3 text-xs">
-                                <div className="flex-shrink-0 mt-0.5">
-                                  <StatusBadge status={entry.status} />
-                                </div>
-                                <div className="text-slate-400">
-                                  <span>{formatDate(entry.timestamp)}</span>
-                                  {entry.notes && <span className="ml-2 text-slate-300 italic">— {entry.notes}</span>}
-                                </div>
+                          <div className="px-4 pb-4 pt-2">
+                            <div className="relative pl-5">
+                              {/* Vertical connector line */}
+                              <div className="absolute left-1.5 top-2 bottom-2 w-px bg-slate-700/60" />
+                              <div className="space-y-3">
+                                {[...tool.status_history].reverse().map((entry, hidx) => (
+                                  <div key={hidx} className="relative flex items-start gap-3 text-xs">
+                                    {/* Timeline dot */}
+                                    <div className={`absolute -left-3.5 mt-1.5 w-2 h-2 rounded-full flex-shrink-0 border-2 border-slate-800 ${
+                                      REPAIR_STATUSES[entry.status]?.dot || 'bg-slate-500'
+                                    }`} />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <StatusBadge status={entry.status} />
+                                        <span className="text-slate-500">{formatDate(entry.timestamp)}</span>
+                                      </div>
+                                      {entry.notes && (
+                                        <p className="mt-1 text-slate-400 italic pl-0.5">"{entry.notes}"</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
                           </div>
                         </details>
                       )}
@@ -1173,27 +1240,41 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
       {/* ── STATUS UPDATE MODAL ──────────────────────────── */}
       {statusUpdateModal && (
-        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => !updatingStatus && setStatusUpdateModal(null)}>
-          <div className="bg-slate-800 rounded-lg max-w-md w-full p-6 border border-slate-600" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-black text-white uppercase mb-1">Update Tool Status</h3>
-            <p className="text-slate-400 text-sm mb-4">
-              {statusUpdateModal.brand} {statusUpdateModal.model_number}
-            </p>
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-slate-700/50 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-700/60">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-lg">sync</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-white uppercase">Update Status</h3>
+                <p className="text-slate-400 text-xs truncate">{statusUpdateModal.brand} {statusUpdateModal.model_number}</p>
+              </div>
+              <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all flex-shrink-0">
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs text-slate-400">Current:</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Current:</span>
                   <StatusBadge status={statusUpdateModal.status} />
                 </div>
                 {getValidNextStatuses(statusUpdateModal.status).length === 0 ? (
-                  <p className="text-sm text-slate-400 py-2 italic">This tool is in a terminal status and cannot be changed.</p>
+                  <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                    <span className="material-symbols-outlined text-slate-500 text-base">info</span>
+                    <p className="text-sm text-slate-400 italic">This tool is in a terminal status and cannot be changed.</p>
+                  </div>
                 ) : (
                   <>
-                    <label className="block text-sm font-bold text-slate-300 mb-2">New Status</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">New Status</label>
                     <select
                       value={statusUpdateForm.status}
                       onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, status: e.target.value })}
-                      className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                     >
                       {REPAIR_STATUSES_LIST
                         .filter(s => getValidNextStatuses(statusUpdateModal.status).includes(s.value))
@@ -1205,28 +1286,28 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 )}
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">Notes (optional)</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Notes (optional)</label>
                 <textarea
                   rows={2}
                   value={statusUpdateForm.notes}
                   onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, notes: e.target.value })}
                   placeholder="e.g., Parts arrived from supplier"
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all resize-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">Est. Completion Date (optional)</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Est. Completion Date (optional)</label>
                 <input
                   type="date"
                   value={statusUpdateForm.estimated_completion}
                   onChange={(e) => setStatusUpdateForm({ ...statusUpdateForm, estimated_completion: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                 />
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
+            <div className="flex gap-3 px-6 pb-6">
+              <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                 {updatingStatus ? 'Updating...' : 'Update Status'}
               </button>
             </div>
@@ -1234,31 +1315,62 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         </div>
       )}
 
-      {/* ── ADD TOOL MODAL ───────────────────────────────── */}
-      {addToolForm && (
-        <div className="fixed inset-0 z-[60] bg-black/90 flex items-start justify-center p-4 overflow-y-auto" onClick={() => !addingTool && setAddToolForm(null)}>
-          <div className="bg-slate-800 rounded-lg max-w-2xl w-full my-8 p-6 border border-slate-600" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-black text-white uppercase mb-4">Add Tool</h3>
-            <ToolForm toolData={addToolForm} onChange={setAddToolForm} />
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setAddToolForm(null)} disabled={addingTool} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleAddTool} disabled={addingTool} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
-                {addingTool ? 'Adding...' : 'Add Tool'}
+      {/* ── ADD / EDIT TOOL MODAL ─────────────────────────── */}
+      {(addToolForm || (editingToolId && toolEditForm)) && (() => {
+        const isEdit = !!editingToolId;
+        const formData = isEdit ? toolEditForm : addToolForm;
+        const setFormData = isEdit ? setToolEditForm : setAddToolForm;
+        const busy = isEdit ? savingToolEdit : addingTool;
+        const handleClose = () => { if (busy) return; isEdit ? handleCancelToolEdit() : setAddToolForm(null); };
+        const handleSubmit = isEdit ? handleSaveToolEdit : handleAddTool;
+        return (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-800 rounded-2xl max-w-4xl w-full my-8 border border-slate-700/50 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-700/60">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-lg">{isEdit ? 'edit' : 'build'}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
+                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{formData.brand} {formData.model_number}</p>}
+              </div>
+              <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all flex-shrink-0">
+                <span className="material-symbols-outlined text-base">close</span>
               </button>
+            </div>
+            <div className="p-6">
+              <ToolForm toolData={formData} onChange={setFormData} />
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+                  {busy ? (isEdit ? 'Saving...' : 'Adding...') : (isEdit ? 'Save Changes' : 'Add Tool')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── NEW JOB FORM MODAL (TWO-STEP) ───────────────── */}
       {showNewJobForm && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-start justify-center p-4 overflow-y-auto" onClick={handleCloseNewJob}>
-          <div className="bg-slate-800 rounded-lg max-w-5xl w-full my-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-800 rounded-2xl max-w-5xl w-full my-4 border border-slate-700/50 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
             {/* Header */}
-            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between gap-4">
-              <h3 className="text-lg font-black text-white uppercase flex-shrink-0">New Repair Job</h3>
+            <div className="sticky top-0 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/60 px-6 py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-primary text-sm">add_circle</span>
+                </div>
+                <h3 className="text-base font-black text-white uppercase">New Repair Job</h3>
+              </div>
               {/* 4-step progress stepper */}
-              <div className="flex items-center gap-1 flex-1 min-w-0">
+              <div className="flex items-center gap-0 flex-1 min-w-0 max-w-sm mx-auto">
                 {[
                   { n: 1, label: 'Customer' },
                   { n: 2, label: 'Tool Info' },
@@ -1268,24 +1380,29 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   const done = newJobStep > n;
                   const active = newJobStep === n;
                   return (
-                    <div key={n} className="flex items-center gap-1 min-w-0">
-                      {i > 0 && <div className={`h-px w-4 flex-shrink-0 ${done ? 'bg-primary' : 'bg-slate-700'}`} />}
+                    <div key={n} className="flex items-center gap-0 flex-1 min-w-0">
+                      {i > 0 && <div className={`h-0.5 flex-1 transition-all duration-300 ${done ? 'bg-primary' : 'bg-slate-700'}`} />}
                       <button
                         type="button"
                         onClick={() => done && setNewJobStep(n)}
-                        className={`flex items-center gap-1 flex-shrink-0 ${done ? 'cursor-pointer' : 'cursor-default'}`}
+                        className={`flex flex-col items-center gap-1 flex-shrink-0 ${done ? 'cursor-pointer' : 'cursor-default'}`}
                       >
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-colors ${done ? 'bg-primary text-white hover:bg-blue-500' : active ? 'bg-primary text-white ring-2 ring-primary/40' : 'bg-slate-700 text-slate-500'}`}>
+                        <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all duration-300 ${
+                          done ? 'bg-primary text-white hover:bg-blue-500' :
+                          active ? 'bg-primary text-white shadow-md shadow-primary/30' :
+                          'bg-slate-700 text-slate-500 border border-slate-600'
+                        }`}>
+                          {active && <span className="absolute inset-0 rounded-full ring-4 ring-primary/20 animate-pulse" />}
                           {done ? <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check</span> : n}
                         </div>
-                        <span className={`text-xs font-bold hidden sm:block ${active ? 'text-white' : done ? 'text-primary hover:text-blue-400' : 'text-slate-500'}`}>{label}</span>
+                        <span className={`text-[10px] font-bold whitespace-nowrap ${active ? 'text-blue-400' : done ? 'text-slate-500' : 'text-slate-600'}`}>{label}</span>
                       </button>
                     </div>
                   );
                 })}
               </div>
-              <button onClick={handleCloseNewJob} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
-                <span className="material-symbols-outlined text-3xl">close</span>
+              <button onClick={handleCloseNewJob} className="w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all flex-shrink-0">
+                <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
 
@@ -1471,7 +1588,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
                 {/* Step 1 actions */}
                 <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={handleCloseNewJob} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">
+                  <button type="button" onClick={handleCloseNewJob} className="px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all">
                     Cancel
                   </button>
                   <button
@@ -1490,7 +1607,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         showToast('error', 'Please select or create a customer first');
                       }
                     }}
-                    className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                   >
                     Next: Add Tools
                     <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -1501,7 +1618,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
             {/* Customer summary bar — shown on steps 2–4 */}
             {newJobStep >= 2 && (
-              <div className="bg-slate-900 border-b border-slate-700 px-6 py-2 flex items-center gap-3">
+              <div className="bg-slate-900/60 border-b border-slate-700/60 px-6 py-2.5 flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary text-lg">person</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm font-bold truncate">
@@ -1525,31 +1642,38 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 {/* Tools */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-white uppercase">Tools to Repair</h4>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Tools to Repair</h4>
                     <button type="button" onClick={handleAddToolToForm}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs font-bold transition-all">
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all">
                       <span className="material-symbols-outlined text-sm">add</span>
                       Add Another Tool
                     </button>
                   </div>
                   <div className="space-y-4">
                     {newJobForm.tools.map((tool, idx) => (
-                      <div key={idx} className="bg-slate-900 rounded-lg border border-slate-700 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h5 className="font-bold text-white">Tool {idx + 1}</h5>
+                      <div key={idx} className="bg-slate-900/60 rounded-xl border border-slate-700/60 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60 bg-slate-900/40">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                              <span className="text-primary font-black text-xs">{idx + 1}</span>
+                            </div>
+                            <h5 className="font-bold text-white text-sm">Tool {idx + 1}</h5>
+                          </div>
                           {newJobForm.tools.length > 1 && (
-                            <button type="button" onClick={() => handleRemoveToolFromForm(idx)} className="text-red-400 hover:text-red-300 transition-colors">
+                            <button type="button" onClick={() => handleRemoveToolFromForm(idx)} className="text-slate-500 hover:text-red-400 transition-colors">
                               <span className="material-symbols-outlined text-sm">delete</span>
                             </button>
                           )}
                         </div>
-                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={2} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        <div className="p-4">
+                          <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={2} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setNewJobStep(1)} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all flex items-center gap-2">
+                  <button type="button" onClick={() => setNewJobStep(1)} className="px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
                   </button>
@@ -1563,7 +1687,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       }
                       setNewJobStep(3);
                     }}
-                    className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                   >
                     Next: Job Details
                     <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -1576,27 +1700,32 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             {newJobStep === 3 && (
               <div className="p-6 space-y-6">
                 <div>
-                  <h4 className="text-sm font-bold text-white uppercase mb-3">Tools to Repair</h4>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Tools to Repair</h4>
                   <div className="space-y-4">
                     {newJobForm.tools.map((tool, idx) => (
-                      <div key={idx} className="bg-slate-900 rounded-lg border border-slate-700 p-4">
-                        <div className="flex items-center justify-between mb-3">
+                      <div key={idx} className="bg-slate-900/60 rounded-xl border border-slate-700/60 overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-700/60 bg-slate-900/40">
+                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                            <span className="text-primary font-black text-xs">{idx + 1}</span>
+                          </div>
                           <div>
-                            <h5 className="font-bold text-white">Tool {idx + 1}</h5>
+                            <h5 className="font-bold text-white text-sm">Tool {idx + 1}</h5>
                             <p className="text-slate-400 text-xs">{tool.brand} {tool.model_number}</p>
                           </div>
                         </div>
-                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={3} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        <div className="p-4">
+                          <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={3} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setNewJobStep(2)} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all flex items-center gap-2">
+                  <button type="button" onClick={() => setNewJobStep(2)} className="px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
                   </button>
-                  <button type="button" onClick={() => setNewJobStep(4)} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+                  <button type="button" onClick={() => setNewJobStep(4)} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2">
                     Next: Cost & Schedule
                     <span className="material-symbols-outlined text-lg">arrow_forward</span>
                   </button>
@@ -1608,28 +1737,40 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             {newJobStep === 4 && (
               <form onSubmit={handleCreateJob} className="p-6 space-y-6">
                 <div>
-                  <h4 className="text-sm font-bold text-white uppercase mb-3">Tools to Repair</h4>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Tools to Repair</h4>
                   <div className="space-y-4">
                     {newJobForm.tools.map((tool, idx) => (
-                      <div key={idx} className="bg-slate-900 rounded-lg border border-slate-700 p-4">
-                        <div className="flex items-center justify-between mb-3">
+                      <div key={idx} className="bg-slate-900/60 rounded-xl border border-slate-700/60 overflow-hidden">
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-700/60 bg-slate-900/40">
+                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                            <span className="text-primary font-black text-xs">{idx + 1}</span>
+                          </div>
                           <div>
-                            <h5 className="font-bold text-white">Tool {idx + 1}</h5>
+                            <h5 className="font-bold text-white text-sm">Tool {idx + 1}</h5>
                             <p className="text-slate-400 text-xs">{tool.brand} {tool.model_number}</p>
                           </div>
                         </div>
-                        <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={4} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        <div className="p-4">
+                          <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={4} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setNewJobStep(3)} className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all flex items-center gap-2">
+                  <button type="button" onClick={() => setNewJobStep(3)} className="px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
                   </button>
-                  <button type="submit" disabled={savingJob} className="flex-1 px-4 py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all disabled:opacity-50">
-                    {savingJob ? (uploadingPhotos ? 'Uploading Photos...' : 'Creating...') : 'Create Repair Job'}
+                  <button type="submit" disabled={savingJob} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {savingJob ? (
+                      uploadingPhotos ? 'Uploading Photos...' : 'Creating...'
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-lg">check_circle</span>
+                        Create Repair Job
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -1653,23 +1794,95 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         </div>
       )}
 
-      {/* Delete Confirmation */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => setDeleteConfirmId(null)}>
-          <div className="bg-slate-800 rounded-lg max-w-md w-full p-6 border border-red-700" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-center mb-4">
-              <div className="bg-red-900/30 p-3 rounded-full">
-                <span className="material-symbols-outlined text-4xl text-red-400">warning</span>
+      {/* Edit Customer Modal (from WO dialog) */}
+      {editingJob && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700/50 max-w-lg w-full shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            <div className="px-6 py-4 border-b border-slate-700/60 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary text-lg">edit</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white uppercase tracking-tight">Edit Customer</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{jobEditForm.first_name} {jobEditForm.last_name}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingJob(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5">First Name *</label>
+                  <input value={jobEditForm.first_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Last Name *</label>
+                  <input value={jobEditForm.last_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, last_name: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Company</label>
+                <input value={jobEditForm.company_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Email *</label>
+                  <input type="email" value={jobEditForm.email || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, email: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Phone *</label>
+                  <input value={jobEditForm.phone || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, phone: formatPhone(e.target.value) })} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Address</label>
+                <input value={jobEditForm.address || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, address: e.target.value })} className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Notes (Internal)</label>
+                <textarea value={jobEditForm.customer_notes || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, customer_notes: e.target.value })} rows={3} placeholder="Internal notes (not visible to customer)" className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none" />
               </div>
             </div>
-            <h3 className="text-xl font-black text-white uppercase text-center mb-2">Delete Repair Job</h3>
-            <p className="text-slate-300 text-center mb-2">
-              Delete job <span className="font-bold text-white">{deleteConfirmId.request_number}</span>?
-            </p>
-            <p className="text-red-300 text-sm text-center font-bold mb-6">This will permanently delete all tool data and photos.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">Cancel</button>
-              <button onClick={handleDeleteJob} className="flex-1 px-4 py-3 bg-red-900 hover:bg-red-800 text-white rounded-lg font-bold transition-all">Delete</button>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setEditingJob(false)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold text-sm transition-all">
+                Cancel
+              </button>
+              <button onClick={handleSaveJobEdit} disabled={savingJobEdit} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none">
+                {savingJobEdit ? <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-sm">check</span>}
+                {savingJobEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-red-900/40 shadow-2xl shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent — red */}
+            <div className="h-0.5 bg-gradient-to-r from-red-600 via-red-400 to-red-600/30" />
+            <div className="p-6">
+              <div className="flex items-center justify-center mb-5">
+                <div className="w-16 h-16 bg-red-900/30 border border-red-800/40 rounded-2xl flex items-center justify-center">
+                  <span className="material-symbols-outlined text-4xl text-red-400">delete_forever</span>
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-white uppercase text-center mb-2">Delete Repair Job</h3>
+              <p className="text-slate-300 text-center mb-1">
+                Delete job <span className="font-bold text-white font-mono">{deleteConfirmId.request_number}</span>?
+              </p>
+              <p className="text-red-300/80 text-sm text-center mb-6">This will permanently delete all tool data and photos.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConfirmId(null)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl font-bold transition-all">Cancel</button>
+                <button onClick={handleDeleteJob} className="flex-1 px-4 py-2.5 bg-red-900/60 hover:bg-red-800/80 border border-red-700/50 text-red-200 hover:text-white rounded-xl font-bold transition-all">
+                  Delete Permanently
+                </button>
+              </div>
             </div>
           </div>
         </div>

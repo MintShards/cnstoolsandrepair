@@ -1,10 +1,12 @@
 import { Fragment } from 'react';
 import { REPAIR_STATUSES, MAIN_STAGES, getStepInfo } from '../../../constants/repairStatuses';
 
-export const StatusBadge = ({ status }) => {
-  const cfg = REPAIR_STATUSES[status] || { label: status, color: 'bg-slate-700 text-slate-300 border-slate-600' };
+export const StatusBadge = ({ status, count }) => {
+  const cfg = REPAIR_STATUSES[status] || { label: status, color: 'bg-slate-700/60 text-slate-300 border-slate-500', dot: 'bg-slate-400' };
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border ${cfg.color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${cfg.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+      {count && <span className="opacity-70">{count}×</span>}
       {cfg.label}
     </span>
   );
@@ -14,7 +16,7 @@ export const StepBadge = ({ status }) => {
   const info = getStepInfo(status);
   if (!info) return null;
   return (
-    <span className="text-xs text-slate-500 font-mono tabular-nums">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-700/50 border border-slate-600 text-xs text-slate-400 font-mono tabular-nums">
       {info.current}/{info.total}
     </span>
   );
@@ -23,47 +25,70 @@ export const StepBadge = ({ status }) => {
 export const ProgressStepper = ({ status }) => {
   const cfg = REPAIR_STATUSES[status];
   const currentStep = cfg?.step;
+
   if (currentStep === null) {
-    const offRampColors = {
-      declined: 'text-red-400 border-red-700 bg-red-900/20',
-      completed: 'text-green-300 border-green-600 bg-green-900/30',
-      abandoned: 'text-rose-400 border-rose-700 bg-rose-900/20',
-      closed: 'text-slate-400 border-slate-600 bg-slate-800/50',
-    };
-    return (
-      <div className="flex items-center gap-2 py-2">
-        <span className="text-xs text-slate-500">Status:</span>
-        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${offRampColors[status] || 'text-slate-400 border-slate-600 bg-slate-800/50'}`}>
-          {cfg?.label || status}
-        </span>
-      </div>
-    );
+    return null;
   }
+
   return (
-    <div className="flex items-center gap-0.5 py-2 flex-wrap">
-      {MAIN_STAGES.map((stage, i) => {
-        const step = i + 1;
-        const isCompleted = step < currentStep;
-        const isCurrent = step === currentStep;
-        const stageCfg = REPAIR_STATUSES[stage];
-        return (
-          <Fragment key={stage}>
-            {i > 0 && (
-              <div className={`h-0.5 w-3 flex-shrink-0 ${isCompleted ? 'bg-blue-500' : 'bg-slate-700'}`} />
-            )}
-            <div
-              title={stageCfg?.label}
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all
-                ${isCurrent ? 'bg-blue-500 text-white ring-2 ring-blue-400/40' :
-                  isCompleted ? 'bg-blue-500/25 text-blue-400' :
-                  'bg-slate-800 text-slate-600'}`}
-            >
-              {step}
-            </div>
-          </Fragment>
-        );
-      })}
-      <span className="ml-2 text-xs text-slate-400">{cfg?.label}</span>
+    <div className="py-3">
+      {/* Step circles + connectors */}
+      <div className="flex items-center gap-0">
+        {MAIN_STAGES.map((stage, i) => {
+          const step = i + 1;
+          const isCompleted = step < currentStep;
+          const isCurrent = step === currentStep;
+          const stageCfg = REPAIR_STATUSES[stage];
+          return (
+            <Fragment key={stage}>
+              {i > 0 && (
+                <div className={`h-1 flex-1 min-w-[8px] transition-all duration-300 ${isCompleted ? 'bg-blue-500' : 'bg-slate-700'}`} />
+              )}
+              <div
+                title={stageCfg?.label}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all duration-300 relative
+                  ${isCurrent
+                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/30'
+                    : isCompleted
+                      ? 'bg-blue-500/80 text-white'
+                      : 'bg-slate-800 text-slate-600 border border-slate-700'
+                  }`}
+              >
+                {isCurrent && (
+                  <span className="absolute inset-0 rounded-full ring-4 ring-blue-400/25 animate-pulse" />
+                )}
+                {isCompleted ? (
+                  <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check</span>
+                ) : (
+                  step
+                )}
+              </div>
+            </Fragment>
+          );
+        })}
+      </div>
+      {/* Labels row */}
+      <div className="flex items-start mt-1.5 gap-0">
+        {MAIN_STAGES.map((stage, i) => {
+          const step = i + 1;
+          const isCompleted = step < currentStep;
+          const isCurrent = step === currentStep;
+          const stageCfg = REPAIR_STATUSES[stage];
+          const shortLabels = ['Received', 'Diagnosed', 'Quoted', 'Approved', 'Parts', 'In Repair', 'Ready', 'Invoiced'];
+          return (
+            <Fragment key={stage}>
+              {i > 0 && <div className="flex-1 min-w-[8px]" />}
+              <div className={`w-8 flex flex-col items-center flex-shrink-0`}>
+                <span className={`text-[9px] font-bold text-center leading-tight mt-0.5 ${
+                  isCurrent ? 'text-blue-400' : isCompleted ? 'text-slate-500' : 'text-slate-600'
+                }`}>
+                  {shortLabels[i]}
+                </span>
+              </div>
+            </Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 };
