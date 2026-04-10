@@ -11,9 +11,9 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "http://localhost:5173"
 
-    # Email - SendGrid
-    sendgrid_api_key: str
-    sendgrid_from_email: str
+    # Email - Resend
+    resend_api_key: str
+    sendgrid_from_email: str = "noreply@cnstoolrepair.com"  # kept for backwards compat, unused
     notification_email: str
 
     # File Upload
