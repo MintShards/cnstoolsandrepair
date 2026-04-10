@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { quotesAPI, repairsAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import PaginationBar from '../shared/PaginationBar';
+import { formatDatePacific } from '../../../utils/dateFormat';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -95,12 +96,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
     if (selectedQuote?.id === deletedId) setSelectedQuote(null);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
-  };
+  const formatDate = formatDatePacific;
 
   const getStatusBadge = (status) => {
     const statusConfig = {

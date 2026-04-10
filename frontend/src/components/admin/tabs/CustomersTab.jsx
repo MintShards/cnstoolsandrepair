@@ -7,6 +7,7 @@ import {
 } from '../../../constants/repairStatuses';
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
+import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -468,9 +469,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
     return Object.entries(counts).map(([status, count]) => ({ status, count }));
   };
 
-  const formatDate = (d) => new Date(d).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric'
-  });
+  const formatDate = formatDateShortPacific;
 
   const paginated = customers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -1076,7 +1075,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 flex-wrap">
                                           <StatusBadge status={entry.status} />
-                                          <span className="text-slate-500">{formatDate(entry.timestamp)}</span>
+                                          <span className="text-slate-500">{formatDatePacific(entry.timestamp)}</span>
                                         </div>
                                         {entry.notes && (
                                           <p className="mt-1 text-slate-500 dark:text-slate-400 italic pl-0.5">"{entry.notes}"</p>

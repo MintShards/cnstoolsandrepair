@@ -7,6 +7,7 @@ import {
 } from '../../../constants/repairStatuses';
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
+import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -243,20 +244,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
-  };
-
-  const formatDateShort = (dateString) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric'
-    });
-  };
+  const formatDate = formatDatePacific;
+  const formatDateShort = formatDateShortPacific;
 
   // ── FILTER / PAGINATION ──────────────────────────────
   const filteredJobs = jobs.filter(job => {
