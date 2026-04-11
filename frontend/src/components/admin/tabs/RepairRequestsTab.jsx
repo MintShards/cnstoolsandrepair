@@ -105,7 +105,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
     };
     const config = statusConfig[status] || statusConfig.pending;
     return (
-      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${config.bg} ${config.text} border ${config.border}`}>
+      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold ${config.bg} ${config.text} border ${config.border}`}>
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dot}`} />
         {config.label}
       </span>
@@ -154,7 +154,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
 
       {/* Filter Bar */}
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-[160px] sm:min-w-[220px]">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 text-base pointer-events-none">search</span>
           <input
             type="text"
@@ -172,12 +172,12 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
             </button>
           )}
         </div>
-        <div className="relative">
+        <div className="relative min-w-[140px]">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 text-base pointer-events-none">filter_list</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
@@ -225,54 +225,56 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60">
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Request #</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Company / Contact</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Submitted</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Tools</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Actions</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Request #</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider text-slate-500">Company / Contact</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider text-slate-500 hidden md:table-cell">Submitted</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider text-slate-500 hidden md:table-cell">Tools</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider text-slate-500 hidden sm:table-cell">Status</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
                 {paginatedQuotes.map((quote) => (
                   <tr key={quote.id} className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors group">
-                    <td className="py-3.5 px-4 font-mono text-xs text-slate-900 dark:text-white font-bold">{quote.request_number}</td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3 sm:px-4 font-mono text-xs sm:text-sm text-slate-900 dark:text-white font-bold whitespace-nowrap">{quote.request_number}</td>
+                    <td className="py-3 px-3 sm:px-4">
                       <div className="text-slate-900 dark:text-white font-bold text-sm">{quote.company_name || `${quote.first_name} ${quote.last_name}`}</div>
                       {quote.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{quote.first_name} {quote.last_name}</div>}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{formatDate(quote.created_at)}</td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3 sm:px-4 text-slate-500 dark:text-slate-400 text-sm hidden md:table-cell">{formatDate(quote.created_at)}</td>
+                    <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm">
-                        <span className="material-symbols-outlined text-slate-500 text-sm">build</span>
+                        <span className="material-symbols-outlined text-slate-500 text-base">build</span>
                         {quote.tools.length} tool{quote.tools.length !== 1 ? 's' : ''}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">{getStatusBadge(quote.status)}</td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-3 px-3 sm:px-4 hidden sm:table-cell">{getStatusBadge(quote.status)}</td>
+                    <td className="py-3 px-3 sm:px-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setSelectedQuote(quote)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all"
+                          className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                          title="View"
                         >
-                          <span className="material-symbols-outlined text-sm">visibility</span>
-                          View
+                          <span className="material-symbols-outlined text-base">visibility</span>
+                          <span className="hidden sm:inline">View</span>
                         </button>
                         {quote.status !== 'converted' && (
                           <button
                             onClick={() => handleConvertClick(quote)}
                             disabled={convertingId === quote.id}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-700/50 text-orange-700 dark:text-orange-300 hover:text-orange-800 dark:hover:text-orange-200 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                            className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-700/50 text-orange-700 dark:text-orange-300 hover:text-orange-800 dark:hover:text-orange-200 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                            title="Convert to Work Order"
                           >
-                            <span className="material-symbols-outlined text-sm">build_circle</span>
-                            Convert
+                            <span className="material-symbols-outlined text-base">build_circle</span>
+                            <span className="hidden sm:inline">Convert</span>
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteClick(quote)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 border border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/50 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-lg text-xs font-bold transition-all"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 border border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/50 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-lg text-sm font-bold transition-all"
                         >
-                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span className="material-symbols-outlined text-base">delete</span>
                         </button>
                       </div>
                     </td>
@@ -298,11 +300,11 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
 
       {/* Detail Modal */}
       {selectedQuote && (
-        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-fadeInScale overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-4 sm:my-8 max-h-[calc(100vh-2rem)] flex flex-col border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-fadeInScale overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30 flex-shrink-0" />
             {/* Header */}
-            <div className="sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
+            <div className="flex-shrink-0 sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex flex-wrap items-center gap-2 z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-primary text-xl">request_quote</span>
@@ -315,14 +317,15 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
                 {selectedQuote.status !== 'converted' && (
                   <button
                     onClick={() => { setSelectedQuote(null); handleConvertClick(selectedQuote); }}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/40 dark:hover:bg-orange-900/60 border border-orange-200 dark:border-orange-700/50 text-orange-700 dark:text-orange-300 hover:text-orange-800 dark:hover:text-orange-200 rounded-xl text-sm font-bold transition-all"
                   >
                     <span className="material-symbols-outlined text-sm">build_circle</span>
-                    Convert to WO
+                    <span className="hidden sm:inline">Convert to WO</span>
+                    <span className="sm:hidden">Convert</span>
                   </button>
                 )}
                 <button
@@ -334,7 +337,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* Customer */}
               <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
@@ -342,29 +345,24 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                   <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Customer</h4>
                 </div>
                 <div className="px-4 py-2.5">
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                     {selectedQuote.company_name && (
-                      <>
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-slate-500" style={{fontSize:'13px'}}>business</span>
-                          <span className="text-xs text-slate-500">Company:</span>
-                          <span className="text-sm text-slate-900 dark:text-white font-bold">{selectedQuote.company_name}</span>
-                        </div>
-                        <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
-                      </>
+                      <div className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-slate-500" style={{fontSize:'13px'}}>business</span>
+                        <span className="text-xs text-slate-500">Company:</span>
+                        <span className="text-sm text-slate-900 dark:text-white font-bold">{selectedQuote.company_name}</span>
+                      </div>
                     )}
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-slate-500" style={{fontSize:'13px'}}>person</span>
                       <span className="text-xs text-slate-500">Contact:</span>
                       <span className="text-sm text-slate-900 dark:text-white">{selectedQuote.first_name} {selectedQuote.last_name}</span>
                     </div>
-                    <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-slate-500" style={{fontSize:'13px'}}>mail</span>
                       <span className="text-xs text-slate-500">Email:</span>
                       <a href={`mailto:${selectedQuote.email}`} className="text-sm text-primary hover:underline">{selectedQuote.email}</a>
                     </div>
-                    <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-slate-500" style={{fontSize:'13px'}}>phone</span>
                       <span className="text-xs text-slate-500">Phone:</span>
@@ -419,7 +417,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                     <span className="material-symbols-outlined text-slate-500 dark:text-slate-400 text-base">photo_library</span>
                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Photos ({selectedQuote.photos.length})</h4>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                     {selectedQuote.photos.map((photo, idx) => (
                       <div key={idx} className="aspect-square cursor-pointer group relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/60 hover:border-primary/50 transition-all" onClick={() => setSelectedPhoto(photo)}>
                         <img
@@ -460,7 +458,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
         <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 max-w-md w-full shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="h-0.5 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500/30" />
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-2xl bg-orange-900/40 border border-orange-700/40 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-orange-400 text-xl">build_circle</span>
@@ -509,7 +507,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
         <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 max-w-md w-full shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="h-0.5 bg-gradient-to-r from-red-500 via-red-400 to-red-500/30" />
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-2xl bg-red-100 border border-red-300 dark:bg-red-900/40 dark:border-red-700/40 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-xl">delete_forever</span>

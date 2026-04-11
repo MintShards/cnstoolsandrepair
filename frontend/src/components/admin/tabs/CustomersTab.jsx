@@ -62,7 +62,7 @@ const getHighestPriority = (tools) => {
 function PriorityBadge({ priority }) {
   const cfg = PRIORITIES[priority] || PRIORITIES.standard;
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border ${cfg.color}`}>
+    <span className={`inline-flex items-center px-2 py-1 rounded text-sm font-bold border ${cfg.color}`}>
       {cfg.label}
     </span>
   );
@@ -484,33 +484,31 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
     return (
       <div>
         {/* Back + Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { setSelectedCustomer(null); setEditing(false); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
-            >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              <span>Customers</span>
-            </button>
-            <span className="text-slate-400 dark:text-slate-600 text-sm">/</span>
-            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-black text-sm">
-                {(selectedCustomer.first_name || selectedCustomer.company_name || '?')[0].toUpperCase()}
-              </span>
-            </div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase truncate leading-tight">
-              {selectedCustomer.company_name || `${selectedCustomer.first_name} ${selectedCustomer.last_name}`}
-            </h2>
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <button
+            onClick={() => { setSelectedCustomer(null); setEditing(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold flex-shrink-0"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            <span>Customers</span>
+          </button>
+          <span className="text-slate-400 dark:text-slate-600 text-sm flex-shrink-0">/</span>
+          <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+            <span className="text-primary font-black text-sm">
+              {(selectedCustomer.first_name || selectedCustomer.company_name || '?')[0].toUpperCase()}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase truncate leading-tight min-w-0 flex-1">
+            {selectedCustomer.company_name || `${selectedCustomer.first_name} ${selectedCustomer.last_name}`}
+          </h2>
+          <div className="flex items-center gap-2 flex-shrink-0">
             {onNewJob && (
               <button
                 onClick={() => onNewJob(selectedCustomer)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl text-sm font-bold transition-all"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
-                New Job
+                <span className="hidden sm:inline">New Job</span>
               </button>
             )}
             <button
@@ -518,7 +516,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 border border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/50 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-xl text-sm font-bold transition-all"
             >
               <span className="material-symbols-outlined text-sm">delete</span>
-              Delete
+              <span className="hidden sm:inline">Delete</span>
             </button>
           </div>
         </div>
@@ -550,43 +548,35 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
               </div>
               {/* Compact inline fields */}
               <div className="px-4 py-2.5">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                   {selectedCustomer.company_name && (
-                    <>
-                      <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
-                        <span className="text-xs text-slate-500">Company:</span>
-                        <span className="text-sm text-slate-900 dark:text-white font-bold">{selectedCustomer.company_name}</span>
-                      </div>
-                      <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
-                    </>
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
+                      <span className="text-xs text-slate-500">Company:</span>
+                      <span className="text-sm text-slate-900 dark:text-white font-bold">{selectedCustomer.company_name}</span>
+                    </div>
                   )}
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
                     <span className="text-xs text-slate-500">Contact:</span>
                     <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.first_name} {selectedCustomer.last_name}</span>
                   </div>
-                  <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
                     <span className="text-xs text-slate-500">Email:</span>
                     <a href={`mailto:${selectedCustomer.email}`} className="text-sm text-primary hover:underline">{selectedCustomer.email}</a>
                   </div>
-                  <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>phone</span>
                     <span className="text-xs text-slate-500">Phone:</span>
                     <a href={`tel:${selectedCustomer.phone}`} className="text-sm text-primary hover:underline">{selectedCustomer.phone}</a>
                   </div>
                   {selectedCustomer.address && (
-                    <>
-                      <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
-                        <span className="text-xs text-slate-500">Address:</span>
-                        <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.address}</span>
-                      </div>
-                    </>
+                    <div className="flex items-center gap-1.5 sm:col-span-2">
+                      <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
+                      <span className="text-xs text-slate-500">Address:</span>
+                      <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.address}</span>
+                    </div>
                   )}
                 </div>
                 {selectedCustomer.customer_notes && (
@@ -638,15 +628,15 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
               ) : (
                 <>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-left text-base">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60">
-                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Work Order #</th>
-                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Tools</th>
-                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Priority</th>
-                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Status</th>
-                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Created</th>
-                        <th className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
+                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500">Work Order #</th>
+                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Tools</th>
+                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Priority</th>
+                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500">Status</th>
+                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Created</th>
+                        <th className="py-3 px-4 text-right text-sm font-bold uppercase tracking-wide text-slate-500">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -657,21 +647,21 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                           onClick={() => openWoDialog(job)}
                         >
                           <td className="py-3.5 px-4">
-                            <div className="text-slate-900 dark:text-white font-mono font-bold text-xs tracking-wide">{job.request_number}</div>
+                            <div className="text-slate-900 dark:text-white font-mono font-bold text-sm tracking-wide">{job.request_number}</div>
                             {job.source === 'online_request' && (
-                              <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
-                                <span className="material-symbols-outlined text-xs" style={{fontSize:'11px'}}>public</span>
+                              <span className="inline-flex items-center gap-1 text-sm text-sky-400 mt-0.5">
+                                <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>public</span>
                                 Online
                               </span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4">
-                            <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-xs font-medium">
-                              <span className="material-symbols-outlined text-slate-500" style={{fontSize:'14px'}}>build</span>
+                          <td className="py-3.5 px-4 hidden md:table-cell">
+                            <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
+                              <span className="material-symbols-outlined text-slate-500" style={{fontSize:'16px'}}>build</span>
                               {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 hidden md:table-cell">
                             <PriorityBadge priority={getHighestPriority(job.tools)} />
                           </td>
                           <td className="py-3.5 px-4">
@@ -695,21 +685,21 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                               );
                             })()}
                           </td>
-                          <td className="py-3.5 px-4 text-slate-500 text-xs">{formatDate(job.created_at)}</td>
+                          <td className="py-3.5 px-4 text-slate-500 text-sm hidden md:table-cell">{formatDate(job.created_at)}</td>
                           <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => openWoDialog(job)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm"
                               >
-                                <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                <span className="material-symbols-outlined text-base">open_in_new</span>
                                 Open
                               </button>
                               <button
                                 onClick={() => setDeleteJobConfirm(job)}
                                 className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
                               >
-                                <span className="material-symbols-outlined text-sm">delete</span>
+                                <span className="material-symbols-outlined text-base">delete</span>
                               </button>
                             </div>
                           </td>
@@ -736,8 +726,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* Edit Customer Modal */}
         {editing && (
-          <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 max-w-lg w-full shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 max-w-lg w-full my-4 sm:my-8 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
               <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -756,8 +746,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   <span className="material-symbols-outlined text-base">close</span>
                 </button>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 sm:p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">First Name *</label>
                     <input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
@@ -771,7 +761,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Company</label>
                   <input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Email *</label>
                     <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
@@ -813,7 +803,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
           <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-red-200 dark:border-red-900/40 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-red-600 via-red-400 to-red-600/30" />
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center mb-5">
                   <div className="w-16 h-16 bg-red-100 border border-red-300 dark:bg-red-900/30 dark:border-red-800/40 rounded-2xl flex items-center justify-center">
                     <span className="material-symbols-outlined text-4xl text-red-600 dark:text-red-400">person_remove</span>
@@ -835,11 +825,11 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
         {/* ── WO DETAIL DIALOG ─────────────────────────────── */}
         {woDialogJob && (
-          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+          <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-4 sm:my-8 max-h-[calc(100vh-2rem)] flex flex-col border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30 flex-shrink-0" />
               {/* Header */}
-              <div className="sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
+              <div className="flex-shrink-0 sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
@@ -868,7 +858,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                 {/* Tools */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -892,12 +882,12 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black text-slate-500 dark:text-slate-400">
+                              <div className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-black text-slate-500 dark:text-slate-400">
                                 {idx + 1}
                               </div>
                               <div>
-                                <div className="font-bold text-slate-900 dark:text-white text-sm">{tool.brand} {tool.model_number}</div>
-                                <div className="text-xs text-slate-500 mt-0.5">
+                                <div className="font-bold text-slate-900 dark:text-white text-base">{tool.brand} {tool.model_number}</div>
+                                <div className="text-sm text-slate-500 mt-0.5">
                                   {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                   {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
                                   {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDate(tool.estimated_completion)}</>}
@@ -908,35 +898,35 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                               <StepBadge status={tool.status} />
                               <PriorityBadge priority={tool.priority} />
                               {tool.warranty && (
-                                <span className="hidden sm:inline px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
+                                <span className="hidden sm:inline px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                             {tool.warranty && (
-                              <span className="sm:hidden px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
+                              <span className="sm:hidden px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                             )}
-                            <button onClick={() => openStatusUpdate(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-xs font-bold transition-all">
-                              <span className="material-symbols-outlined text-sm">update</span>
+                            <button onClick={() => openStatusUpdate(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-sm font-bold transition-all">
+                              <span className="material-symbols-outlined text-base">update</span>
                               Update Status
                             </button>
                             {editingToolId !== tool.tool_id && (
-                              <button onClick={() => handleStartToolEdit(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all">
-                                <span className="material-symbols-outlined text-sm">edit</span>
+                              <button onClick={() => handleStartToolEdit(tool)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all">
+                                <span className="material-symbols-outlined text-base">edit</span>
                                 Edit
                               </button>
                             )}
                             {woDialogJob.tools.length > 1 && (
                               <button
                                 onClick={() => handleRemoveTool(tool.tool_id)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all border ${
                                   removeConfirmId === tool.tool_id
                                     ? 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700/60'
                                     : 'bg-slate-200/40 dark:bg-slate-700/40 hover:bg-red-50 dark:hover:bg-red-900/30 border-slate-200 dark:border-slate-600/40 hover:border-red-300 dark:hover:border-red-700/40 text-slate-500 hover:text-red-600 dark:hover:text-red-400'
                                 }`}
                               >
                                 {removeConfirmId === tool.tool_id ? 'Confirm Remove?' : (
-                                  <span className="material-symbols-outlined text-sm">delete</span>
+                                  <span className="material-symbols-outlined text-base">delete</span>
                                 )}
                               </button>
                             )}
@@ -947,25 +937,26 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         <div className="px-4 pt-3 pb-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700/60">
                           <div className="flex items-center gap-3 flex-wrap mb-1">
                             <StatusBadge status={tool.status} />
-                            <div className="text-xs text-slate-500">
+                            <div className="text-sm text-slate-500">
                               Received: {formatDate(tool.date_received)}
                               {tool.date_completed && ` · Completed: ${formatDate(tool.date_completed)}`}
                             </div>
                           </div>
-                          <ProgressStepper status={tool.status} />
+                          <div className="md:hidden"><ProgressStepper status={tool.status} compact /></div>
+                          <div className="hidden md:block"><ProgressStepper status={tool.status} /></div>
                         </div>
 
                             {/* Tool Details — 3-column grid */}
                             <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60">
-                              <div className="grid grid-cols-3 gap-3 text-xs">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                 {/* Left — Remarks */}
                                 <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
-                                  <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Remarks</span>
+                                  <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
                                   <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
                                 </div>
                                 {/* Middle — Parts */}
                                 <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
-                                  <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
+                                  <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
                                   {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                                     <div className="mt-1 space-y-1">
                                       {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
@@ -977,7 +968,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                             p.status === 'received' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' :
                                             p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
                                             'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                                          }`} style={{fontSize:'10px'}}>{p.status}</span>
+                                          }`} style={{fontSize:'12px'}}>{p.status}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -988,7 +979,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                 {/* Right — Labour / Technician / Zoho */}
                                 <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
                                   <div>
-                                    <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Labour</span>
+                                    <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Labour</span>
                                     <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
                                       {tool.labour_hours || tool.hourly_rate ? (
                                         <>
@@ -1002,11 +993,11 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                     </p>
                                   </div>
                                   <div>
-                                    <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Technician</span>
+                                    <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Technician</span>
                                     <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
                                   </div>
                                   <div>
-                                    <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Zoho Ref</span>
+                                    <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Ref</span>
                                     <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
                                   </div>
                                 </div>
@@ -1017,14 +1008,14 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         <div className="px-4 pb-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-slate-500 text-sm">photo_library</span>
-                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Photos</span>
+                              <span className="material-symbols-outlined text-slate-500 text-base">photo_library</span>
+                              <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Photos</span>
                               {tool.photos?.length > 0 && (
-                                <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
+                                <span className="text-sm font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
                               )}
                             </div>
-                            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all">
-                              <span className="material-symbols-outlined text-sm">upload</span>
+                            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold cursor-pointer transition-all">
+                              <span className="material-symbols-outlined text-base">upload</span>
                               {uploadingPhoto === tool.tool_id ? 'Uploading...' : 'Add Photo'}
                               <input type="file" accept="image/*" className="hidden"
                                 onChange={(e) => e.target.files?.[0] && handlePhotoUpload(tool.tool_id, e.target.files[0])}
@@ -1032,7 +1023,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                             </label>
                           </div>
                           {tool.photos?.length > 0 && (
-                            <div className="grid grid-cols-4 md:grid-cols-6 gap-1.5">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
                               {tool.photos.map((photo, pidx) => (
                                 <div key={pidx} className="aspect-square cursor-pointer group relative rounded-lg overflow-hidden" onClick={() => setSelectedPhoto(photo)}>
                                   <img
@@ -1048,7 +1039,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                                     className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                     title="Delete photo"
                                   >
-                                    <span className="material-symbols-outlined text-slate-900 dark:text-white" style={{ fontSize: '12px' }}>close</span>
+                                    <span className="material-symbols-outlined text-slate-900 dark:text-white" style={{ fontSize: '14px' }}>close</span>
                                   </button>
                                 </div>
                               ))}
@@ -1060,17 +1051,17 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                         {tool.status_history?.length > 0 && (
                           <details className="border-t border-slate-200 dark:border-slate-700/60 group/hist">
                             <summary className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-colors select-none list-none">
-                              <span className="material-symbols-outlined text-slate-500 text-sm group-open/hist:rotate-90 transition-transform">chevron_right</span>
-                              <span className="material-symbols-outlined text-slate-500 text-sm">history</span>
-                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status History</span>
-                              <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
+                              <span className="material-symbols-outlined text-slate-500 text-base group-open/hist:rotate-90 transition-transform">chevron_right</span>
+                              <span className="material-symbols-outlined text-slate-500 text-base">history</span>
+                              <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status History</span>
+                              <span className="text-sm font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
                             </summary>
                             <div className="px-4 pb-4 pt-2">
                               <div className="relative pl-5">
                                 <div className="absolute left-1.5 top-2 bottom-2 w-px bg-slate-200/60 dark:bg-slate-700/60" />
                                 <div className="space-y-3">
                                   {[...tool.status_history].reverse().map((entry, hidx) => (
-                                    <div key={hidx} className="relative flex items-start gap-3 text-xs">
+                                    <div key={hidx} className="relative flex items-start gap-3 text-sm">
                                       <div className={`absolute -left-3.5 mt-1.5 w-2 h-2 rounded-full flex-shrink-0 border-2 border-slate-200 dark:border-slate-800 ${REPAIR_STATUSES[entry.status]?.dot || 'bg-slate-500'}`} />
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2 flex-wrap">
@@ -1114,7 +1105,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   <span className="material-symbols-outlined text-base">close</span>
                 </button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4">
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Current:</span>
@@ -1194,7 +1185,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   <span className="material-symbols-outlined text-base">close</span>
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <InlineToolForm toolData={formData} onChange={setFormData} />
                 <div className="flex gap-3 mt-6">
                   <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
@@ -1213,7 +1204,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
           <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-red-200 dark:border-red-900/40 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="h-0.5 bg-gradient-to-r from-red-600 via-red-400 to-red-600/30" />
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center mb-5">
                   <div className="w-16 h-16 bg-red-100 border border-red-300 dark:bg-red-900/30 dark:border-red-800/40 rounded-2xl flex items-center justify-center">
                     <span className="material-symbols-outlined text-4xl text-red-600 dark:text-red-400">delete_forever</span>
@@ -1256,7 +1247,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
   // ── List view ──
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div>
           <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Customers</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manage customer profiles and repair history</p>
@@ -1266,12 +1257,12 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl text-sm font-bold transition-all"
         >
           <span className="material-symbols-outlined text-sm">person_add</span>
-          New Customer
+          <span className="hidden sm:inline">New Customer</span>
         </button>
       </div>
 
       {/* Search + Filter bar */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-lg">search</span>
           <input
@@ -1328,14 +1319,14 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase text-slate-500 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60">
+              <table className="w-full text-base text-left">
+                <thead className="text-sm uppercase text-slate-500 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60">
                   <tr>
                     <th className="py-3 px-4 font-bold">Company / Contact</th>
-                    <th className="py-3 px-4 font-bold">Email</th>
-                    <th className="py-3 px-4 font-bold">Phone</th>
-                    <th className="py-3 px-4 font-bold">Address</th>
-                    <th className="py-3 px-4 font-bold">Since</th>
+                    <th className="py-3 px-4 font-bold hidden md:table-cell">Email</th>
+                    <th className="py-3 px-4 font-bold hidden md:table-cell">Phone</th>
+                    <th className="py-3 px-4 font-bold hidden lg:table-cell">Address</th>
+                    <th className="py-3 px-4 font-bold hidden lg:table-cell">Since</th>
                     <th className="py-3 px-4 text-right font-bold">Actions</th>
                   </tr>
                 </thead>
@@ -1348,18 +1339,18 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                     >
                       <td className="py-3.5 px-4">
                         <div className="text-slate-900 dark:text-white font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</div>
-                        {customer.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{customer.first_name} {customer.last_name}</div>}
+                        {customer.company_name && <div className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{customer.first_name} {customer.last_name}</div>}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{customer.email}</td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{customer.phone}</td>
-                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{customer.address || <span className="text-slate-400 dark:text-slate-600">—</span>}</td>
-                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-xs">{formatDate(customer.created_at)}</td>
+                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 hidden md:table-cell">{customer.email}</td>
+                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 hidden md:table-cell">{customer.phone}</td>
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell">{customer.address || <span className="text-slate-400 dark:text-slate-600">—</span>}</td>
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell">{formatDate(customer.created_at)}</td>
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={(e) => { e.stopPropagation(); openCustomer(customer); }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 group-hover:bg-primary/20 group-hover:border-primary/30 hover:text-primary border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold transition-all"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 group-hover:bg-primary/20 group-hover:border-primary/30 hover:text-primary border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold transition-all"
                         >
-                          <span className="material-symbols-outlined text-sm">open_in_new</span>
+                          <span className="material-symbols-outlined text-base">open_in_new</span>
                           Open
                         </button>
                       </td>
@@ -1384,8 +1375,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
       {/* New Customer Modal */}
       {showNewForm && (
-        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full my-4 sm:my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
             <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
               <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -1396,8 +1387,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
-            <form onSubmit={handleCreateCustomer} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleCreateCustomer} className="p-4 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">First Name *</label>
                   <input
@@ -1429,7 +1420,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Email *</label>
                   <input
@@ -1563,16 +1554,16 @@ function InlineToolForm({ toolData, onChange }) {
           <div className="space-y-2">
             {d.parts.map((part, pi) => (
               <div key={pi} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-300 dark:border-slate-700">
-                <div className="flex-1 flex gap-3">
+                <div className="flex-1 flex flex-wrap gap-2 sm:gap-3">
                   <input placeholder="Part name *" value={part.name} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, name: e.target.value }; h('parts', updated);
-                  }} className="w-[70%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
                   <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }; h('parts', updated);
-                  }} className="w-[15%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="w-16 px-2 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
                   <select value={part.status} onChange={(e) => {
                     const updated = [...d.parts]; updated[pi] = { ...part, status: e.target.value }; h('parts', updated);
-                  }} className="w-[15%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary">
+                  }} className="w-28 sm:w-auto px-2 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="pending">Pending</option>
                     <option value="ordered">Ordered</option>
                     <option value="received">Received</option>

@@ -21,7 +21,7 @@ export default function Header() {
         </div>
 
         {/* Desktop Navigation - Hidden on mobile */}
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className="hidden lg:flex items-center lg:gap-4 xl:gap-6">
           <Link
             to="/"
             className={`font-semibold uppercase text-sm transition-colors ${
@@ -81,7 +81,7 @@ export default function Header() {
         {/* Mobile Navigation Toggle - Hidden on desktop */}
         <div className="flex lg:hidden items-center gap-2">
           <Link to="/repair-request">
-            <button className="bg-primary text-white text-[10px] font-bold px-3 py-2 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
+            <button className="bg-primary text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
               Repair
             </button>
           </Link>

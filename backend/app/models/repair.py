@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
@@ -78,6 +78,8 @@ class StatusHistoryEntry(BaseModel):
 
 
 class ToolItemCreate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     tool_type: str = Field(..., min_length=1, max_length=100)
     brand: str = Field(..., min_length=1, max_length=100)
     model_number: str = Field(..., min_length=1, max_length=100)
@@ -104,6 +106,8 @@ class ToolItemCreate(BaseModel):
 
 
 class ToolItemUpdate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     tool_type: Optional[str] = Field(None, min_length=1, max_length=100)
     brand: Optional[str] = Field(None, min_length=1, max_length=100)
     model_number: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -141,6 +145,8 @@ class ToolItem(ToolItemCreate):
 
 
 class ToolItemResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     tool_id: str
     tool_type: str
     brand: str

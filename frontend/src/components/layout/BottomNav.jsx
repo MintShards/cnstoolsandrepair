@@ -7,7 +7,7 @@ export default function BottomNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3 pb-8 z-50">
-      <div className="flex items-center justify-between max-w-md sm:max-w-3xl mx-auto">
+      <div className="flex items-center justify-between w-full mx-auto">
         <Link
           to="/"
           className={`flex flex-col items-center gap-1 ${
@@ -20,7 +20,7 @@ export default function BottomNav() {
           >
             home
           </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Home</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Home</span>
         </Link>
 
         <Link
@@ -35,7 +35,7 @@ export default function BottomNav() {
           >
             handyman
           </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Services</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Services</span>
         </Link>
 
         {/* Tablet only - Industries */}
@@ -51,7 +51,7 @@ export default function BottomNav() {
           >
             factory
           </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Industries</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Industries</span>
         </Link>
 
         <div className="relative -mt-12">
@@ -79,7 +79,7 @@ export default function BottomNav() {
           >
             photo_library
           </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Gallery</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Gallery</span>
         </Link>
 
         {/* Tablet only - About */}
@@ -95,7 +95,7 @@ export default function BottomNav() {
           >
             history
           </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">About</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">About</span>
         </Link>
 
         <Link
@@ -110,7 +110,7 @@ export default function BottomNav() {
           >
             chat_bubble
           </span>
-          <span className="text-[9px] font-black uppercase tracking-tighter">Contact</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Contact</span>
         </Link>
       </div>
     </nav>

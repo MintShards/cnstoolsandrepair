@@ -73,7 +73,7 @@ export default function AnnouncementBanner() {
 
   return (
     <div className={`${style.bg} ${style.text} py-1 px-4 sm:px-6 sticky top-0 z-50 shadow-md animate-slideDown`}>
-      <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-4">
+      <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         <div className="flex items-center gap-3 flex-1">
           <span className="material-symbols-outlined text-xl sm:text-2xl flex-shrink-0">
             {style.icon}

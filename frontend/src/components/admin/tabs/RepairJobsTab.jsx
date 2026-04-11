@@ -48,7 +48,7 @@ const getHighestPriority = (tools) => {
 const PriorityBadge = ({ priority }) => {
   const cfg = getPriorityConfig(priority);
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border ${cfg.color}`}>
+    <span className={`inline-flex items-center px-2 py-1 rounded text-sm font-bold border ${cfg.color}`}>
       {cfg.label}
     </span>
   );
@@ -668,7 +668,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // ── RENDER ───────────────────────────────────────────
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Repair Jobs</h2>
           <p className="text-slate-500 text-sm mt-0.5">Manage work orders and tool repairs</p>
@@ -678,7 +678,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30"
         >
           <span className="material-symbols-outlined text-base">add</span>
-          New Repair Job
+          <span className="hidden sm:inline">New Repair Job</span>
         </button>
       </div>
 
@@ -686,7 +686,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       <div className="mb-5 p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-[160px] sm:min-w-[200px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">search</span>
             <input
               type="text"
@@ -697,24 +697,24 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             />
           </div>
           {/* Status filter */}
-          <div className="relative">
+          <div className="relative min-w-[140px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">label</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-10 pr-8 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
+              className="w-full pl-10 pr-8 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
             >
               <option value="">All Statuses</option>
               {REPAIR_STATUSES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           {/* Priority filter */}
-          <div className="relative">
+          <div className="relative min-w-[130px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">flag</span>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="pl-10 pr-8 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
+              className="w-full pl-10 pr-8 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer"
             >
               <option value="">All Priorities</option>
               {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
@@ -777,13 +777,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60">
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Work Order #</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Customer</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Tools</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Priority</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Status</th>
-                  <th className="py-3 px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Created</th>
-                  <th className="py-3 px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500">WO #</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Customer</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Tools</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Priority</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden sm:table-cell">Status</th>
+                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden lg:table-cell">Created</th>
+                  <th className="py-3 px-3 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -793,29 +793,29 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     className="group hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors duration-150 cursor-pointer"
                     onClick={() => openJob(job)}
                   >
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-900 dark:text-white font-mono font-bold text-xs tracking-wide">{job.request_number}</div>
+                    <td className="py-3 px-3 sm:px-4">
+                      <div className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">{job.request_number}</div>
                       {job.source === 'online_request' && (
                         <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
-                          <span className="material-symbols-outlined text-xs" style={{fontSize:'11px'}}>public</span>
+                          <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>public</span>
                           Online
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       <div className="text-slate-900 dark:text-white font-semibold text-sm">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
                       {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs">{job.first_name} {job.last_name}</div>}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-xs font-medium">
-                        <span className="material-symbols-outlined text-slate-500" style={{fontSize:'14px'}}>build</span>
+                    <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
+                      <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
+                        <span className="material-symbols-outlined text-slate-500" style={{fontSize:'16px'}}>build</span>
                         {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <PriorityBadge priority={getHighestPriority(job.tools)} />
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3 sm:px-4 hidden sm:table-cell">
                       {job.tools?.length === 1 ? (
                         <StatusBadge status={job.tools[0].status} />
                       ) : (() => {
@@ -836,21 +836,23 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         );
                       })()}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-xs">{formatDateShort(job.created_at)}</td>
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-3 px-3 sm:px-4 text-slate-500 text-sm hidden lg:table-cell">{formatDateShort(job.created_at)}</td>
+                    <td className="py-3 px-3 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => openJob(job)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm"
+                          title="Open"
                         >
-                          <span className="material-symbols-outlined text-sm">open_in_new</span>
-                          Open
+                          <span className="material-symbols-outlined text-base">open_in_new</span>
+                          <span className="hidden sm:inline">Open</span>
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(job)}
                           className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
+                          title="Delete"
                         >
-                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span className="material-symbols-outlined text-base">delete</span>
                         </button>
                       </div>
                     </td>
@@ -876,12 +878,12 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
       {/* ── JOB DETAIL MODAL ─────────────────────────────── */}
       {selectedJob && (
-        <div role="dialog" aria-modal="true" aria-labelledby="wo-dialog-title" className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-fadeInScale overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div role="dialog" aria-modal="true" aria-labelledby="wo-dialog-title" className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-4 sm:my-8 max-h-[calc(100vh-2rem)] flex flex-col border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/50 animate-fadeInScale overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Colored top-border accent */}
-            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30 flex-shrink-0" />
             {/* Header */}
-            <div className="sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
+            <div className="flex-shrink-0 sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
@@ -910,7 +912,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* Customer Info */}
               <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
                 <div className="flex items-center gap-2 flex-wrap px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
@@ -935,43 +937,35 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   <div className="px-4 py-2.5">
                     {(() => { const cust = jobCustomer || selectedJob; return (
                       <>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                           {cust.company_name && (
-                            <>
-                              <div className="flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
-                                <span className="text-xs text-slate-500">Company:</span>
-                                <span className="text-sm text-slate-900 dark:text-white font-bold">{cust.company_name}</span>
-                              </div>
-                              <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
-                            </>
+                            <div className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
+                              <span className="text-xs text-slate-500">Company:</span>
+                              <span className="text-sm text-slate-900 dark:text-white font-bold">{cust.company_name}</span>
+                            </div>
                           )}
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
                             <span className="text-xs text-slate-500">Contact:</span>
                             <span className="text-sm text-slate-900 dark:text-white">{cust.first_name} {cust.last_name}</span>
                           </div>
-                          <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
                             <span className="text-xs text-slate-500">Email:</span>
                             <a href={`mailto:${cust.email}`} className="text-sm text-primary hover:underline">{cust.email}</a>
                           </div>
-                          <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>phone</span>
                             <span className="text-xs text-slate-500">Phone:</span>
                             <a href={`tel:${cust.phone}`} className="text-sm text-primary hover:underline">{cust.phone}</a>
                           </div>
                           {cust.address && (
-                            <>
-                              <span className="text-slate-500 dark:text-slate-700 text-xs select-none">|</span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
-                                <span className="text-xs text-slate-500">Address:</span>
-                                <span className="text-sm text-slate-900 dark:text-white">{cust.address}</span>
-                              </div>
-                            </>
+                            <div className="flex items-center gap-1.5 sm:col-span-2">
+                              <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
+                              <span className="text-xs text-slate-500">Address:</span>
+                              <span className="text-sm text-slate-900 dark:text-white">{cust.address}</span>
+                            </div>
                           )}
                         </div>
                         {cust.customer_notes && (
@@ -1010,14 +1004,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       <div className="p-4 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black text-slate-500 dark:text-slate-400">
+                            <div className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-black text-slate-500 dark:text-slate-400">
                               {idx + 1}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 dark:text-white text-sm">
+                              <div className="font-bold text-slate-900 dark:text-white text-base">
                                 {tool.brand} {tool.model_number}
                               </div>
-                              <div className="text-xs text-slate-500 mt-0.5">
+                              <div className="text-sm text-slate-500 mt-0.5">
                                 {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                 {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
@@ -1028,41 +1022,41 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <StepBadge status={tool.status} />
                             <PriorityBadge priority={tool.priority} />
                             {tool.warranty && (
-                              <span className="hidden sm:inline px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
+                              <span className="hidden sm:inline px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                           {tool.warranty && (
-                            <span className="sm:hidden px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
+                            <span className="sm:hidden px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                           )}
                           <button
                             onClick={() => openStatusUpdate(tool)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-xs font-bold transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-sm font-bold transition-all"
                           >
-                            <span className="material-symbols-outlined text-sm">update</span>
+                            <span className="material-symbols-outlined text-base">update</span>
                             Update Status
                           </button>
                           {editingToolId !== tool.tool_id && (
                             <button
                               onClick={() => handleStartToolEdit(tool)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                             >
-                              <span className="material-symbols-outlined text-sm">edit</span>
+                              <span className="material-symbols-outlined text-base">edit</span>
                               Edit
                             </button>
                           )}
                           {selectedJob.tools.length > 1 && (
                             <button
                               onClick={() => handleRemoveTool(tool.tool_id)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all border ${
                                 removeConfirmId === tool.tool_id
                                   ? 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700/60'
                                   : 'bg-slate-200/40 dark:bg-slate-700/40 hover:bg-red-50 dark:hover:bg-red-900/30 border-slate-200 dark:border-slate-600/40 hover:border-red-300 dark:hover:border-red-700/40 text-slate-500 hover:text-red-600 dark:hover:text-red-400'
                               }`}
                             >
                               {removeConfirmId === tool.tool_id ? 'Confirm Remove?' : (
-                                <span className="material-symbols-outlined text-sm">delete</span>
+                                <span className="material-symbols-outlined text-base">delete</span>
                               )}
                             </button>
                           )}
@@ -1073,25 +1067,26 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       <div className="px-4 pt-3 pb-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700/60">
                         <div className="flex items-center gap-3 flex-wrap mb-1">
                           <StatusBadge status={tool.status} />
-                          <div className="text-xs text-slate-500">
+                          <div className="text-sm text-slate-500">
                             Received: {formatDateShort(tool.date_received)}
                             {tool.date_completed && ` · Completed: ${formatDateShort(tool.date_completed)}`}
                           </div>
                         </div>
-                        <ProgressStepper status={tool.status} />
+                        <div className="md:hidden"><ProgressStepper status={tool.status} compact /></div>
+                        <div className="hidden md:block"><ProgressStepper status={tool.status} /></div>
                       </div>
 
                       {/* Tool Details — 3-column grid */}
                       <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60">
-                        <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                           {/* Left — Remarks */}
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
-                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Remarks</span>
+                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
                             <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
                           </div>
                           {/* Middle — Parts */}
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
-                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
+                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
                             {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                               <div className="mt-1 space-y-1">
                                 {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
@@ -1103,7 +1098,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                       p.status === 'received' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' :
                                       p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
                                       'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                                    }`} style={{fontSize:'10px'}}>{p.status}</span>
+                                    }`} style={{fontSize:'12px'}}>{p.status}</span>
                                   </div>
                                 ))}
                               </div>
@@ -1114,7 +1109,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           {/* Right — Labour / Technician / Zoho */}
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
                             <div>
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Labour</span>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Labour</span>
                               <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
                                 {tool.labour_hours || tool.hourly_rate ? (
                                   <>
@@ -1128,11 +1123,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               </p>
                             </div>
                             <div>
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Technician</span>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Technician</span>
                               <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
                             </div>
                             <div>
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'10px'}}>Zoho Ref</span>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Ref</span>
                               <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
                             </div>
                           </div>
@@ -1143,14 +1138,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       <div className="px-4 pb-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-slate-500 text-sm">photo_library</span>
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Photos</span>
+                            <span className="material-symbols-outlined text-slate-500 text-base">photo_library</span>
+                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Photos</span>
                             {tool.photos?.length > 0 && (
-                              <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
+                              <span className="text-sm font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
                             )}
                           </div>
-                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all">
-                            <span className="material-symbols-outlined text-sm">upload</span>
+                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold cursor-pointer transition-all">
+                            <span className="material-symbols-outlined text-base">upload</span>
                             {uploadingPhoto === tool.tool_id ? 'Uploading...' : 'Add Photo'}
                             <input type="file" accept="image/*" className="hidden"
                               onChange={(e) => e.target.files?.[0] && handlePhotoUpload(tool.tool_id, e.target.files[0])}
@@ -1158,7 +1153,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           </label>
                         </div>
                         {tool.photos?.length > 0 && (
-                          <div className="grid grid-cols-4 md:grid-cols-6 gap-1.5">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
                             {tool.photos.map((photo, pidx) => (
                               <div key={pidx} className="aspect-square cursor-pointer group relative rounded-lg overflow-hidden" onClick={() => setSelectedPhoto(photo)}>
                                 <img
@@ -1174,7 +1169,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                   className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                   title="Delete photo"
                                 >
-                                  <span className="material-symbols-outlined text-slate-900 dark:text-white" style={{ fontSize: '12px' }}>close</span>
+                                  <span className="material-symbols-outlined text-slate-900 dark:text-white" style={{ fontSize: '14px' }}>close</span>
                                 </button>
                               </div>
                             ))}
@@ -1186,10 +1181,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       {tool.status_history?.length > 0 && (
                         <details className="border-t border-slate-200 dark:border-slate-700/60 group/hist">
                           <summary className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-colors select-none list-none">
-                            <span className="material-symbols-outlined text-slate-500 text-sm group-open/hist:rotate-90 transition-transform">chevron_right</span>
-                            <span className="material-symbols-outlined text-slate-500 text-sm">history</span>
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status History</span>
-                            <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
+                            <span className="material-symbols-outlined text-slate-500 text-base group-open/hist:rotate-90 transition-transform">chevron_right</span>
+                            <span className="material-symbols-outlined text-slate-500 text-base">history</span>
+                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status History</span>
+                            <span className="text-sm font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full ml-1">{tool.status_history.length}</span>
                           </summary>
                           <div className="px-4 pb-4 pt-2">
                             <div className="relative pl-5">
@@ -1197,7 +1192,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               <div className="absolute left-1.5 top-2 bottom-2 w-px bg-slate-200/60 dark:bg-slate-700/60" />
                               <div className="space-y-3">
                                 {[...tool.status_history].reverse().map((entry, hidx) => (
-                                  <div key={hidx} className="relative flex items-start gap-3 text-xs">
+                                  <div key={hidx} className="relative flex items-start gap-3 text-sm">
                                     {/* Timeline dot */}
                                     <div className={`absolute -left-3.5 mt-1.5 w-2 h-2 rounded-full flex-shrink-0 border-2 border-slate-200 dark:border-slate-800 ${
                                       REPAIR_STATUSES[entry.status]?.dot || 'bg-slate-500'
@@ -1246,7 +1241,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Current:</span>
@@ -1330,7 +1325,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <ToolForm toolData={formData} onChange={setFormData} />
               <div className="flex gap-3 mt-6">
                 <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
@@ -1351,53 +1346,58 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             {/* Top accent */}
             <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
             {/* Header */}
-            <div className="sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary text-sm">add_circle</span>
+            <div className="flex-shrink-0 sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-4 sm:px-6 py-3 sm:py-4 flex flex-col gap-3 z-10">
+              {/* Row 1: Title + Close */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-primary text-sm">add_circle</span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">New Repair Job</h3>
                 </div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">New Repair Job</h3>
+                <button onClick={handleCloseNewJob} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
+                  <span className="material-symbols-outlined text-base">close</span>
+                </button>
               </div>
-              {/* 4-step progress stepper */}
-              <div className="flex items-center gap-0 flex-1 min-w-0 max-w-sm mx-auto">
-                {[
-                  { n: 1, label: 'Customer' },
-                  { n: 2, label: 'Tool Info' },
-                  { n: 3, label: 'Job Details' },
-                  { n: 4, label: 'Cost & Schedule' },
-                ].map(({ n, label }, i) => {
-                  const done = newJobStep > n;
-                  const active = newJobStep === n;
-                  return (
-                    <div key={n} className="flex items-center gap-0 flex-1 min-w-0">
-                      {i > 0 && <div className={`h-0.5 flex-1 transition-all duration-300 ${done ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`} />}
-                      <button
-                        type="button"
-                        onClick={() => done && setNewJobStep(n)}
-                        className={`flex flex-col items-center gap-1 flex-shrink-0 ${done ? 'cursor-pointer' : 'cursor-default'}`}
-                      >
-                        <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all duration-300 ${
-                          done ? 'bg-primary text-white hover:bg-blue-500' :
-                          active ? 'bg-primary text-white shadow-md shadow-primary/30' :
-                          'bg-slate-200 dark:bg-slate-700 text-slate-500 border border-slate-300 dark:border-slate-600'
-                        }`}>
-                          {active && <span className="absolute inset-0 rounded-full ring-4 ring-primary/20 animate-pulse" />}
-                          {done ? <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check</span> : n}
-                        </div>
-                        <span className={`text-[10px] font-bold whitespace-nowrap ${active ? 'text-blue-400' : done ? 'text-slate-500' : 'text-slate-400 dark:text-slate-600'}`}>{label}</span>
-                      </button>
-                    </div>
-                  );
-                })}
+              {/* Row 2: 4-step progress stepper */}
+              <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+                <div className="flex items-center gap-0 min-w-[280px] max-w-sm mx-auto">
+                  {[
+                    { n: 1, label: 'Customer' },
+                    { n: 2, label: 'Tool Info' },
+                    { n: 3, label: 'Job Details' },
+                    { n: 4, label: 'Cost & Schedule' },
+                  ].map(({ n, label }, i) => {
+                    const done = newJobStep > n;
+                    const active = newJobStep === n;
+                    return (
+                      <div key={n} className="flex items-center gap-0 flex-1 min-w-0">
+                        {i > 0 && <div className={`h-0.5 flex-1 transition-all duration-300 ${done ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`} />}
+                        <button
+                          type="button"
+                          onClick={() => done && setNewJobStep(n)}
+                          className={`flex flex-col items-center gap-1 flex-shrink-0 ${done ? 'cursor-pointer' : 'cursor-default'}`}
+                        >
+                          <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all duration-300 ${
+                            done ? 'bg-primary text-white hover:bg-blue-500' :
+                            active ? 'bg-primary text-white shadow-md shadow-primary/30' :
+                            'bg-slate-200 dark:bg-slate-700 text-slate-500 border border-slate-300 dark:border-slate-600'
+                          }`}>
+                            {active && <span className="absolute inset-0 rounded-full ring-4 ring-primary/20 animate-pulse" />}
+                            {done ? <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check</span> : n}
+                          </div>
+                          <span className={`text-[10px] font-bold text-center leading-tight ${active ? 'text-blue-400' : done ? 'text-slate-500' : 'text-slate-400 dark:text-slate-600'}`}>{label}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <button onClick={handleCloseNewJob} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
-                <span className="material-symbols-outlined text-base">close</span>
-              </button>
             </div>
 
             {/* Step 1: Customer Selection */}
             {newJobStep === 1 && (
-              <div className="p-6 space-y-5">
+              <div className="p-4 sm:p-6 space-y-5">
                 {!selectedCustomerObj ? (
                   <>
                     {/* Search existing */}
@@ -1576,7 +1576,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 )}
 
                 {/* Step 1 actions */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-wrap gap-3 pt-2">
                   <button type="button" onClick={handleCloseNewJob} className="px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all">
                     Cancel
                   </button>
@@ -1627,7 +1627,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
             {/* Step 2: Tool Info (identification + photos) */}
             {newJobStep === 2 && (
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-6">
                 {/* Tools */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -1661,7 +1661,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button type="button" onClick={() => setNewJobStep(1)} className="px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
@@ -1687,7 +1687,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
             {/* Step 3: Job Details (description + parts) */}
             {newJobStep === 3 && (
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-6">
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Tools to Repair</h4>
                   <div className="space-y-4">
@@ -1709,7 +1709,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button type="button" onClick={() => setNewJobStep(2)} className="px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
@@ -1724,7 +1724,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
             {/* Step 4: Cost & Schedule + submit */}
             {newJobStep === 4 && (
-              <form onSubmit={handleCreateJob} className="p-6 space-y-6">
+              <form onSubmit={handleCreateJob} className="p-4 sm:p-6 space-y-6">
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Tools to Repair</h4>
                   <div className="space-y-4">
@@ -1746,7 +1746,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <button type="button" onClick={() => setNewJobStep(3)} className="px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">arrow_back</span>
                     Back
@@ -1802,8 +1802,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">First Name *</label>
                   <input value={jobEditForm.first_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
@@ -1817,7 +1817,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Company</label>
                 <input value={jobEditForm.company_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Email *</label>
                   <input type="email" value={jobEditForm.email || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, email: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
@@ -1855,7 +1855,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-red-200 dark:border-red-900/40 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Top accent — red */}
             <div className="h-0.5 bg-gradient-to-r from-red-600 via-red-400 to-red-600/30" />
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-center mb-5">
                 <div className="w-16 h-16 bg-red-100 border border-red-300 dark:bg-red-900/30 dark:border-red-800/40 rounded-2xl flex items-center justify-center">
                   <span className="material-symbols-outlined text-4xl text-red-600 dark:text-red-400">delete_forever</span>
@@ -1995,7 +1995,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {data._pendingPhotos.length} photo{data._pendingPhotos.length !== 1 ? 's' : ''} selected
                 </p>
-                <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
                   {data._pendingPhotos.map((file, fi) => (
                     <div key={fi} className="aspect-square group relative">
                       <img
@@ -2033,16 +2033,16 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
           <div className="space-y-2">
             {data.parts.map((part, pi) => (
               <div key={pi} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-300 dark:border-slate-700">
-                <div className="flex-1 flex gap-3">
+                <div className="flex-1 flex flex-wrap gap-2 sm:gap-3">
                   <input placeholder="Part name *" value={part.name} onChange={(e) => {
                     const updated = [...data.parts]; updated[pi] = { ...part, name: e.target.value }; handleChange('parts', updated);
-                  }} className="w-[70%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
                   <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => {
                     const updated = [...data.parts]; updated[pi] = { ...part, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }; handleChange('parts', updated);
-                  }} className="w-[15%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary" />
+                  }} className="w-16 px-2 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
                   <select value={part.status} onChange={(e) => {
                     const updated = [...data.parts]; updated[pi] = { ...part, status: e.target.value }; handleChange('parts', updated);
-                  }} className="w-[15%] px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-base focus:outline-none focus:ring-1 focus:ring-primary">
+                  }} className="w-28 sm:w-auto px-2 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="pending">Pending</option>
                     <option value="ordered">Ordered</option>
                     <option value="received">Received</option>

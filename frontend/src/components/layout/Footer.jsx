@@ -8,7 +8,7 @@ export default function Footer() {
   if (loading || !settings) {
     return (
       <footer role="contentinfo" className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 pb-24 lg:pb-0">
-        <div className="max-w-screen-xl mx-auto px-6 py-12">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-12">
           {/* Main Footer Grid Skeleton - 4 Columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-8">
 
@@ -162,7 +162,7 @@ export default function Footer() {
 
   return (
     <footer role="contentinfo" className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 pb-24 lg:pb-0">
-      <div className="max-w-screen-xl mx-auto px-6 py-12">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-12">
         {/* Main Footer Grid - 4 Columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-8">
 
@@ -195,7 +195,7 @@ export default function Footer() {
 
           {/* Column 2: Services */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-400 dark:text-slate-500 mb-4">
               Services
             </h3>
             <ul className="space-y-3 text-sm font-bold">
@@ -228,7 +228,7 @@ export default function Footer() {
 
           {/* Column 3: Quick Links */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-400 dark:text-slate-500 mb-4">
               Quick Links
             </h3>
             <ul className="space-y-3 text-sm font-bold">
@@ -277,7 +277,7 @@ export default function Footer() {
 
           {/* Column 4: Contact Us */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-400 dark:text-slate-500 mb-4">
               Contact Us
             </h3>
             <ul className="space-y-3 text-sm font-bold">
