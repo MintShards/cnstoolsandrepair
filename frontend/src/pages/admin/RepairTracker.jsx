@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CustomersTab from '../../components/admin/tabs/CustomersTab';
 import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
 import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
+import DashboardSummary from '../../components/admin/DashboardSummary';
 import ThemeToggle from '../../components/layout/ThemeToggle';
 
 // ── TOAST SYSTEM ─────────────────────────────────────────────
@@ -83,10 +84,11 @@ function ToastContainer({ toasts, onDismiss }) {
 
 export default function RepairTracker() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('customers');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [preselectedCustomer, setPreselectedCustomer] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [tabCounts, setTabCounts] = useState({ customers: null, requests: null, jobs: null });
+  const [dashboardStatusFilter, setDashboardStatusFilter] = useState('');
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
@@ -105,9 +107,10 @@ export default function RepairTracker() {
   }, []);
 
   const tabs = [
-    { id: 'customers', label: 'Customers', icon: 'group' },
-    { id: 'requests', label: 'Repair Requests', icon: 'inbox' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'jobs', label: 'Repair Jobs', icon: 'build_circle' },
+    { id: 'requests', label: 'Repair Requests', icon: 'inbox' },
+    { id: 'customers', label: 'Customers', icon: 'group' },
   ];
 
   const handleCountUpdate = useCallback((tab, count) => {
@@ -130,38 +133,45 @@ export default function RepairTracker() {
     }
   };
 
+  const handleDashboardStatusFilter = useCallback((status) => {
+    setDashboardStatusFilter(status);
+    setActiveTab('jobs');
+  }, []);
+
   return (
     <ToastContext.Provider value={showToast}>
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col">
         {/* Repair Tracker Header */}
         <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg shadow-black/10 dark:shadow-black/30">
-          <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Link to="/" className="font-logo text-xl font-bold leading-none tracking-wide uppercase flex-shrink-0">
+          <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-2">
+              {/* Left: brand + title */}
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <Link to="/" className="font-logo text-base sm:text-xl font-bold leading-none tracking-wide uppercase flex-shrink-0">
                   <span className="text-accent-orange">CNS</span>{' '}
-                  <span className="text-slate-900 dark:text-white">Tool Repair</span>
+                  <span className="text-slate-900 dark:text-white hidden sm:inline">Tool Repair</span>
                 </Link>
-                <div className="h-8 w-px bg-slate-300 dark:bg-slate-700/80 flex-shrink-0"></div>
+                <div className="h-7 sm:h-8 w-px bg-slate-300 dark:bg-slate-700/80 flex-shrink-0"></div>
                 <div className="min-w-0">
-                  <h1 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                  <h1 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight truncate">
                     Repair Tracker
                   </h1>
-                  <p className="text-xs text-slate-500 hidden sm:block">Work Orders &amp; Customer Repairs</p>
+                  <p className="text-xs text-slate-500 hidden sm:block leading-tight">Work Orders &amp; Customer Repairs</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Right: actions */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <ThemeToggle />
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/30 hover:border-red-300 dark:hover:border-red-700/50 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all text-sm font-bold"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/30 hover:border-red-300 dark:hover:border-red-700/50 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">logout</span>
                   <span className="hidden sm:inline">Logout</span>
                 </button>
                 <Link
                   to="/"
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">arrow_back</span>
                   <span className="hidden sm:inline">Back to Website</span>
@@ -175,6 +185,7 @@ export default function RepairTracker() {
 
         {/* Main Content */}
         <main className="flex-1 max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 w-full">
+
           {/* Tab Navigation */}
           <div className="mb-6 overflow-x-auto -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6">
             <nav className="flex gap-1.5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-1.5 w-fit shadow-lg shadow-black/5 dark:shadow-black/20">
@@ -209,6 +220,9 @@ export default function RepairTracker() {
 
           {/* Tab Content */}
           <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-xl shadow-black/5 dark:shadow-black/20 animate-fadeInScale">
+            {activeTab === 'dashboard' && (
+              <DashboardSummary onStatusFilter={handleDashboardStatusFilter} asTab />
+            )}
             {activeTab === 'customers' && (
               <CustomersTab
                 onNewJob={handleNewJobFromCustomer}
@@ -226,6 +240,8 @@ export default function RepairTracker() {
                 preselectedCustomer={preselectedCustomer}
                 onPreselectedCustomerUsed={() => setPreselectedCustomer(null)}
                 onCountUpdate={handleJobsCountUpdate}
+                externalStatusFilter={dashboardStatusFilter}
+                onExternalStatusFilterApplied={() => setDashboardStatusFilter('')}
               />
             )}
           </div>

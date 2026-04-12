@@ -48,7 +48,9 @@ def validate_status_transition(current: str, new: str) -> bool:
 
 class RepairSource(str, Enum):
     ONLINE_REQUEST = "online_request"
-    WALK_IN = "walk_in"
+    DROP_OFF = "drop_off"
+    PHONE_IN = "phone_in"
+    EMAIL = "email"
 
 
 class Priority(str, Enum):
@@ -178,7 +180,7 @@ class RepairJobCreate(BaseModel):
     phone: Optional[str] = Field(None, min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
     customer_notes: Optional[str] = Field(None, max_length=2000)
-    source: RepairSource = RepairSource.WALK_IN
+    source: RepairSource = RepairSource.DROP_OFF
     source_quote_id: Optional[str] = None
     tools: List[ToolItemCreate] = Field(..., min_length=1)
 
@@ -230,3 +232,28 @@ class RepairJobResponse(BaseModel):
     tools: List[ToolItemResponse]
     created_at: datetime
     updated_at: datetime
+
+
+class BatchStatusItem(BaseModel):
+    job_id: str
+    tool_id: str
+    new_status: RepairStatus
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class BatchStatusRequest(BaseModel):
+    items: List[BatchStatusItem] = Field(..., min_length=1, max_length=100)
+
+
+class BatchStatusResult(BaseModel):
+    job_id: str
+    tool_id: str
+    success: bool
+    new_status: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BatchStatusResponse(BaseModel):
+    results: List[BatchStatusResult]
+    success_count: int
+    failure_count: int

@@ -290,6 +290,10 @@ export const customersAPI = {
 
 // Repairs API (admin only)
 export const repairsAPI = {
+  summary: async () => {
+    const response = await api.get('/api/repairs/summary');
+    return response.data;
+  },
   list: async (params = {}) => {
     const response = await api.get('/api/repairs/', { params });
     return response.data;
@@ -341,6 +345,10 @@ export const repairsAPI = {
   },
   removeTool: async (jobId, toolId) => {
     const response = await api.delete(`/api/repairs/${jobId}/tools/${toolId}`);
+    return response.data;
+  },
+  batchUpdateStatus: async (items) => {
+    const response = await api.post('/api/repairs/batch-status', { items });
     return response.data;
   },
 };

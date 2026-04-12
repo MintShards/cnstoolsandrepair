@@ -11,7 +11,8 @@ from app.models.repair import (
     RepairJobCreate, RepairJobUpdate, RepairJobResponse,
     ToolItemCreate, ToolItemUpdate, ToolStatusUpdate,
     ToolItem, ToolItemResponse, RepairStatus, RepairSource,
-    StatusHistoryEntry, ALLOWED_TRANSITIONS, validate_status_transition
+    StatusHistoryEntry, ALLOWED_TRANSITIONS, validate_status_transition,
+    BatchStatusRequest, BatchStatusResponse, BatchStatusResult
 )
 from app.models.auth import User
 from app.dependencies.auth import require_admin
@@ -51,6 +52,91 @@ def _build_job_response(job: dict) -> RepairJobResponse:
 
 
 # ──────────────────────────────────────────────
+# SUMMARY (before LIST and /{id} to avoid routing conflict)
+# ──────────────────────────────────────────────
+
+@router.get("/summary")
+async def get_repair_summary(
+    current_user: User = Depends(require_admin)
+):
+    """
+    Returns aggregated dashboard stats:
+    - status_counts: count of tools in each active status
+    - overdue_count: tools past estimated_completion and not terminal
+    - stale_count: tools with no status change in 3+ days and not terminal
+    - rush_urgent_active: count of rush/urgent tools in active (non-terminal) statuses
+    - updated_today: count of jobs updated today
+    - total_active_jobs: jobs with at least one non-terminal tool
+    """
+    db = get_database()
+    now = datetime.utcnow()
+    terminal_statuses = {"completed", "abandoned", "closed", "declined"}
+
+    # ── Status counts via aggregation ──
+    pipeline = [
+        {"$unwind": "$tools"},
+        {"$group": {"_id": "$tools.status", "count": {"$sum": 1}}},
+    ]
+    status_cursor = db.repairs.aggregate(pipeline)
+    raw_counts = await status_cursor.to_list(length=50)
+    status_counts = {item["_id"]: item["count"] for item in raw_counts}
+
+    # ── Pull all active (non-terminal) tools to compute stale/overdue ──
+    active_jobs_cursor = db.repairs.find(
+        {"tools.status": {"$nin": list(terminal_statuses)}}
+    )
+    active_jobs = await active_jobs_cursor.to_list(length=2000)
+
+    overdue_count = 0
+    stale_count = 0
+    rush_urgent_active = 0
+
+    for job in active_jobs:
+        for tool in job.get("tools", []):
+            if tool.get("status") in terminal_statuses:
+                continue
+            # Overdue
+            ec = tool.get("estimated_completion")
+            if ec:
+                ec_dt = ec if isinstance(ec, datetime) else datetime.fromisoformat(str(ec).replace("Z", "+00:00")).replace(tzinfo=None)
+                if ec_dt < now:
+                    overdue_count += 1
+            # Stale: no update in 3+ days
+            history = tool.get("status_history", [])
+            if history:
+                last_entry = history[-1]
+                last_ts = last_entry.get("timestamp")
+                if last_ts:
+                    last_dt = last_ts if isinstance(last_ts, datetime) else datetime.fromisoformat(str(last_ts).replace("Z", "+00:00")).replace(tzinfo=None)
+                    days_since = (now - last_dt).days
+                    if days_since >= 3:
+                        stale_count += 1
+            # Rush/Urgent in active status
+            if tool.get("priority") in ("rush", "urgent"):
+                rush_urgent_active += 1
+
+    # ── Jobs updated today ──
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    updated_today = await db.repairs.count_documents({"updated_at": {"$gte": today_start}})
+
+    # ── Total active jobs ──
+    total_active_jobs = await db.repairs.count_documents(
+        {"tools.status": {"$nin": list(terminal_statuses)}}
+    )
+
+    return {
+        "status_counts": status_counts,
+        "overdue_count": overdue_count,
+        "stale_count": stale_count,
+        "rush_urgent_active": rush_urgent_active,
+        "updated_today": updated_today,
+        "total_active_jobs": total_active_jobs,
+    }
+
+
+# ──────────────────────────────────────────────
+# LIST
+# ──────────────────────────────────────────────
 # LIST
 # ──────────────────────────────────────────────
 
@@ -62,6 +148,9 @@ async def list_repair_jobs(
     priority: Optional[str] = None,
     search: Optional[str] = None,
     customer_id: Optional[str] = None,
+    assigned_technician: Optional[str] = None,
+    sort_by: Optional[str] = Query(default="created_at", regex="^(created_at|request_number)$"),
+    sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
     current_user: User = Depends(require_admin)
 ):
     """List all repair jobs with optional filtering and search"""
@@ -78,6 +167,9 @@ async def list_repair_jobs(
     if priority:
         query["tools.priority"] = priority
 
+    if assigned_technician:
+        query["tools.assigned_technician"] = assigned_technician
+
     if search:
         escaped = re.escape(search)
         query["$or"] = [
@@ -88,11 +180,116 @@ async def list_repair_jobs(
             {"request_number": {"$regex": escaped, "$options": "i"}},
         ]
 
-    cursor = db.repairs.find(query).sort("created_at", -1).skip(skip).limit(limit)
+    sort_direction = 1 if sort_order == "asc" else -1
+    sort_field = sort_by if sort_by in ("created_at", "request_number") else "created_at"
+
+    cursor = db.repairs.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit)
     jobs = await cursor.to_list(length=limit)
     jobs = [convert_objectid_to_str(j) for j in jobs]
 
     return [_build_job_response(j) for j in jobs]
+
+
+# ──────────────────────────────────────────────
+# BATCH STATUS UPDATE (before /{job_id} routes)
+# ──────────────────────────────────────────────
+
+@router.post("/batch-status", response_model=BatchStatusResponse)
+async def batch_update_tool_status(
+    batch: BatchStatusRequest,
+    current_user: User = Depends(require_admin)
+):
+    """Batch update status for multiple tools across one or more repair jobs."""
+    db = get_database()
+
+    results: list[BatchStatusResult] = []
+    now = datetime.utcnow()
+
+    # Group items by job_id to minimize DB round-trips
+    from collections import defaultdict
+    by_job: dict[str, list] = defaultdict(list)
+    for item in batch.items:
+        by_job[item.job_id].append(item)
+
+    for job_id, items in by_job.items():
+        try:
+            object_id = ObjectId(job_id)
+        except Exception:
+            for item in items:
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id,
+                    success=False, error="Invalid job ID format"
+                ))
+            continue
+
+        job = await db.repairs.find_one({"_id": object_id})
+        if not job:
+            for item in items:
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id,
+                    success=False, error="Repair job not found"
+                ))
+            continue
+
+        tools = job.get("tools", [])
+
+        for item in items:
+            tool_index = next((i for i, t in enumerate(tools) if t.get("tool_id") == item.tool_id), None)
+            if tool_index is None:
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id,
+                    success=False, error="Tool not found in this repair job"
+                ))
+                continue
+
+            current_status = tools[tool_index].get("status", "received")
+            new_status = item.new_status.value
+
+            if not validate_status_transition(current_status, new_status):
+                allowed = sorted(ALLOWED_TRANSITIONS.get(current_status, set()))
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id,
+                    success=False,
+                    error=f"Cannot change '{current_status}' → '{new_status}'. Allowed: {', '.join(allowed) or 'none'}"
+                ))
+                continue
+
+            history_entry = {
+                "status": new_status,
+                "timestamp": now,
+                "notes": item.notes
+            }
+            set_data: dict = {
+                f"tools.{tool_index}.status": new_status,
+                "updated_at": now,
+            }
+            if item.new_status == RepairStatus.COMPLETED:
+                set_data[f"tools.{tool_index}.date_completed"] = now
+
+            try:
+                await db.repairs.update_one(
+                    {"_id": object_id},
+                    {
+                        "$set": set_data,
+                        "$push": {f"tools.{tool_index}.status_history": history_entry}
+                    }
+                )
+                # Update local copy so subsequent items in same job see new status
+                tools[tool_index]["status"] = new_status
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id,
+                    success=True, new_status=new_status
+                ))
+            except Exception as e:
+                logger.error(f"Batch status update failed for job {job_id} tool {item.tool_id}: {e}")
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id,
+                    success=False, error="Database error"
+                ))
+
+    success_count = sum(1 for r in results if r.success)
+    failure_count = len(results) - success_count
+    return BatchStatusResponse(results=results, success_count=success_count, failure_count=failure_count)
 
 
 # ──────────────────────────────────────────────

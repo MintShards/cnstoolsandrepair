@@ -8,6 +8,7 @@ import {
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
+import { openPrintWorkOrder } from '../PrintWorkOrder';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -649,9 +650,21 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                           <td className="py-3.5 px-4">
                             <div className="text-slate-900 dark:text-white font-mono font-bold text-sm tracking-wide">{job.request_number}</div>
                             {job.source === 'online_request' && (
-                              <span className="inline-flex items-center gap-1 text-sm text-sky-400 mt-0.5">
+                              <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
                                 <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>public</span>
                                 Online
+                              </span>
+                            )}
+                            {job.source === 'phone_in' && (
+                              <span className="inline-flex items-center gap-1 text-xs text-violet-400 mt-0.5">
+                                <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>call</span>
+                                Phone
+                              </span>
+                            )}
+                            {job.source === 'email' && (
+                              <span className="inline-flex items-center gap-1 text-xs text-emerald-400 mt-0.5">
+                                <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>mail</span>
+                                Email
                               </span>
                             )}
                           </td>
@@ -835,7 +848,16 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                     <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{woDialogJob.request_number}</span></h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{woDialogJob.request_number}</span></h3>
+                      <button
+                        onClick={() => openPrintWorkOrder(woDialogJob)}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
+                        title="Print / Save as PDF"
+                      >
+                        <span className="material-symbols-outlined" style={{fontSize:'16px'}}>print</span>
+                      </button>
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-slate-500">Created {formatDate(woDialogJob.created_at)}</span>
                       {woDialogJob.source === 'online_request' && (
@@ -844,10 +866,22 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                           Online Request
                         </span>
                       )}
-                      {woDialogJob.source === 'walk_in' && (
+                      {woDialogJob.source === 'drop_off' && (
                         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600/50">
                           <span className="material-symbols-outlined" style={{fontSize:'11px'}}>store</span>
-                          Walk-in
+                          Drop-off
+                        </span>
+                      )}
+                      {woDialogJob.source === 'phone_in' && (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-300 dark:bg-violet-900/40 dark:text-violet-400 dark:border-violet-700/50">
+                          <span className="material-symbols-outlined" style={{fontSize:'11px'}}>call</span>
+                          Phone-in
+                        </span>
+                      )}
+                      {woDialogJob.source === 'email' && (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-700/50">
+                          <span className="material-symbols-outlined" style={{fontSize:'11px'}}>mail</span>
+                          Email
                         </span>
                       )}
                     </div>

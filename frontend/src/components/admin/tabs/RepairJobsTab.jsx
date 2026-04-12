@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { repairsAPI, customersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
@@ -6,6 +6,7 @@ import {
   getValidNextStatuses,
 } from '../../../constants/repairStatuses';
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
+import { openPrintWorkOrder } from '../PrintWorkOrder';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 
@@ -69,10 +70,10 @@ const getEmptyTool = () => ({
 
 const getEmptyJob = () => ({
   customer_id: null, company_name: '', first_name: '', last_name: '', email: '', phone: '',
-  address: '', customer_notes: '', source: 'walk_in', tools: [getEmptyTool()]
+  address: '', customer_notes: '', source: 'drop_off', tools: [getEmptyTool()]
 });
 
-export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate }) {
+export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied }) {
   const showToast = useToast();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [technicianFilter, setTechnicianFilter] = useState(() => localStorage.getItem('rt_technician_filter') || '');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDir, setSortDir] = useState('desc');
+  const [quickAdvancing, setQuickAdvancing] = useState(null); // toolId being quick-advanced
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelected, setBatchSelected] = useState(new Set()); // Set of "jobId:toolId"
+  const [batchTargetStatus, setBatchTargetStatus] = useState('');
+  const [batchApplying, setBatchApplying] = useState(false);
 
   // Detail view state
   const [jobCustomer, setJobCustomer] = useState(null); // linked customer record (single source of truth)
@@ -131,6 +140,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedCustomer]);
+
+  // Apply status filter pushed from the dashboard
+  useEffect(() => {
+    if (externalStatusFilter !== undefined && externalStatusFilter !== '') {
+      setStatusFilter(externalStatusFilter);
+      setCurrentPage(1);
+      if (onExternalStatusFilterApplied) onExternalStatusFilterApplied();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalStatusFilter]);
 
   // Debounced customer search
   const searchCustomersDebounced = useCallback(
@@ -196,8 +215,24 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     setNewJobForm(getEmptyJob());
   };
 
-  useEffect(() => { fetchJobs(); }, [statusFilter]);
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, priorityFilter]);
+  useEffect(() => { fetchJobs(); }, [statusFilter, priorityFilter, technicianFilter]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, priorityFilter, technicianFilter]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const handleTechnicianFilter = (value) => {
+    setTechnicianFilter(value);
+    if (value) localStorage.setItem('rt_technician_filter', value);
+    else localStorage.removeItem('rt_technician_filter');
+  };
 
   // Clean up remove-confirm timer on unmount
   useEffect(() => {
@@ -232,8 +267,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const params = {};
+      const params = { limit: 200 };
       if (statusFilter) params.status = statusFilter;
+      if (priorityFilter) params.priority = priorityFilter;
+      if (technicianFilter) params.assigned_technician = technicianFilter;
       const data = await repairsAPI.list(params);
       setJobs(data);
       if (onCountUpdate) onCountUpdate(data.length);
@@ -247,24 +284,91 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const formatDate = formatDatePacific;
   const formatDateShort = formatDateShortPacific;
 
+  // ── STALE / OVERDUE HELPERS ──────────────────────────
+  const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined']);
+  const now = new Date();
+
+  const getDaysSinceLastUpdate = (tool) => {
+    const history = tool.status_history;
+    if (!history?.length) return null;
+    const last = new Date(history[history.length - 1].timestamp);
+    return Math.floor((now - last) / (1000 * 60 * 60 * 24));
+  };
+
+  const isToolOverdue = (tool) => {
+    if (!tool.estimated_completion || TERMINAL_STATUSES.has(tool.status)) return false;
+    return new Date(tool.estimated_completion) < now;
+  };
+
+  const isToolStale = (tool) => {
+    if (TERMINAL_STATUSES.has(tool.status)) return false;
+    const days = getDaysSinceLastUpdate(tool);
+    return days !== null && days >= 3;
+  };
+
+  const getJobAlertLevel = (job) => {
+    if (job.tools.some(t => isToolOverdue(t))) return 'overdue';
+    if (job.tools.some(t => isToolStale(t))) return 'stale';
+    return null;
+  };
+
   // ── FILTER / PAGINATION ──────────────────────────────
-  const filteredJobs = jobs.filter(job => {
-    const matchesSearch = !searchQuery || (() => {
-      const s = searchQuery.toLowerCase();
-      return (
-        job.company_name?.toLowerCase().includes(s) ||
-        `${job.first_name} ${job.last_name}`.toLowerCase().includes(s) ||
-        job.email.toLowerCase().includes(s) ||
-        job.request_number.toLowerCase().includes(s)
-      );
-    })();
-    const matchesPriority = !priorityFilter || job.tools.some(t => t.priority === priorityFilter);
-    return matchesSearch && matchesPriority;
-  });
+  const filteredJobs = (() => {
+    const filtered = jobs.filter(job => {
+      const matchesSearch = !searchQuery || (() => {
+        const s = searchQuery.toLowerCase();
+        return (
+          job.company_name?.toLowerCase().includes(s) ||
+          `${job.first_name} ${job.last_name}`.toLowerCase().includes(s) ||
+          job.email.toLowerCase().includes(s) ||
+          job.request_number.toLowerCase().includes(s)
+        );
+      })();
+      const matchesPriority = !priorityFilter || job.tools.some(t => t.priority === priorityFilter);
+      const matchesTechnician = !technicianFilter || job.tools.some(t => t.assigned_technician === technicianFilter);
+      return matchesSearch && matchesPriority && matchesTechnician;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      if (sortField === 'request_number') {
+        aVal = a.request_number; bVal = b.request_number;
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      } else if (sortField === 'customer') {
+        aVal = (a.company_name || `${a.first_name} ${a.last_name}`).toLowerCase();
+        bVal = (b.company_name || `${b.first_name} ${b.last_name}`).toLowerCase();
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      } else if (sortField === 'tools') {
+        aVal = a.tools.length; bVal = b.tools.length;
+      } else if (sortField === 'priority') {
+        aVal = PRIORITY_RANK[getHighestPriority(a.tools)] || 0;
+        bVal = PRIORITY_RANK[getHighestPriority(b.tools)] || 0;
+      } else if (sortField === 'status') {
+        const getMinStep = (job) => {
+          const steps = job.tools.map(t => REPAIR_STATUSES[t.status]?.step ?? 99);
+          return Math.min(...steps);
+        };
+        aVal = getMinStep(a); bVal = getMinStep(b);
+      } else {
+        // created_at default
+        aVal = new Date(a.created_at).getTime();
+        bVal = new Date(b.created_at).getTime();
+      }
+      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+
+    return filtered;
+  })();
 
   const totalResults = filteredJobs.length;
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
+
+  // Collect distinct technicians from all loaded jobs for the filter dropdown
+  const allTechnicians = [...new Set(
+    jobs.flatMap(j => j.tools.map(t => t.assigned_technician).filter(Boolean))
+  )].sort();
 
 
   // Summary of tool statuses for list view
@@ -513,6 +617,66 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     setUpdatingStatus(false);
   };
 
+  // ── QUICK-ADVANCE STATUS ────────────────────────────
+  const handleQuickAdvance = async (tool, targetStatus) => {
+    setQuickAdvancing(tool.tool_id);
+    try {
+      const updated = await repairsAPI.updateToolStatus(selectedJob.id, tool.tool_id, {
+        status: targetStatus,
+        notes: null,
+        estimated_completion: null,
+      });
+      setSelectedJob(updated);
+      setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+      showToast('success', `Status → ${REPAIR_STATUSES[targetStatus]?.label || targetStatus}`);
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to update status'));
+    } finally {
+      setQuickAdvancing(null);
+    }
+  };
+
+  // ── BATCH STATUS UPDATE ─────────────────────────────
+  const toggleBatchSelect = (jobId, toolId) => {
+    const key = `${jobId}:${toolId}`;
+    setBatchSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleBatchApply = async () => {
+    if (!batchTargetStatus || batchSelected.size === 0) return;
+    setBatchApplying(true);
+    try {
+      const items = [...batchSelected].map(key => {
+        const [job_id, tool_id] = key.split(':');
+        return { job_id, tool_id, new_status: batchTargetStatus, notes: null };
+      });
+      const result = await repairsAPI.batchUpdateStatus(items);
+      if (result.success_count > 0) {
+        showToast('success', `Updated ${result.success_count} tool${result.success_count !== 1 ? 's' : ''}`);
+        setBatchSelected(new Set());
+        setBatchTargetStatus('');
+        await fetchJobs();
+      }
+      if (result.failure_count > 0) {
+        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed`);
+      }
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Batch update failed'));
+    } finally {
+      setBatchApplying(false);
+    }
+  };
+
+  const handleExitBatchMode = () => {
+    setBatchMode(false);
+    setBatchSelected(new Set());
+    setBatchTargetStatus('');
+  };
+
   // ── EDIT TOOL DETAILS ───────────────────────────────
   const handleStartToolEdit = (tool) => {
     setEditingToolId(tool.tool_id);
@@ -683,10 +847,68 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       </div>
 
       {/* Filters */}
-      <div className="mb-5 p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[160px] sm:min-w-[200px]">
+      <div className="mb-5 p-3 sm:p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+        {/* Row 1: search (full width on mobile) */}
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-0 sm:hidden">
+          <div className="relative flex-1">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">search</span>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+            />
+          </div>
+          {/* Mobile: icon-only selects + batch */}
+          <div className={`relative ${statusFilter ? 'ring-2 ring-primary/40 rounded-xl' : ''}`}>
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">label</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="pl-9 pr-2 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer w-10"
+              title="Filter by status"
+            >
+              <option value="">All Statuses</option>
+              {REPAIR_STATUSES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div className={`relative ${priorityFilter ? 'ring-2 ring-primary/40 rounded-xl' : ''}`}>
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">flag</span>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="pl-9 pr-2 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all appearance-none cursor-pointer w-10"
+              title="Filter by priority"
+            >
+              <option value="">All Priorities</option>
+              {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
+          {(searchQuery || statusFilter || priorityFilter) && (
+            <button
+              onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); }}
+              className="w-10 h-10 flex items-center justify-center bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0"
+              title="Clear filters"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          )}
+          <button
+            onClick={() => batchMode ? handleExitBatchMode() : setBatchMode(true)}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl border flex-shrink-0 transition-all ${
+              batchMode
+                ? 'bg-primary/10 dark:bg-primary/20 border-primary/50 text-primary dark:text-blue-400'
+                : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-400 dark:hover:border-slate-600'
+            }`}
+            title={batchMode ? 'Exit batch mode' : 'Batch update statuses'}
+          >
+            <span className="material-symbols-outlined text-base">checklist</span>
+          </button>
+        </div>
+        {/* Desktop: single row, full labels */}
+        <div className="hidden sm:flex items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">search</span>
             <input
               type="text"
@@ -696,7 +918,6 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
             />
           </div>
-          {/* Status filter */}
           <div className="relative min-w-[140px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">label</span>
             <select
@@ -708,7 +929,6 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               {REPAIR_STATUSES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
-          {/* Priority filter */}
           <div className="relative min-w-[130px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">flag</span>
             <select
@@ -720,7 +940,6 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
-          {/* Clear filters */}
           {(searchQuery || statusFilter || priorityFilter) && (
             <button
               onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); }}
@@ -730,6 +949,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               Clear
             </button>
           )}
+          <button
+            onClick={() => batchMode ? handleExitBatchMode() : setBatchMode(true)}
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+              batchMode
+                ? 'bg-primary/10 dark:bg-primary/20 border-primary/50 dark:border-primary/50 text-primary dark:text-blue-400'
+                : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-400 dark:hover:border-slate-600'
+            }`}
+            title={batchMode ? 'Exit batch mode' : 'Batch update statuses'}
+          >
+            <span className="material-symbols-outlined text-base">checklist</span>
+            {batchMode ? 'Exit Batch' : 'Batch'}
+          </button>
         </div>
       </div>
 
@@ -740,6 +971,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             Work Orders
             <span className="ml-2 px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 font-bold">{totalResults}</span>
           </h3>
+          {batchMode && (
+            <span className="text-xs text-primary dark:text-blue-400 font-bold">
+              {batchSelected.size} selected — click rows to select tools
+            </span>
+          )}
         </div>
 
         {loading ? (
@@ -777,28 +1013,68 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60">
-                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500">WO #</th>
-                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500">Customer</th>
-                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Tools</th>
-                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Priority</th>
-                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden sm:table-cell">Status</th>
-                  <th className="py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 hidden lg:table-cell">Created</th>
+                  {[
+                    { field: 'request_number', label: 'WO #', cls: '' },
+                    { field: 'customer', label: 'Customer', cls: '' },
+                    { field: 'tools', label: 'Tools', cls: 'hidden md:table-cell' },
+                    { field: 'priority', label: 'Priority', cls: 'hidden md:table-cell' },
+                    { field: 'status', label: 'Status', cls: 'hidden sm:table-cell' },
+                    { field: 'created_at', label: 'Created', cls: 'hidden lg:table-cell' },
+                  ].map(({ field, label, cls }) => (
+                    <th
+                      key={field}
+                      className={`py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 transition-colors ${cls}`}
+                      onClick={() => handleSort(field)}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {label}
+                        <span className="material-symbols-outlined text-xs opacity-50" style={{fontSize:'14px'}}>
+                          {sortField === field ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                        </span>
+                      </span>
+                    </th>
+                  ))}
                   <th className="py-3 px-3 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
-                {paginatedJobs.map((job) => (
+                {paginatedJobs.map((job) => {
+                  const alertLevel = getJobAlertLevel(job);
+                  return (
+                  <React.Fragment key={job.id}>
                   <tr
-                    key={job.id}
-                    className="group hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors duration-150 cursor-pointer"
-                    onClick={() => openJob(job)}
+                    className={`group hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors duration-150 ${batchMode ? '' : 'cursor-pointer'} ${
+                      alertLevel === 'overdue' ? 'bg-red-50/50 dark:bg-red-900/10' :
+                      alertLevel === 'stale' ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''
+                    }`}
+                    onClick={() => !batchMode && openJob(job)}
                   >
                     <td className="py-3 px-3 sm:px-4">
-                      <div className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">{job.request_number}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">{job.request_number}</span>
+                        {alertLevel === 'overdue' && (
+                          <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{fontSize:'14px'}} title="Overdue">schedule</span>
+                        )}
+                        {alertLevel === 'stale' && (
+                          <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{fontSize:'14px'}} title="No update in 3+ days">warning</span>
+                        )}
+                      </div>
                       {job.source === 'online_request' && (
                         <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>public</span>
                           Online
+                        </span>
+                      )}
+                      {job.source === 'phone_in' && (
+                        <span className="inline-flex items-center gap-1 text-xs text-violet-400 mt-0.5">
+                          <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>call</span>
+                          Phone
+                        </span>
+                      )}
+                      {job.source === 'email' && (
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-400 mt-0.5">
+                          <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>mail</span>
+                          Email
                         </span>
                       )}
                     </td>
@@ -839,25 +1115,64 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     <td className="py-3 px-3 sm:px-4 text-slate-500 text-sm hidden lg:table-cell">{formatDateShort(job.created_at)}</td>
                     <td className="py-3 px-3 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openJob(job)}
-                          className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm"
-                          title="Open"
-                        >
-                          <span className="material-symbols-outlined text-base">open_in_new</span>
-                          <span className="hidden sm:inline">Open</span>
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(job)}
-                          className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
-                          title="Delete"
-                        >
-                          <span className="material-symbols-outlined text-base">delete</span>
-                        </button>
+                        {!batchMode && (
+                          <>
+                            <button
+                              onClick={() => openJob(job)}
+                              className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm"
+                              title="Open"
+                            >
+                              <span className="material-symbols-outlined text-base">open_in_new</span>
+                              <span className="hidden sm:inline">Open</span>
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(job)}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
+                              title="Delete"
+                            >
+                              <span className="material-symbols-outlined text-base">delete</span>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ))}
+                  {batchMode && (
+                    <tr className="bg-blue-50/60 dark:bg-blue-900/10 border-t border-blue-200 dark:border-slate-700/60">
+                      <td colSpan={7} className="px-4 py-2">
+                        <div className="flex flex-wrap gap-2">
+                          {job.tools.map(tool => {
+                            const key = `${job.id}:${tool.tool_id}`;
+                            const isChecked = batchSelected.has(key);
+                            const cfg = REPAIR_STATUSES[tool.status] || {};
+                            return (
+                              <label
+                                key={tool.tool_id}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-xs font-semibold transition-all select-none ${
+                                  isChecked
+                                    ? 'bg-primary/10 dark:bg-primary/20 border-primary dark:border-primary/60 text-primary dark:text-blue-300'
+                                    : 'bg-white dark:bg-slate-800/60 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-primary/50'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleBatchSelect(job.id, tool.tool_id)}
+                                  className="accent-primary w-3.5 h-3.5"
+                                />
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot || 'bg-slate-400'}`} />
+                                <span>{tool.brand} {tool.model_number}</span>
+                                <span className="opacity-60">— {cfg.label || tool.status}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -876,6 +1191,44 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         )}
       </div>
 
+      {/* ── BATCH ACTION BAR ────────────────────────────────── */}
+      {batchMode && batchSelected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-3 bg-primary text-white rounded-2xl shadow-2xl shadow-primary/30 border border-blue-400/20 animate-[slideInRight_0.2s_ease-out]">
+          <span className="material-symbols-outlined text-lg">checklist</span>
+          <span className="text-sm font-bold whitespace-nowrap">{batchSelected.size} tool{batchSelected.size !== 1 ? 's' : ''}</span>
+          <div className="w-px h-5 bg-blue-400/40" />
+          <select
+            value={batchTargetStatus}
+            onChange={(e) => setBatchTargetStatus(e.target.value)}
+            className="bg-blue-700 border border-blue-400/40 text-white text-sm font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer"
+          >
+            <option value="">Set status…</option>
+            {Object.entries(REPAIR_STATUSES).map(([key, cfg]) => (
+              <option key={key} value={key}>{cfg.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleBatchApply}
+            disabled={!batchTargetStatus || batchApplying}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-white text-primary hover:bg-blue-50 rounded-xl text-sm font-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {batchApplying ? (
+              <span className="material-symbols-outlined text-base animate-spin">autorenew</span>
+            ) : (
+              <span className="material-symbols-outlined text-base">check</span>
+            )}
+            Apply
+          </button>
+          <button
+            onClick={() => setBatchSelected(new Set())}
+            className="p-1.5 text-blue-200 hover:text-white transition-colors"
+            title="Clear selection"
+          >
+            <span className="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+      )}
+
       {/* ── JOB DETAIL MODAL ─────────────────────────────── */}
       {selectedJob && (
         <div role="dialog" aria-modal="true" aria-labelledby="wo-dialog-title" className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4">
@@ -889,7 +1242,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
                 </div>
                 <div>
-                  <h3 id="wo-dialog-title" className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{selectedJob.request_number}</span></h3>
+                  <div className="flex items-center gap-2">
+                    <h3 id="wo-dialog-title" className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{selectedJob.request_number}</span></h3>
+                    <button
+                      onClick={() => openPrintWorkOrder(selectedJob)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
+                      title="Print / Save as PDF"
+                    >
+                      <span className="material-symbols-outlined" style={{fontSize:'16px'}}>print</span>
+                    </button>
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-slate-500">Created {formatDateShort(selectedJob.created_at)}</span>
                     {selectedJob.source === 'online_request' && (
@@ -898,10 +1260,22 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         Online Request
                       </span>
                     )}
-                    {selectedJob.source === 'walk_in' && (
+                    {selectedJob.source === 'drop_off' && (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600/50">
                         <span className="material-symbols-outlined" style={{fontSize:'11px'}}>store</span>
-                        Walk-in
+                        Drop-off
+                      </span>
+                    )}
+                    {selectedJob.source === 'phone_in' && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-300 dark:bg-violet-900/40 dark:text-violet-400 dark:border-violet-700/50">
+                        <span className="material-symbols-outlined" style={{fontSize:'11px'}}>call</span>
+                        Phone-in
+                      </span>
+                    )}
+                    {selectedJob.source === 'email' && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-700/50">
+                        <span className="material-symbols-outlined" style={{fontSize:'11px'}}>mail</span>
+                        Email
                       </span>
                     )}
                   </div>
@@ -1065,6 +1439,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
                       {/* Current Status bar (always visible) */}
                       <div className="px-4 pt-3 pb-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700/60">
+                        {isToolOverdue(tool) && (
+                          <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-lg text-xs text-red-700 dark:text-red-400 font-bold">
+                            <span className="material-symbols-outlined" style={{fontSize:'14px'}}>schedule</span>
+                            Overdue — estimated completion was {formatDateShort(tool.estimated_completion)}
+                          </div>
+                        )}
+                        {!isToolOverdue(tool) && isToolStale(tool) && (
+                          <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-700 dark:text-amber-400 font-bold">
+                            <span className="material-symbols-outlined" style={{fontSize:'14px'}}>warning</span>
+                            No status update in {getDaysSinceLastUpdate(tool)} days
+                          </div>
+                        )}
                         <div className="flex items-center gap-3 flex-wrap mb-1">
                           <StatusBadge status={tool.status} />
                           <div className="text-sm text-slate-500">
@@ -1688,6 +2074,19 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             {/* Step 3: Job Details (description + parts) */}
             {newJobStep === 3 && (
               <div className="p-4 sm:p-6 space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">How did this job come in?</label>
+                  <select
+                    value={newJobForm.source}
+                    onChange={(e) => setNewJobForm({ ...newJobForm, source: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="drop_off">Drop-off</option>
+                    <option value="online_request">Online Request</option>
+                    <option value="phone_in">Phone-in</option>
+                    <option value="email">Email</option>
+                  </select>
+                </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Tools to Repair</h4>
                   <div className="space-y-4">
