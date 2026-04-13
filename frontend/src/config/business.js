@@ -63,7 +63,7 @@ export const BUSINESS_INFO = {
 // Helper function to format full address
 export const getFullAddress = () => {
   const { street, city, province, postalCode, country } = BUSINESS_INFO.address;
-  return `${street}${postalCode ? ', ' + postalCode : ''}, ${city}, ${province}, ${country}`;
+  return `${street}, ${city}, ${province}${postalCode ? ' ' + postalCode : ''}, ${country}`;
 };
 
 // Helper function to format hours for display

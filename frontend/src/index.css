@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@media print {
+  body > * { display: none !important; }
+  #print-work-order-root { display: block !important; }
+  #print-work-order-root .tool-card { break-inside: avoid; }
+}
+
 @layer base {
   body {
     min-height: max(884px, 100dvh);

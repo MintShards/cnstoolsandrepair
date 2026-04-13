@@ -477,6 +477,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         try { finalJob = await repairsAPI.get(created.id); } catch { /* use created */ }
         if (photoErrors.length > 0) {
           setJobs(prev => [finalJob, ...prev]);
+          openPrintWorkOrder(finalJob);
           handleCloseNewJob();
           showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
           setSavingJob(false);
@@ -485,6 +486,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
 
       setJobs(prev => [finalJob, ...prev]);
+      openPrintWorkOrder(finalJob);
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
       setSavingJob(false);
