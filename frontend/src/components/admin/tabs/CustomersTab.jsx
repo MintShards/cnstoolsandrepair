@@ -7,7 +7,7 @@ import {
 } from '../../../constants/repairStatuses';
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
-import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
+import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -78,7 +78,7 @@ const EMPTY_TOOL_BASE = {
 
 const getEmptyTool = () => ({
   ...EMPTY_TOOL_BASE,
-  date_received: new Date().toISOString().split('T')[0],
+  date_received: getTodayPacific(),
 });
 
 function formatPhone(raw) {

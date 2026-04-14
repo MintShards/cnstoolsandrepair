@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { galleryAPI } from '../../../services/api';
+import { formatDatePacific } from '../../../utils/dateFormat';
 
 // Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -110,15 +111,7 @@ export default function GalleryTab() {
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDate = formatDatePacific;
 
   return (
     <div>

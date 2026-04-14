@@ -40,3 +40,17 @@ export const formatDateShortPacific = (dateString) => {
     timeZone: 'America/Vancouver',
   });
 };
+
+/**
+ * Get today's date as YYYY-MM-DD in Vancouver (Pacific) time.
+ * Used for default date_received on new tools to avoid UTC date mismatch in evening hours.
+ */
+export const getTodayPacific = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Vancouver',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  return parts; // en-CA locale produces YYYY-MM-DD format
+};

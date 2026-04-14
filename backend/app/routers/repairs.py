@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Q
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.database import get_database, get_next_work_order_number
 from app.models.repair import (
@@ -115,9 +116,12 @@ async def get_repair_summary(
             if tool.get("priority") in ("rush", "urgent"):
                 rush_urgent_active += 1
 
-    # ── Jobs updated today ──
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    updated_today = await db.repairs.count_documents({"updated_at": {"$gte": today_start}})
+    # ── Jobs updated today (Pacific time) ──
+    pacific = ZoneInfo("America/Vancouver")
+    now_pacific = datetime.now(pacific)
+    today_start_pacific = now_pacific.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_utc = today_start_pacific.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    updated_today = await db.repairs.count_documents({"updated_at": {"$gte": today_start_utc}})
 
     # ── Total active jobs ──
     total_active_jobs = await db.repairs.count_documents(

@@ -8,7 +8,7 @@ import {
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 import PaginationBar from '../shared/PaginationBar';
-import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
+import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -65,7 +65,7 @@ const EMPTY_TOOL_BASE = {
 
 const getEmptyTool = () => ({
   ...EMPTY_TOOL_BASE,
-  date_received: new Date().toISOString().split('T')[0],
+  date_received: getTodayPacific(),
 });
 
 const getEmptyJob = () => ({
