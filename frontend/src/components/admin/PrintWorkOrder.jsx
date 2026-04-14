@@ -8,22 +8,82 @@ const PART_STATUS_LABELS = {
   installed: 'Installed',
 };
 
-
-export function openPrintWorkOrder(job) {
-  const root = document.getElementById('print-work-order-root');
-  if (!root) return;
-  root.innerHTML = buildPrintContent(job);
-  const cleanup = () => { root.innerHTML = ''; };
-  window.addEventListener('afterprint', cleanup, { once: true });
-  window.print();
-  // Fallback: clear after 60s if afterprint never fires (some mobile browsers)
-  setTimeout(() => {
-    window.removeEventListener('afterprint', cleanup);
-    root.innerHTML = '';
-  }, 60000);
+function isMobile() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
-function buildPrintContent(job) {
+export function openPrintWorkOrder(job) {
+  if (isMobile()) {
+    // Mobile: open in new tab (window.print() is unreliable on iOS/Android)
+    const html = buildFullHTML(job);
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  } else {
+    // Desktop: inline DOM print
+    const root = document.getElementById('print-work-order-root');
+    if (!root) return;
+    root.innerHTML = buildPrintContent(job);
+    const cleanup = () => { root.innerHTML = ''; };
+    window.addEventListener('afterprint', cleanup, { once: true });
+    window.print();
+    setTimeout(() => {
+      window.removeEventListener('afterprint', cleanup);
+      root.innerHTML = '';
+    }, 60000);
+  }
+}
+
+function getStyles(prefix) {
+  const p = prefix ? `${prefix} ` : '';
+  const s = prefix || 'body';
+  return `
+    ${p}* { box-sizing: border-box; margin: 0; padding: 0; }
+    ${s} { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1e293b; background: #fff; padding: 24px; }
+    ${p}.doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1152d4; padding-bottom: 12px; margin-bottom: 16px; }
+    ${p}.company-name { font-family: 'Russo One', sans-serif; font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; color: #1152d4; }
+    ${p}.company-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+    ${p}.wo-block { text-align: right; }
+    ${p}.wo-number { font-size: 22px; font-weight: 900; font-family: monospace; color: #1152d4; }
+    ${p}.wo-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+    ${p}.section { margin-bottom: 14px; }
+    ${p}.section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; }
+    ${p}.customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 16px; }
+    ${p}.field-group { display: flex; flex-direction: column; margin-bottom: 4px; }
+    ${p}.field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
+    ${p}.muted { color: #94a3b8; font-style: italic; }
+    ${p}.tool-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    ${p}.tool-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    ${p}.tool-num { width: 24px; height: 24px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
+    ${p}.tool-title { flex: 1; }
+    ${p}.tool-title strong { font-size: 13px; }
+    ${p}.tool-title .muted { font-size: 11px; }
+    ${p}.tool-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
+    ${p}.badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid; }
+    ${p}.badge.priority-rush { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+    ${p}.badge.priority-urgent { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+    ${p}.badge.warranty { background: #f0fdfa; color: #0f766e; border-color: #5eead4; }
+    ${p}.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
+    ${p}.remarks { margin-bottom: 8px; line-height: 1.5; font-size: 11px; }
+    ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: fixed; }
+    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: 60%; }
+    ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { width: 15%; }
+    ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { width: 25%; }
+    ${p}.parts-table th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #64748b; text-align: center; }
+    ${p}.parts-table th:first-child { text-align: left; }
+    ${p}.parts-table td { border: 1px solid #e2e8f0; padding: 4px 8px; }
+    ${p}.center { text-align: center; }
+    ${p}.signature-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; }
+    ${p}.signature-row .signature-box { width: 220px; }
+    ${p}.terms { font-size: 9px; color: #64748b; line-height: 1.6; }
+    ${p}.terms-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 4px; }
+    ${p}.signature-box { border-top: 1px solid #64748b; padding-top: 4px; font-size: 10px; color: #64748b; }
+  `;
+}
+
+function buildBody(job) {
   const address = getFullAddress();
   const printDate = formatDatePacific(new Date().toISOString());
 
@@ -92,49 +152,6 @@ function buildPrintContent(job) {
   }).join('');
 
   return `
-    <style>
-      #print-work-order-root * { box-sizing: border-box; margin: 0; padding: 0; }
-      #print-work-order-root { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1e293b; background: #fff; padding: 24px; }
-      #print-work-order-root .doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1152d4; padding-bottom: 12px; margin-bottom: 16px; }
-      #print-work-order-root .company-name { font-family: 'Russo One', sans-serif; font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; color: #1152d4; }
-      #print-work-order-root .company-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-      #print-work-order-root .wo-block { text-align: right; }
-      #print-work-order-root .wo-number { font-size: 22px; font-weight: 900; font-family: monospace; color: #1152d4; }
-      #print-work-order-root .wo-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
-      #print-work-order-root .section { margin-bottom: 14px; }
-      #print-work-order-root .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; }
-      #print-work-order-root .customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 16px; }
-      #print-work-order-root .field-group { display: flex; flex-direction: column; margin-bottom: 4px; }
-      #print-work-order-root .field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
-      #print-work-order-root .muted { color: #94a3b8; font-style: italic; }
-      #print-work-order-root .tool-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-      #print-work-order-root .tool-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-      #print-work-order-root .tool-num { width: 24px; height: 24px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
-      #print-work-order-root .tool-title { flex: 1; }
-      #print-work-order-root .tool-title strong { font-size: 13px; }
-      #print-work-order-root .tool-title .muted { font-size: 11px; }
-      #print-work-order-root .tool-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
-      #print-work-order-root .badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid; }
-      #print-work-order-root .badge.priority-rush { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
-      #print-work-order-root .badge.priority-urgent { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
-      #print-work-order-root .badge.warranty { background: #f0fdfa; color: #0f766e; border-color: #5eead4; }
-      #print-work-order-root .tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
-      #print-work-order-root .remarks { margin-bottom: 8px; line-height: 1.5; font-size: 11px; }
-      #print-work-order-root .parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: fixed; }
-      #print-work-order-root .parts-table th:nth-child(1), #print-work-order-root .parts-table td:nth-child(1) { width: 60%; }
-      #print-work-order-root .parts-table th:nth-child(2), #print-work-order-root .parts-table td:nth-child(2) { width: 15%; }
-      #print-work-order-root .parts-table th:nth-child(3), #print-work-order-root .parts-table td:nth-child(3) { width: 25%; }
-      #print-work-order-root .parts-table th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #64748b; text-align: center; }
-      #print-work-order-root .parts-table th:first-child { text-align: left; }
-      #print-work-order-root .parts-table td { border: 1px solid #e2e8f0; padding: 4px 8px; }
-      #print-work-order-root .center { text-align: center; }
-      #print-work-order-root .signature-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; }
-      #print-work-order-root .signature-row .signature-box { width: 220px; }
-      #print-work-order-root .terms { font-size: 9px; color: #64748b; line-height: 1.6; }
-      #print-work-order-root .terms-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 4px; }
-      #print-work-order-root .signature-box { border-top: 1px solid #64748b; padding-top: 4px; font-size: 10px; color: #64748b; }
-    </style>
-
     <div class="doc-header">
       <div>
         <div class="company-name">${escHtml(BUSINESS_INFO.name)}</div>
@@ -164,7 +181,6 @@ function buildPrintContent(job) {
       ${toolsHTML}
     </div>
 
-
     <div class="signature-row">
       <div class="terms">
         <div class="terms-title">Terms &amp; Conditions</div>
@@ -174,8 +190,30 @@ function buildPrintContent(job) {
       </div>
       <div class="signature-box">Customer Signature &amp; Date</div>
     </div>
-
   `;
+}
+
+function buildPrintContent(job) {
+  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job)}`;
+}
+
+function buildFullHTML(job) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Order ${escHtml(job.request_number)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet"/>
+  <style>
+    ${getStyles('')}
+    @media print { .tool-card { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  ${buildBody(job)}
+</body>
+</html>`;
 }
 
 function escHtml(str) {
