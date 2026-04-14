@@ -13,8 +13,14 @@ export function openPrintWorkOrder(job) {
   const root = document.getElementById('print-work-order-root');
   if (!root) return;
   root.innerHTML = buildPrintContent(job);
+  const cleanup = () => { root.innerHTML = ''; };
+  window.addEventListener('afterprint', cleanup, { once: true });
   window.print();
-  root.innerHTML = '';
+  // Fallback: clear after 60s if afterprint never fires (some mobile browsers)
+  setTimeout(() => {
+    window.removeEventListener('afterprint', cleanup);
+    root.innerHTML = '';
+  }, 60000);
 }
 
 function buildPrintContent(job) {

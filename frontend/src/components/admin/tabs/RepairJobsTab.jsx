@@ -477,7 +477,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         try { finalJob = await repairsAPI.get(created.id); } catch { /* use created */ }
         if (photoErrors.length > 0) {
           setJobs(prev => [finalJob, ...prev]);
-          openPrintWorkOrder(finalJob);
+          if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob);
           handleCloseNewJob();
           showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
           setSavingJob(false);
@@ -486,7 +486,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
 
       setJobs(prev => [finalJob, ...prev]);
-      openPrintWorkOrder(finalJob);
+      if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob);
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
       setSavingJob(false);
@@ -1248,10 +1248,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     <h3 id="wo-dialog-title" className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{selectedJob.request_number}</span></h3>
                     <button
                       onClick={() => openPrintWorkOrder(selectedJob)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
+                      className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                       title="Print / Save as PDF"
                     >
-                      <span className="material-symbols-outlined" style={{fontSize:'16px'}}>print</span>
+                      <span className="material-symbols-outlined" style={{fontSize:'18px'}}>print</span>
                     </button>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
