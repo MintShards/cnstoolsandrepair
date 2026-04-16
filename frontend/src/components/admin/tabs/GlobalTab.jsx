@@ -723,6 +723,29 @@ export default function GlobalTab() {
         </>
       )}
 
+      {/* Repair Tracker */}
+      <h3 className="text-xl font-black text-white uppercase tracking-tight mt-8 mb-4">
+        Repair Tracker Settings
+      </h3>
+      <div className="flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-lg mb-6">
+        <span className="material-symbols-outlined text-amber-400 text-2xl flex-shrink-0">warning</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white mb-0.5">Stale Job Threshold</p>
+          <p className="text-xs text-slate-400">Tools with no status update for this many days are flagged as stale in the dashboard.</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <input
+            type="number"
+            min="1"
+            max="30"
+            value={formData.staleDays ?? 3}
+            onChange={(e) => updateField('staleDays', Math.max(1, Math.min(30, parseInt(e.target.value) || 3)))}
+            className="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-white text-center focus:border-primary focus:outline-none"
+          />
+          <span className="text-sm text-slate-400">days</span>
+        </div>
+      </div>
+
       {/* Brands */}
       <h3 className="text-xl font-black text-white uppercase tracking-tight mt-8 mb-4">
         Brands We Service

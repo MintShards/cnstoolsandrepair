@@ -1,7 +1,8 @@
 import logging
 import re
 import uuid
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Query
+from collections import defaultdict
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Query, Response
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
@@ -73,6 +74,12 @@ async def get_repair_summary(
     now = datetime.utcnow()
     terminal_statuses = {"completed", "abandoned", "closed", "declined"}
 
+    # Read configurable stale threshold from settings (default 3 days)
+    settings_doc = await db.business_settings.find_one({"active": True})
+    stale_days_threshold = 3
+    if settings_doc:
+        stale_days_threshold = int(settings_doc.get("stale_days", 3) or 3)
+
     # ── Status counts via aggregation ──
     pipeline = [
         {"$unwind": "$tools"},
@@ -110,7 +117,7 @@ async def get_repair_summary(
                 if last_ts:
                     last_dt = last_ts if isinstance(last_ts, datetime) else datetime.fromisoformat(str(last_ts).replace("Z", "+00:00")).replace(tzinfo=None)
                     days_since = (now - last_dt).days
-                    if days_since >= 3:
+                    if days_since >= stale_days_threshold:
                         stale_count += 1
             # Rush/Urgent in active status
             if tool.get("priority") in ("rush", "urgent"):
@@ -132,6 +139,7 @@ async def get_repair_summary(
         "status_counts": status_counts,
         "overdue_count": overdue_count,
         "stale_count": stale_count,
+        "stale_days": stale_days_threshold,
         "rush_urgent_active": rush_urgent_active,
         "updated_today": updated_today,
         "total_active_jobs": total_active_jobs,
@@ -141,11 +149,10 @@ async def get_repair_summary(
 # ──────────────────────────────────────────────
 # LIST
 # ──────────────────────────────────────────────
-# LIST
-# ──────────────────────────────────────────────
 
-@router.get("/", response_model=List[RepairJobResponse])
+@router.get("/")
 async def list_repair_jobs(
+    response: Response,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     status: Optional[str] = None,
@@ -153,11 +160,12 @@ async def list_repair_jobs(
     search: Optional[str] = None,
     customer_id: Optional[str] = None,
     assigned_technician: Optional[str] = None,
-    sort_by: Optional[str] = Query(default="created_at", regex="^(created_at|request_number)$"),
+    sort_by: Optional[str] = Query(default="created_at", regex="^(created_at|updated_at|request_number)$"),
     sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
     current_user: User = Depends(require_admin)
 ):
-    """List all repair jobs with optional filtering and search"""
+    """List all repair jobs with optional filtering, search, and server-side pagination.
+    Returns X-Total-Count header with total matching documents."""
     db = get_database()
 
     query = {}
@@ -182,10 +190,18 @@ async def list_repair_jobs(
             {"last_name": {"$regex": escaped, "$options": "i"}},
             {"email": {"$regex": escaped, "$options": "i"}},
             {"request_number": {"$regex": escaped, "$options": "i"}},
+            {"tools.brand": {"$regex": escaped, "$options": "i"}},
+            {"tools.model_number": {"$regex": escaped, "$options": "i"}},
+            {"tools.tool_type": {"$regex": escaped, "$options": "i"}},
+            {"tools.serial_number": {"$regex": escaped, "$options": "i"}},
         ]
 
     sort_direction = 1 if sort_order == "asc" else -1
-    sort_field = sort_by if sort_by in ("created_at", "request_number") else "created_at"
+    sort_field = sort_by if sort_by in ("created_at", "updated_at", "request_number") else "created_at"
+
+    total = await db.repairs.count_documents(query)
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
 
     cursor = db.repairs.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit)
     jobs = await cursor.to_list(length=limit)
@@ -210,7 +226,6 @@ async def batch_update_tool_status(
     now = datetime.utcnow()
 
     # Group items by job_id to minimize DB round-trips
-    from collections import defaultdict
     by_job: dict[str, list] = defaultdict(list)
     for item in batch.items:
         by_job[item.job_id].append(item)

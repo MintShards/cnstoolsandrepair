@@ -86,6 +86,7 @@ class BusinessSettingsUpdate(BaseModel):
     claims: Optional[ClaimsModel] = Field(default_factory=ClaimsModel)
     social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
+    stale_days: int = Field(default=3, ge=1, le=30, alias="staleDays")  # Configurable stale threshold
 
     class Config:
         populate_by_name = True
@@ -161,6 +162,7 @@ class BusinessSettingsResponse(BaseModel):
     claims: ClaimsModel
     social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
+    stale_days: int = Field(default=3, alias="staleDays")
 
     class Config:
         populate_by_name = True

@@ -14,7 +14,6 @@ from app.dependencies.auth import require_admin
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
-# Default settings to return if no settings exist in database
 DEFAULT_SETTINGS = {
     "contact": {
         "phone": "(604) 555-0123",
@@ -80,7 +79,8 @@ DEFAULT_SETTINGS = {
         "facebook": "",
         "linkedin": "",
         "instagram": ""
-    }
+    },
+    "staleDays": 3,
 }
 
 
@@ -92,14 +92,11 @@ async def get_settings():
     """
     db = get_database()
 
-    # Fetch the single active settings document
     settings = await db.business_settings.find_one({"active": True})
 
     if not settings:
-        # Return default settings if none exist
         return BusinessSettingsResponse(**DEFAULT_SETTINGS)
 
-    # Convert ObjectId to string and return
     settings = convert_objectid_to_str(settings)
     return BusinessSettingsResponse(**settings)
 
@@ -115,13 +112,10 @@ async def update_settings(settings_data: BusinessSettingsUpdate):
     """
     db = get_database()
 
-    # Prepare settings document
     settings_dict = settings_data.model_dump(by_alias=True)
     settings_dict["active"] = True
     settings_dict["updatedAt"] = datetime.utcnow()
 
-    # Upsert: update if exists, create if doesn't
-    # Filter by active=True ensures only one document is ever active
     result = await db.business_settings.update_one(
         {"active": True},
         {
@@ -131,13 +125,11 @@ async def update_settings(settings_data: BusinessSettingsUpdate):
         upsert=True
     )
 
-    # Fetch the updated/created document
     updated_settings = await db.business_settings.find_one({"active": True})
 
     if not updated_settings:
         raise HTTPException(status_code=500, detail="Failed to update settings")
 
-    # Convert ObjectId to string
     updated_settings = convert_objectid_to_str(updated_settings)
 
     return BusinessSettingsResponse(**updated_settings)
@@ -148,7 +140,6 @@ async def settings_health():
     """Health check for settings service"""
     db = get_database()
 
-    # Check if settings exist
     settings_count = await db.business_settings.count_documents({"active": True})
 
     return {

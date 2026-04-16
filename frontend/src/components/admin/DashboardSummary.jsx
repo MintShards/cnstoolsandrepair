@@ -7,7 +7,7 @@ const REFRESH_INTERVAL_MS = 60_000;
 // Active statuses we show in the swimlane (terminal ones have nothing to action)
 const ACTIVE_STATUSES = MAIN_STAGES;
 
-export default function DashboardSummary({ onStatusFilter, collapsed: initialCollapsed = false, asTab = false }) {
+export default function DashboardSummary({ onStatusFilter, onAttentionUpdate, onStaleDaysUpdate, collapsed: initialCollapsed = false, asTab = false }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -18,12 +18,19 @@ export default function DashboardSummary({ onStatusFilter, collapsed: initialCol
       const result = await repairsAPI.summary();
       setData(result);
       setLastRefreshed(new Date());
+      if (onAttentionUpdate) {
+        const hasAttention = (result.overdue_count > 0) || (result.stale_count > 0) || (result.rush_urgent_active > 0);
+        onAttentionUpdate(hasAttention);
+      }
+      if (onStaleDaysUpdate && result.stale_days != null) {
+        onStaleDaysUpdate(result.stale_days);
+      }
     } catch {
       // Silently fail — dashboard is non-critical
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onAttentionUpdate]);
 
   useEffect(() => {
     fetchSummary();
@@ -38,6 +45,7 @@ export default function DashboardSummary({ onStatusFilter, collapsed: initialCol
   const totalActive = data?.total_active_jobs ?? 0;
   const overdueCount = data?.overdue_count ?? 0;
   const staleCount = data?.stale_count ?? 0;
+  const staleDays = data?.stale_days ?? 3;
   const rushUrgent = data?.rush_urgent_active ?? 0;
   const updatedToday = data?.updated_today ?? 0;
   const hasAttention = overdueCount > 0 || staleCount > 0 || rushUrgent > 0;
@@ -91,7 +99,7 @@ export default function DashboardSummary({ onStatusFilter, collapsed: initialCol
                 />
                 <StatCard
                   icon="warning"
-                  label="Stale (3+ days)"
+                  label={`Stale (${staleDays}+ days)`}
                   value={staleCount}
                   color={staleCount > 0 ? 'amber' : 'neutral'}
                   urgent={staleCount > 0}
@@ -139,7 +147,7 @@ export default function DashboardSummary({ onStatusFilter, collapsed: initialCol
                     );
                   })}
                   {/* Show off-ramp statuses that have tools */}
-                  {['declined', 'completed', 'abandoned'].map(status => {
+                  {['declined', 'completed', 'abandoned', 'closed'].map(status => {
                     const count = data?.status_counts?.[status] ?? 0;
                     if (count === 0) return null;
                     const cfg = REPAIR_STATUSES[status];

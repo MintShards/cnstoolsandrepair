@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, createContext, useContext, useRef } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CustomersTab from '../../components/admin/tabs/CustomersTab';
 import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
@@ -89,6 +89,8 @@ export default function RepairTracker() {
   const [toasts, setToasts] = useState([]);
   const [tabCounts, setTabCounts] = useState({ customers: null, requests: null, jobs: null });
   const [dashboardStatusFilter, setDashboardStatusFilter] = useState('');
+  const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
+  const [staleDays, setStaleDays] = useState(3);
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
@@ -136,6 +138,14 @@ export default function RepairTracker() {
   const handleDashboardStatusFilter = useCallback((status) => {
     setDashboardStatusFilter(status);
     setActiveTab('jobs');
+  }, []);
+
+  const handleAttentionUpdate = useCallback((hasAttention) => {
+    setJobsNeedAttention(hasAttention);
+  }, []);
+
+  const handleStaleDaysUpdate = useCallback((days) => {
+    setStaleDays(days);
   }, []);
 
   return (
@@ -212,6 +222,9 @@ export default function RepairTracker() {
                         {count}
                       </span>
                     )}
+                    {tab.id === 'jobs' && jobsNeedAttention && activeTab !== 'jobs' && (
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" title="Jobs need attention" />
+                    )}
                   </button>
                 );
               })}
@@ -221,7 +234,7 @@ export default function RepairTracker() {
           {/* Tab Content */}
           <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-xl shadow-black/5 dark:shadow-black/20 animate-fadeInScale">
             {activeTab === 'dashboard' && (
-              <DashboardSummary onStatusFilter={handleDashboardStatusFilter} asTab />
+              <DashboardSummary onStatusFilter={handleDashboardStatusFilter} onAttentionUpdate={handleAttentionUpdate} onStaleDaysUpdate={handleStaleDaysUpdate} asTab />
             )}
             {activeTab === 'customers' && (
               <CustomersTab
@@ -242,6 +255,7 @@ export default function RepairTracker() {
                 onCountUpdate={handleJobsCountUpdate}
                 externalStatusFilter={dashboardStatusFilter}
                 onExternalStatusFilterApplied={() => setDashboardStatusFilter('')}
+                staleDays={staleDays}
               />
             )}
           </div>

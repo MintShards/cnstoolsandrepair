@@ -296,7 +296,8 @@ export const repairsAPI = {
   },
   list: async (params = {}) => {
     const response = await api.get('/api/repairs/', { params });
-    return response.data;
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { jobs: response.data, total };
   },
   get: async (id) => {
     const response = await api.get(`/api/repairs/${id}`);
