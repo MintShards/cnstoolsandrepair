@@ -40,6 +40,7 @@ function getStyles(prefix) {
   const p = prefix ? `${prefix} ` : '';
   const s = prefix || 'body';
   return `
+    @page { margin: 10mm; size: auto; }
     ${p}* { box-sizing: border-box; margin: 0; padding: 0; }
     ${s} { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #000; background: #fff; padding: 24px; }
     ${p}.doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; }
