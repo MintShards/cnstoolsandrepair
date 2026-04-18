@@ -1408,14 +1408,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 id="wo-dialog-title" className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{selectedJob.request_number}</span></h3>
-                    <button
-                      onClick={() => openPrintWorkOrder(selectedJob)}
-                      className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
-                      title="Print / Save as PDF"
-                    >
-                      <span className="material-symbols-outlined" style={{fontSize:'18px'}}>print</span>
-                    </button>
+                    <h3 id="wo-dialog-title" className="text-base sm:text-lg font-black text-slate-900 dark:text-white"><span className="hidden sm:inline">Work Order </span><span className="text-primary font-mono">{selectedJob.request_number}</span></h3>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-slate-500">Created {formatDateShort(selectedJob.created_at)}</span>
@@ -1446,9 +1439,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   </div>
                 </div>
               </div>
-              <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openPrintWorkOrder(selectedJob)}
+                  className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
+                  title="Print / Save as PDF"
+                >
+                  <span className="material-symbols-outlined" style={{fontSize:'18px'}}>print</span>
+                </button>
+                <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
@@ -1559,7 +1561,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <StepBadge status={tool.status} />
-                            <PriorityBadge priority={tool.priority} />
+                            <span className="hidden sm:block"><PriorityBadge priority={tool.priority} /></span>
                             {tool.warranty && (
                               <span className="hidden sm:inline px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                             )}
