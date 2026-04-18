@@ -1401,7 +1401,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             {/* Colored top-border accent */}
             <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30 flex-shrink-0" />
             {/* Header */}
-            <div className="flex-shrink-0 sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between z-10">
+            <div className="flex-shrink-0 sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700/60 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <span className="material-symbols-outlined text-primary text-xl">build_circle</span>
@@ -1415,25 +1415,25 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     {selectedJob.source === 'online_request' && (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-300 dark:bg-sky-900/40 dark:text-sky-400 dark:border-sky-700/50">
                         <span className="material-symbols-outlined" style={{fontSize:'11px'}}>public</span>
-                        Online Request
+                        <span className="hidden sm:inline">Online Request</span>
                       </span>
                     )}
                     {selectedJob.source === 'drop_off' && (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600/50">
                         <span className="material-symbols-outlined" style={{fontSize:'11px'}}>store</span>
-                        Drop-off
+                        <span className="hidden sm:inline">Drop-off</span>
                       </span>
                     )}
                     {selectedJob.source === 'phone_in' && (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-300 dark:bg-violet-900/40 dark:text-violet-400 dark:border-violet-700/50">
                         <span className="material-symbols-outlined" style={{fontSize:'11px'}}>call</span>
-                        Phone-in
+                        <span className="hidden sm:inline">Phone-in</span>
                       </span>
                     )}
                     {selectedJob.source === 'email' && (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-700/50">
                         <span className="material-symbols-outlined" style={{fontSize:'11px'}}>mail</span>
-                        Email
+                        <span className="hidden sm:inline">Email</span>
                       </span>
                     )}
                   </div>
