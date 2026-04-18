@@ -9,6 +9,7 @@ import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusB
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
+import { useSettings } from '../../../contexts/SettingsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -90,6 +91,7 @@ function formatPhone(raw) {
 
 export default function CustomersTab({ onNewJob, onCountUpdate }) {
   const showToast = useToast();
+  const { settings } = useSettings();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -851,7 +853,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{woDialogJob.request_number}</span></h3>
                       <button
-                        onClick={() => openPrintWorkOrder(woDialogJob)}
+                        onClick={() => openPrintWorkOrder(woDialogJob, settings?.contact)}
                         className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                         title="Print / Save as PDF"
                       >

@@ -9,6 +9,7 @@ import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusB
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
+import { useSettings } from '../../../contexts/SettingsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -75,6 +76,7 @@ const getEmptyJob = () => ({
 
 export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied, staleDays = 3 }) {
   const showToast = useToast();
+  const { settings } = useSettings();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -520,7 +522,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         try { finalJob = await repairsAPI.get(created.id); } catch { /* use created */ }
         if (photoErrors.length > 0) {
           setJobs(prev => [finalJob, ...prev]);
-          if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob);
+          if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob, settings?.contact);
           handleCloseNewJob();
           showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
           setSavingJob(false);
@@ -529,7 +531,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
 
       setJobs(prev => [finalJob, ...prev]);
-      if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob);
+      if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob, settings?.contact);
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
       setSavingJob(false);
@@ -1441,7 +1443,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => openPrintWorkOrder(selectedJob)}
+                  onClick={() => openPrintWorkOrder(selectedJob, settings?.contact)}
                   className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                   title="Print / Save as PDF"
                 >

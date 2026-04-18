@@ -12,10 +12,10 @@ function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
-export function openPrintWorkOrder(job) {
+export function openPrintWorkOrder(job, businessInfo) {
   if (isMobile()) {
     // Mobile: open in new tab (window.print() is unreliable on iOS/Android)
-    const html = buildFullHTML(job);
+    const html = buildFullHTML(job, businessInfo);
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(html);
@@ -25,7 +25,7 @@ export function openPrintWorkOrder(job) {
     // Desktop: inline DOM print
     const root = document.getElementById('print-work-order-root');
     if (!root) return;
-    root.innerHTML = buildPrintContent(job);
+    root.innerHTML = buildPrintContent(job, businessInfo);
     const cleanup = () => { root.innerHTML = ''; };
     window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
@@ -84,8 +84,14 @@ function getStyles(prefix) {
   `;
 }
 
-function buildBody(job) {
-  const address = getFullAddress();
+function buildBody(job, businessInfo) {
+  const biz = businessInfo || {};
+  const name = biz.name || BUSINESS_INFO.name;
+  const phone = biz.phone || BUSINESS_INFO.phone;
+  const email = biz.email || BUSINESS_INFO.email;
+  const addr = biz.address
+    ? (() => { const a = biz.address; return `${a.street}, ${a.city}, ${a.province}${a.postalCode ? ' ' + a.postalCode : ''}, ${a.country}`; })()
+    : getFullAddress();
   const printDate = formatDatePacific(new Date().toISOString());
 
   const toolsHTML = job.tools.map((tool, idx) => {
@@ -155,9 +161,9 @@ function buildBody(job) {
   return `
     <div class="doc-header">
       <div>
-        <div class="company-name">${escHtml(BUSINESS_INFO.name)}</div>
-        <div class="company-sub">${escHtml(address)}</div>
-        <div class="company-sub">${escHtml(BUSINESS_INFO.phone)} · ${escHtml(BUSINESS_INFO.email)}</div>
+        <div class="company-name">${escHtml(name)}</div>
+        <div class="company-sub">${escHtml(addr)}</div>
+        <div class="company-sub">${escHtml(phone)} · ${escHtml(email)}</div>
       </div>
       <div class="wo-block">
         <div class="wo-number">${escHtml(job.request_number)}</div>
@@ -194,11 +200,11 @@ function buildBody(job) {
   `;
 }
 
-function buildPrintContent(job) {
-  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job)}`;
+function buildPrintContent(job, businessInfo) {
+  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job, businessInfo)}`;
 }
 
-function buildFullHTML(job) {
+function buildFullHTML(job, businessInfo) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -212,7 +218,7 @@ function buildFullHTML(job) {
   </style>
 </head>
 <body>
-  ${buildBody(job)}
+  ${buildBody(job, businessInfo)}
 </body>
 </html>`;
 }
