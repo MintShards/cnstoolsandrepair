@@ -2,8 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+@page { margin: 10mm; size: auto; }
+
 @media print {
-  @page { margin: 10mm; size: auto; }
   body > * { display: none !important; }
   #print-work-order-root { display: block !important; }
   #print-work-order-root .tool-card { break-inside: avoid; }

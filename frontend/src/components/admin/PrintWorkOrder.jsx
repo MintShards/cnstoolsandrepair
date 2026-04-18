@@ -14,13 +14,18 @@ function isMobile() {
 
 export function openPrintWorkOrder(job) {
   if (isMobile()) {
-    // Mobile: open in new tab (window.print() is unreliable on iOS/Android)
+    // Mobile: use a blob URL to avoid popup blockers on iOS/Android
     const html = buildFullHTML(job);
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(html);
-    win.document.close();
-    win.focus();
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   } else {
     // Desktop: inline DOM print
     const root = document.getElementById('print-work-order-root');
