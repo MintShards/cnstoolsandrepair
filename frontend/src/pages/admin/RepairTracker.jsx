@@ -89,8 +89,12 @@ export default function RepairTracker() {
   const [toasts, setToasts] = useState([]);
   const [tabCounts, setTabCounts] = useState({ customers: null, requests: null, jobs: null });
   const [dashboardStatusFilter, setDashboardStatusFilter] = useState('');
+  const [dashboardTechFilter, setDashboardTechFilter] = useState('');
+  const [dashboardOpenNewJob, setDashboardOpenNewJob] = useState(false);
+  const [dashboardOpenNewCustomer, setDashboardOpenNewCustomer] = useState(false);
   const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
   const [staleDays, setStaleDays] = useState(3);
+  const [dashboardOpenJobId, setDashboardOpenJobId] = useState(null);
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
@@ -137,6 +141,30 @@ export default function RepairTracker() {
 
   const handleDashboardStatusFilter = useCallback((status) => {
     setDashboardStatusFilter(status);
+    setActiveTab('jobs');
+  }, []);
+
+  const handleDashboardTechFilter = useCallback((tech) => {
+    setDashboardTechFilter(tech);
+    setActiveTab('jobs');
+  }, []);
+
+  const handleDashboardNewJob = useCallback(() => {
+    setDashboardOpenNewJob(true);
+    setActiveTab('jobs');
+  }, []);
+
+  const handleDashboardNewCustomer = useCallback(() => {
+    setDashboardOpenNewCustomer(true);
+    setActiveTab('customers');
+  }, []);
+
+  const handleGoToRequests = useCallback(() => {
+    setActiveTab('requests');
+  }, []);
+
+  const handleDashboardOpenJob = useCallback((jobId) => {
+    setDashboardOpenJobId(jobId);
     setActiveTab('jobs');
   }, []);
 
@@ -234,12 +262,24 @@ export default function RepairTracker() {
           {/* Tab Content */}
           <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-xl shadow-black/5 dark:shadow-black/20 animate-fadeInScale">
             {activeTab === 'dashboard' && (
-              <DashboardSummary onStatusFilter={handleDashboardStatusFilter} onAttentionUpdate={handleAttentionUpdate} onStaleDaysUpdate={handleStaleDaysUpdate} asTab />
+              <DashboardSummary
+                onStatusFilter={handleDashboardStatusFilter}
+                onTechFilter={handleDashboardTechFilter}
+                onNewJob={handleDashboardNewJob}
+                onNewCustomer={handleDashboardNewCustomer}
+                onGoToRequests={handleGoToRequests}
+                onAttentionUpdate={handleAttentionUpdate}
+                onStaleDaysUpdate={handleStaleDaysUpdate}
+                onOpenJob={handleDashboardOpenJob}
+                asTab
+              />
             )}
             {activeTab === 'customers' && (
               <CustomersTab
                 onNewJob={handleNewJobFromCustomer}
                 onCountUpdate={handleCustomersCountUpdate}
+                externalOpenNewCustomer={dashboardOpenNewCustomer}
+                onExternalOpenNewCustomerHandled={() => setDashboardOpenNewCustomer(false)}
               />
             )}
             {activeTab === 'requests' && (
@@ -255,6 +295,12 @@ export default function RepairTracker() {
                 onCountUpdate={handleJobsCountUpdate}
                 externalStatusFilter={dashboardStatusFilter}
                 onExternalStatusFilterApplied={() => setDashboardStatusFilter('')}
+                externalTechFilter={dashboardTechFilter}
+                onExternalTechFilterApplied={() => setDashboardTechFilter('')}
+                externalOpenNewJob={dashboardOpenNewJob}
+                onExternalOpenNewJobHandled={() => setDashboardOpenNewJob(false)}
+                externalOpenJobId={dashboardOpenJobId}
+                onExternalOpenJobHandled={() => setDashboardOpenJobId(null)}
                 staleDays={staleDays}
               />
             )}

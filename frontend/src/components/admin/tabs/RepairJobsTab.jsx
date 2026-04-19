@@ -74,7 +74,7 @@ const getEmptyJob = () => ({
   address: '', customer_notes: '', source: 'drop_off', tools: [getEmptyTool()]
 });
 
-export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied, staleDays = 3 }) {
+export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied, externalTechFilter, onExternalTechFilterApplied, externalOpenNewJob, onExternalOpenNewJobHandled, externalOpenJobId, onExternalOpenJobHandled, staleDays = 3 }) {
   const showToast = useToast();
   const { settings } = useSettings();
   const [jobs, setJobs] = useState([]);
@@ -82,7 +82,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [selectedJob, setSelectedJob] = useState(null);
   const [showNewJobForm, setShowNewJobForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  // Initialize filter from external prop if present (dashboard click-through)
+  // Capture the initial prop in a ref so StrictMode double-mount doesn't lose it
+  const SPECIAL_FILTERS = new Set(['__all__', '__attention__', '__overdue__', '__stuck__']);
+  const initialExternalStatus = useRef(externalStatusFilter);
+  const ext = initialExternalStatus.current;
+  const initStatus = ext && ext !== '' && !SPECIAL_FILTERS.has(ext) ? ext : '';
+  const [statusFilter, setStatusFilter] = useState(initStatus);
   const [priorityFilter, setPriorityFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -98,7 +104,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [batchSelected, setBatchSelected] = useState(new Set()); // Set of "jobId:toolId"
   const [batchTargetStatus, setBatchTargetStatus] = useState('');
   const [batchApplying, setBatchApplying] = useState(false);
-  const [attentionFilter, setAttentionFilter] = useState(false);
+  const [attentionFilter, setAttentionFilter] = useState(ext === '__attention__');
+  // Specific dashboard filters: 'overdue' = past estimated_completion, 'stuck' = diagnosed/in_repair 24h+
+  const initSpecial = ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : '';
+  const [specialFilter, setSpecialFilter] = useState(initSpecial);
 
   // Detail view state
   const [jobCustomer, setJobCustomer] = useState(null); // linked customer record (single source of truth)
@@ -146,15 +155,88 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedCustomer]);
 
-  // Apply status filter pushed from the dashboard
+  // Apply status filter pushed from the dashboard.
+  // Initial value is handled by useState initializer above — this effect only
+  // responds to prop changes AFTER mount (e.g. clicking another dashboard card
+  // while already on the Jobs tab — which can't happen with current conditional
+  // rendering, but is future-proof).
+  const prevExternalStatus = useRef(externalStatusFilter);
   useEffect(() => {
+    // On mount: clear the prop after a tick so StrictMode remount can still read it
+    if (prevExternalStatus.current === externalStatusFilter) {
+      if (externalStatusFilter && externalStatusFilter !== '') {
+        setTimeout(() => { if (onExternalStatusFilterApplied) onExternalStatusFilterApplied(); }, 0);
+      }
+      return;
+    }
+    prevExternalStatus.current = externalStatusFilter;
     if (externalStatusFilter !== undefined && externalStatusFilter !== '') {
-      setStatusFilter(externalStatusFilter);
+      const isAttention = externalStatusFilter === '__attention__';
+      const isAll = externalStatusFilter === '__all__';
+      const isOverdue = externalStatusFilter === '__overdue__';
+      const isStuck = externalStatusFilter === '__stuck__';
+      const isSpecial = isAttention || isAll || isOverdue || isStuck;
+      const newStatus = isSpecial ? '' : externalStatusFilter;
+
+      setStatusFilter(newStatus);
+      setAttentionFilter(isAttention);
+      setSpecialFilter(isOverdue ? 'overdue' : isStuck ? 'stuck' : '');
+      setSearchQuery('');
+      setPriorityFilter('');
       setCurrentPage(1);
       if (onExternalStatusFilterApplied) onExternalStatusFilterApplied();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalStatusFilter]);
+
+  // Apply technician filter pushed from the dashboard
+  const prevExternalTech = useRef(externalTechFilter);
+  useEffect(() => {
+    if (prevExternalTech.current === externalTechFilter) {
+      if (externalTechFilter && externalTechFilter !== '') {
+        setTimeout(() => { if (onExternalTechFilterApplied) onExternalTechFilterApplied(); }, 0);
+      }
+      return;
+    }
+    prevExternalTech.current = externalTechFilter;
+    if (externalTechFilter !== undefined && externalTechFilter !== '') {
+      setTechnicianFilter(externalTechFilter);
+      setCurrentPage(1);
+      if (onExternalTechFilterApplied) onExternalTechFilterApplied();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalTechFilter]);
+
+  // Open new job form triggered from the dashboard
+  useEffect(() => {
+    if (externalOpenNewJob) {
+      setShowNewJobForm(true);
+      setNewJobStep(1);
+      setNewJobForm(getEmptyJob());
+      setSelectedCustomerObj(null);
+      setShowInlineCustomerForm(false);
+      if (onExternalOpenNewJobHandled) onExternalOpenNewJobHandled();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalOpenNewJob]);
+
+  // Open a specific job triggered from the dashboard (e.g. clicking a work order in Pending Approvals)
+  const initialOpenJobId = useRef(externalOpenJobId);
+  useEffect(() => {
+    const jobId = initialOpenJobId.current || externalOpenJobId;
+    if (!jobId) return;
+    initialOpenJobId.current = null;
+    (async () => {
+      try {
+        const job = await repairsAPI.get(jobId);
+        setSelectedJob(job);
+      } catch (err) {
+        showToast('error', 'Could not open work order');
+      }
+      if (onExternalOpenJobHandled) onExternalOpenJobHandled();
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalOpenJobId]);
 
   // Debounced customer search
   const searchCustomersDebounced = useCallback(
@@ -220,7 +302,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     setNewJobForm(getEmptyJob());
   };
 
-  // Initial load
+  // Initial load — state is pre-initialized from props (statusFilter, attentionFilter)
   useEffect(() => {
     fetchJobs(1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -243,6 +325,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     fetchJobs(1, pageSize, attentionFilter);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attentionFilter]);
+
+  // Special filter (overdue / stuck): fetch all + client filter
+  const isFirstSpecial = useRef(true);
+  useEffect(() => {
+    if (isFirstSpecial.current) { isFirstSpecial.current = false; return; }
+    setCurrentPage(1);
+    fetchJobs(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specialFilter]);
 
   // Debounced search: reset page and fetch after 350ms pause (skip initial empty value)
   const isFirstSearch = useRef(true);
@@ -312,8 +403,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const activePage = page ?? currentPage;
       const activeSize = size ?? pageSize;
       const isAttention = attention !== undefined ? attention : attentionFilter;
-      const params = isAttention
-        ? { skip: 0, limit: 200 }  // fetch all when attention mode — client filter does the rest
+      const isBulkFilter = isAttention || specialFilter !== '';
+      const params = isBulkFilter
+        ? { skip: 0, limit: 200 }  // fetch all when client-side filter active
         : { skip: (activePage - 1) * activeSize, limit: activeSize };
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
@@ -326,8 +418,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
       const { jobs: data, total } = await repairsAPI.list(params);
       setJobs(data);
-      setTotalCount(isAttention ? data.length : total);
-      if (onCountUpdate) onCountUpdate(isAttention ? data.length : total);
+      setTotalCount(isBulkFilter ? data.length : total);
+      if (onCountUpdate) onCountUpdate(isBulkFilter ? data.length : total);
       // Accumulate known technicians across pages for filter dropdown
       const newTechs = data.flatMap(j => j.tools.map(t => t.assigned_technician).filter(Boolean));
       setKnownTechnicians(prev => [...new Set([...prev, ...newTechs])].sort());
@@ -386,6 +478,26 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         return job.tools.some(t => t.priority === 'rush' || t.priority === 'urgent');
       });
     }
+    if (specialFilter === 'overdue') {
+      base = base.filter(job => job.tools.some(t => isToolOverdue(t)));
+    }
+    if (specialFilter === 'stuck') {
+      const STUCK_STATUSES = new Set(['diagnosed', 'in_repair']);
+      base = base.filter(job => job.tools.some(t => {
+        if (!STUCK_STATUSES.has(t.status)) return false;
+        const days = getDaysSinceLastUpdate(t);
+        // 24 hours = 1 day, but getDaysSinceLastUpdate uses Math.floor(days)
+        // so anything >= 1 day qualifies
+        const hours = (() => {
+          const history = t.status_history;
+          if (!history?.length) return 0;
+          const raw = history[history.length - 1].timestamp;
+          const ts = typeof raw === 'string' && !raw.endsWith('Z') && !raw.includes('+') ? raw + 'Z' : raw;
+          return (now - new Date(ts)) / (1000 * 60 * 60);
+        })();
+        return hours >= 24;
+      }));
+    }
     if (SERVER_SORT_FIELDS.has(sortField)) return base; // already sorted by server
     const sorted = [...base];
     sorted.sort((a, b) => {
@@ -411,8 +523,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     return sorted;
   })();
 
-  // In attention mode: displayJobs is client-filtered (from all 200 fetched), so use its length
-  const totalResults = attentionFilter ? displayJobs.length : totalCount;
+  // In client-filter mode: displayJobs is client-filtered (from all 200 fetched), so use its length
+  const isBulkFiltered = attentionFilter || specialFilter !== '';
+  const totalResults = isBulkFiltered ? displayJobs.length : totalCount;
   const paginatedJobs = displayJobs; // server already applied skip/limit
 
   // Summary of tool statuses for list view
@@ -969,7 +1082,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             </div>
           )}
           <button
-            onClick={() => setAttentionFilter(f => !f)}
+            onClick={() => { setAttentionFilter(f => !f); setSpecialFilter(''); }}
             className={`w-10 h-10 flex items-center justify-center rounded-xl border flex-shrink-0 transition-all ${
               attentionFilter
                 ? 'bg-red-500 border-red-500 text-white shadow-md'
@@ -979,9 +1092,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           >
             <span className="material-symbols-outlined text-base">notification_important</span>
           </button>
-          {(searchQuery || statusFilter || priorityFilter || technicianFilter || attentionFilter) && (
+          {specialFilter && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold">
+              <span className="material-symbols-outlined text-sm">{specialFilter === 'overdue' ? 'schedule' : 'block'}</span>
+              {specialFilter === 'overdue' ? 'Overdue' : 'Stuck 24h+'}
+              <button onClick={() => setSpecialFilter('')} className="ml-0.5 hover:text-amber-900 dark:hover:text-amber-100">
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </span>
+          )}
+          {(searchQuery || statusFilter || priorityFilter || technicianFilter || attentionFilter || specialFilter) && (
             <button
-              onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); handleTechnicianFilter(''); setAttentionFilter(false); }}
+              onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); handleTechnicianFilter(''); setAttentionFilter(false); setSpecialFilter(''); }}
               className="w-10 h-10 flex items-center justify-center bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0"
               title="Clear all filters"
             >
@@ -1048,7 +1170,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             </div>
           )}
           <button
-            onClick={() => setAttentionFilter(f => !f)}
+            onClick={() => { setAttentionFilter(f => !f); setSpecialFilter(''); }}
             className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-bold transition-all flex-shrink-0 ${
               attentionFilter
                 ? 'bg-red-500 border-red-500 text-white shadow-md'
@@ -1059,9 +1181,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             <span className="material-symbols-outlined text-base">notification_important</span>
             Attention
           </button>
-          {(searchQuery || statusFilter || priorityFilter || technicianFilter || attentionFilter) && (
+          {specialFilter && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold">
+              <span className="material-symbols-outlined text-sm">{specialFilter === 'overdue' ? 'schedule' : 'block'}</span>
+              {specialFilter === 'overdue' ? 'Overdue' : 'Stuck 24h+'}
+              <button onClick={() => setSpecialFilter('')} className="ml-0.5 hover:text-amber-900 dark:hover:text-amber-100">
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </span>
+          )}
+          {(searchQuery || statusFilter || priorityFilter || technicianFilter || attentionFilter || specialFilter) && (
             <button
-              onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); handleTechnicianFilter(''); setAttentionFilter(false); }}
+              onClick={() => { setSearchQuery(''); setStatusFilter(''); setPriorityFilter(''); handleTechnicianFilter(''); setAttentionFilter(false); setSpecialFilter(''); }}
               className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm font-bold transition-all"
             >
               <span className="material-symbols-outlined text-base">close</span>
@@ -1347,7 +1478,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         )}
 
         {/* Pagination — hidden in attention mode (all results loaded at once) */}
-        {!loading && !attentionFilter && (
+        {!loading && !isBulkFiltered && (
           <PaginationBar
             currentPage={currentPage}
             totalItems={totalResults}

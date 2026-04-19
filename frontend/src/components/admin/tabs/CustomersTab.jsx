@@ -89,7 +89,7 @@ function formatPhone(raw) {
   return digits;
 }
 
-export default function CustomersTab({ onNewJob, onCountUpdate }) {
+export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewCustomer, onExternalOpenNewCustomerHandled }) {
   const showToast = useToast();
   const { settings } = useSettings();
   const [customers, setCustomers] = useState([]);
@@ -117,6 +117,16 @@ export default function CustomersTab({ onNewJob, onCountUpdate }) {
 
   // Delete confirm
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  // Open new customer form triggered from the dashboard
+  useEffect(() => {
+    if (externalOpenNewCustomer) {
+      setShowNewForm(true);
+      setNewForm(EMPTY_CUSTOMER);
+      if (onExternalOpenNewCustomerHandled) onExternalOpenNewCustomerHandled();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalOpenNewCustomer]);
 
   // WO detail dialog
   const [woDialogJob, setWoDialogJob] = useState(null);

@@ -69,6 +69,12 @@ async def get_repair_summary(
     - rush_urgent_active: count of rush/urgent tools in active (non-terminal) statuses
     - updated_today: count of jobs updated today
     - total_active_jobs: jobs with at least one non-terminal tool
+    - technician_summary: per-technician active/overdue/stale/rush_urgent counts
+    - today_activity: {new_jobs, completions, status_changes}
+    - recent_completions: list of recently completed tools (last 24h, max 10)
+    - parts_summary: {pending, ordered, received, total_cost}
+    - financial_summary: {active_value, completed_month_value, tools_priced, tools_total}
+    - aging_buckets: {fresh, normal, aging, stale_plus} tool counts by days since last update
     """
     db = get_database()
     now = datetime.utcnow()
@@ -89,6 +95,22 @@ async def get_repair_summary(
     raw_counts = await status_cursor.to_list(length=50)
     status_counts = {item["_id"]: item["count"] for item in raw_counts}
 
+    # ── Jobs updated today (Pacific time) ──
+    pacific = ZoneInfo("America/Vancouver")
+    now_pacific = datetime.now(pacific)
+    today_start_pacific = now_pacific.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_utc = today_start_pacific.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    updated_today = await db.repairs.count_documents({"updated_at": {"$gte": today_start_utc}})
+
+    # ── New jobs created today ──
+    new_jobs_today = await db.repairs.count_documents({"created_at": {"$gte": today_start_utc}})
+
+    # ── Month start for financial summary ──
+    month_start_utc = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # ── 24h ago for recent completions ──
+    one_day_ago = datetime.utcfromtimestamp(now.timestamp() - 86400)
+
     # ── Pull all active (non-terminal) tools to compute stale/overdue ──
     active_jobs_cursor = db.repairs.find(
         {"tools.status": {"$nin": list(terminal_statuses)}}
@@ -99,18 +121,57 @@ async def get_repair_summary(
     stale_count = 0
     rush_urgent_active = 0
 
+    # New accumulators
+    technician_summary = {}  # name -> {active, overdue, stale, rush_urgent}
+    completions_today = 0
+    recent_completions = []
+    parts_pending = 0
+    parts_ordered = 0
+    parts_received = 0
+    parts_total_cost = 0.0
+    parts_has_cost = False
+    active_value = 0.0
+    tools_priced = 0
+    tools_total = 0
+    completed_month_value = 0.0
+    aging_fresh = 0    # 0-1 days
+    aging_normal = 0   # 2-3 days
+    aging_aging = 0    # 4-7 days
+    aging_stale_plus = 0  # 8+ days
+    pending_approval_stale_count = 0  # quoted status 2+ days
+    stuck_count = 0  # diagnosed/in_repair with no update 24h+
+    priority_jobs = []  # top jobs by urgency for work queue
+    customer_map = {}  # for active_customers
+
     for job in active_jobs:
+        request_number = job.get("request_number", "")
         for tool in job.get("tools", []):
-            if tool.get("status") in terminal_statuses:
+            tool_status = tool.get("status")
+            if tool_status in terminal_statuses:
                 continue
-            # Overdue
+
+            tools_total += 1
+
+            # ── Tech workload ──
+            raw_tech = tool.get("assigned_technician", "")
+            tech_name = raw_tech.strip().title() if raw_tech and raw_tech.strip() else "Unassigned"
+            if tech_name not in technician_summary:
+                technician_summary[tech_name] = {"active": 0, "overdue": 0, "stale": 0, "rush_urgent": 0}
+            technician_summary[tech_name]["active"] += 1
+
+            # ── Overdue ──
+            is_overdue = False
             ec = tool.get("estimated_completion")
             if ec:
                 ec_dt = ec if isinstance(ec, datetime) else datetime.fromisoformat(str(ec).replace("Z", "+00:00")).replace(tzinfo=None)
                 if ec_dt < now:
                     overdue_count += 1
-            # Stale: no update in 3+ days
+                    is_overdue = True
+                    technician_summary[tech_name]["overdue"] += 1
+
+            # ── Stale / aging buckets ──
             history = tool.get("status_history", [])
+            days_since = 0
             if history:
                 last_entry = history[-1]
                 last_ts = last_entry.get("timestamp")
@@ -119,21 +180,281 @@ async def get_repair_summary(
                     days_since = (now - last_dt).days
                     if days_since >= stale_days_threshold:
                         stale_count += 1
-            # Rush/Urgent in active status
+                        technician_summary[tech_name]["stale"] += 1
+
+            if days_since <= 1:
+                aging_fresh += 1
+            elif days_since <= 3:
+                aging_normal += 1
+            elif days_since <= 7:
+                aging_aging += 1
+            else:
+                aging_stale_plus += 1
+
+            # ── Rush/Urgent ──
             if tool.get("priority") in ("rush", "urgent"):
                 rush_urgent_active += 1
+                technician_summary[tech_name]["rush_urgent"] += 1
 
-    # ── Jobs updated today (Pacific time) ──
-    pacific = ZoneInfo("America/Vancouver")
-    now_pacific = datetime.now(pacific)
-    today_start_pacific = now_pacific.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_start_utc = today_start_pacific.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
-    updated_today = await db.repairs.count_documents({"updated_at": {"$gte": today_start_utc}})
+            # ── Pending approval stale (quoted 2+ days) ──
+            if tool_status == "quoted" and days_since >= 2:
+                pending_approval_stale_count += 1
+
+            # ── Stuck (diagnosed/in_repair 24h+) ──
+            if tool_status in ("diagnosed", "in_repair") and history:
+                last_entry = history[-1]
+                last_ts = last_entry.get("timestamp")
+                if last_ts:
+                    last_dt_stuck = last_ts if isinstance(last_ts, datetime) else datetime.fromisoformat(str(last_ts).replace("Z", "+00:00")).replace(tzinfo=None)
+                    hours_since = (now - last_dt_stuck).total_seconds() / 3600
+                    if hours_since >= 24:
+                        stuck_count += 1
+
+            # ── Priority jobs (for work queue) ──
+            # Only include tools that actually need attention:
+            # overdue, rush/urgent, stale, stuck, or waiting approval 2+ days
+            company = job.get("company_name", "")
+            first_n = job.get("first_name", "")
+            last_n = job.get("last_name", "")
+            cust_name = company if company else f"{first_n} {last_n}".strip()
+            is_rush_urgent = tool.get("priority") in ("rush", "urgent")
+            is_stale = days_since >= stale_days_threshold
+            is_stuck = False
+            if tool_status in ("diagnosed", "in_repair") and history:
+                stuck_entry = history[-1]
+                stuck_ts = stuck_entry.get("timestamp")
+                if stuck_ts:
+                    stuck_dt = stuck_ts if isinstance(stuck_ts, datetime) else datetime.fromisoformat(str(stuck_ts).replace("Z", "+00:00")).replace(tzinfo=None)
+                    is_stuck = (now - stuck_dt).total_seconds() / 3600 >= 24
+            is_approval_stale = tool_status == "quoted" and days_since >= 2
+
+            # Only add if tool has a reason to be in the work queue
+            if is_overdue or is_rush_urgent or is_stale or is_stuck or is_approval_stale:
+                urgency = 0
+                reason = []
+                if is_overdue:
+                    urgency -= 100
+                    reason.append("overdue")
+                if is_rush_urgent:
+                    urgency -= 50
+                    reason.append(tool.get("priority", "rush"))
+                if is_stuck:
+                    urgency -= 40
+                    reason.append("stuck")
+                if is_stale:
+                    urgency -= 30
+                    reason.append("stale")
+                if is_approval_stale:
+                    urgency -= 20
+                    reason.append("awaiting approval")
+                urgency -= days_since  # older = more urgent
+                priority_jobs.append({
+                    "request_number": job.get("request_number", ""),
+                    "job_id": str(job.get("_id", "")),
+                    "tool_type": tool.get("tool_type", ""),
+                    "brand": tool.get("brand", ""),
+                    "model_number": tool.get("model_number", ""),
+                    "customer_name": cust_name,
+                    "status": tool_status,
+                    "days_in_status": days_since,
+                    "assigned_technician": (tool.get("assigned_technician") or "").strip() or "Unassigned",
+                    "priority": tool.get("priority", "standard"),
+                    "is_overdue": is_overdue,
+                    "reason": reason,
+                    "_urgency": urgency,
+                })
+
+            # ── Parts aggregation ──
+            for part in tool.get("parts", []):
+                part_status = part.get("status", "pending")
+                if part_status == "pending":
+                    parts_pending += 1
+                elif part_status == "ordered":
+                    parts_ordered += 1
+                elif part_status == "received":
+                    parts_received += 1
+                unit_cost = part.get("unit_cost")
+                qty = part.get("quantity", 1) or 1
+                if unit_cost is not None:
+                    parts_total_cost += float(unit_cost) * int(qty)
+                    parts_has_cost = True
+
+            # ── Financial: active job value ──
+            tool_parts_cost = sum(
+                float(p.get("unit_cost", 0) or 0) * int(p.get("quantity", 1) or 1)
+                for p in tool.get("parts", [])
+                if p.get("unit_cost") is not None
+            )
+            labour_h = tool.get("labour_hours")
+            labour_r = tool.get("hourly_rate")
+            tool_labour = float(labour_h or 0) * float(labour_r or 0)
+            if tool_parts_cost > 0 or tool_labour > 0:
+                active_value += tool_parts_cost + tool_labour
+                tools_priced += 1
+
+    # ── Recently completed tools (last 24h) — scan all jobs ──
+    # Also compute completions_today and completed_month_value from a separate query
+    all_jobs_with_completions_cursor = db.repairs.find(
+        {"tools.date_completed": {"$gte": one_day_ago}},
+        {"request_number": 1, "tools": 1}
+    )
+    all_completed_jobs = await all_jobs_with_completions_cursor.to_list(length=500)
+
+    for job in all_completed_jobs:
+        request_number = job.get("request_number", "")
+        for tool in job.get("tools", []):
+            dc = tool.get("date_completed")
+            if not dc:
+                continue
+            dc_dt = dc if isinstance(dc, datetime) else datetime.fromisoformat(str(dc).replace("Z", "+00:00")).replace(tzinfo=None)
+            if dc_dt >= today_start_utc:
+                completions_today += 1
+            if dc_dt >= one_day_ago and len(recent_completions) < 10:
+                recent_completions.append({
+                    "request_number": request_number,
+                    "brand": tool.get("brand", ""),
+                    "model_number": tool.get("model_number", ""),
+                    "assigned_technician": tool.get("assigned_technician", ""),
+                    "date_completed": dc_dt.isoformat() + "Z",
+                })
+            # Completed this month financial value
+            if dc_dt >= month_start_utc:
+                tool_parts_cost = sum(
+                    float(p.get("unit_cost", 0) or 0) * int(p.get("quantity", 1) or 1)
+                    for p in tool.get("parts", [])
+                    if p.get("unit_cost") is not None
+                )
+                labour_h = tool.get("labour_hours")
+                labour_r = tool.get("hourly_rate")
+                tool_labour = float(labour_h or 0) * float(labour_r or 0)
+                completed_month_value += tool_parts_cost + tool_labour
+
+    recent_completions.sort(key=lambda x: x["date_completed"], reverse=True)
+
+    # Sort technician summary: Unassigned last, rest by active count desc
+    sorted_techs = sorted(
+        technician_summary.items(),
+        key=lambda kv: (kv[0] == "Unassigned", -kv[1]["active"])
+    )
+    technician_summary_list = [{"name": k, **v} for k, v in sorted_techs]
 
     # ── Total active jobs ──
     total_active_jobs = await db.repairs.count_documents(
         {"tools.status": {"$nin": list(terminal_statuses)}}
     )
+
+    # ── Ready for Pickup / Invoiced list ──
+    pickup_statuses = {"ready", "invoiced"}
+    pickup_jobs_cursor = db.repairs.find(
+        {"tools.status": {"$in": list(pickup_statuses)}},
+        {"request_number": 1, "company_name": 1, "first_name": 1, "last_name": 1, "phone": 1, "tools": 1}
+    )
+    pickup_jobs_raw = await pickup_jobs_cursor.to_list(length=200)
+
+    ready_for_pickup = []
+    for job in pickup_jobs_raw:
+        pickup_tools = [t for t in job.get("tools", []) if t.get("status") in pickup_statuses]
+        if not pickup_tools:
+            continue
+        # Determine dominant status (ready takes priority over invoiced)
+        dominant_status = "ready" if any(t.get("status") == "ready" for t in pickup_tools) else "invoiced"
+        # Find how long the earliest tool has been in a pickup status
+        days_waiting = 0
+        for tool in pickup_tools:
+            history = tool.get("status_history", [])
+            # Find the most recent entry where status became ready or invoiced
+            for entry in reversed(history):
+                if entry.get("status") in pickup_statuses:
+                    ts = entry.get("timestamp")
+                    if ts:
+                        ts_dt = ts if isinstance(ts, datetime) else datetime.fromisoformat(str(ts).replace("Z", "+00:00")).replace(tzinfo=None)
+                        d = (now - ts_dt).days
+                        if d > days_waiting:
+                            days_waiting = d
+                    break
+        company = job.get("company_name", "")
+        first = job.get("first_name", "")
+        last = job.get("last_name", "")
+        customer_name = company if company else f"{first} {last}".strip()
+        ready_for_pickup.append({
+            "request_number": job.get("request_number", ""),
+            "customer_name": customer_name,
+            "phone": job.get("phone", ""),
+            "tool_count": len(pickup_tools),
+            "status": dominant_status,
+            "days_waiting": days_waiting,
+        })
+    ready_for_pickup.sort(key=lambda x: -x["days_waiting"])
+    ready_for_pickup = ready_for_pickup[:15]
+
+    # ── Pending repair requests (unconverted online quotes) ──
+    pending_requests_count = await db.quotes.count_documents({"status": "pending"})
+
+    # ── Priority jobs: sort and trim ──
+    priority_jobs.sort(key=lambda x: x["_urgency"])
+    priority_jobs = priority_jobs[:15]
+    for j in priority_jobs:
+        j.pop("_urgency", None)
+
+    # ── Active customers: aggregate from active_jobs ──
+    for job in active_jobs:
+        company = job.get("company_name", "")
+        first_n = job.get("first_name", "")
+        last_n = job.get("last_name", "")
+        cust_name = company if company else f"{first_n} {last_n}".strip()
+        if not cust_name:
+            cust_name = "Unknown"
+        updated = job.get("updated_at")
+        if cust_name not in customer_map:
+            customer_map[cust_name] = {"job_count": 0, "last_activity": None}
+        customer_map[cust_name]["job_count"] += 1
+        if updated and (customer_map[cust_name]["last_activity"] is None or updated > customer_map[cust_name]["last_activity"]):
+            customer_map[cust_name]["last_activity"] = updated
+
+    active_customers = sorted(
+        [{"name": k, "job_count": v["job_count"], "last_activity": v["last_activity"].isoformat() + "Z" if v["last_activity"] else None}
+         for k, v in customer_map.items()],
+        key=lambda x: -x["job_count"]
+    )[:20]
+
+    # ── Pending approvals (quoted status jobs) ──
+    quoted_jobs_cursor = db.repairs.find(
+        {"tools.status": "quoted"},
+        {"request_number": 1, "company_name": 1, "first_name": 1, "last_name": 1, "phone": 1, "tools": 1}
+    )
+    quoted_jobs_raw = await quoted_jobs_cursor.to_list(length=200)
+
+    pending_approvals = []
+    for job in quoted_jobs_raw:
+        quoted_tools = [t for t in job.get("tools", []) if t.get("status") == "quoted"]
+        if not quoted_tools:
+            continue
+        days_waiting = 0
+        for tool in quoted_tools:
+            history = tool.get("status_history", [])
+            for entry in reversed(history):
+                if entry.get("status") == "quoted":
+                    ts = entry.get("timestamp")
+                    if ts:
+                        ts_dt = ts if isinstance(ts, datetime) else datetime.fromisoformat(str(ts).replace("Z", "+00:00")).replace(tzinfo=None)
+                        d = (now - ts_dt).days
+                        if d > days_waiting:
+                            days_waiting = d
+                    break
+        company = job.get("company_name", "")
+        first = job.get("first_name", "")
+        last = job.get("last_name", "")
+        customer_name = company if company else f"{first} {last}".strip()
+        pending_approvals.append({
+            "request_number": job.get("request_number", ""),
+            "job_id": str(job.get("_id", "")),
+            "customer_name": customer_name,
+            "phone": job.get("phone", ""),
+            "tool_count": len(quoted_tools),
+            "days_waiting": days_waiting,
+        })
+    pending_approvals.sort(key=lambda x: -x["days_waiting"])
+    pending_approvals = pending_approvals[:15]
 
     return {
         "status_counts": status_counts,
@@ -143,6 +464,39 @@ async def get_repair_summary(
         "rush_urgent_active": rush_urgent_active,
         "updated_today": updated_today,
         "total_active_jobs": total_active_jobs,
+        # New fields
+        "technician_summary": technician_summary_list,
+        "today_activity": {
+            "new_jobs": new_jobs_today,
+            "completions": completions_today,
+            "status_changes": updated_today,
+        },
+        "recent_completions": recent_completions,
+        "parts_summary": {
+            "pending": parts_pending,
+            "ordered": parts_ordered,
+            "received": parts_received,
+            "total_cost": round(parts_total_cost, 2) if parts_has_cost else None,
+        },
+        "financial_summary": {
+            "active_value": round(active_value, 2),
+            "completed_month_value": round(completed_month_value, 2),
+            "tools_priced": tools_priced,
+            "tools_total": tools_total,
+        },
+        "aging_buckets": {
+            "fresh": aging_fresh,
+            "normal": aging_normal,
+            "aging": aging_aging,
+            "stale_plus": aging_stale_plus,
+        },
+        "ready_for_pickup": ready_for_pickup,
+        "pending_requests_count": pending_requests_count,
+        "pending_approval_stale_count": pending_approval_stale_count,
+        "stuck_count": stuck_count,
+        "priority_jobs": priority_jobs,
+        "active_customers": active_customers,
+        "pending_approvals": pending_approvals,
     }
 
 
