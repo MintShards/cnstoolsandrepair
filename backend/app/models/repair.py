@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+from zoneinfo import ZoneInfo
 import re
 import uuid
 
@@ -96,7 +97,7 @@ class ToolItemCreate(BaseModel):
     zoho_ref: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
     photos: List[str] = Field(default_factory=list)
-    date_received: datetime = Field(default_factory=datetime.utcnow)
+    date_received: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Vancouver")).replace(tzinfo=None))
     estimated_completion: Optional[datetime] = None
 
     @field_validator('tool_type', 'brand', 'model_number', mode='before')
