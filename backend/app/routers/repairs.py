@@ -24,6 +24,14 @@ from app.utils.helpers import convert_objectid_to_str
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
 logger = logging.getLogger(__name__)
 
+_PACIFIC = ZoneInfo("America/Vancouver")
+
+
+def _pacific_date_to_utc(dt: datetime) -> datetime:
+    """Convert a naive datetime (interpreted as Pacific midnight) to naive UTC for MongoDB storage."""
+    aware = dt.replace(tzinfo=_PACIFIC)
+    return aware.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+
 
 def _migrate_tool_parts(tool: dict) -> dict:
     """Migrate old parts_needed string to parts list for backward compat"""
@@ -751,6 +759,7 @@ async def create_repair_job(
     for tool_in in job_data.tools:
         tool = ToolItem(**tool_in.model_dump())
         tool_dict = tool.model_dump()
+        tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
         # Add initial status history entry
         tool_dict["status_history"] = [{
             "status": RepairStatus.RECEIVED.value,
@@ -828,7 +837,7 @@ async def convert_from_request(
             "assigned_technician": None,
             "photos": [],
             "status": RepairStatus.RECEIVED.value,
-            "date_received": datetime.utcnow(),
+            "date_received": datetime.now(_PACIFIC).astimezone(ZoneInfo("UTC")).replace(tzinfo=None),
             "estimated_completion": None,
             "date_completed": None,
             "status_history": [{
@@ -1015,6 +1024,7 @@ async def add_tool(
 
     tool = ToolItem(**tool_data.model_dump())
     tool_dict = tool.model_dump()
+    tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
     tool_dict["status_history"] = [{
         "status": RepairStatus.RECEIVED.value,
         "timestamp": datetime.utcnow(),
