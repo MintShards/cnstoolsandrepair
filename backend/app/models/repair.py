@@ -80,6 +80,13 @@ class PartItem(BaseModel):
     date_received: Optional[datetime] = None
     tracking: Optional[str] = Field(None, max_length=200)
 
+    @field_validator('price', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
     @field_validator('eta', 'order_date', 'date_received', mode='before')
     @classmethod
     def parse_date_string(cls, v):
@@ -124,6 +131,13 @@ class ToolItemCreate(BaseModel):
             return v.strip().title()
         return v
 
+    @field_validator('labour_hours', 'hourly_rate', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
     @field_validator('estimated_completion', mode='before')
     @classmethod
     def parse_date_string(cls, v):
@@ -157,6 +171,13 @@ class ToolItemUpdate(BaseModel):
     def capitalize_fields(cls, v):
         if v:
             return v.strip().title()
+        return v
+
+    @field_validator('labour_hours', 'hourly_rate', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
+        if v == '' or v is None:
+            return None
         return v
 
     @field_validator('estimated_completion', mode='before')

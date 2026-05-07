@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { repairsAPI, customersAPI, suppliersAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
@@ -1770,7 +1770,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             {/* Remarks */}
                             <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
                               <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
-                              <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
+                              <p className={`mt-1 leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
                             </div>
                             {/* Labour / Technician / Zoho */}
                             <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
@@ -2659,6 +2659,41 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
     }
   };
 
+  // Technician dropdown state
+  const [technicians, setTechnicians] = useState([]);
+  const [addingTechnician, setAddingTechnician] = useState(false);
+  const [newTechnicianName, setNewTechnicianName] = useState('');
+  const [technicianSaving, setTechnicianSaving] = useState(false);
+
+  useEffect(() => {
+    techniciansAPI.getAll().then(setTechnicians).catch(() => {});
+  }, []);
+
+  const handleAddTechnician = async () => {
+    if (!newTechnicianName.trim()) return;
+    setTechnicianSaving(true);
+    try {
+      const created = await techniciansAPI.create({ name: newTechnicianName.trim() });
+      setTechnicians(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewTechnicianName('');
+      setAddingTechnician(false);
+      handleChange('assigned_technician', created.name);
+    } catch {
+      // duplicate or error — silently ignore
+    } finally {
+      setTechnicianSaving(false);
+    }
+  };
+
+  const handleRemoveTechnician = async (technician) => {
+    try {
+      await techniciansAPI.remove(technician.id);
+      setTechnicians(prev => prev.filter(t => t.id !== technician.id));
+    } catch {
+      // ignore
+    }
+  };
+
   const data = toolData;
 
   const inputCls = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
@@ -2717,7 +2752,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Remarks / Description</label>
-              <textarea value={data.remarks || ''} onChange={(e) => handleChange('remarks', e.target.value)}
+              <textarea value={data.remarks || ''} onChange={(e) => handleChange('remarks', e.target.value.toUpperCase())}
                 rows={3} placeholder="Customer's description of the problem"
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
             </div>
@@ -2938,8 +2973,40 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
-              <input value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value.toUpperCase())}
-                placeholder="Optional" className={inputCls} />
+              {!addingTechnician ? (
+                <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
+                  <select value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
+                    className="flex-1 min-w-0 px-3 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:outline-none border-none">
+                    <option value="">Unassigned</option>
+                    {technicians.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                  </select>
+                  {data.assigned_technician && technicians.find(t => t.name === data.assigned_technician) && (
+                    <button type="button" title="Remove technician" onClick={() => { const t = technicians.find(x => x.name === data.assigned_technician); if (t) handleRemoveTechnician(t); }}
+                      className="px-2 border-l border-slate-300 dark:border-slate-600 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                      <span className="material-symbols-outlined" style={{fontSize:'16px'}}>delete</span>
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setAddingTechnician(true)} title="Add technician"
+                    className="px-3 border-l border-slate-300 dark:border-slate-600 text-slate-400 hover:text-primary dark:hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                    <span className="material-symbols-outlined" style={{fontSize:'18px'}}>add</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex rounded-lg border border-primary dark:border-primary/60 bg-white dark:bg-slate-800 overflow-hidden">
+                  <input autoFocus placeholder="New technician name" value={newTechnicianName}
+                    onChange={(e) => setNewTechnicianName(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTechnician(); } if (e.key === 'Escape') { setAddingTechnician(false); setNewTechnicianName(''); } }}
+                    className="flex-1 min-w-0 px-3 py-3 bg-transparent text-slate-900 dark:text-white text-base focus:outline-none border-none placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+                  <button type="button" onClick={handleAddTechnician} disabled={technicianSaving}
+                    className="px-3 border-l border-slate-300 dark:border-slate-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50">
+                    <span className="material-symbols-outlined" style={{fontSize:'18px'}}>check</span>
+                  </button>
+                  <button type="button" onClick={() => { setAddingTechnician(false); setNewTechnicianName(''); }}
+                    className="px-3 border-l border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                    <span className="material-symbols-outlined" style={{fontSize:'18px'}}>close</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
