@@ -288,6 +288,21 @@ export const customersAPI = {
   },
 };
 
+// Suppliers API (admin only)
+export const suppliersAPI = {
+  getAll: async () => {
+    const response = await api.get('/api/suppliers/');
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/suppliers/', data);
+    return response.data;
+  },
+  remove: async (id) => {
+    await api.delete(`/api/suppliers/${id}`);
+  },
+};
+
 // Repairs API (admin only)
 export const repairsAPI = {
   summary: async () => {

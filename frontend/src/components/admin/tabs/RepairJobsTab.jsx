@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { repairsAPI, customersAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
@@ -58,7 +58,7 @@ const PriorityBadge = ({ priority }) => {
 
 const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
-  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, status: 'pending' }],
+  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
   zoho_ref: '', assigned_technician: '', estimated_completion: '',
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
@@ -871,7 +871,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       serial_number: tool.serial_number || '',
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
-      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p })) : [{ name: '', quantity: 1, status: 'pending' }],
+      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' })) : [{ name: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
       priority: tool.priority || 'standard',
@@ -1762,60 +1762,93 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         <div className="hidden md:block"><ProgressStepper status={tool.status} /></div>
                       </div>
 
-                      {/* Tool Details — 3-column grid */}
+                      {/* Tool Details — 2-column grid: left (Remarks + Labour/Tech/Zoho), right (Parts wider) */}
                       <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                          {/* Left — Remarks */}
-                          <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
-                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
-                            <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-3 text-sm">
+                          {/* Left column — Remarks stacked above Labour/Tech/Zoho */}
+                          <div className="space-y-3">
+                            {/* Remarks */}
+                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
+                              <p className={`mt-1 leading-relaxed ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
+                            </div>
+                            {/* Labour / Technician / Zoho */}
+                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
+                              <div>
+                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Labour</span>
+                                <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
+                                  {tool.labour_hours || tool.hourly_rate ? (
+                                    <>
+                                      {tool.labour_hours ? `${tool.labour_hours} hrs` : '—'}
+                                      {tool.hourly_rate ? ` @ $${tool.hourly_rate}/hr` : ''}
+                                      {tool.labour_hours && tool.hourly_rate && (
+                                        <> = <span className="text-slate-900 dark:text-white font-bold">${(parseFloat(tool.labour_hours) * parseFloat(tool.hourly_rate)).toFixed(2)}</span></>
+                                      )}
+                                    </>
+                                  ) : 'Not set'}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Technician</span>
+                                <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Ref</span>
+                                <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
+                              </div>
+                            </div>
                           </div>
-                          {/* Middle — Parts */}
+                          {/* Right column — Parts (wider) */}
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
                             <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
                             {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                               <div className="mt-1 space-y-1">
                                 {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
-                                  <div key={pi} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1 border border-slate-200/30 dark:border-slate-700/30">
-                                    <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}</span>
-                                    <span className="text-slate-500">×{p.quantity}</span>
-                                    <span className={`px-1.5 py-px rounded-full font-bold ${
-                                      p.status === 'installed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
-                                      p.status === 'received' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' :
-                                      p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
-                                      'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                                    }`} style={{fontSize:'12px'}}>{p.status}</span>
+                                  <div key={pi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}</span>
+                                      <span className="text-slate-500 text-xs">×{p.quantity}</span>
+                                      {(p.price != null && p.price !== '') && (
+                                        <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">${(parseFloat(p.price) * (p.quantity || 1)).toFixed(2)}</span>
+                                      )}
+                                      <span className={`px-1.5 py-px rounded-full font-bold ${
+                                        p.status === 'installed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                                        p.status === 'received' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' :
+                                        p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
+                                        'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                                      }`} style={{fontSize:'11px'}}>{p.status}</span>
+                                    </div>
+                                    {p.supplier && <div className="text-xs text-slate-500 dark:text-slate-400">{p.supplier}</div>}
+                                    {p.order_link?.trim() && (
+                                      <div className="text-xs">
+                                        <a href={p.order_link.startsWith('http') ? p.order_link : `https://${p.order_link}`} target="_blank" rel="noopener noreferrer"
+                                          className="text-primary dark:text-primary/80 hover:underline inline-flex items-center gap-0.5">
+                                          <span className="material-symbols-outlined" style={{fontSize:'12px'}}>link</span>
+                                          Order link
+                                          <span className="material-symbols-outlined" style={{fontSize:'11px'}}>open_in_new</span>
+                                        </a>
+                                      </div>
+                                    )}
+                                    {['ordered','received','installed'].includes(p.status) && (p.tracking || p.eta) && (
+                                      <div className="flex items-center gap-2 flex-wrap" style={{fontSize:'11px'}}>
+                                        {p.tracking && <span className="text-slate-500">Track: <span className="text-slate-700 dark:text-slate-300 font-medium">{p.tracking}</span></span>}
+                                        {p.eta && <span className="text-slate-500">ETA: <span className="text-slate-700 dark:text-slate-300 font-medium">{new Date(p.eta).toLocaleDateString('en-CA')}</span></span>}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
+                                {(() => {
+                                  const total = tool.parts.filter(p => p.name?.trim() && (p.price != null && p.price !== '')).reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
+                                  return total > 0 ? (
+                                    <div className="flex justify-end pt-1.5 border-t border-slate-200 dark:border-slate-700/40">
+                                      <span className="text-sm text-slate-500">Parts total: <span className="text-base font-bold text-slate-900 dark:text-white">${total.toFixed(2)}</span></span>
+                                    </div>
+                                  ) : null;
+                                })()}
                               </div>
                             ) : (
                               <p className="mt-1 text-slate-400 dark:text-slate-600 italic">No parts</p>
                             )}
-                          </div>
-                          {/* Right — Labour / Technician / Zoho */}
-                          <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
-                            <div>
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Labour</span>
-                              <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
-                                {tool.labour_hours || tool.hourly_rate ? (
-                                  <>
-                                    {tool.labour_hours ? `${tool.labour_hours} hrs` : '—'}
-                                    {tool.hourly_rate ? ` @ $${tool.hourly_rate}/hr` : ''}
-                                    {tool.labour_hours && tool.hourly_rate && (
-                                      <> = <span className="text-slate-900 dark:text-white font-bold">${(parseFloat(tool.labour_hours) * parseFloat(tool.hourly_rate)).toFixed(2)}</span></>
-                                    )}
-                                  </>
-                                ) : 'Not set'}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Technician</span>
-                              <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Ref</span>
-                              <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -2592,6 +2625,40 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
     }
   };
 
+  // Supplier dropdown state
+  const [suppliers, setSuppliers] = useState([]);
+  const [addingSupplier, setAddingSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [supplierSaving, setSupplierSaving] = useState(false);
+
+  useEffect(() => {
+    suppliersAPI.getAll().then(setSuppliers).catch(() => {});
+  }, []);
+
+  const handleAddSupplier = async () => {
+    if (!newSupplierName.trim()) return;
+    setSupplierSaving(true);
+    try {
+      const created = await suppliersAPI.create({ name: newSupplierName.trim() });
+      setSuppliers(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewSupplierName('');
+      setAddingSupplier(false);
+    } catch {
+      // duplicate or error — silently ignore (user can see name already in list)
+    } finally {
+      setSupplierSaving(false);
+    }
+  };
+
+  const handleRemoveSupplier = async (supplier) => {
+    try {
+      await suppliersAPI.remove(supplier.id);
+      setSuppliers(prev => prev.filter(s => s.id !== supplier.id));
+    } catch {
+      // ignore
+    }
+  };
+
   const data = toolData;
 
   const inputCls = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
@@ -2723,38 +2790,128 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
       {showSection([3]) && <div>
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-300 dark:border-slate-700">
           <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
-          <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', quantity: 1, status: 'pending' }])}
+          <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }])}
             className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-1 transition-colors">
             <span className="material-symbols-outlined text-base">add</span> Add Part
           </button>
         </div>
         {(data.parts || []).length > 0 && (
-          <div className="space-y-2">
-            {data.parts.map((part, pi) => (
-              <div key={pi} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-300 dark:border-slate-700">
-                <div className="flex-1 flex flex-wrap gap-2 sm:gap-3">
-                  <input placeholder="Part name *" value={part.name} onChange={(e) => {
-                    const updated = [...data.parts]; updated[pi] = { ...part, name: e.target.value }; handleChange('parts', updated);
-                  }} className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-                  <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => {
-                    const updated = [...data.parts]; updated[pi] = { ...part, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 }; handleChange('parts', updated);
-                  }} className="w-16 px-2 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-                  <select value={part.status} onChange={(e) => {
-                    const updated = [...data.parts]; updated[pi] = { ...part, status: e.target.value }; handleChange('parts', updated);
-                  }} className="w-28 sm:w-auto px-2 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="pending">Pending</option>
-                    <option value="ordered">Ordered</option>
-                    <option value="received">Received</option>
-                    <option value="installed">Installed</option>
-                  </select>
+          <div className="space-y-3">
+            {data.parts.map((part, pi) => {
+              const updatePart = (fields) => {
+                const updated = [...data.parts];
+                updated[pi] = { ...part, ...fields };
+                handleChange('parts', updated);
+              };
+              const isPostOrder = ['ordered', 'received', 'installed'].includes(part.status);
+              const partInputCls = "px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary";
+              return (
+                <div key={pi} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden">
+                  {/* Row 1: Name, Qty, Price, Status, Remove — all inline */}
+                  <div className="flex items-center gap-2 p-2.5 flex-wrap">
+                    <input placeholder="Part name *" value={part.name || ''} onChange={(e) => updatePart({ name: e.target.value.toUpperCase() })}
+                      className={`flex-1 min-w-[140px] ${partInputCls}`} />
+                    <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => updatePart({ quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })}
+                      className={`w-14 ${partInputCls}`} />
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
+                      <input type="number" min="0" step="0.01" placeholder="Price" value={part.price ?? ''} onChange={(e) => updatePart({ price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                        className={`w-24 pl-5 ${partInputCls}`} />
+                    </div>
+                    <select value={part.status || 'pending'} onChange={(e) => updatePart({ status: e.target.value })}
+                      className={`w-28 ${partInputCls}`}>
+                      <option value="pending">Pending</option>
+                      <option value="ordered">Ordered</option>
+                      <option value="received">Received</option>
+                      <option value="installed">Installed</option>
+                    </select>
+                    <button type="button" onClick={() => handleChange('parts', data.parts.filter((_, i) => i !== pi))}
+                      className="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors flex-shrink-0" title="Remove part">
+                      <span className="material-symbols-outlined" style={{fontSize:'18px'}}>close</span>
+                    </button>
+                  </div>
+
+                  {/* Row 2: Supplier + Order link */}
+                  <div className="flex gap-2 px-2.5 pb-2 flex-wrap">
+                    {/* Supplier input group */}
+                    {!addingSupplier ? (
+                      <div className="flex flex-1 min-w-[180px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
+                        <select value={part.supplier || ''} onChange={(e) => updatePart({ supplier: e.target.value })}
+                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none border-none">
+                          <option value="">Supplier</option>
+                          {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                        </select>
+                        {part.supplier && suppliers.find(s => s.name === part.supplier) && (
+                          <button type="button" title="Remove supplier" onClick={() => { const s = suppliers.find(x => x.name === part.supplier); if (s) handleRemoveSupplier(s); }}
+                            className="px-1.5 border-l border-slate-300 dark:border-slate-600 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                            <span className="material-symbols-outlined" style={{fontSize:'14px'}}>delete</span>
+                          </button>
+                        )}
+                        <button type="button" onClick={() => setAddingSupplier(true)} title="Add supplier"
+                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-slate-400 hover:text-primary dark:hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                          <span className="material-symbols-outlined" style={{fontSize:'16px'}}>add</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-1 min-w-[180px] rounded border border-primary dark:border-primary/60 bg-white dark:bg-slate-800 overflow-hidden">
+                        <input autoFocus placeholder="New supplier name" value={newSupplierName}
+                          onChange={(e) => setNewSupplierName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSupplier(); } if (e.key === 'Escape') { setAddingSupplier(false); setNewSupplierName(''); } }}
+                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-transparent text-slate-900 dark:text-white text-sm focus:outline-none border-none placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+                        <button type="button" onClick={handleAddSupplier} disabled={supplierSaving}
+                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50">
+                          <span className="material-symbols-outlined" style={{fontSize:'16px'}}>check</span>
+                        </button>
+                        <button type="button" onClick={() => { setAddingSupplier(false); setNewSupplierName(''); }}
+                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                          <span className="material-symbols-outlined" style={{fontSize:'16px'}}>close</span>
+                        </button>
+                      </div>
+                    )}
+                    {/* Order link input group */}
+                    <div className="flex flex-1 min-w-[180px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden focus-within:border-primary dark:focus-within:border-primary/70">
+                      <span className="flex items-center pl-2 text-slate-400 dark:text-slate-500 pointer-events-none flex-shrink-0">
+                        <span className="material-symbols-outlined" style={{fontSize:'15px'}}>link</span>
+                      </span>
+                      <input placeholder="Order link (URL)" value={part.order_link || ''} onChange={(e) => updatePart({ order_link: e.target.value })}
+                        className="flex-1 min-w-0 px-2 py-1.5 bg-transparent text-slate-900 dark:text-white text-sm focus:outline-none border-none placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+                      {part.order_link?.trim() && (
+                        <a href={part.order_link.startsWith('http') ? part.order_link : `https://${part.order_link}`} target="_blank" rel="noopener noreferrer"
+                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-primary dark:text-primary/80 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors flex items-center flex-shrink-0" title="Open link">
+                          <span className="material-symbols-outlined" style={{fontSize:'15px'}}>open_in_new</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 3 (post-approval): Tracking, ETA, auto-dates */}
+                  {isPostOrder && (
+                    <div className="flex items-center gap-3 px-2.5 pb-2 pt-2 border-t border-slate-200 dark:border-slate-700/60 bg-blue-50/30 dark:bg-blue-900/10 flex-wrap">
+                      <input placeholder="Tracking #" value={part.tracking || ''} onChange={(e) => updatePart({ tracking: e.target.value })}
+                        className={`w-32 ${partInputCls}`} />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-400 whitespace-nowrap">ETA</span>
+                        <input type="date" value={part.eta ? (typeof part.eta === 'string' ? part.eta.split('T')[0] : '') : ''} onChange={(e) => updatePart({ eta: e.target.value })}
+                          className={`${partInputCls}`} />
+                      </div>
+                      {part.order_date && (
+                        <span className="text-xs text-slate-500">Ordered: <span className="font-medium text-slate-700 dark:text-slate-300">{new Date(part.order_date).toLocaleDateString('en-CA')}</span></span>
+                      )}
+                      {part.date_received && (
+                        <span className="text-xs text-slate-500">Received: <span className="font-medium text-green-600 dark:text-green-400">{new Date(part.date_received).toLocaleDateString('en-CA')}</span></span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div className="px-3 pb-3 pt-1">
+                    <label className="block text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Notes</label>
+                    <input placeholder="Backorder, alternatives, OEM only…" value={part.notes || ''} onChange={(e) => updatePart({ notes: e.target.value })}
+                      className={`w-full ${partInputCls}`} />
+                  </div>
                 </div>
-                <button type="button" onClick={() => {
-                  const updated = data.parts.filter((_, i) => i !== pi); handleChange('parts', updated);
-                }} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
-                  <span className="material-symbols-outlined text-sm">close</span>
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>}
@@ -2776,12 +2933,12 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Reference</label>
-              <input value={data.zoho_ref || ''} onChange={(e) => handleChange('zoho_ref', e.target.value)}
+              <input value={data.zoho_ref || ''} onChange={(e) => handleChange('zoho_ref', e.target.value.toUpperCase())}
                 placeholder="Optional" className={inputCls} />
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
-              <input value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
+              <input value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value.toUpperCase())}
                 placeholder="Optional" className={inputCls} />
             </div>
           </div>

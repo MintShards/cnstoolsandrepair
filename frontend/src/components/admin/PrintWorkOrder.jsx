@@ -68,14 +68,17 @@ function getStyles(prefix) {
     ${p}.badge.warranty { background: #fff; color: #000; border-color: #000; }
     ${p}.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
     ${p}.remarks { margin-bottom: 8px; line-height: 1.5; font-size: 11px; }
-    ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: fixed; }
-    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: 60%; }
-    ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { width: 15%; }
-    ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { width: 25%; }
-    ${p}.parts-table th { background: #f5f5f5; border: 1px solid #ccc; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #333; text-align: center; }
-    ${p}.parts-table th:first-child { text-align: left; }
+    ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: auto; }
+    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: auto; }
+    ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { white-space: nowrap; }
+    ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { white-space: nowrap; }
+    ${p}.parts-table th:nth-child(4), ${p}.parts-table td:nth-child(4) { }
+    ${p}.parts-table th:nth-child(5), ${p}.parts-table td:nth-child(5) { white-space: nowrap; }
+    ${p}.parts-table th:nth-child(6), ${p}.parts-table td:nth-child(6) { white-space: nowrap; }
+    ${p}.parts-table th { background: #f5f5f5; border: 1px solid #ccc; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #333; text-align: left; }
     ${p}.parts-table td { border: 1px solid #ccc; padding: 4px 8px; }
-    ${p}.center { text-align: center; }
+    ${p}.center, ${p}.parts-table th.center { text-align: center; }
+    ${p}.right, ${p}.parts-table th.right { text-align: right; }
     ${p}.signature-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; }
     ${p}.signature-row .signature-box { width: 220px; }
     ${p}.terms { font-size: 9px; color: #333; line-height: 1.6; }
@@ -96,15 +99,30 @@ function buildBody(job, businessInfo) {
 
   const toolsHTML = job.tools.map((tool, idx) => {
 
-    const partsRows = (tool.parts || [])
-      .filter(p => p.name?.trim())
-      .map(p => `
+    const filteredParts = (tool.parts || []).filter(p => p.name?.trim());
+    const partsRows = filteredParts.map(p => {
+      const lineTotal = (p.price != null && p.price !== '') ? (parseFloat(p.price) * (p.quantity || 1)).toFixed(2) : '';
+      const postOrderInfo = ['ordered', 'received', 'installed'].includes(p.status)
+        ? [p.tracking ? `Track: ${p.tracking}` : '', p.eta ? `ETA: ${new Date(p.eta).toLocaleDateString('en-CA')}` : ''].filter(Boolean).join(' · ')
+        : '';
+      return `
         <tr>
-          <td>${escHtml(p.name)}</td>
+          <td>${escHtml(p.name)}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
           <td class="center">${p.quantity ?? 1}</td>
+          <td class="right">${p.price != null && p.price !== '' ? '$' + parseFloat(p.price).toFixed(2) : '—'}</td>
+          <td>${p.supplier ? escHtml(p.supplier) : '—'}</td>
           <td class="center">${escHtml(PART_STATUS_LABELS[p.status] || p.status || '')}</td>
+          <td class="right">${lineTotal ? '$' + lineTotal : '—'}</td>
         </tr>
-      `).join('');
+      `;
+    }).join('');
+    const partsTotal = filteredParts.filter(p => p.price != null && p.price !== '').reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
+    const partsTotalRow = filteredParts.length > 0 && partsTotal > 0 ? `
+      <tr style="border-top:2px solid #e2e8f0;font-weight:700;">
+        <td colspan="5" class="right" style="padding-top:6px;">Parts Subtotal</td>
+        <td class="right" style="padding-top:6px;">$${partsTotal.toFixed(2)}</td>
+      </tr>
+    ` : '';
 
     return `
       <div class="tool-card">
@@ -147,10 +165,13 @@ function buildBody(job, businessInfo) {
               <tr>
                 <th>Part</th>
                 <th class="center">Qty</th>
+                <th class="right">Price</th>
+                <th>Supplier</th>
                 <th class="center">Status</th>
+                <th class="right">Total</th>
               </tr>
             </thead>
-            <tbody>${partsRows}</tbody>
+            <tbody>${partsRows}${partsTotalRow}</tbody>
           </table>
         ` : ''}
 

@@ -70,8 +70,25 @@ class PartStatus(str, Enum):
 class PartItem(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     quantity: int = Field(default=1, gt=0)
-    unit_cost: Optional[float] = Field(None, ge=0)
+    price: Optional[float] = Field(None, ge=0)
+    supplier: Optional[str] = Field(None, max_length=200)
+    order_link: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=500)
     status: PartStatus = PartStatus.PENDING
+    order_date: Optional[datetime] = None
+    eta: Optional[datetime] = None
+    date_received: Optional[datetime] = None
+    tracking: Optional[str] = Field(None, max_length=200)
+
+    @field_validator('eta', 'order_date', 'date_received', mode='before')
+    @classmethod
+    def parse_date_string(cls, v):
+        if v is None or v == '':
+            return None
+        if isinstance(v, str) and len(v) == 10:
+            # Date-only string like "2026-05-10" from <input type="date">
+            return datetime.fromisoformat(v)
+        return v
 
 
 class StatusHistoryEntry(BaseModel):
@@ -107,6 +124,15 @@ class ToolItemCreate(BaseModel):
             return v.strip().title()
         return v
 
+    @field_validator('estimated_completion', mode='before')
+    @classmethod
+    def parse_date_string(cls, v):
+        if v is None or v == '':
+            return None
+        if isinstance(v, str) and len(v) == 10:
+            return datetime.fromisoformat(v)
+        return v
+
 
 class ToolItemUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -133,11 +159,29 @@ class ToolItemUpdate(BaseModel):
             return v.strip().title()
         return v
 
+    @field_validator('estimated_completion', mode='before')
+    @classmethod
+    def parse_date_string(cls, v):
+        if v is None or v == '':
+            return None
+        if isinstance(v, str) and len(v) == 10:
+            return datetime.fromisoformat(v)
+        return v
+
 
 class ToolStatusUpdate(BaseModel):
     status: RepairStatus
     notes: Optional[str] = Field(None, max_length=1000)
     estimated_completion: Optional[datetime] = None
+
+    @field_validator('estimated_completion', mode='before')
+    @classmethod
+    def parse_date_string(cls, v):
+        if v is None or v == '':
+            return None
+        if isinstance(v, str) and len(v) == 10:
+            return datetime.fromisoformat(v)
+        return v
 
 
 class ToolItem(ToolItemCreate):

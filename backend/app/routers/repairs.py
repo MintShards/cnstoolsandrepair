@@ -38,13 +38,27 @@ def _migrate_tool_parts(tool: dict) -> dict:
     if "parts_needed" in tool and "parts" not in tool:
         old = tool.pop("parts_needed", None)
         if old and isinstance(old, str) and old.strip():
-            tool["parts"] = [{"name": old.strip(), "quantity": 1, "unit_cost": None, "status": "pending"}]
+            tool["parts"] = [{"name": old.strip(), "quantity": 1, "price": None, "status": "pending"}]
         else:
             tool["parts"] = []
     elif "parts" not in tool:
         tool["parts"] = []
     # Remove legacy field if still present alongside new field
     tool.pop("parts_needed", None)
+    # Migrate unit_cost → price and add new fields with defaults
+    for part in tool["parts"]:
+        if "unit_cost" in part and "price" not in part:
+            part["price"] = part.pop("unit_cost")
+        elif "unit_cost" in part:
+            part.pop("unit_cost")
+        part.setdefault("price", None)
+        part.setdefault("supplier", None)
+        part.setdefault("order_link", None)
+        part.setdefault("notes", None)
+        part.setdefault("order_date", None)
+        part.setdefault("eta", None)
+        part.setdefault("date_received", None)
+        part.setdefault("tracking", None)
     return tool
 
 
@@ -281,7 +295,7 @@ async def get_repair_summary(
                     parts_ordered += 1
                 elif part_status == "received":
                     parts_received += 1
-                unit_cost = part.get("unit_cost")
+                unit_cost = part.get("price") if part.get("price") is not None else part.get("unit_cost")
                 qty = part.get("quantity", 1) or 1
                 if unit_cost is not None:
                     parts_total_cost += float(unit_cost) * int(qty)
@@ -289,9 +303,9 @@ async def get_repair_summary(
 
             # ── Financial: active job value ──
             tool_parts_cost = sum(
-                float(p.get("unit_cost", 0) or 0) * int(p.get("quantity", 1) or 1)
+                float(p.get("price") or p.get("unit_cost") or 0) * int(p.get("quantity", 1) or 1)
                 for p in tool.get("parts", [])
-                if p.get("unit_cost") is not None
+                if p.get("price") is not None or p.get("unit_cost") is not None
             )
             labour_h = tool.get("labour_hours")
             labour_r = tool.get("hourly_rate")
@@ -1075,6 +1089,19 @@ async def update_tool(
 
     # Build update with only provided fields
     update_fields = tool_update.model_dump(exclude_unset=True)
+
+    # Auto-set order_date and date_received when part status changes
+    if "parts" in update_fields:
+        now = datetime.utcnow()
+        old_parts = {p.get("name", ""): p for p in tools[tool_index].get("parts", [])}
+        for part in update_fields["parts"]:
+            old = old_parts.get(part.get("name", ""), {})
+            new_status = part.get("status")
+            if new_status == "ordered" and not part.get("order_date") and old.get("status") != "ordered":
+                part["order_date"] = now
+            if new_status == "received" and not part.get("date_received") and old.get("status") != "received":
+                part["date_received"] = now
+
     set_data = {f"tools.{tool_index}.{k}": v for k, v in update_fields.items()}
     set_data["updated_at"] = datetime.utcnow()
 
