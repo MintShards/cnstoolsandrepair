@@ -188,7 +188,7 @@ class CompatGroupResponse(BaseModel):
     active: bool
     part_count: Optional[int] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
