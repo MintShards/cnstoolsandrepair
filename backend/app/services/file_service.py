@@ -69,6 +69,21 @@ def sanitize_filename(filename: str) -> str:
     return sanitized
 
 
+async def validate_pdf_file(contents: bytes) -> bool:
+    """Validate that file is actually a PDF by checking magic bytes"""
+    try:
+        if len(contents) < 5:
+            return False
+        # PDF magic bytes: %PDF-
+        if not contents[:5].startswith(b'%PDF-'):
+            logger.info("PDF validation failed: missing %PDF- magic bytes")
+            return False
+        return True
+    except Exception as e:
+        logger.info(f"PDF validation failed: {type(e).__name__}: {str(e)}")
+        return False
+
+
 async def validate_image_file(contents: bytes, file_ext: str) -> bool:
     """Validate that file is actually an image by checking content"""
     try:
@@ -119,7 +134,7 @@ async def upload_file_to_spaces(file: UploadFile, folder: str, contents: bytes, 
             BytesIO(contents),
             settings.spaces_bucket,
             key,
-            ExtraArgs={'ACL': 'public-read', 'ContentType': f'image/{file_ext}'}
+            ExtraArgs={'ACL': 'public-read', 'ContentType': 'application/pdf' if file_ext == 'pdf' else f'image/{file_ext}'}
         )
         # Return full public URL
         return f"{settings.spaces_endpoint}/{settings.spaces_bucket}/{key}"
@@ -161,12 +176,19 @@ async def save_upload_file(file: UploadFile, folder: str = "uploads") -> str:
             detail=f"File too large. Maximum size: {settings.max_file_size / 1024 / 1024}MB"
         )
 
-    # Validate file content (verify it's actually an image)
-    if not await validate_image_file(contents, file_ext):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid image file. File content does not match declared type or is corrupted."
-        )
+    # Validate file content
+    if file_ext == 'pdf':
+        if not await validate_pdf_file(contents):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid PDF file. File content does not appear to be a valid PDF."
+            )
+    else:
+        if not await validate_image_file(contents, file_ext):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid image file. File content does not match declared type or is corrupted."
+            )
 
     # Upload to Spaces if enabled, otherwise save locally
     if settings.use_spaces:

@@ -79,6 +79,8 @@ class PartItem(BaseModel):
     eta: Optional[datetime] = None
     date_received: Optional[datetime] = None
     tracking: Optional[str] = Field(None, max_length=200)
+    part_number: Optional[str] = Field(None, max_length=100)
+    library_part_id: Optional[str] = Field(None, max_length=50)
 
     @field_validator('price', mode='before')
     @classmethod

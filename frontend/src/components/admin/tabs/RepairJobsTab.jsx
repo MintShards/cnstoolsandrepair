@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
+import PartLibraryPicker from '../shared/PartLibraryPicker';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
   getValidNextStatuses,
@@ -2631,6 +2632,9 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
   const [newSupplierName, setNewSupplierName] = useState('');
   const [supplierSaving, setSupplierSaving] = useState(false);
 
+  // Parts Library Picker state
+  const [pickerOpenForPi, setPickerOpenForPi] = useState(null); // index of part row being filled
+
   useEffect(() => {
     suppliersAPI.getAll().then(setSuppliers).catch(() => {});
   }, []);
@@ -2846,6 +2850,12 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                   <div className="flex items-center gap-2 p-2.5 flex-wrap">
                     <input placeholder="Part name *" value={part.name || ''} onChange={(e) => updatePart({ name: e.target.value.toUpperCase() })}
                       className={`flex-1 min-w-[140px] ${partInputCls}`} />
+                    <button type="button" onClick={() => setPickerOpenForPi(pi)}
+                      title="Find in Parts Library"
+                      className="flex items-center gap-1 px-2 py-1.5 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/40 border border-violet-300 dark:border-violet-700/50 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 rounded text-xs font-bold transition-colors flex-shrink-0">
+                      <span className="material-symbols-outlined" style={{fontSize:'14px'}}>inventory_2</span>
+                      <span className="hidden sm:inline">Library</span>
+                    </button>
                     <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => updatePart({ quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })}
                       className={`w-14 ${partInputCls}`} />
                     <div className="relative">
@@ -3027,6 +3037,29 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
           </div>
         </div>
+      )}
+
+      {/* Parts Library Picker modal */}
+      {pickerOpenForPi !== null && (
+        <PartLibraryPicker
+          onSelect={(partData) => {
+            const updated = [...(data.parts || [])];
+            if (updated[pickerOpenForPi]) {
+              updated[pickerOpenForPi] = {
+                ...updated[pickerOpenForPi],
+                name: partData.name || updated[pickerOpenForPi].name,
+                part_number: partData.part_number || updated[pickerOpenForPi].part_number,
+                library_part_id: partData.library_part_id,
+                supplier: partData.supplier || updated[pickerOpenForPi].supplier,
+                price: partData.price !== '' ? partData.price : updated[pickerOpenForPi].price,
+                order_link: partData.order_link || updated[pickerOpenForPi].order_link,
+                notes: partData.notes || updated[pickerOpenForPi].notes,
+              };
+              handleChange('parts', updated);
+            }
+          }}
+          onClose={() => setPickerOpenForPi(null)}
+        />
       )}
     </div>
   );

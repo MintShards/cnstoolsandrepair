@@ -1,0 +1,322 @@
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import List, Optional
+from datetime import datetime
+
+
+class LibraryBrandCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    short_code: Optional[str] = Field(None, max_length=10)
+    website: Optional[str] = Field(None, max_length=300)
+    notes: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator('name', mode='before')
+    @classmethod
+    def capitalize_name(cls, v):
+        if v:
+            return v.strip().title()
+        return v
+
+    @field_validator('short_code', mode='before')
+    @classmethod
+    def uppercase_short_code(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().upper()
+        return v or None
+
+    @field_validator('website', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class LibraryBrandUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    short_code: Optional[str] = Field(None, max_length=10)
+    website: Optional[str] = Field(None, max_length=300)
+    notes: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator('name', mode='before')
+    @classmethod
+    def capitalize_name(cls, v):
+        if v:
+            return v.strip().title()
+        return v
+
+    @field_validator('short_code', mode='before')
+    @classmethod
+    def uppercase_short_code(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().upper()
+        return v or None
+
+    @field_validator('website', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class LibraryBrandResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    id: str
+    name: str
+    short_code: Optional[str] = None
+    logo_url: Optional[str] = None
+    website: Optional[str] = None
+    notes: Optional[str] = None
+    active: bool
+    model_count: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class LibraryModelCreate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    name: str = Field(..., min_length=1, max_length=200)
+    category: Optional[str] = Field(None, max_length=100)
+    specifications: Optional[str] = Field(None, max_length=2000)
+    discontinued: bool = False
+
+    @field_validator('name', 'category', mode='before')
+    @classmethod
+    def capitalize_field(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().title()
+        return v or None
+
+    @field_validator('specifications', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class LibraryModelUpdate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = Field(None, max_length=100)
+    specifications: Optional[str] = Field(None, max_length=2000)
+    discontinued: Optional[bool] = None
+
+    @field_validator('name', 'category', mode='before')
+    @classmethod
+    def capitalize_field(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().title()
+        return v or None
+
+    @field_validator('specifications', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class LibraryModelResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    id: str
+    brand_id: str
+    brand_name: Optional[str] = None
+    name: str
+    category: Optional[str] = None
+    specifications: Optional[str] = None
+    diagram_urls: List[str] = []
+    discontinued: bool
+    active: bool
+    part_count: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class CompatGroupCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator('name', mode='before')
+    @classmethod
+    def strip_name(cls, v):
+        if v:
+            return v.strip()
+        return v
+
+    @field_validator('description', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class CompatGroupUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator('name', mode='before')
+    @classmethod
+    def strip_name(cls, v):
+        if v:
+            return v.strip()
+        return v
+
+    @field_validator('description', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class CompatGroupResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    active: bool
+    part_count: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class LibraryPartCreate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    part_number: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    category: Optional[str] = Field(None, max_length=100)
+    ref_number: Optional[str] = Field(None, max_length=20)
+    brand_id: str = Field(..., min_length=1)
+    model_ids: List[str] = Field(default_factory=list)
+    compatibility_group_ids: List[str] = Field(default_factory=list)
+    specifications: Optional[str] = Field(None, max_length=2000)
+    suggested_suppliers: List[str] = Field(default_factory=list)
+    suggested_price: Optional[float] = Field(None, ge=0)
+    order_url: Optional[str] = Field(None, max_length=1000)
+    notes: Optional[str] = Field(None, max_length=2000)
+
+    @field_validator('part_number', mode='before')
+    @classmethod
+    def strip_part_number(cls, v):
+        if v:
+            return v.strip().upper()
+        return v
+
+    @field_validator('name', 'category', mode='before')
+    @classmethod
+    def capitalize_field(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().title()
+        return v or None
+
+    @field_validator('description', 'specifications', 'notes', 'order_url', 'ref_number', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+    @field_validator('suggested_price', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class LibraryPartUpdate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    part_number: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    category: Optional[str] = Field(None, max_length=100)
+    ref_number: Optional[str] = Field(None, max_length=20)
+    brand_id: Optional[str] = None
+    model_ids: Optional[List[str]] = None
+    compatibility_group_ids: Optional[List[str]] = None
+    specifications: Optional[str] = Field(None, max_length=2000)
+    suggested_suppliers: Optional[List[str]] = None
+    suggested_price: Optional[float] = Field(None, ge=0)
+    order_url: Optional[str] = Field(None, max_length=1000)
+    notes: Optional[str] = Field(None, max_length=2000)
+
+    @field_validator('part_number', mode='before')
+    @classmethod
+    def strip_part_number(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().upper()
+        return v or None
+
+    @field_validator('name', 'category', mode='before')
+    @classmethod
+    def capitalize_field(cls, v):
+        if v and isinstance(v, str):
+            return v.strip().title()
+        return v or None
+
+    @field_validator('description', 'specifications', 'notes', 'order_url', 'ref_number', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+    @field_validator('suggested_price', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+
+class LibraryPartResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    id: str
+    part_number: str
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    ref_number: Optional[str] = None
+    brand_id: str
+    brand_name: Optional[str] = None
+    model_ids: List[str] = []
+    model_names: List[str] = []
+    compatibility_group_ids: List[str] = []
+    compatibility_group_names: List[str] = []
+    specifications: Optional[str] = None
+    diagram_urls: List[str] = []
+    suggested_suppliers: List[str] = []
+    suggested_price: Optional[float] = None
+    order_url: Optional[str] = None
+    notes: Optional[str] = None
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class CompatiblePartsGroup(BaseModel):
+    group: CompatGroupResponse
+    parts: List[LibraryPartResponse]
+
+
+class CompatiblePartsResponse(BaseModel):
+    part: LibraryPartResponse
+    compatibility_groups: List[CompatiblePartsGroup]

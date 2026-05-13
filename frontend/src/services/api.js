@@ -384,4 +384,129 @@ export const repairsAPI = {
   },
 };
 
+// Parts Library API (admin only)
+export const partsLibraryAPI = {
+  // Brands
+  listBrands: async (activeOnly = true) => {
+    const response = await api.get('/api/parts-library/brands', { params: { active_only: activeOnly } });
+    return response.data;
+  },
+  getBrand: async (id) => {
+    const response = await api.get(`/api/parts-library/brands/${id}`);
+    return response.data;
+  },
+  createBrand: async (formData) => {
+    const response = await api.post('/api/parts-library/brands', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  updateBrand: async (id, formData) => {
+    const response = await api.put(`/api/parts-library/brands/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  deleteBrand: async (id) => {
+    await api.delete(`/api/parts-library/brands/${id}`);
+  },
+
+  // Models
+  listModels: async (brandId, activeOnly = true) => {
+    const response = await api.get(`/api/parts-library/brands/${brandId}/models`, {
+      params: { active_only: activeOnly },
+    });
+    return response.data;
+  },
+  getModel: async (id) => {
+    const response = await api.get(`/api/parts-library/models/${id}`);
+    return response.data;
+  },
+  createModel: async (brandId, data) => {
+    const response = await api.post(`/api/parts-library/brands/${brandId}/models`, data);
+    return response.data;
+  },
+  updateModel: async (id, data) => {
+    const response = await api.put(`/api/parts-library/models/${id}`, data);
+    return response.data;
+  },
+  deleteModel: async (id) => {
+    await api.delete(`/api/parts-library/models/${id}`);
+  },
+  uploadModelDiagram: async (id, file) => {
+    const formData = new FormData();
+    formData.append('diagram', file);
+    const response = await api.post(`/api/parts-library/models/${id}/diagrams`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  deleteModelDiagram: async (id, url) => {
+    await api.delete(`/api/parts-library/models/${id}/diagrams`, { params: { url } });
+  },
+
+  // Parts
+  listParts: async (params = {}) => {
+    const response = await api.get('/api/parts-library/parts', { params });
+    return response.data;
+  },
+  getPart: async (id) => {
+    const response = await api.get(`/api/parts-library/parts/${id}`);
+    return response.data;
+  },
+  createPart: async (data) => {
+    const response = await api.post('/api/parts-library/parts', data);
+    return response.data;
+  },
+  updatePart: async (id, data) => {
+    const response = await api.put(`/api/parts-library/parts/${id}`, data);
+    return response.data;
+  },
+  deletePart: async (id) => {
+    await api.delete(`/api/parts-library/parts/${id}`);
+  },
+  getCompatibleParts: async (id) => {
+    const response = await api.get(`/api/parts-library/parts/${id}/compatible`);
+    return response.data;
+  },
+  uploadPartDiagram: async (id, file) => {
+    const formData = new FormData();
+    formData.append('diagram', file);
+    const response = await api.post(`/api/parts-library/parts/${id}/diagrams`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  deletePartDiagram: async (id, url) => {
+    await api.delete(`/api/parts-library/parts/${id}/diagrams`, { params: { url } });
+  },
+
+  // Compatibility Groups
+  listCompatGroups: async (activeOnly = true) => {
+    const response = await api.get('/api/parts-library/compat-groups', { params: { active_only: activeOnly } });
+    return response.data;
+  },
+  createCompatGroup: async (data) => {
+    const response = await api.post('/api/parts-library/compat-groups', data);
+    return response.data;
+  },
+  updateCompatGroup: async (id, data) => {
+    const response = await api.put(`/api/parts-library/compat-groups/${id}`, data);
+    return response.data;
+  },
+  deleteCompatGroup: async (id) => {
+    await api.delete(`/api/parts-library/compat-groups/${id}`);
+  },
+  getCompatGroupParts: async (id) => {
+    const response = await api.get(`/api/parts-library/compat-groups/${id}/parts`);
+    return response.data;
+  },
+
+  // Search
+  search: async (q, limit = 30) => {
+    const response = await api.get('/api/parts-library/search', { params: { q, limit } });
+    return response.data;
+  },
+};
+
 export default api;

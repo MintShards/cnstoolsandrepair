@@ -59,6 +59,8 @@ def _migrate_tool_parts(tool: dict) -> dict:
         part.setdefault("eta", None)
         part.setdefault("date_received", None)
         part.setdefault("tracking", None)
+        part.setdefault("part_number", None)
+        part.setdefault("library_part_id", None)
     return tool
 
 

@@ -4,6 +4,7 @@ import CustomersTab from '../../components/admin/tabs/CustomersTab';
 import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
 import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
 import DashboardSummary from '../../components/admin/DashboardSummary';
+import PartsLibraryTab from '../../components/admin/tabs/PartsLibraryTab';
 import ThemeToggle from '../../components/layout/ThemeToggle';
 
 // ── TOAST SYSTEM ─────────────────────────────────────────────
@@ -117,6 +118,7 @@ export default function RepairTracker() {
     { id: 'jobs', label: 'Repair Jobs', icon: 'build_circle' },
     { id: 'requests', label: 'Repair Requests', icon: 'inbox' },
     { id: 'customers', label: 'Customers', icon: 'group' },
+    { id: 'parts-library', label: 'Parts Library', icon: 'inventory_2' },
   ];
 
   const handleCountUpdate = useCallback((tab, count) => {
@@ -287,6 +289,9 @@ export default function RepairTracker() {
                 onConvertSuccess={() => handleTabChange('jobs')}
                 onCountUpdate={handleRequestsCountUpdate}
               />
+            )}
+            {activeTab === 'parts-library' && (
+              <PartsLibraryTab />
             )}
             {activeTab === 'jobs' && (
               <RepairJobsTab
