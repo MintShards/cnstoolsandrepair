@@ -79,11 +79,12 @@ function getStyles(prefix) {
     ${p}.parts-table td { border: 1px solid #ccc; padding: 4px 8px; }
     ${p}.center, ${p}.parts-table th.center { text-align: center; }
     ${p}.right, ${p}.parts-table th.right { text-align: right; }
-    ${p}.signature-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; }
-    ${p}.signature-row .signature-box { width: 220px; }
-    ${p}.terms { font-size: 9px; color: #333; line-height: 1.6; }
+    ${p}.terms-section { margin-top: 24px; }
+    ${p}.terms { font-size: 9px; color: #333; line-height: 1.6; margin-bottom: 6px; }
     ${p}.terms-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin-bottom: 4px; }
-    ${p}.signature-box { border-top: 1px solid #000; padding-top: 4px; font-size: 10px; color: #333; }
+    ${p}.terms-sub { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-top: 6px; margin-bottom: 2px; }
+    ${p}.signature-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; gap: 24px; }
+    ${p}.signature-box { flex: 1; border-top: 1px solid #000; padding-top: 4px; font-size: 10px; color: #333; }
   `;
 }
 
@@ -209,14 +210,30 @@ function buildBody(job, businessInfo) {
       ${toolsHTML}
     </div>
 
-    <div class="signature-row">
+    <div class="terms-section">
       <div class="terms">
         <div class="terms-title">Terms &amp; Conditions</div>
-        1. Replaced parts carry a 30-day warranty.<br/>
-        2. Not liable for pre-existing damage.<br/>
-        3. Unclaimed items after 30 days may be disposed of.
+
+        <div class="terms-sub">Warranty</div>
+        1. A 3-month limited warranty is provided on parts replaced and labour performed, under normal use.<br/>
+        2. This warranty does not cover normal wear and tear, misuse, improper use, poor maintenance (including air supply), external damage, or parts not included in the repair.<br/>
+        3. If the tool is opened, modified, or repaired by others, the warranty is void.<br/>
+        4. If the operating requirements below are not followed, the warranty will not apply.<br/>
+        5. All warranty claims must be inspected and approved in-shop.
+
+        <div class="terms-sub">Air Supply Requirements</div>
+        6. Tool must be used with clean, dry air at 90 PSI.<br/>
+        7. Use at least a 3/8&quot; hose. For larger tools, 1/2&quot; hose is recommended.<br/>
+        8. Wrong air pressure or hose size can cause poor performance or damage, and the warranty will not apply.
+
+        <div class="terms-sub">General</div>
+        9. Not liable for pre-existing damage.<br/>
+        10. Unclaimed items after 30 days may be disposed of.
       </div>
+    </div>
+    <div class="signature-row">
       <div class="signature-box">Customer Signature &amp; Date</div>
+      <div class="signature-box">Authorized Signature &amp; Date</div>
     </div>
   `;
 }
