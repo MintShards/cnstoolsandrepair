@@ -237,16 +237,23 @@ async def update_library_brand(
     if not doc:
         raise HTTPException(status_code=404, detail="Brand not found")
 
-    data = LibraryBrandUpdate(name=name, short_code=short_code, website=website, notes=notes)
-    updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
+    updates = {}
+    if name is not None:
+        updates["name"] = name.strip()
+    if short_code is not None:
+        updates["short_code"] = short_code.strip()
+    if website is not None:
+        updates["website"] = website.strip()
+    if notes is not None:
+        updates["notes"] = notes.strip()
 
     if name and name.strip():
         existing = await db.parts_library_brands.find_one({
-            "name": {"$regex": f"^{re.escape(data.name)}$", "$options": "i"},
+            "name": {"$regex": f"^{re.escape(name.strip())}$", "$options": "i"},
             "_id": {"$ne": _to_object_id(brand_id)}
         })
         if existing:
-            raise HTTPException(status_code=400, detail=f"Brand '{data.name}' already exists")
+            raise HTTPException(status_code=400, detail=f"Brand '{name.strip()}' already exists")
 
     if logo and logo.filename:
         if doc.get("logo_url"):
