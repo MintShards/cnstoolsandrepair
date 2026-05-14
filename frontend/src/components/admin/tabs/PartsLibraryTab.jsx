@@ -1249,7 +1249,7 @@ export default function PartsLibraryTab() {
               <span className="material-symbols-outlined text-slate-400 text-sm flex-shrink-0">chevron_right</span>
               <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[120px] sm:max-w-xs" title={selectedModel.name}>{selectedModel.name}</span>
               {selectedModel.category && (
-                <span className="text-sm text-slate-400 dark:text-slate-500 flex-shrink-0">— {selectedModel.category}</span>
+                <span className="text-base text-slate-500 dark:text-slate-300 flex-shrink-0">— {selectedModel.category}</span>
               )}
               {selectedModel.discontinued && (
                 <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full flex-shrink-0">Discontinued</span>

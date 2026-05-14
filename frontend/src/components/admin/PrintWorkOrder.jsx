@@ -54,13 +54,13 @@ function getStyles(prefix) {
     ${p}.customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 16px; }
     ${p}.field-group { display: flex; flex-direction: column; margin-bottom: 4px; }
     ${p}.field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #555; letter-spacing: 0.05em; }
-    ${p}.muted { color: #666; font-style: italic; }
+    ${p}.muted { color: #333; font-style: normal; }
     ${p}.tool-card { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     ${p}.tool-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
     ${p}.tool-num { width: 24px; height: 24px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
     ${p}.tool-title { flex: 1; }
     ${p}.tool-title strong { font-size: 13px; }
-    ${p}.tool-title .muted { font-size: 11px; }
+    ${p}.tool-title .muted { font-size: 13px; }
     ${p}.tool-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
     ${p}.badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid #000; }
     ${p}.badge.priority-rush { background: #fff; color: #000; border-color: #000; }
