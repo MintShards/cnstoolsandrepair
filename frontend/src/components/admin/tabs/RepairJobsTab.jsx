@@ -2687,12 +2687,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 // wizardStep: 2 = Tool Identification + Photos, 3 = Job Details + Parts, 4 = Labour & Scheduling
 // Omit wizardStep (or isNewJobForm=false) to render all sections (add tool modal / edit mode)
 function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm }) {
-  const handleChange = (field, value) => {
+  const handleChange = (fieldOrObj, value) => {
+    // Support both handleChange('field', value) and handleChange({ field1: v1, field2: v2 })
+    const updates = typeof fieldOrObj === 'string' ? { [fieldOrObj]: value } : fieldOrObj;
     if (isNewJobForm) {
-      const updatedTools = newJobForm.tools.map((t, i) => i === idx ? { ...t, [field]: value } : t);
-      setNewJobForm({ ...newJobForm, tools: updatedTools });
+      setNewJobForm(prev => ({
+        ...prev,
+        tools: prev.tools.map((t, i) => i === idx ? { ...t, ...updates } : t),
+      }));
     } else {
-      onChange({ ...toolData, [field]: value });
+      onChange({ ...toolData, ...updates });
     }
   };
 
@@ -2934,8 +2938,9 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                   {filteredModels.map(m => (
                     <button key={m.id} type="button"
                       onMouseDown={() => {
-                        handleChange('model_number', m.name.toUpperCase());
-                        if (m.category) handleChange('tool_type', m.category.toUpperCase());
+                        const updates = { model_number: m.name.toUpperCase() };
+                        if (m.category) updates.tool_type = m.category.toUpperCase();
+                        handleChange(updates);
                         setShowModelDropdown(false);
                       }}
                       className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
