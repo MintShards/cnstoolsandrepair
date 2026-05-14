@@ -158,8 +158,9 @@ export default function UserGuide({ onClose }) {
                   ['7', 'Parts Library'],
                   ['8', 'Common Workflows'],
                   ['9', 'Quick Reference'],
-                  ['10', 'How To — Step-by-Step'],
-                  ['11', 'Glossary'],
+                  ['10', 'Zoho Books — Quotes & Invoices'],
+                  ['11', 'How To — Step-by-Step'],
+                  ['12', 'Glossary'],
                 ].map(([num, title]) => (
                   <div key={num} className="flex items-center gap-2 py-1">
                     <span className="w-6 h-6 bg-orange-500 text-white rounded-full text-xs font-black flex items-center justify-center flex-shrink-0">{num}</span>
@@ -553,16 +554,52 @@ export default function UserGuide({ onClose }) {
                     'Click Add Tool. Fill in: Tool Type, Brand, Model Number. Add Serial Number, Priority, and any notes in the Remarks field.',
                     'Click Save. The job is created with status set to Received automatically.',
                     'After you inspect the tool: open the job, change the status to Diagnosed. Add a note in Remarks describing what you found.',
-                    'Prepare a quote: change status to Quoted. Note the estimated cost.',
-                    'Customer approves the quote: change status to Approved.',
-                    'If you need to order parts: change status to Parts Pending. Add the part to the parts list and enter the order details.',
-                    'Start the repair: change status to In Repair.',
-                    'Repair is done: change status to Ready for Pickup. Contact the customer to let them know.',
-                    'Send the invoice: change status to Invoiced.',
-                    'Customer picks up and pays: change status to Completed, then Closed.',
+                    'Prepare a quote: change status to Quoted. Note the estimated cost in Remarks.',
                   ].map((step, i) => (
                     <li key={i} className="flex gap-3">
                       <span className="w-6 h-6 bg-primary text-white rounded-full text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="my-4 flex gap-3 p-4 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
+                  <span className="material-symbols-outlined text-violet-600 dark:text-violet-400 text-xl flex-shrink-0 mt-0.5">open_in_new</span>
+                  <div className="text-sm">
+                    <p className="font-bold text-violet-800 dark:text-violet-300 mb-1">Switch to Zoho Books now — Send the Quote</p>
+                    <p className="text-violet-700 dark:text-violet-400">Open Zoho Books in another browser tab. If this is a new customer, create them in Zoho Books too. Then create a new Quote, add the tools and parts with their prices, and send it to the customer by email. See <strong>Section 10</strong> for step-by-step instructions.</p>
+                  </div>
+                </div>
+
+                <ol className="space-y-2 text-sm" start={8}>
+                  {[
+                    'Customer approves the quote: in Zoho Books, mark the quote as Accepted. Back in the Repair Tracker, change the job status to Approved.',
+                    'If you need to order parts: change status to Parts Pending. Add the part to the parts list and enter the order details.',
+                    'Start the repair: change status to In Repair.',
+                    'Repair is done: change status to Ready for Pickup. Contact the customer to let them know.',
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="w-6 h-6 bg-primary text-white rounded-full text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 8}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="my-4 flex gap-3 p-4 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
+                  <span className="material-symbols-outlined text-violet-600 dark:text-violet-400 text-xl flex-shrink-0 mt-0.5">open_in_new</span>
+                  <div className="text-sm">
+                    <p className="font-bold text-violet-800 dark:text-violet-300 mb-1">Switch to Zoho Books now — Send the Invoice</p>
+                    <p className="text-violet-700 dark:text-violet-400">Open Zoho Books. Convert the approved quote into an Invoice and send it to the customer. Once payment is received, mark the invoice as Paid in Zoho Books. See <strong>Section 10</strong> for step-by-step instructions.</p>
+                  </div>
+                </div>
+
+                <ol className="space-y-2 text-sm" start={12}>
+                  {[
+                    'Change the job status to Invoiced in the Repair Tracker.',
+                    'Customer picks up their tools and pays: change the status to Completed, then Closed.',
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="w-6 h-6 bg-primary text-white rounded-full text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 12}</span>
                       <span className="text-slate-700 dark:text-slate-300">{step}</span>
                     </li>
                   ))}
@@ -677,9 +714,168 @@ export default function UserGuide({ onClose }) {
 
             </div>
 
-            {/* ─── SECTION 10: HOW TO ─── */}
+            {/* ─── SECTION 10: ZOHO BOOKS ─── */}
             <div className="guide-section pt-10">
-              <SectionHeader num="10" title="How To — Step-by-Step" icon="help" />
+              <SectionHeader num="10" title="Zoho Books — Quotes & Invoices" icon="receipt_long" />
+
+              <InfoBox icon="info" color="blue" className="mb-6">
+                <strong>Two systems work together.</strong> The Repair Tracker tracks the physical repair. Zoho Books handles the money — quotes, invoices, and payments. You need to do steps in both systems. This section tells you exactly when and what to do in Zoho Books.
+              </InfoBox>
+
+              <SubSection title="When to Use Zoho Books">
+                <p>You will open Zoho Books at two key moments in every job:</p>
+                <div className="mt-3 space-y-3">
+                  <div className="flex gap-3 p-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
+                    <span className="w-7 h-7 bg-violet-600 text-white rounded-full text-sm font-black flex items-center justify-center flex-shrink-0">1</span>
+                    <div className="text-sm">
+                      <p className="font-bold text-violet-800 dark:text-violet-300">After Diagnosis — Send a Quote</p>
+                      <p className="text-violet-700 dark:text-violet-400 mt-0.5">Once you know what is wrong and what it will cost to fix, create a Quote in Zoho Books and email it to the customer.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 p-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
+                    <span className="w-7 h-7 bg-violet-600 text-white rounded-full text-sm font-black flex items-center justify-center flex-shrink-0">2</span>
+                    <div className="text-sm">
+                      <p className="font-bold text-violet-800 dark:text-violet-300">After Repair is Ready — Send an Invoice</p>
+                      <p className="text-violet-700 dark:text-violet-400 mt-0.5">Once the tool is fixed and ready for pickup, convert the quote into an Invoice in Zoho Books and send it to the customer.</p>
+                    </div>
+                  </div>
+                </div>
+              </SubSection>
+
+              <SubSection title="Step 1 — Create the Customer in Zoho Books">
+                <p>If this is a new customer, you need to add them in Zoho Books too (the two systems do not share customer records automatically).</p>
+                <ol className="mt-2 space-y-1.5 text-sm">
+                  {[
+                    'Open Zoho Books in your browser (log in if needed).',
+                    'Go to Contacts in the left menu.',
+                    'Click New Contact.',
+                    'Fill in the customer\'s name, company (if any), email, and phone — use the same details you entered in the Repair Tracker.',
+                    'Click Save.',
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="w-5 h-5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 font-black text-xs rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </SubSection>
+
+              <SubSection title="Step 2 — Create and Send a Quote">
+                <p>Do this after you have diagnosed the tool and know what the repair will cost.</p>
+                <ol className="mt-2 space-y-1.5 text-sm">
+                  {[
+                    'In Zoho Books, go to Sales → Quotes.',
+                    'Click New Quote.',
+                    'In the Customer Name field, search for and select the customer.',
+                    'Add a line item for each tool being repaired. In the Item Name field, type a clear description (e.g., "Ingersoll Rand 2235TiMAX — Diagnose and repair impact mechanism").',
+                    'Add line items for each part that will be needed. Enter the part name, quantity, and price.',
+                    'Add a line for labor if applicable.',
+                    'Review the total. Add any notes or terms at the bottom.',
+                    'Click Save and Send (or Save first, then Send later).',
+                    'The customer will receive the quote by email. They can approve or decline it.',
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="w-5 h-5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 font-black text-xs rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400"><strong>Then:</strong> Come back to the Repair Tracker and update the job status to <strong>Quoted</strong>.</p>
+              </SubSection>
+
+              <SubSection title="Step 3 — Customer Approves or Declines">
+                <div className="space-y-3">
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm">
+                    <p className="font-bold text-green-800 dark:text-green-300 mb-1">If the customer approves:</p>
+                    <ul className="text-green-700 dark:text-green-400 space-y-1">
+                      <li>In Zoho Books: open the quote and click <strong>Mark as Accepted</strong>.</li>
+                      <li>In the Repair Tracker: change the job status to <strong>Approved</strong>. Then proceed with ordering parts and starting the repair.</li>
+                    </ul>
+                  </div>
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm">
+                    <p className="font-bold text-red-800 dark:text-red-300 mb-1">If the customer declines:</p>
+                    <ul className="text-red-700 dark:text-red-400 space-y-1">
+                      <li>In Zoho Books: open the quote and click <strong>Mark as Declined</strong>.</li>
+                      <li>In the Repair Tracker: change the job status to <strong>Declined</strong>. Then close the job.</li>
+                    </ul>
+                  </div>
+                </div>
+              </SubSection>
+
+              <SubSection title="Step 4 — Convert the Quote to an Invoice and Send It">
+                <p>Do this after the repair is complete and the tool is ready for pickup.</p>
+                <ol className="mt-2 space-y-1.5 text-sm">
+                  {[
+                    'In Zoho Books, go to Sales → Quotes and open the accepted quote for this job.',
+                    'Click Convert to Invoice (button near the top).',
+                    'Review the invoice — add or adjust any line items if the final cost changed during the repair (e.g., extra parts were needed).',
+                    'Set the due date.',
+                    'Click Save and Send. The customer receives the invoice by email.',
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="w-5 h-5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 font-black text-xs rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400"><strong>Then:</strong> Come back to the Repair Tracker and update the job status to <strong>Invoiced</strong>.</p>
+              </SubSection>
+
+              <SubSection title="Step 5 — Mark Invoice as Paid">
+                <ol className="mt-2 space-y-1.5 text-sm">
+                  {[
+                    'In Zoho Books, open the invoice.',
+                    'Click Record Payment when the customer pays.',
+                    'Enter the amount, date, and payment method.',
+                    'Click Save.',
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="w-5 h-5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 font-black text-xs rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400"><strong>Then:</strong> Come back to the Repair Tracker and update the job status to <strong>Completed</strong>, then <strong>Closed</strong>.</p>
+              </SubSection>
+
+              <SubSection title="Summary — Which System Does What">
+                <div className="guide-no-break overflow-x-auto mt-2">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-slate-800">
+                        <th className="text-left p-2 border border-slate-200 dark:border-slate-700">Step</th>
+                        <th className="text-left p-2 border border-slate-200 dark:border-slate-700">Repair Tracker</th>
+                        <th className="text-left p-2 border border-slate-200 dark:border-slate-700">Zoho Books</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['Tool arrives', 'Create job → status: Received', '—'],
+                        ['Inspect tool', 'Status → Diagnosed', '—'],
+                        ['Prepare quote', 'Status → Quoted, note cost in Remarks', 'Create Quote, add tools/parts/labor, Send to customer'],
+                        ['Customer approves', 'Status → Approved', 'Mark Quote as Accepted'],
+                        ['Customer declines', 'Status → Declined → Closed', 'Mark Quote as Declined'],
+                        ['Order parts', 'Status → Parts Pending, track parts', '—'],
+                        ['Start repair', 'Status → In Repair', '—'],
+                        ['Repair done', 'Status → Ready for Pickup', '—'],
+                        ['Send invoice', 'Status → Invoiced', 'Convert Quote to Invoice, Send to customer'],
+                        ['Customer pays & picks up', 'Status → Completed → Closed', 'Record Payment on invoice'],
+                      ].map(([step, tracker, zoho]) => (
+                        <tr key={step} className="border-b border-slate-100 dark:border-slate-800">
+                          <td className="p-2 border border-slate-200 dark:border-slate-700 font-medium text-xs">{step}</td>
+                          <td className="p-2 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400">{tracker}</td>
+                          <td className="p-2 border border-slate-200 dark:border-slate-700 text-xs text-violet-700 dark:text-violet-400 font-medium">{zoho}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </SubSection>
+            </div>
+
+            {/* ─── SECTION 11: HOW TO ─── */}
+            <div className="guide-section pt-10">
+              <SectionHeader num="11" title="How To — Step-by-Step" icon="help" />
               <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">Quick answers to the most common tasks. Each entry walks you through exactly what to click.</p>
 
               <div className="space-y-6">
@@ -879,6 +1075,33 @@ export default function UserGuide({ onClose }) {
                   ]}
                 </HowTo>
 
+                <HowTo title="How to Create a Quote in Zoho Books">
+                  {[
+                    'Open Zoho Books in your browser.',
+                    'Go to Sales → Quotes in the left menu.',
+                    'Click New Quote.',
+                    'Search for the customer in the Customer Name field. If they are not there yet, add them first under Contacts.',
+                    'Click Add Line Item for each tool being repaired — type a clear description and the price.',
+                    'Add more line items for parts and labor.',
+                    'Review the total at the bottom.',
+                    'Click Save and Send to email it to the customer right away. Or click Save to send it later.',
+                    <span key="then" className="text-violet-700 dark:text-violet-400 text-xs font-bold">Then: go back to the Repair Tracker and change the job status to Quoted.</span>,
+                  ]}
+                </HowTo>
+
+                <HowTo title="How to Convert a Zoho Books Quote to an Invoice">
+                  {[
+                    'Open Zoho Books and go to Sales → Quotes.',
+                    'Find the quote for this job and open it.',
+                    'Click Convert to Invoice (button near the top of the quote).',
+                    'Review the invoice — adjust any line items if the final cost changed.',
+                    'Set the due date.',
+                    'Click Save and Send to email the invoice to the customer.',
+                    'When the customer pays: click Record Payment, enter the amount and payment method, click Save.',
+                    <span key="then" className="text-violet-700 dark:text-violet-400 text-xs font-bold">Then: go back to the Repair Tracker and change the job status to Invoiced, then Completed, then Closed.</span>,
+                  ]}
+                </HowTo>
+
                 <HowTo title="How to Create a Compatibility Group">
                   {[
                     'Go to the Parts Library tab.',
@@ -893,9 +1116,9 @@ export default function UserGuide({ onClose }) {
               </div>
             </div>
 
-            {/* ─── SECTION 11: GLOSSARY ─── */}
+            {/* ─── SECTION 12: GLOSSARY ─── */}
             <div className="guide-section pt-10">
-              <SectionHeader num="11" title="Glossary" icon="menu_book" />
+              <SectionHeader num="12" title="Glossary" icon="menu_book" />
               <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">Plain-English definitions of every word or term used in this guide.</p>
 
               <div className="space-y-3">
@@ -934,6 +1157,9 @@ export default function UserGuide({ onClose }) {
                   { term: 'Tool', def: 'The physical item being repaired — for example, an impact wrench or a drill. A single repair job can contain multiple tools.' },
                   { term: 'Warranty', def: 'A checkbox on a tool that marks the repair as covered under warranty. Warranty jobs are labeled with a special badge.' },
                   { term: 'Work Order', def: 'A printed document that summarizes a repair job — includes the customer\'s information, the tools, parts, and a signature line. Generated by clicking the print icon on a job.' },
+                  { term: 'Zoho Books', def: 'A separate accounting program used to create quotes, send invoices, and record payments. The Repair Tracker handles the physical repair; Zoho Books handles the money. You need to use both systems on every job.' },
+                  { term: 'Zoho Quote', def: 'A document created in Zoho Books that lists the tools, parts, and labor costs for a repair, and is emailed to the customer for approval before the work begins.' },
+                  { term: 'Zoho Invoice', def: 'A bill created in Zoho Books and sent to the customer after the repair is complete. Created by converting the approved quote into an invoice.' },
                 ].map(({ term, def }) => (
                   <div key={term} className="guide-no-break flex gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
                     <p className="font-bold text-slate-900 dark:text-white text-sm w-44 flex-shrink-0">{term}</p>
