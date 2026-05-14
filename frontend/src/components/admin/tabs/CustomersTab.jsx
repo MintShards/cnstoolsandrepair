@@ -1007,7 +1007,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                                     <div className="mt-1 space-y-1">
                                       {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
                                         <div key={pi} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1 border border-slate-200/30 dark:border-slate-700/30">
-                                          <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}</span>
+                                          <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
                                           <span className="text-slate-500">×{p.quantity}</span>
                                           <span className={`px-1.5 py-px rounded-full font-bold ${
                                             p.status === 'installed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :

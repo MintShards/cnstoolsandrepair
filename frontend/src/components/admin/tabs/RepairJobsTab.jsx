@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI, partsLibraryAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import PartLibraryPicker from '../shared/PartLibraryPicker';
 import {
@@ -59,7 +59,7 @@ const PriorityBadge = ({ priority }) => {
 
 const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
-  quantity: 1, remarks: '', parts: [{ name: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
+  quantity: 1, remarks: '', parts: [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
   zoho_ref: '', assigned_technician: '', estimated_completion: '',
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
@@ -560,6 +560,67 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     setNewJobForm({ ...newJobForm, tools: newJobForm.tools.filter((_, i) => i !== idx) });
   };
 
+  // Silently save new parts to the Parts Library (fire-and-forget)
+  const syncPartsToLibrary = async (tools) => {
+    try {
+      let libraryBrands = null;
+      const getBrandId = async (brandName) => {
+        if (!brandName?.trim()) return null;
+        if (!libraryBrands) libraryBrands = await partsLibraryAPI.listBrands();
+        const match = libraryBrands.find(b => b.name.toLowerCase() === brandName.trim().toLowerCase());
+        if (match) return match.id;
+        const created = await partsLibraryAPI.createBrand({ name: brandName.trim() });
+        libraryBrands.push(created);
+        return created.id;
+      };
+
+      const getModelId = async (brandId, modelName, toolType) => {
+        if (!brandId || !modelName?.trim()) return [];
+        try {
+          const models = await partsLibraryAPI.listModels(brandId);
+          const match = models.find(m => m.name.toLowerCase() === modelName.trim().toLowerCase());
+          if (match) return [match.id];
+          // Auto-create the model in the library
+          try {
+            const created = await partsLibraryAPI.createModel(brandId, { name: modelName.trim(), category: toolType?.trim() || null });
+            return [created.id];
+          } catch { return []; }
+        } catch { return []; }
+      };
+
+      for (const tool of tools) {
+        const brandId = await getBrandId(tool.brand);
+        if (!brandId) continue;
+        const modelIds = await getModelId(brandId, tool.model_number, tool.tool_type);
+        for (const part of (tool.parts || [])) {
+          if (!part.name?.trim() || part.library_part_id) continue;
+          try {
+            const created = await partsLibraryAPI.createPart({
+              name: part.name.trim(),
+              part_number: part.part_number?.trim() || part.name.trim().toUpperCase().replace(/\s+/g, '-'),
+              brand_id: brandId,
+              model_ids: modelIds,
+              compatibility_group_ids: [],
+              suggested_suppliers: part.supplier ? [part.supplier] : [],
+              suggested_price: part.price ? Number(part.price) : null,
+              notes: part.notes || null,
+            });
+            // Backfill library_part_id on the part
+            if (created?.id) part.library_part_id = created.id;
+          } catch {
+            // Duplicate — try to find existing and backfill library_part_id
+            try {
+              const partNum = part.part_number?.trim() || part.name.trim().toUpperCase().replace(/\s+/g, '-');
+              const existing = await partsLibraryAPI.search(partNum, 5);
+              const match = existing.find(p => p.brand_id === brandId && p.part_number.toLowerCase() === partNum.toLowerCase());
+              if (match) part.library_part_id = match.id;
+            } catch { /* ignore */ }
+          }
+        }
+      }
+    } catch { /* never block the caller */ }
+  };
+
   const handleCreateJob = async (e) => {
     e.preventDefault();
     setSavingJob(true);
@@ -574,7 +635,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         hourly_rate: t.hourly_rate ? parseFloat(t.hourly_rate) : null,
         serial_number: t.serial_number || null,
         remarks: t.remarks || null,
-        parts: (t.parts || []).filter(p => p.name.trim()),
+        parts: (t.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_ref: t.zoho_ref || null,
         assigned_technician: t.assigned_technician || null,
         estimated_completion: t.estimated_completion || null,
@@ -612,6 +673,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         setSavingJob(false);
         return;
       }
+
+      // Silently save new parts to the Parts Library (fire-and-forget)
+      syncPartsToLibrary(newJobForm.tools);
 
       // API succeeded — upload staged photos then update UI
       const hasPhotos = pendingPhotosByIndex.some(arr => arr.length > 0);
@@ -872,7 +936,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       serial_number: tool.serial_number || '',
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
-      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' })) : [{ name: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
+      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' })) : [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
       priority: tool.priority || 'standard',
@@ -901,7 +965,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         hourly_rate: toolEditForm.hourly_rate ? parseFloat(toolEditForm.hourly_rate) : null,
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
-        parts: (toolEditForm.parts || []).filter(p => p.name?.trim()),
+        parts: (toolEditForm.parts || []).filter(p => p.name?.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_ref: toolEditForm.zoho_ref || null,
         assigned_technician: toolEditForm.assigned_technician || null,
         estimated_completion: toolEditForm.estimated_completion || null,
@@ -912,6 +976,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       setSavingToolEdit(false);
       return;
     }
+    // Silently save new parts to library
+    syncPartsToLibrary([toolEditForm]);
+
     setSelectedJob(updated);
     setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
     setEditingToolId(null);
@@ -933,7 +1000,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         hourly_rate: addToolForm.hourly_rate ? parseFloat(addToolForm.hourly_rate) : null,
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
-        parts: (addToolForm.parts || []).filter(p => p.name.trim()),
+        parts: (addToolForm.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_ref: addToolForm.zoho_ref || null,
         assigned_technician: addToolForm.assigned_technician || null,
         estimated_completion: addToolForm.estimated_completion || null,
@@ -944,6 +1011,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       setAddingTool(false);
       return;
     }
+    // Silently save new parts to library
+    syncPartsToLibrary([addToolForm]);
+
     setSelectedJob(updated);
     setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
     setAddToolForm(null);
@@ -1807,7 +1877,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
                                   <div key={pi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}</span>
+                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
                                       <span className="text-slate-500 text-xs">×{p.quantity}</span>
                                       {(p.price != null && p.price !== '') && (
                                         <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">${(parseFloat(p.price) * (p.quantity || 1)).toFixed(2)}</span>
@@ -2635,6 +2705,97 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
   // Parts Library Picker state
   const [pickerOpenForPi, setPickerOpenForPi] = useState(null); // index of part row being filled
 
+  // Parts Library autocomplete
+  const [partSuggestions, setPartSuggestions] = useState([]);
+  const [partSuggestionsLoading, setPartSuggestionsLoading] = useState(false);
+  const [activeSuggestionPi, setActiveSuggestionPi] = useState(null);
+  const partSearchTimer = useRef(null);
+
+  // Suggested parts for this model
+  const [suggestedParts, setSuggestedParts] = useState([]);
+  const [suggestedPartsLoading, setSuggestedPartsLoading] = useState(false);
+  const [showSuggestedParts, setShowSuggestedParts] = useState(false);
+
+  const loadSuggestedParts = async () => {
+    if (showSuggestedParts) { setShowSuggestedParts(false); return; }
+    // Find model ID from library brands/models
+    const brand = data.brand?.trim();
+    const model = data.model_number?.trim();
+    if (!brand || !model) return;
+    setSuggestedPartsLoading(true);
+    setShowSuggestedParts(true);
+    try {
+      const brands = await partsLibraryAPI.listBrands();
+      const matchBrand = brands.find(b => b.name.toLowerCase() === brand.toLowerCase());
+      if (!matchBrand) { setSuggestedParts([]); return; }
+      const models = await partsLibraryAPI.listModels(matchBrand.id);
+      const matchModel = models.find(m => m.name.toLowerCase() === model.toLowerCase());
+      if (!matchModel) { setSuggestedParts([]); return; }
+      const result = await partsLibraryAPI.listParts({ model_id: matchModel.id, limit: 50 });
+      setSuggestedParts(result.items || []);
+    } catch { setSuggestedParts([]); }
+    finally { setSuggestedPartsLoading(false); }
+  };
+
+  const addSuggestedPart = (libPart) => {
+    const updated = [...(data.parts || [])];
+    updated.push({
+      name: libPart.name || '',
+      part_number: libPart.part_number || '',
+      library_part_id: libPart.id,
+      quantity: 1,
+      price: libPart.suggested_price != null ? String(libPart.suggested_price) : '',
+      supplier: libPart.suggested_suppliers?.[0] || '',
+      _suggested_suppliers: libPart.suggested_suppliers || [],
+      order_link: '',
+      notes: libPart.notes || '',
+      status: 'pending',
+      tracking: '',
+      eta: '',
+    });
+    handleChange('parts', updated);
+  };
+
+  const triggerPartSearch = (pi, searchValue) => {
+    setActiveSuggestionPi(pi);
+    if (partSearchTimer.current) clearTimeout(partSearchTimer.current);
+    const trimmed = searchValue.trim();
+    if (trimmed.length < 2) { setPartSuggestions([]); return; }
+    partSearchTimer.current = setTimeout(async () => {
+      setPartSuggestionsLoading(true);
+      try {
+        const results = await partsLibraryAPI.search(trimmed, 8);
+        setPartSuggestions(results);
+      } catch { setPartSuggestions([]); }
+      finally { setPartSuggestionsLoading(false); }
+    }, 300);
+  };
+
+  const handlePartNameChange = (pi, value, updatePart) => {
+    updatePart({ name: value.toUpperCase() });
+    triggerPartSearch(pi, value);
+  };
+
+  const handlePartNumberChange = (pi, value, updatePart) => {
+    updatePart({ part_number: value.toUpperCase() });
+    triggerPartSearch(pi, value);
+  };
+
+  const handleSelectSuggestion = (part, updatePart) => {
+    updatePart({
+      name: part.name || '',
+      part_number: part.part_number || '',
+      library_part_id: part.id,
+      supplier: part.suggested_suppliers?.[0] || '',
+      _suggested_suppliers: part.suggested_suppliers || [],
+      price: part.suggested_price != null ? String(part.suggested_price) : '',
+      order_link: '',
+      notes: part.notes || '',
+    });
+    setPartSuggestions([]);
+    setActiveSuggestionPi(null);
+  };
+
   useEffect(() => {
     suppliersAPI.getAll().then(setSuppliers).catch(() => {});
   }, []);
@@ -2698,6 +2859,33 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
     }
   };
 
+  // Library brands/models for tool identification dropdowns
+  const [libraryBrands, setLibraryBrands] = useState([]);
+  const [libraryModels, setLibraryModels] = useState([]);
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+
+  useEffect(() => {
+    partsLibraryAPI.listBrands().then(setLibraryBrands).catch(() => {});
+  }, []);
+
+  // When brand changes, load models for matching library brand
+  const matchedBrand = libraryBrands.find(b => b.name.toLowerCase() === (toolData.brand || '').trim().toLowerCase());
+  useEffect(() => {
+    if (matchedBrand) {
+      partsLibraryAPI.listModels(matchedBrand.id).then(setLibraryModels).catch(() => setLibraryModels([]));
+    } else {
+      setLibraryModels([]);
+    }
+  }, [matchedBrand?.id]);
+
+  const filteredBrands = libraryBrands.filter(b =>
+    !toolData.brand?.trim() || b.name.toLowerCase().includes(toolData.brand.trim().toLowerCase())
+  );
+  const filteredModels = libraryModels.filter(m =>
+    !toolData.model_number?.trim() || m.name.toLowerCase().includes(toolData.model_number.trim().toLowerCase())
+  );
+
   const data = toolData;
 
   const inputCls = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
@@ -2713,24 +2901,60 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
         <div>
           <p className={sectionHdr}>Tool Identification</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
+              <input required value={data.brand || ''} autoComplete="off"
+                onChange={(e) => { handleChange('brand', e.target.value.toUpperCase()); setShowBrandDropdown(true); }}
+                onFocus={() => setShowBrandDropdown(true)}
+                onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
+                placeholder="e.g., Ingersoll Rand" className={inputCls} />
+              {showBrandDropdown && filteredBrands.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredBrands.map(b => (
+                    <button key={b.id} type="button"
+                      onMouseDown={() => { handleChange('brand', b.name.toUpperCase()); setShowBrandDropdown(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
+                    >
+                      <span className="text-slate-800 dark:text-slate-100">{b.name}</span>
+                      {b.short_code && <span className="ml-2 text-xs text-slate-400">{b.short_code}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
+              <input required value={data.model_number || ''} autoComplete="off"
+                onChange={(e) => { handleChange('model_number', e.target.value.toUpperCase()); setShowModelDropdown(true); }}
+                onFocus={() => { if (libraryModels.length > 0) setShowModelDropdown(true); }}
+                onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
+                placeholder="e.g., 2135TIMAX" className={inputCls} />
+              {showModelDropdown && filteredModels.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredModels.map(m => (
+                    <button key={m.id} type="button"
+                      onMouseDown={() => {
+                        handleChange('model_number', m.name.toUpperCase());
+                        if (m.category) handleChange('tool_type', m.category.toUpperCase());
+                        setShowModelDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
+                    >
+                      <span className="text-slate-800 dark:text-slate-100">{m.name}</span>
+                      {m.category && <span className="ml-2 text-xs text-slate-400">{m.category}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
-              <input required value={data.tool_type || ''} onChange={(e) => handleChange('tool_type', e.target.value)}
+              <input required value={data.tool_type || ''} onChange={(e) => handleChange('tool_type', e.target.value.toUpperCase())}
                 placeholder="e.g., Impact Wrench" className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
-              <input required value={data.brand || ''} onChange={(e) => handleChange('brand', e.target.value)}
-                placeholder="e.g., Ingersoll Rand" className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
-              <input required value={data.model_number || ''} onChange={(e) => handleChange('model_number', e.target.value)}
-                placeholder="e.g., 2135TIMAX" className={inputCls} />
-            </div>
-            <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Serial Number</label>
-              <input value={data.serial_number || ''} onChange={(e) => handleChange('serial_number', e.target.value)}
+              <input value={data.serial_number || ''} onChange={(e) => handleChange('serial_number', e.target.value.toUpperCase())}
                 placeholder="Optional" className={inputCls} />
             </div>
           </div>
@@ -2829,11 +3053,57 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
       {showSection([3]) && <div>
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-300 dark:border-slate-700">
           <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
-          <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }])}
-            className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-1 transition-colors">
-            <span className="material-symbols-outlined text-base">add</span> Add Part
-          </button>
+          <div className="flex items-center gap-3">
+            {data.brand && data.model_number && (
+              <button type="button" onClick={loadSuggestedParts}
+                className={`text-xs font-bold flex items-center gap-1 transition-colors ${showSuggestedParts ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-amber-600 dark:hover:text-amber-400'}`}>
+                <span className="material-symbols-outlined" style={{fontSize:'15px'}}>lightbulb</span>
+                {suggestedPartsLoading ? 'Loading…' : showSuggestedParts ? 'Hide Suggestions' : 'Suggested Parts'}
+              </button>
+            )}
+            <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }])}
+              className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-1 transition-colors">
+              <span className="material-symbols-outlined text-base">add</span> Add Part
+            </button>
+          </div>
         </div>
+
+        {/* Suggested parts for this model */}
+        {showSuggestedParts && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-lg">
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wide mb-2">
+              Parts for {data.brand} {data.model_number}
+            </p>
+            {suggestedPartsLoading ? (
+              <p className="text-xs text-slate-500">Loading…</p>
+            ) : suggestedParts.length === 0 ? (
+              <p className="text-xs text-slate-500">No parts found in library for this model.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {suggestedParts.map(sp => {
+                  const alreadyAdded = (data.parts || []).some(p => p.library_part_id === sp.id);
+                  return (
+                    <button key={sp.id} type="button" disabled={alreadyAdded}
+                      onClick={() => addSuggestedPart(sp)}
+                      className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 ${
+                        alreadyAdded
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 cursor-default'
+                          : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 text-slate-700 dark:text-slate-200'
+                      }`}>
+                      {alreadyAdded ? (
+                        <span className="material-symbols-outlined" style={{fontSize:'13px'}}>check</span>
+                      ) : (
+                        <span className="material-symbols-outlined" style={{fontSize:'13px'}}>add</span>
+                      )}
+                      <span className="font-medium">{sp.name}{sp.part_number ? ` - ${sp.part_number}` : ''}</span>
+                      {sp.suggested_price != null && <span className="text-green-600 dark:text-green-400">${sp.suggested_price.toFixed(2)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         {(data.parts || []).length > 0 && (
           <div className="space-y-3">
             {data.parts.map((part, pi) => {
@@ -2846,11 +3116,73 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
               const partInputCls = "px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary";
               return (
                 <div key={pi} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden">
-                  {/* Row 1: Name, Qty, Price, Status, Remove — all inline */}
+                  {/* Row 1: Name, Part#, Qty, Price, Status, Remove — all inline */}
                   <div className="flex items-center gap-2 p-2.5 flex-wrap">
-                    <input placeholder="Part name *" value={part.name || ''} onChange={(e) => updatePart({ name: e.target.value.toUpperCase() })}
-                      className={`flex-1 min-w-[140px] ${partInputCls}`} />
-                    <button type="button" onClick={() => setPickerOpenForPi(pi)}
+                    <div className="relative flex-1 min-w-[140px]">
+                      <input
+                        placeholder="Part name *"
+                        value={part.name || ''}
+                        onChange={(e) => handlePartNameChange(pi, e.target.value, updatePart)}
+                        onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); } }, 200)}
+                        className={`w-full ${partInputCls}`}
+                        autoComplete="off"
+                      />
+                      {activeSuggestionPi === pi && (partSuggestions.length > 0 || partSuggestionsLoading) && (
+                        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                          {partSuggestionsLoading ? (
+                            <div className="px-3 py-2 text-xs text-slate-400 text-center">Searching…</div>
+                          ) : partSuggestions.map(s => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onMouseDown={() => handleSelectSuggestion(s, updatePart)}
+                              className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-slate-800 dark:text-slate-100 font-medium">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {s.brand_name}
+                                {s.suggested_price != null && ` · $${s.suggested_price.toFixed(2)}`}
+                                {s.compatibility_group_names?.length > 0 && <span className="text-green-600 dark:text-green-400"> · Compat: {s.compatibility_group_names.join(', ')}</span>}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="relative w-28">
+                      <input
+                        placeholder="Part #"
+                        value={part.part_number || ''}
+                        onChange={(e) => handlePartNumberChange(pi, e.target.value, updatePart)}
+                        onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); } }, 200)}
+                        className={`w-full ${partInputCls}`}
+                        autoComplete="off"
+                      />
+                      {activeSuggestionPi === pi && (partSuggestions.length > 0 || partSuggestionsLoading) && (
+                        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-52 overflow-y-auto min-w-[280px]">
+                          {partSuggestionsLoading ? (
+                            <div className="px-3 py-2 text-xs text-slate-400 text-center">Searching…</div>
+                          ) : partSuggestions.map(s => (
+                            <button key={s.id} type="button"
+                              onMouseDown={() => handleSelectSuggestion(s, updatePart)}
+                              className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors">
+                              <span className="text-slate-800 dark:text-slate-100 font-medium">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {s.brand_name}{s.suggested_price != null && ` · $${s.suggested_price.toFixed(2)}`}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {part.library_part_id && (
+                      <span title="Linked to Parts Library" className="flex items-center text-violet-500 dark:text-violet-400 flex-shrink-0">
+                        <span className="material-symbols-outlined" style={{fontSize:'16px'}}>inventory_2</span>
+                      </span>
+                    )}
+                    <button type="button" onClick={() => { setPickerOpenForPi(pi); setActiveSuggestionPi(null); setPartSuggestions([]); }}
                       title="Find in Parts Library"
                       className="flex items-center gap-1 px-2 py-1.5 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/40 border border-violet-300 dark:border-violet-700/50 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 rounded text-xs font-bold transition-colors flex-shrink-0">
                       <span className="material-symbols-outlined" style={{fontSize:'14px'}}>inventory_2</span>
@@ -2884,6 +3216,10 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         <select value={part.supplier || ''} onChange={(e) => updatePart({ supplier: e.target.value })}
                           className="flex-1 min-w-0 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none border-none">
                           <option value="">Supplier</option>
+                          {/* Show library suggested suppliers at top if available */}
+                          {(part._suggested_suppliers || []).filter(s => !suppliers.some(sup => sup.name === s)).map(s => (
+                            <option key={`lib-${s}`} value={s}>{s} (library)</option>
+                          ))}
                           {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                         </select>
                         {part.supplier && suppliers.find(s => s.name === part.supplier) && (
@@ -3051,6 +3387,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                 part_number: partData.part_number || updated[pickerOpenForPi].part_number,
                 library_part_id: partData.library_part_id,
                 supplier: partData.supplier || updated[pickerOpenForPi].supplier,
+                _suggested_suppliers: partData._suggested_suppliers || [],
                 price: partData.price !== '' ? partData.price : updated[pickerOpenForPi].price,
                 order_link: partData.order_link || updated[pickerOpenForPi].order_link,
                 notes: partData.notes || updated[pickerOpenForPi].notes,

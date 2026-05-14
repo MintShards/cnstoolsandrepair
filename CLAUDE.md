@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## ⚠️ Security Notice
-**IMPORTANT:** Never include real MongoDB credentials, SendGrid API keys, passwords, or tokens in this file. All credentials are in `backend/.env` (gitignored).
+**IMPORTANT:** Never include real MongoDB credentials, Resend API keys, passwords, or tokens in this file. All credentials are in `backend/.env` (gitignored).
 
 ## Project Overview
 
@@ -31,7 +31,10 @@ python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 cd frontend
 npm install
-npm run dev  # Dev server on :5173
+npm run dev       # Dev server on :5173
+npm run lint      # ESLint check
+npm run lint:fix  # ESLint auto-fix
+npm run build     # Production build to dist/
 ```
 
 ### MongoDB Atlas
@@ -43,7 +46,7 @@ npm run dev  # Dev server on :5173
 ## Architecture
 
 ### Request Flow
-Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas → SendGrid (email)
+Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas → Resend (email)
 
 ### Backend (FastAPI)
 - **Async-first** using Motor driver (all DB ops use `await`)
@@ -52,7 +55,7 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 - **Key patterns**:
   - ObjectId conversion: `convert_objectid_to_str()` + rename `_id` to `id` before returning to frontend
   - File uploads: `multipart/form-data` with `UploadFile`, saved to `uploads/` with UUID filenames
-  - Email: Non-blocking SendGrid notifications (don't block quote creation)
+  - Email: Non-blocking Resend notifications (don't block quote creation)
   - Email senders: `request@cnstoolrepair.com` (display: "Request") for repair requests, `message@cnstoolrepair.com` (display: "Message") for contact form. Reply-To is always set to customer email.
   - Middleware: Request logging, CORS, static file serving (`/uploads`)
 
@@ -91,6 +94,14 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
   created_at: datetime,
   updated_at: datetime
 }
+
+// repairs - Full repair job lifecycle (source: online_request|drop_off|phone_in|email)
+// technicians - Staff/technician directory
+// suppliers - Parts supplier directory
+
+// Parts Library (3-level hierarchy):
+// library_brands → library_models → library_parts
+// compat_groups - Cross-brand interchangeable part compatibility groupings
 
 // tools_catalog - Repairable tools (categorized: air_tools, electric_tools, lifting_equipment)
 // brands - Brand logos for carousel (has 'authorized' field for classification)
@@ -149,6 +160,31 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 @router.get("/{id}")
 ```
 
+### Repair Job Lifecycle
+```python
+# RepairStatus enum (12 states in order):
+# received → diagnosed → quoted → approved → parts_pending →
+# in_repair → quality_check → ready → invoiced → completed
+# (also: abandoned, closed)
+
+# RepairSource enum: online_request | drop_off | phone_in | email
+# Priority enum: standard | rush | urgent
+
+# PartItem includes order tracking:
+# { name, part_number, quantity, unit_price, supplier,
+#   order_link, order_date, eta, date_received }
+```
+
+Repairs router (`routers/repairs.py`) supports server-side pagination with filters, batch status updates, and work order generation.
+
+### Parts Library (3-Level Hierarchy)
+```
+library_brands → library_models → library_parts
+```
+- `CompatGroup` links parts across brands (cross-brand interchangeable parts)
+- `/api/parts-library/compatible-parts/{model_id}` returns parts that fit a model, including cross-brand matches
+- Route order rule applies here too: specific paths before `/{id}` parameterized routes
+
 ### CRUD Pattern
 - **GET /** - List all (with `active_only` param)
 - **POST /** - Create (tools require `category` field)
@@ -169,14 +205,20 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 MONGODB_URL=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>?retryWrites=true&w=majority&tls=true
 DATABASE_NAME=cnstoolsandrepair_db_dev
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-SENDGRID_API_KEY=<key>
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+RESEND_API_KEY=<key>
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 JWT_SECRET_KEY=<generate_with_secrets.token_urlsafe(32)>
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=8
 MAX_FILE_SIZE=10485760
-ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
+ALLOWED_EXTENSIONS=jpg,jpeg,png,webp,pdf
+# Digital Ocean Spaces (set USE_SPACES=true in production)
+USE_SPACES=false
+SPACES_REGION=nyc3
+SPACES_BUCKET=cnstoolsandrepair-photos
+SPACES_KEY=<key>
+SPACES_SECRET=<secret>
+SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
 ```
 
 ### Frontend (optional `.env`)
@@ -186,13 +228,15 @@ VITE_API_URL=http://localhost:8000
 
 ## Admin Interface
 
-- **Routes**: `/admin/login`, `/admin/settings` (hidden, no nav links)
+- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repairs` (hidden, no nav links)
 - **Auth**: JWT-based (email + password), 8-hour expiration
 - **User creation**: `python scripts/create_admin.py`
-- **Settings tabs**: Home, Services, Industries, Gallery, About, Contact, Global
+- **Settings tabs**: Home, Services, Industries, Gallery, About, Contact, Global, Parts Library, Repair Jobs, Repair Requests, Customers
 - **Services vs Tools**:
   - Services: Array in settings collection (no IDs)
   - Tools: Separate collection with CRUD API (categorized, soft-delete)
+- **Repair Tracker** (`/admin/repairs`): Server-side pagination, batch status updates, work order printing (inline DOM printing with new-tab fallback for mobile)
+- **Parts Library tabs**: Brands → Models → Parts (3-level drill-down), plus Compatibility Groups for cross-brand interchangeable parts
 
 ## Development Workflows
 
@@ -242,10 +286,9 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 - Confirm database name: `cnstoolsandrepair_db_dev`
 
 ### Email not sending
-- Verify `SENDGRID_API_KEY` in `.env`
-- Check logs for `Email sent. Status: 202`
-- Free tier: 100 emails/day limit
-- Domain authentication for `cnstoolrepair.com` is configured in SendGrid (required for deliverability)
+- Verify `RESEND_API_KEY` in `.env`
+- Check backend logs for email send confirmation
+- Domain authentication for `cnstoolrepair.com` must be configured in Resend dashboard
 
 ## Security Features
 
@@ -269,8 +312,9 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 
 1. **No password reset** - Manual via MongoDB (see AUTH_SETUP_GUIDE.md)
 2. **Local file storage** - Production needs Digital Ocean Spaces/AWS S3 (see DEPLOYMENT.md)
-3. **No pagination** - Quote list returns all (add for >1000 quotes)
+3. **No pagination on quotes list** - Returns all (repairs tracker has server-side pagination)
 4. **Client-side SEO** - Meta tags via react-helmet-async (SSR/SSG would be better)
+5. **No test suite** - pytest + httpx are installed but no tests written yet
 
 ## Production Deployment
 

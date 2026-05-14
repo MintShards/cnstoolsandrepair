@@ -199,16 +199,11 @@ class LibraryPartCreate(BaseModel):
 
     part_number: str = Field(..., min_length=1, max_length=100)
     name: str = Field(..., min_length=1, max_length=200)
-    description: Optional[str] = Field(None, max_length=2000)
-    category: Optional[str] = Field(None, max_length=100)
-    ref_number: Optional[str] = Field(None, max_length=20)
     brand_id: str = Field(..., min_length=1)
     model_ids: List[str] = Field(default_factory=list)
     compatibility_group_ids: List[str] = Field(default_factory=list)
-    specifications: Optional[str] = Field(None, max_length=2000)
     suggested_suppliers: List[str] = Field(default_factory=list)
     suggested_price: Optional[float] = Field(None, ge=0)
-    order_url: Optional[str] = Field(None, max_length=1000)
     notes: Optional[str] = Field(None, max_length=2000)
 
     @field_validator('part_number', mode='before')
@@ -218,14 +213,14 @@ class LibraryPartCreate(BaseModel):
             return v.strip().upper()
         return v
 
-    @field_validator('name', 'category', mode='before')
+    @field_validator('name', mode='before')
     @classmethod
     def capitalize_field(cls, v):
         if v and isinstance(v, str):
             return v.strip().title()
         return v or None
 
-    @field_validator('description', 'specifications', 'notes', 'order_url', 'ref_number', mode='before')
+    @field_validator('notes', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
         if v == '' or v is None:
@@ -245,16 +240,11 @@ class LibraryPartUpdate(BaseModel):
 
     part_number: Optional[str] = Field(None, min_length=1, max_length=100)
     name: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = Field(None, max_length=2000)
-    category: Optional[str] = Field(None, max_length=100)
-    ref_number: Optional[str] = Field(None, max_length=20)
     brand_id: Optional[str] = None
     model_ids: Optional[List[str]] = None
     compatibility_group_ids: Optional[List[str]] = None
-    specifications: Optional[str] = Field(None, max_length=2000)
     suggested_suppliers: Optional[List[str]] = None
     suggested_price: Optional[float] = Field(None, ge=0)
-    order_url: Optional[str] = Field(None, max_length=1000)
     notes: Optional[str] = Field(None, max_length=2000)
 
     @field_validator('part_number', mode='before')
@@ -264,14 +254,14 @@ class LibraryPartUpdate(BaseModel):
             return v.strip().upper()
         return v or None
 
-    @field_validator('name', 'category', mode='before')
+    @field_validator('name', mode='before')
     @classmethod
     def capitalize_field(cls, v):
         if v and isinstance(v, str):
             return v.strip().title()
         return v or None
 
-    @field_validator('description', 'specifications', 'notes', 'order_url', 'ref_number', mode='before')
+    @field_validator('notes', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
         if v == '' or v is None:
@@ -292,20 +282,15 @@ class LibraryPartResponse(BaseModel):
     id: str
     part_number: str
     name: str
-    description: Optional[str] = None
-    category: Optional[str] = None
-    ref_number: Optional[str] = None
     brand_id: str
     brand_name: Optional[str] = None
     model_ids: List[str] = []
     model_names: List[str] = []
     compatibility_group_ids: List[str] = []
     compatibility_group_names: List[str] = []
-    specifications: Optional[str] = None
     diagram_urls: List[str] = []
     suggested_suppliers: List[str] = []
     suggested_price: Optional[float] = None
-    order_url: Optional[str] = None
     notes: Optional[str] = None
     active: bool
     created_at: datetime

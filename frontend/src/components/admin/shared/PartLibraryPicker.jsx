@@ -73,14 +73,14 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
   const handlePickPart = (part) => {
     const supplier = part.suggested_suppliers?.[0] || '';
     const price = part.suggested_price != null ? String(part.suggested_price) : '';
-    const order_link = part.order_url || '';
     onSelect({
       name: part.name || '',
       part_number: part.part_number || '',
       library_part_id: part.id,
       supplier,
+      _suggested_suppliers: part.suggested_suppliers || [],
       price,
-      order_link,
+      order_link: '',
       notes: part.notes || '',
     });
     onClose();
@@ -105,7 +105,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-black text-base text-slate-900 dark:text-white">Find Part in Library</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Search by part name, number, or description</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Search by part name or number</p>
           </div>
           <button onClick={onClose}
             className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors flex-shrink-0">
@@ -145,7 +145,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                 <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-3xl">manage_search</span>
               </div>
               <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Start typing to search the parts library</p>
-              <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Try part numbers, names, or descriptions</p>
+              <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Try part numbers or names</p>
             </div>
           )}
 
@@ -172,15 +172,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{part.name}</span>
-                      {part.part_number && (
-                        <span className="text-xs font-mono text-primary dark:text-primary/80 bg-primary/8 dark:bg-primary/15 px-1.5 py-0.5 rounded flex-shrink-0">
-                          {part.part_number}
-                        </span>
-                      )}
-                      {part.ref_number && (
-                        <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">Ref #{part.ref_number}</span>
-                      )}
+                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       {part.brand_name && (
@@ -201,9 +193,6 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                         </span>
                       )}
                     </div>
-                    {part.description && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{part.description}</p>
-                    )}
                   </div>
                   <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 flex-shrink-0 mt-1 text-lg">chevron_right</span>
                 </button>
@@ -240,12 +229,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                       {selectedPart.model_names?.length > 0 && (
                         <span>{selectedPart.model_names.join(', ')}</span>
                       )}
-                      {selectedPart.ref_number && <span>Ref #{selectedPart.ref_number}</span>}
-                      {selectedPart.category && <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{selectedPart.category}</span>}
                     </div>
-                    {selectedPart.description && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">{selectedPart.description}</p>
-                    )}
                     <div className="flex items-center gap-4 mt-2 flex-wrap text-xs">
                       {selectedPart.suggested_price != null && (
                         <span className="font-bold text-green-600 dark:text-green-400 text-sm">${Number(selectedPart.suggested_price).toFixed(2)}</span>
@@ -255,14 +239,6 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                           <span className="text-slate-400 dark:text-slate-500">Supplier: </span>
                           {selectedPart.suggested_suppliers.join(', ')}
                         </span>
-                      )}
-                      {selectedPart.order_url && (
-                        <a href={selectedPart.order_url.startsWith('http') ? selectedPart.order_url : `https://${selectedPart.order_url}`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-primary dark:text-primary/80 hover:underline flex items-center gap-0.5">
-                          <span className="material-symbols-outlined" style={{fontSize:'13px'}}>open_in_new</span>
-                          Order
-                        </a>
                       )}
                     </div>
                   </div>
@@ -321,15 +297,6 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                                     {cp.model_names?.length > 0 && <span>{cp.model_names.slice(0, 2).join(', ')}</span>}
                                     {cp.suggested_price != null && (
                                       <span className="font-bold text-green-600 dark:text-green-400">${Number(cp.suggested_price).toFixed(2)}</span>
-                                    )}
-                                    {cp.order_url && (
-                                      <a href={cp.order_url.startsWith('http') ? cp.order_url : `https://${cp.order_url}`}
-                                        target="_blank" rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="text-primary hover:underline flex items-center gap-0.5">
-                                        <span className="material-symbols-outlined" style={{fontSize:'11px'}}>open_in_new</span>
-                                        Order
-                                      </a>
                                     )}
                                   </div>
                                 </div>

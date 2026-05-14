@@ -107,7 +107,7 @@ function buildBody(job, businessInfo) {
         : '';
       return `
         <tr>
-          <td>${escHtml(p.name)}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
+          <td>${escHtml(p.name)}${p.part_number ? ' - ' + escHtml(p.part_number) : ''}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
           <td class="center">${p.quantity ?? 1}</td>
           <td class="right">${p.price != null && p.price !== '' ? '$' + parseFloat(p.price).toFixed(2) : '—'}</td>
           <td>${p.supplier ? escHtml(p.supplier) : '—'}</td>

@@ -225,10 +225,10 @@ async def get_library_brand(
 @router.put("/brands/{brand_id}", response_model=LibraryBrandResponse)
 async def update_library_brand(
     brand_id: str,
-    name: Optional[str] = Form(None),
-    short_code: Optional[str] = Form(None),
-    website: Optional[str] = Form(None),
-    notes: Optional[str] = Form(None),
+    name: str = Form(""),
+    short_code: str = Form(""),
+    website: str = Form(""),
+    notes: str = Form(""),
     logo: Optional[UploadFile] = File(None),
     current_user: User = Depends(require_admin),
 ):
@@ -237,23 +237,20 @@ async def update_library_brand(
     if not doc:
         raise HTTPException(status_code=404, detail="Brand not found")
 
-    updates = {}
-    if name is not None:
-        updates["name"] = name.strip()
-    if short_code is not None:
-        updates["short_code"] = short_code.strip()
-    if website is not None:
-        updates["website"] = website.strip()
-    if notes is not None:
-        updates["notes"] = notes.strip()
+    updates = {
+        "name": name.strip() if name.strip() else doc.get("name", ""),
+        "short_code": short_code.strip(),
+        "website": website.strip(),
+        "notes": notes.strip(),
+    }
 
-    if name and name.strip():
+    if updates["name"] != doc.get("name", ""):
         existing = await db.parts_library_brands.find_one({
-            "name": {"$regex": f"^{re.escape(name.strip())}$", "$options": "i"},
+            "name": {"$regex": f"^{re.escape(updates['name'])}$", "$options": "i"},
             "_id": {"$ne": _to_object_id(brand_id)}
         })
         if existing:
-            raise HTTPException(status_code=400, detail=f"Brand '{name.strip()}' already exists")
+            raise HTTPException(status_code=400, detail=f"Brand '{updates['name']}' already exists")
 
     if logo and logo.filename:
         if doc.get("logo_url"):
@@ -575,8 +572,6 @@ async def list_library_parts(
         query["$or"] = [
             {"part_number": {"$regex": term, "$options": "i"}},
             {"name": {"$regex": term, "$options": "i"}},
-            {"description": {"$regex": term, "$options": "i"}},
-            {"category": {"$regex": term, "$options": "i"}},
         ]
 
     total = await db.parts_library_parts.count_documents(query)
@@ -774,9 +769,6 @@ async def search_parts(
         "$or": [
             {"part_number": {"$regex": term, "$options": "i"}},
             {"name": {"$regex": term, "$options": "i"}},
-            {"description": {"$regex": term, "$options": "i"}},
-            {"category": {"$regex": term, "$options": "i"}},
-            {"ref_number": {"$regex": term, "$options": "i"}},
         ]
     }
     cursor = db.parts_library_parts.find(query).sort("part_number", 1).limit(limit)
