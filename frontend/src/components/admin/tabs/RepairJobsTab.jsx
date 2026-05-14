@@ -632,7 +632,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       // Capture pending photos before stripping from payload
       const pendingPhotosByIndex = newJobForm.tools.map(t => t._pendingPhotos || []);
 
-      const tools = newJobForm.tools.map(({ _pendingPhotos, date_received: _dr, ...t }) => ({
+      const tools = newJobForm.tools.map(({ _pendingPhotos, date_received, ...t }) => ({
         ...t,
         quantity: parseInt(t.quantity) || 1,
         labour_hours: t.labour_hours ? parseFloat(t.labour_hours) : null,
@@ -643,8 +643,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         zoho_ref: t.zoho_ref || null,
         assigned_technician: t.assigned_technician || null,
         estimated_completion: t.estimated_completion || null,
-        // date_received intentionally omitted — backend sets it to datetime.utcnow()
-        // so it's always stored as a proper UTC timestamp, not midnight-UTC from a bare date string
+        date_received: date_received || getTodayPacific(),
       }));
 
       let payload;
