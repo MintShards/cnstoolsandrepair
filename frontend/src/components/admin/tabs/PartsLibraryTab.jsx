@@ -10,7 +10,8 @@ function DiagramList({ urls, onDelete, readonly = false }) {
     <div className="flex flex-wrap gap-2 mt-2">
       {urls.map((url, i) => {
         const isPdf = url.toLowerCase().endsWith('.pdf');
-        const displayName = url.split('/').pop()?.slice(0, 30) || `File ${i + 1}`;
+        const ext = url.split('.').pop()?.toLowerCase() || '';
+        const displayName = isPdf ? `Diagram ${i + 1}.pdf` : `Diagram ${i + 1}${ext ? `.${ext}` : ''}`;
         const fullUrl = url.startsWith('http') ? url : `/uploads/${url}`;
         return (
           <div key={i} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1 text-xs">
