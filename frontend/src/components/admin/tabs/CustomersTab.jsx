@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { customersAPI, repairsAPI } from '../../../services/api';
+import { customersAPI, repairsAPI, serviceAgreementAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
@@ -92,6 +92,10 @@ function formatPhone(raw) {
 export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewCustomer, onExternalOpenNewCustomerHandled }) {
   const showToast = useToast();
   const { settings } = useSettings();
+  const [serviceAgreement, setServiceAgreement] = useState(null);
+  useEffect(() => {
+    serviceAgreementAPI.get().then(setServiceAgreement).catch(() => {});
+  }, []);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -863,7 +867,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-black text-slate-900 dark:text-white">Work Order <span className="text-primary font-mono">{woDialogJob.request_number}</span></h3>
                       <button
-                        onClick={() => openPrintWorkOrder(woDialogJob, settings?.contact)}
+                        onClick={() => openPrintWorkOrder(woDialogJob, settings?.contact, serviceAgreement)}
                         className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                         title="Print / Save as PDF"
                       >

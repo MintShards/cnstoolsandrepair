@@ -8,6 +8,7 @@ import GalleryTab from '../../components/admin/tabs/GalleryTab';
 import AboutTab from '../../components/admin/tabs/AboutTab';
 import ContactTab from '../../components/admin/tabs/ContactTab';
 import GlobalTab from '../../components/admin/tabs/GlobalTab';
+import RepairTrackerTab from '../../components/admin/tabs/RepairTrackerTab';
 
 export default function AdminSettings() {
   const { settings, loading: settingsLoading } = useSettings();
@@ -34,6 +35,7 @@ export default function AdminSettings() {
     { id: 'about', label: 'About Page', icon: 'info' },
     { id: 'contact', label: 'Contact Page', icon: 'contact_mail' },
     { id: 'global', label: 'Global Settings', icon: 'settings' },
+    { id: 'repair-tracker', label: 'Repair Tracker', icon: 'build_circle' },
   ];
 
   const updateField = (path, value) => {
@@ -123,6 +125,10 @@ export default function AdminSettings() {
 
             {activeTab === 'global' && (
               <GlobalTab />
+            )}
+
+            {activeTab === 'repair-tracker' && (
+              <RepairTrackerTab />
             )}
           </div>
         </main>

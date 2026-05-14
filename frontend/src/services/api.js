@@ -509,4 +509,16 @@ export const partsLibraryAPI = {
   },
 };
 
+// Service Agreement API
+export const serviceAgreementAPI = {
+  get: async () => {
+    const response = await api.get('/api/service-agreement/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/service-agreement/', data);
+    return response.data;
+  },
+};
+
 export default api;

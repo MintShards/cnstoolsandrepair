@@ -12,10 +12,10 @@ function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
-export function openPrintWorkOrder(job, businessInfo) {
+export function openPrintWorkOrder(job, businessInfo, serviceAgreement) {
   if (isMobile()) {
     // Mobile: open in new tab (window.print() is unreliable on iOS/Android)
-    const html = buildFullHTML(job, businessInfo);
+    const html = buildFullHTML(job, businessInfo, serviceAgreement);
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(html);
@@ -25,7 +25,7 @@ export function openPrintWorkOrder(job, businessInfo) {
     // Desktop: inline DOM print
     const root = document.getElementById('print-work-order-root');
     if (!root) return;
-    root.innerHTML = buildPrintContent(job, businessInfo);
+    root.innerHTML = buildPrintContent(job, businessInfo, serviceAgreement);
     const cleanup = () => { root.innerHTML = ''; };
     window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
@@ -83,12 +83,39 @@ function getStyles(prefix) {
     ${p}.terms { font-size: 9px; color: #333; line-height: 1.6; margin-bottom: 6px; }
     ${p}.terms-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin-bottom: 4px; }
     ${p}.terms-sub { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-top: 6px; margin-bottom: 2px; }
-    ${p}.signature-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; gap: 24px; }
-    ${p}.signature-box { flex: 1; border-top: 1px solid #000; padding-top: 4px; font-size: 10px; color: #333; }
+    ${p}.signature-row { display: flex; justify-content: flex-end; align-items: flex-end; margin-top: 16px; }
+    ${p}.signature-box { width: 220px; border-top: 1px solid #000; padding-top: 4px; font-size: 10px; color: #333; }
   `;
 }
 
-function buildBody(job, businessInfo) {
+function buildServiceAgreementHTML(serviceAgreement) {
+  if (serviceAgreement && Array.isArray(serviceAgreement.sections) && serviceAgreement.sections.length > 0) {
+    return serviceAgreement.sections.map(section => {
+      const items = (section.items || []).map((item, i) =>
+        `${i + 1}. ${escHtml(item.text)}`
+      ).join('<br/>');
+      return `<div class="terms-sub">${escHtml(section.title)}</div>${items}`;
+    }).join('');
+  }
+  // Hardcoded fallback
+  return `
+    <div class="terms-sub">Warranty Coverage</div>
+    1. A 1-month warranty is provided on all parts replaced and labour performed, under normal use and conditions.<br/>
+    2. Warranty does not cover: normal wear and tear, misuse, improper use, poor maintenance (including air supply issues), accidental or external damage, or parts or components not listed on this work order.<br/>
+    3. Warranty is void if the tool is opened, modified, or repaired by anyone other than CNS Tool Repair.<br/>
+    4. All warranty claims require in-shop inspection. Our technicians will assess whether the failure is covered.
+    <div class="terms-sub">Air Supply Requirements</div>
+    5. Tools must be operated with clean, dry, regulated air at 90 PSI.<br/>
+    6. Minimum 3/8" air hose required. For high-demand tools, 1/2" hose is strongly recommended.<br/>
+    7. Operating outside these requirements may cause poor performance, premature wear, or damage — and will void the warranty.
+    <div class="terms-sub">General</div>
+    8. CNS Tool Repair is not liable for pre-existing damage identified at intake and noted on this work order, or damage unrelated to the repair performed.<br/>
+    9. Estimates are provided free of charge. If a repair is declined, the tool will be returned in a disassembled state. Reassembly is not included. Do not attempt to operate a disassembled tool — doing so may cause injury or further damage.<br/>
+    10. Unclaimed tools after 30 days will be considered abandoned and may be disposed of or sold to recover costs.
+  `;
+}
+
+function buildBody(job, businessInfo, serviceAgreement) {
   const biz = businessInfo || {};
   const name = biz.name || BUSINESS_INFO.name;
   const phone = biz.phone || BUSINESS_INFO.phone;
@@ -212,37 +239,21 @@ function buildBody(job, businessInfo) {
 
     <div class="terms-section">
       <div class="terms">
-        <div class="terms-title">Terms &amp; Conditions</div>
-
-        <div class="terms-sub">Warranty</div>
-        1. A 3-month limited warranty is provided on parts replaced and labour performed, under normal use.<br/>
-        2. This warranty does not cover normal wear and tear, misuse, improper use, poor maintenance (including air supply), external damage, or parts not included in the repair.<br/>
-        3. If the tool is opened, modified, or repaired by others, the warranty is void.<br/>
-        4. If the operating requirements below are not followed, the warranty will not apply.<br/>
-        5. All warranty claims must be inspected and approved in-shop.
-
-        <div class="terms-sub">Air Supply Requirements</div>
-        6. Tool must be used with clean, dry air at 90 PSI.<br/>
-        7. Use at least a 3/8&quot; hose. For larger tools, 1/2&quot; hose is recommended.<br/>
-        8. Wrong air pressure or hose size can cause poor performance or damage, and the warranty will not apply.
-
-        <div class="terms-sub">General</div>
-        9. Not liable for pre-existing damage.<br/>
-        10. Unclaimed items after 30 days may be disposed of.
+        <div class="terms-title">Service Agreement</div>
+        ${buildServiceAgreementHTML(serviceAgreement)}
       </div>
     </div>
     <div class="signature-row">
       <div class="signature-box">Customer Signature &amp; Date</div>
-      <div class="signature-box">Authorized Signature &amp; Date</div>
     </div>
   `;
 }
 
-function buildPrintContent(job, businessInfo) {
-  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job, businessInfo)}`;
+function buildPrintContent(job, businessInfo, serviceAgreement) {
+  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job, businessInfo, serviceAgreement)}`;
 }
 
-function buildFullHTML(job, businessInfo) {
+function buildFullHTML(job, businessInfo, serviceAgreement) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -256,7 +267,7 @@ function buildFullHTML(job, businessInfo) {
   </style>
 </head>
 <body>
-  ${buildBody(job, businessInfo)}
+  ${buildBody(job, businessInfo, serviceAgreement)}
 </body>
 </html>`;
 }
