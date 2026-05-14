@@ -2099,7 +2099,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         const handleSubmit = isEdit ? handleSaveToolEdit : handleAddTool;
         return (
         <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-4xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Top accent */}
             <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
             {/* Header */}
@@ -3123,7 +3123,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                 <div key={pi} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden">
                   {/* Row 1: Name, Part#, Qty, Price, Status, Remove — all inline */}
                   <div className="flex items-center gap-2 p-2.5 flex-wrap">
-                    <div className="relative flex-1 min-w-[140px]">
+                    <div className="relative w-[35%] min-w-[100px]">
                       <input
                         placeholder="Part name *"
                         value={part.name || ''}
@@ -3156,7 +3156,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         </div>
                       )}
                     </div>
-                    <div className="relative w-28">
+                    <div className="relative flex-1 min-w-[100px]">
                       <input
                         placeholder="Part #"
                         value={part.part_number || ''}
