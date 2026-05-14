@@ -8,6 +8,7 @@
   body > * { display: none !important; }
   #print-work-order-root { display: block !important; }
   #print-work-order-root .tool-card { break-inside: avoid; }
+  #print-guide-root { display: block !important; }
 }
 
 @layer base {

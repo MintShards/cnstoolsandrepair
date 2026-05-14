@@ -6,6 +6,7 @@ import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
 import DashboardSummary from '../../components/admin/DashboardSummary';
 import PartsLibraryTab from '../../components/admin/tabs/PartsLibraryTab';
 import ThemeToggle from '../../components/layout/ThemeToggle';
+import UserGuide from '../../components/admin/UserGuide';
 
 // ── TOAST SYSTEM ─────────────────────────────────────────────
 export const ToastContext = createContext(null);
@@ -96,6 +97,7 @@ export default function RepairTracker() {
   const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
   const [staleDays, setStaleDays] = useState(3);
   const [dashboardOpenJobId, setDashboardOpenJobId] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
@@ -320,11 +322,22 @@ export default function RepairTracker() {
                 <span className="material-symbols-outlined text-sm">build</span>
                 Internal tool — not customer facing
               </p>
-              <p>CNS Tool Repair © {new Date().getFullYear()}</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowGuide(true)}
+                  className="flex items-center gap-1.5 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">menu_book</span>
+                  User Guide
+                </button>
+                <span className="text-slate-300 dark:text-slate-700">·</span>
+                <p>CNS Tool Repair © {new Date().getFullYear()}</p>
+              </div>
             </div>
           </div>
         </footer>
       </div>
+      {showGuide && <UserGuide onClose={() => setShowGuide(false)} />}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </ToastContext.Provider>
   );
