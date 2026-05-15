@@ -679,7 +679,7 @@ function PartsView({ model, compatGroups, onBack }) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {part.suggested_price != null && (
@@ -860,9 +860,9 @@ function CompatiblePartsModal({ part, data, onClose }) {
                         <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-sm mt-0.5 flex-shrink-0">check_circle</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-slate-700 dark:text-slate-200">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-200 uppercase">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 uppercase">
                             {p.brand_name} {p.model_names?.length > 0 ? `— ${p.model_names.join(', ')}` : ''}
                           </div>
                           {p.suggested_suppliers?.length > 0 && (
@@ -953,12 +953,12 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800 dark:text-slate-100">{model.name}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100 uppercase">{model.name}</span>
                     {model.discontinued && (
                       <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full">Discontinued</span>
                     )}
                   </div>
-                  {model.category && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{model.category}</p>}
+                  {model.category && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 uppercase">{model.category}</p>}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                   <button
@@ -1237,7 +1237,7 @@ export default function PartsLibraryTab() {
               <span className="material-symbols-outlined text-slate-400 text-sm flex-shrink-0">chevron_right</span>
               <button
                 onClick={() => { setSelectedModel(null); setSearchQuery(''); }}
-                className={`text-base sm:text-lg font-bold transition-colors truncate max-w-[120px] sm:max-w-xs ${selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
+                className={`text-base sm:text-lg font-bold transition-colors truncate max-w-[120px] sm:max-w-xs uppercase ${selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
                 title={selectedBrand.name}
               >
                 {selectedBrand.name}
@@ -1247,9 +1247,9 @@ export default function PartsLibraryTab() {
           {selectedModel && (
             <>
               <span className="material-symbols-outlined text-slate-400 text-sm flex-shrink-0">chevron_right</span>
-              <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[120px] sm:max-w-xs" title={selectedModel.name}>{selectedModel.name}</span>
+              <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[120px] sm:max-w-xs uppercase" title={selectedModel.name}>{selectedModel.name}</span>
               {selectedModel.category && (
-                <span className="text-base text-slate-500 dark:text-slate-300 flex-shrink-0">— {selectedModel.category}</span>
+                <span className="text-base text-slate-500 dark:text-slate-300 flex-shrink-0 uppercase">— {selectedModel.category}</span>
               )}
               {selectedModel.discontinued && (
                 <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full flex-shrink-0">Discontinued</span>
@@ -1324,10 +1324,10 @@ export default function PartsLibraryTab() {
                   <span className="material-symbols-outlined text-slate-400 mt-0.5">settings</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}
+                      <span className="uppercase">{part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
@@ -1409,7 +1409,7 @@ export default function PartsLibraryTab() {
                         </div>
                       )}
                       <div>
-                        <p className="font-semibold text-slate-800 dark:text-slate-100 leading-tight">{brand.name}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-100 leading-tight uppercase">{brand.name}</p>
                         {brand.short_code && (
                           <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">{brand.short_code}</span>
                         )}
