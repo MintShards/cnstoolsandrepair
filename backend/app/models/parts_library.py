@@ -13,7 +13,7 @@ class LibraryBrandCreate(BaseModel):
     @classmethod
     def capitalize_name(cls, v):
         if v:
-            return v.strip().title()
+            return v.strip().upper()
         return v
 
     @field_validator('short_code', mode='before')
@@ -41,7 +41,7 @@ class LibraryBrandUpdate(BaseModel):
     @classmethod
     def capitalize_name(cls, v):
         if v:
-            return v.strip().title()
+            return v.strip().upper()
         return v
 
     @field_validator('short_code', mode='before')
@@ -89,7 +89,7 @@ class LibraryModelCreate(BaseModel):
     @classmethod
     def capitalize_field(cls, v):
         if v and isinstance(v, str):
-            return v.strip().title()
+            return v.strip().upper()
         return v or None
 
     @field_validator('specifications', mode='before')
@@ -112,7 +112,7 @@ class LibraryModelUpdate(BaseModel):
     @classmethod
     def capitalize_field(cls, v):
         if v and isinstance(v, str):
-            return v.strip().title()
+            return v.strip().upper()
         return v or None
 
     @field_validator('specifications', mode='before')
@@ -217,7 +217,7 @@ class LibraryPartCreate(BaseModel):
     @classmethod
     def capitalize_field(cls, v):
         if v and isinstance(v, str):
-            return v.strip().title()
+            return v.strip().upper()
         return v or None
 
     @field_validator('notes', mode='before')
@@ -258,7 +258,7 @@ class LibraryPartUpdate(BaseModel):
     @classmethod
     def capitalize_field(cls, v):
         if v and isinstance(v, str):
-            return v.strip().title()
+            return v.strip().upper()
         return v or None
 
     @field_validator('notes', mode='before')

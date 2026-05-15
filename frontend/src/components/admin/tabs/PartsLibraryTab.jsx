@@ -134,16 +134,16 @@ function BrandFormModal({ brand, onClose, onSaved }) {
             <input
               required
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. Ingersoll Rand"
+              placeholder="e.g. INGERSOLL RAND"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Short Code</label>
             <input
               value={form.short_code}
-              onChange={e => setForm(f => ({ ...f, short_code: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, short_code: e.target.value.toUpperCase() }))}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. IR"
               maxLength={10}
@@ -236,18 +236,18 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
             <input
               required
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. 2135TiMAX"
+              placeholder="e.g. 2135TIMAX"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Category</label>
             <input
               value={form.category}
-              onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, category: e.target.value.toUpperCase() }))}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. Impact Wrench"
+              placeholder="e.g. IMPACT WRENCH"
             />
           </div>
           <div>
@@ -352,9 +352,9 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
             <input
               required
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. O-Ring Kit"
+              placeholder="e.g. O-RING KIT"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -363,7 +363,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               <input
                 required
                 value={form.part_number}
-                onChange={e => setForm(f => ({ ...f, part_number: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, part_number: e.target.value.toUpperCase() }))}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g. IR-231C-601"
               />
