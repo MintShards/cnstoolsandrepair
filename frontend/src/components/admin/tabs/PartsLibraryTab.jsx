@@ -86,8 +86,8 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 function BrandFormModal({ brand, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState({
-    name: brand?.name || '',
-    short_code: brand?.short_code || '',
+    name: (brand?.name || '').toUpperCase(),
+    short_code: (brand?.short_code || '').toUpperCase(),
     website: brand?.website || '',
     notes: brand?.notes || '',
   });
@@ -197,8 +197,8 @@ function BrandFormModal({ brand, onClose, onSaved }) {
 function ModelFormModal({ model, brandId, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState({
-    name: model?.name || '',
-    category: model?.category || '',
+    name: (model?.name || '').toUpperCase(),
+    category: (model?.category || '').toUpperCase(),
     specifications: model?.specifications || '',
     discontinued: model?.discontinued || false,
   });
@@ -286,8 +286,8 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
 function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState({
-    part_number: part?.part_number || '',
-    name: part?.name || '',
+    part_number: (part?.part_number || '').toUpperCase(),
+    name: (part?.name || '').toUpperCase(),
     brand_id: part?.brand_id || brandId || '',
     model_ids: part?.model_ids || (modelId ? [modelId] : []),
     compatibility_group_ids: part?.compatibility_group_ids || [],

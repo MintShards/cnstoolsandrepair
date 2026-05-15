@@ -933,10 +933,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const handleStartToolEdit = (tool) => {
     setEditingToolId(tool.tool_id);
     setToolEditForm({
-      tool_type: tool.tool_type || '',
-      brand: tool.brand || '',
-      model_number: tool.model_number || '',
-      serial_number: tool.serial_number || '',
+      tool_type: (tool.tool_type || '').toUpperCase(),
+      brand: (tool.brand || '').toUpperCase(),
+      model_number: (tool.model_number || '').toUpperCase(),
+      serial_number: (tool.serial_number || '').toUpperCase(),
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
       parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' })) : [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
