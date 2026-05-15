@@ -193,7 +193,7 @@ async def create_library_brand(
     data = LibraryBrandCreate(name=name, short_code=short_code, website=website, notes=notes)
 
     existing = await db.parts_library_brands.find_one(
-        {"name": {"$regex": f"^{re.escape(data.name)}$", "$options": "i"}}
+        {"name": {"$regex": f"^{re.escape(data.name)}$", "$options": "i"}, "active": True}
     )
     if existing:
         raise HTTPException(status_code=400, detail=f"Brand '{data.name}' already exists")
@@ -247,7 +247,8 @@ async def update_library_brand(
     if updates["name"] != doc.get("name", ""):
         existing = await db.parts_library_brands.find_one({
             "name": {"$regex": f"^{re.escape(updates['name'])}$", "$options": "i"},
-            "_id": {"$ne": _to_object_id(brand_id)}
+            "_id": {"$ne": _to_object_id(brand_id)},
+            "active": True
         })
         if existing:
             raise HTTPException(status_code=400, detail=f"Brand '{updates['name']}' already exists")
@@ -321,7 +322,8 @@ async def create_library_model(
 
     existing = await db.parts_library_models.find_one({
         "brand_id": brand_id,
-        "name": {"$regex": f"^{re.escape(body.name)}$", "$options": "i"}
+        "name": {"$regex": f"^{re.escape(body.name)}$", "$options": "i"},
+        "active": True
     })
     if existing:
         raise HTTPException(status_code=400, detail=f"Model '{body.name}' already exists for this brand")
@@ -367,7 +369,8 @@ async def update_library_model(
         existing = await db.parts_library_models.find_one({
             "brand_id": doc["brand_id"],
             "name": {"$regex": f"^{re.escape(updates['name'])}$", "$options": "i"},
-            "_id": {"$ne": _to_object_id(model_id)}
+            "_id": {"$ne": _to_object_id(model_id)},
+            "active": True
         })
         if existing:
             raise HTTPException(status_code=400, detail=f"Model '{updates['name']}' already exists for this brand")
@@ -472,7 +475,7 @@ async def create_compat_group(
 ):
     db = get_database()
     existing = await db.parts_library_compat_groups.find_one(
-        {"name": {"$regex": f"^{re.escape(body.name)}$", "$options": "i"}}
+        {"name": {"$regex": f"^{re.escape(body.name)}$", "$options": "i"}, "active": True}
     )
     if existing:
         raise HTTPException(status_code=400, detail=f"Compatibility group '{body.name}' already exists")
@@ -500,7 +503,8 @@ async def update_compat_group(
     if "name" in updates and updates["name"]:
         existing = await db.parts_library_compat_groups.find_one({
             "name": {"$regex": f"^{re.escape(updates['name'])}$", "$options": "i"},
-            "_id": {"$ne": _to_object_id(group_id)}
+            "_id": {"$ne": _to_object_id(group_id)},
+            "active": True
         })
         if existing:
             raise HTTPException(status_code=400, detail=f"Compatibility group '{updates['name']}' already exists")
@@ -601,7 +605,8 @@ async def create_library_part(
 
     existing = await db.parts_library_parts.find_one({
         "brand_id": body.brand_id,
-        "part_number": {"$regex": f"^{re.escape(body.part_number)}$", "$options": "i"}
+        "part_number": {"$regex": f"^{re.escape(body.part_number)}$", "$options": "i"},
+        "active": True
     })
     if existing:
         raise HTTPException(status_code=400, detail=f"Part number '{body.part_number}' already exists for this brand")
@@ -648,7 +653,8 @@ async def update_library_part(
         existing = await db.parts_library_parts.find_one({
             "brand_id": effective_brand_id,
             "part_number": {"$regex": f"^{re.escape(updates['part_number'])}$", "$options": "i"},
-            "_id": {"$ne": _to_object_id(part_id)}
+            "_id": {"$ne": _to_object_id(part_id)},
+            "active": True
         })
         if existing:
             raise HTTPException(status_code=400, detail=f"Part number '{updates['part_number']}' already exists for this brand")
