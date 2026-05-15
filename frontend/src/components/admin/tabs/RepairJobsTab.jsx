@@ -1534,7 +1534,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                   className="accent-primary w-3.5 h-3.5"
                                 />
                                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot || 'bg-slate-400'}`} />
-                                <span>{tool.brand} {tool.model_number}</span>
+                                <span className="uppercase">{tool.brand} {tool.model_number}</span>
                                 <span className="opacity-60">— {cfg.label || tool.status}</span>
                               </label>
                             );
@@ -1756,10 +1756,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               {idx + 1}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 dark:text-white text-base">
+                              <div className="font-bold text-slate-900 dark:text-white text-base uppercase">
                                 {tool.brand} {tool.model_number}
                               </div>
-                              <div className="text-sm text-slate-500 mt-0.5">
+                              <div className="text-sm text-slate-500 mt-0.5 uppercase">
                                 {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                 {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
@@ -1880,7 +1880,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
                                   <div key={pi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
+                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1 uppercase">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
                                       <span className="text-slate-500 text-xs">×{p.quantity}</span>
                                       {(p.price != null && p.price !== '') && (
                                         <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">${(parseFloat(p.price) * (p.quantity || 1)).toFixed(2)}</span>
@@ -2028,7 +2028,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Update Status</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{statusUpdateModal.brand} {statusUpdateModal.model_number}{statusUpdateModal.tool_type ? ` — ${statusUpdateModal.tool_type}` : ''}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{statusUpdateModal.brand} {statusUpdateModal.model_number}{statusUpdateModal.tool_type ? ` — ${statusUpdateModal.tool_type}` : ''}</p>
               </div>
               <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                 <span className="material-symbols-outlined text-base">close</span>
