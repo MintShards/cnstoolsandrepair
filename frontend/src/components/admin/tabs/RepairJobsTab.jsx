@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI, partsLibraryAPI, serviceAgreementAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
-import PartLibraryPicker from '../shared/PartLibraryPicker';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
   getValidNextStatuses,
@@ -2709,13 +2708,12 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
   const [newSupplierName, setNewSupplierName] = useState('');
   const [supplierSaving, setSupplierSaving] = useState(false);
 
-  // Parts Library Picker state
-  const [pickerOpenForPi, setPickerOpenForPi] = useState(null); // index of part row being filled
-
   // Parts Library autocomplete
   const [partSuggestions, setPartSuggestions] = useState([]);
   const [partSuggestionsLoading, setPartSuggestionsLoading] = useState(false);
   const [activeSuggestionPi, setActiveSuggestionPi] = useState(null);
+  const [suggestionAnchor, setSuggestionAnchor] = useState(null); // 'name' | 'partnum'
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const partSearchTimer = useRef(null);
 
   // Suggested parts for this model
@@ -2763,8 +2761,10 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
     handleChange('parts', updated);
   };
 
-  const triggerPartSearch = (pi, searchValue) => {
+  const triggerPartSearch = (pi, searchValue, anchor) => {
     setActiveSuggestionPi(pi);
+    setSuggestionAnchor(anchor);
+    setHighlightIndex(-1);
     if (partSearchTimer.current) clearTimeout(partSearchTimer.current);
     const trimmed = searchValue.trim();
     if (trimmed.length < 2) { setPartSuggestions([]); return; }
@@ -2780,12 +2780,12 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
 
   const handlePartNameChange = (pi, value, updatePart) => {
     updatePart({ name: value.toUpperCase() });
-    triggerPartSearch(pi, value);
+    triggerPartSearch(pi, value, 'name');
   };
 
   const handlePartNumberChange = (pi, value, updatePart) => {
     updatePart({ part_number: value.toUpperCase() });
-    triggerPartSearch(pi, value);
+    triggerPartSearch(pi, value, 'partnum');
   };
 
   const handleSelectSuggestion = (part, updatePart) => {
@@ -2801,6 +2801,30 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
     });
     setPartSuggestions([]);
     setActiveSuggestionPi(null);
+    setSuggestionAnchor(null);
+    setHighlightIndex(-1);
+  };
+
+  const handleSuggestionKeyDown = (e, updatePart) => {
+    const isOpen = activeSuggestionPi !== null && (partSuggestions.length > 0 || partSuggestionsLoading);
+    if (!isOpen) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex(i => (i + 1) % partSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex(i => (i <= 0 ? partSuggestions.length - 1 : i - 1));
+    } else if (e.key === 'Enter') {
+      if (highlightIndex >= 0 && partSuggestions[highlightIndex]) {
+        e.preventDefault();
+        handleSelectSuggestion(partSuggestions[highlightIndex], updatePart);
+      }
+    } else if (e.key === 'Escape') {
+      setPartSuggestions([]);
+      setActiveSuggestionPi(null);
+      setSuggestionAnchor(null);
+      setHighlightIndex(-1);
+    }
   };
 
   useEffect(() => {
@@ -3131,28 +3155,35 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         placeholder="Part name *"
                         value={part.name || ''}
                         onChange={(e) => handlePartNameChange(pi, e.target.value, updatePart)}
-                        onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); } }, 200)}
+                        onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); setSuggestionAnchor(null); setHighlightIndex(-1); } }, 200)}
+                        onKeyDown={(e) => handleSuggestionKeyDown(e, updatePart)}
                         className={`w-full ${partInputCls}`}
                         autoComplete="off"
                       />
-                      {activeSuggestionPi === pi && (partSuggestions.length > 0 || partSuggestionsLoading) && (
-                        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                      {activeSuggestionPi === pi && suggestionAnchor === 'name' && (partSuggestions.length > 0 || partSuggestionsLoading) && (
+                        <div className="absolute z-50 left-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto min-w-[300px]">
                           {partSuggestionsLoading ? (
-                            <div className="px-3 py-2 text-xs text-slate-400 text-center">Searching…</div>
-                          ) : partSuggestions.map(s => (
+                            <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-400">
+                              <span className="material-symbols-outlined text-sm animate-spin">autorenew</span>
+                              Searching parts library…
+                            </div>
+                          ) : partSuggestions.map((s, idx) => (
                             <button
                               key={s.id}
                               type="button"
+                              ref={el => { if (idx === highlightIndex) el?.scrollIntoView({ block: 'nearest' }); }}
                               onMouseDown={() => handleSelectSuggestion(s, updatePart)}
-                              className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
+                              onMouseEnter={() => setHighlightIndex(idx)}
+                              className={`w-full text-left px-3 py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
                             >
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-slate-800 dark:text-slate-100 font-medium">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
-                              </div>
-                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                {s.brand_name}
-                                {s.suggested_price != null && ` · $${s.suggested_price.toFixed(2)}`}
-                                {s.compatibility_group_names?.length > 0 && <span className="text-green-600 dark:text-green-400"> · Compat: {s.compatibility_group_names.join(', ')}</span>}
+                              <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}</span>
+                                {s.part_number && <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase flex-shrink-0">{s.part_number}</span>}
+                                {s.brand_name && <span className="text-[11px] text-slate-400 flex-shrink-0">· {s.brand_name}</span>}
+                                {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0">${s.suggested_price.toFixed(2)}</span>}
+                                {s.compatibility_group_names?.length > 0 && (
+                                  <span className="text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1 py-0.5 rounded flex-shrink-0">{s.compatibility_group_names.join(', ')}</span>
+                                )}
                               </div>
                             </button>
                           ))}
@@ -3164,21 +3195,35 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         placeholder="Part #"
                         value={part.part_number || ''}
                         onChange={(e) => handlePartNumberChange(pi, e.target.value, updatePart)}
-                        onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); } }, 200)}
+                        onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); setSuggestionAnchor(null); setHighlightIndex(-1); } }, 200)}
+                        onKeyDown={(e) => handleSuggestionKeyDown(e, updatePart)}
                         className={`w-full ${partInputCls}`}
                         autoComplete="off"
                       />
-                      {activeSuggestionPi === pi && (partSuggestions.length > 0 || partSuggestionsLoading) && (
-                        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-52 overflow-y-auto min-w-[280px]">
+                      {activeSuggestionPi === pi && suggestionAnchor === 'partnum' && (partSuggestions.length > 0 || partSuggestionsLoading) && (
+                        <div className="absolute z-50 left-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto min-w-[300px]">
                           {partSuggestionsLoading ? (
-                            <div className="px-3 py-2 text-xs text-slate-400 text-center">Searching…</div>
-                          ) : partSuggestions.map(s => (
-                            <button key={s.id} type="button"
+                            <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-400">
+                              <span className="material-symbols-outlined text-sm animate-spin">autorenew</span>
+                              Searching parts library…
+                            </div>
+                          ) : partSuggestions.map((s, idx) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              ref={el => { if (idx === highlightIndex) el?.scrollIntoView({ block: 'nearest' }); }}
                               onMouseDown={() => handleSelectSuggestion(s, updatePart)}
-                              className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors">
-                              <span className="text-slate-800 dark:text-slate-100 font-medium">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
-                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                {s.brand_name}{s.suggested_price != null && ` · $${s.suggested_price.toFixed(2)}`}
+                              onMouseEnter={() => setHighlightIndex(idx)}
+                              className={`w-full text-left px-3 py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+                            >
+                              <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}</span>
+                                {s.part_number && <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase flex-shrink-0">{s.part_number}</span>}
+                                {s.brand_name && <span className="text-[11px] text-slate-400 flex-shrink-0">· {s.brand_name}</span>}
+                                {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0">${s.suggested_price.toFixed(2)}</span>}
+                                {s.compatibility_group_names?.length > 0 && (
+                                  <span className="text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1 py-0.5 rounded flex-shrink-0">{s.compatibility_group_names.join(', ')}</span>
+                                )}
                               </div>
                             </button>
                           ))}
@@ -3190,12 +3235,6 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         <span className="material-symbols-outlined" style={{fontSize:'16px'}}>inventory_2</span>
                       </span>
                     )}
-                    <button type="button" onClick={() => { setPickerOpenForPi(pi); setActiveSuggestionPi(null); setPartSuggestions([]); }}
-                      title="Find in Parts Library"
-                      className="flex items-center gap-1 px-2 py-1.5 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/40 border border-violet-300 dark:border-violet-700/50 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 rounded text-xs font-bold transition-colors flex-shrink-0">
-                      <span className="material-symbols-outlined" style={{fontSize:'14px'}}>inventory_2</span>
-                      <span className="hidden sm:inline">Library</span>
-                    </button>
                     <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => updatePart({ quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })}
                       className={`w-14 ${partInputCls}`} />
                     <div className="relative">
@@ -3383,29 +3422,6 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
         </div>
       )}
 
-      {/* Parts Library Picker modal */}
-      {pickerOpenForPi !== null && (
-        <PartLibraryPicker
-          onSelect={(partData) => {
-            const updated = [...(data.parts || [])];
-            if (updated[pickerOpenForPi]) {
-              updated[pickerOpenForPi] = {
-                ...updated[pickerOpenForPi],
-                name: partData.name || updated[pickerOpenForPi].name,
-                part_number: partData.part_number || updated[pickerOpenForPi].part_number,
-                library_part_id: partData.library_part_id,
-                supplier: partData.supplier || updated[pickerOpenForPi].supplier,
-                _suggested_suppliers: partData._suggested_suppliers || [],
-                price: partData.price !== '' ? partData.price : updated[pickerOpenForPi].price,
-                order_link: partData.order_link || updated[pickerOpenForPi].order_link,
-                notes: partData.notes || updated[pickerOpenForPi].notes,
-              };
-              handleChange('parts', updated);
-            }
-          }}
-          onClose={() => setPickerOpenForPi(null)}
-        />
-      )}
     </div>
   );
 }

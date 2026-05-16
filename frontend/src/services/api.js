@@ -382,6 +382,10 @@ export const repairsAPI = {
     const response = await api.post('/api/repairs/batch-status', { items });
     return response.data;
   },
+  partsAnalytics: async () => {
+    const response = await api.get('/api/repairs/parts-analytics');
+    return response.data;
+  },
 };
 
 // Parts Library API (admin only)

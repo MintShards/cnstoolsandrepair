@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import uuid
@@ -152,6 +153,7 @@ async def get_repair_summary(
     parts_pending = 0
     parts_ordered = 0
     parts_received = 0
+    parts_installed = 0
     parts_total_cost = 0.0
     parts_has_cost = False
     active_value = 0.0
@@ -297,6 +299,8 @@ async def get_repair_summary(
                     parts_ordered += 1
                 elif part_status == "received":
                     parts_received += 1
+                elif part_status == "installed":
+                    parts_installed += 1
                 unit_cost = part.get("price") if part.get("price") is not None else part.get("unit_cost")
                 qty = part.get("quantity", 1) or 1
                 if unit_cost is not None:
@@ -500,6 +504,7 @@ async def get_repair_summary(
             "pending": parts_pending,
             "ordered": parts_ordered,
             "received": parts_received,
+            "installed": parts_installed,
             "total_cost": round(parts_total_cost, 2) if parts_has_cost else None,
         },
         "financial_summary": {
@@ -521,6 +526,162 @@ async def get_repair_summary(
         "priority_jobs": priority_jobs,
         "active_customers": active_customers,
         "pending_approvals": pending_approvals,
+    }
+
+
+# ──────────────────────────────────────────────
+# PARTS ANALYTICS
+# ──────────────────────────────────────────────
+
+@router.get("/parts-analytics")
+async def get_parts_analytics(current_user: User = Depends(require_admin)):
+    """Aggregated parts usage analytics for stocking and supplier decisions."""
+    db = get_database()
+
+    pipeline_most_used = [
+        {"$unwind": "$tools"},
+        {"$unwind": "$tools.parts"},
+        {"$match": {"tools.parts.name": {"$exists": True, "$ne": "", "$ne": None}}},
+        {"$group": {
+            "_id": {
+                "$ifNull": [
+                    {"$cond": [{"$gt": ["$tools.parts.library_part_id", None]}, "$tools.parts.library_part_id", None]},
+                    {"$cond": [{"$gt": ["$tools.parts.part_number", None]},
+                        {"$toLower": "$tools.parts.part_number"}, {"$toLower": "$tools.parts.name"}]}
+                ]
+            },
+            "part_name": {"$first": "$tools.parts.name"},
+            "part_number": {"$first": "$tools.parts.part_number"},
+            "total_quantity": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
+            "job_ids": {"$addToSet": "$_id"},
+            "total_spend": {"$sum": {
+                "$multiply": [
+                    {"$ifNull": ["$tools.parts.price", 0]},
+                    {"$ifNull": ["$tools.parts.quantity", 1]}
+                ]
+            }},
+        }},
+        {"$addFields": {
+            "job_count": {"$size": "$job_ids"},
+        }},
+        {"$sort": {"total_quantity": -1}},
+        {"$limit": 25},
+        {"$project": {
+            "_id": 0,
+            "part_name": 1,
+            "part_number": 1,
+            "total_quantity": 1,
+            "job_count": 1,
+            "total_spend": {"$round": ["$total_spend", 2]},
+        }},
+    ]
+
+    pipeline_suppliers = [
+        {"$unwind": "$tools"},
+        {"$unwind": "$tools.parts"},
+        {"$match": {"tools.parts.supplier": {"$exists": True, "$ne": "", "$ne": None}}},
+        {"$group": {
+            "_id": "$tools.parts.supplier",
+            "part_count": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
+            "total_spend": {"$sum": {
+                "$multiply": [
+                    {"$ifNull": ["$tools.parts.price", 0]},
+                    {"$ifNull": ["$tools.parts.quantity", 1]}
+                ]
+            }},
+            "unique_parts": {"$addToSet": {
+                "$ifNull": ["$tools.parts.part_number", "$tools.parts.name"]
+            }},
+        }},
+        {"$addFields": {"unique_part_count": {"$size": "$unique_parts"}}},
+        {"$sort": {"part_count": -1}},
+        {"$limit": 10},
+        {"$project": {
+            "_id": 0,
+            "supplier": "$_id",
+            "part_count": 1,
+            "total_spend": {"$round": ["$total_spend", 2]},
+            "unique_part_count": 1,
+        }},
+    ]
+
+    pipeline_lead_times = [
+        {"$unwind": "$tools"},
+        {"$unwind": "$tools.parts"},
+        {"$match": {
+            "tools.parts.order_date": {"$type": "date"},
+            "tools.parts.date_received": {"$type": "date"},
+            "tools.parts.supplier": {"$exists": True, "$ne": "", "$ne": None},
+        }},
+        {"$addFields": {
+            "lead_days": {
+                "$divide": [
+                    {"$subtract": ["$tools.parts.date_received", "$tools.parts.order_date"]},
+                    86400000
+                ]
+            }
+        }},
+        {"$group": {
+            "_id": "$tools.parts.supplier",
+            "avg_lead_days": {"$avg": "$lead_days"},
+            "min_lead_days": {"$min": "$lead_days"},
+            "max_lead_days": {"$max": "$lead_days"},
+            "sample_count": {"$sum": 1},
+        }},
+        {"$sort": {"avg_lead_days": 1}},
+        {"$project": {
+            "_id": 0,
+            "supplier": "$_id",
+            "avg_lead_days": {"$round": ["$avg_lead_days", 1]},
+            "min_lead_days": {"$round": ["$min_lead_days", 0]},
+            "max_lead_days": {"$round": ["$max_lead_days", 0]},
+            "sample_count": 1,
+        }},
+    ]
+
+    pipeline_monthly_spend = [
+        {"$unwind": "$tools"},
+        {"$unwind": "$tools.parts"},
+        {"$match": {"tools.parts.status": "installed"}},
+        {"$addFields": {
+            "month_key": {"$dateToString": {
+                "format": "%Y-%m",
+                "date": {"$ifNull": ["$tools.parts.date_received", "$created_at"]}
+            }},
+            "line_cost": {
+                "$multiply": [
+                    {"$ifNull": ["$tools.parts.price", 0]},
+                    {"$ifNull": ["$tools.parts.quantity", 1]}
+                ]
+            }
+        }},
+        {"$group": {
+            "_id": "$month_key",
+            "total_cost": {"$sum": "$line_cost"},
+            "part_count": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
+        }},
+        {"$sort": {"_id": -1}},
+        {"$limit": 6},
+        {"$project": {
+            "_id": 0,
+            "month": "$_id",
+            "total_cost": {"$round": ["$total_cost", 2]},
+            "part_count": 1,
+        }},
+    ]
+
+    most_used, top_suppliers, lead_times, monthly_spend = await asyncio.gather(
+        db.repairs.aggregate(pipeline_most_used).to_list(length=25),
+        db.repairs.aggregate(pipeline_suppliers).to_list(length=10),
+        db.repairs.aggregate(pipeline_lead_times).to_list(length=20),
+        db.repairs.aggregate(pipeline_monthly_spend).to_list(length=6),
+    )
+
+    return {
+        "most_used_parts": most_used,
+        "top_suppliers": top_suppliers,
+        "supplier_lead_times": lead_times,
+        "monthly_spend": monthly_spend,
     }
 
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { partsLibraryAPI } from '../../../services/api';
+import { partsLibraryAPI, repairsAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -77,6 +77,302 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
           <button onClick={onConfirm} className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors">Delete</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Parts Analytics Section ──────────────────────────────────────────────────
+
+function fmt$(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + Number(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function AnalyticsSectionCard({ title, icon, children }) {
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/60 overflow-hidden">
+      <div className="px-3 sm:px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/60 flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-slate-500 dark:text-slate-400 text-base">{icon}</span>
+        <h3 className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">{title}</h3>
+      </div>
+      <div className="p-3 sm:p-4">{children}</div>
+    </div>
+  );
+}
+
+const PAGE_SIZES = [5, 10, 25, 50, 100];
+
+function PartsAnalyticsSection() {
+  const [open, setOpen] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [summaryData, setSummaryData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  const load = useCallback(async () => {
+    if (loaded) return;
+    setLoading(true);
+    try {
+      const [analytics, summary] = await Promise.all([
+        repairsAPI.partsAnalytics(),
+        repairsAPI.summary(),
+      ]);
+      setAnalyticsData(analytics);
+      setSummaryData(summary?.parts_summary ?? null);
+    } catch {
+      // silently fail — non-critical
+    } finally {
+      setLoading(false);
+      setLoaded(true);
+    }
+  }, [loaded]);
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) load();
+  };
+
+  const ps = summaryData;
+  const mu = analyticsData?.most_used_parts ?? [];
+  const totalPages = Math.ceil(mu.length / pageSize);
+  const muPage = mu.slice(page * pageSize, page * pageSize + pageSize);
+  const ts = analyticsData?.top_suppliers ?? [];
+  const lt = analyticsData?.supplier_lead_times ?? [];
+  const ms = analyticsData?.monthly_spend ?? [];
+
+  const maxSpend = ms.length > 0 ? Math.max(...ms.map(m => m.total_cost || 0), 1) : 1;
+
+  const hasAnyData = mu.length > 0 || ts.length > 0 || ms.length > 0;
+
+  return (
+    <div className="mb-4 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/60 overflow-hidden">
+      {/* Collapsible header */}
+      <button
+        onClick={handleToggle}
+        className="w-full flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">analytics</span>
+          <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Parts Analytics</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-normal normal-case hidden sm:inline">Most-used parts, suppliers &amp; spend</span>
+        </div>
+        <span
+          className="material-symbols-outlined text-slate-400 text-xl transition-transform duration-200"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        >
+          expand_more
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-100 dark:border-slate-800/60 px-3 sm:px-4 pb-4 pt-3 space-y-4">
+          {loading && (
+            <div className="flex items-center gap-2 text-slate-500 text-sm py-4">
+              <span className="material-symbols-outlined text-base animate-spin">autorenew</span>
+              Loading analytics…
+            </div>
+          )}
+
+          {!loading && loaded && !hasAnyData && (
+            <div className="text-center py-8">
+              <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 mb-2 block">inventory_2</span>
+              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">No parts data yet</p>
+              <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">Parts analytics will appear as you add parts to repair jobs.</p>
+            </div>
+          )}
+
+          {!loading && loaded && hasAnyData && (
+            <>
+              {/* Parts Status KPI row */}
+              {ps && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { label: 'Pending', value: ps.pending ?? 0, color: 'amber', icon: 'pending' },
+                    { label: 'Ordered', value: ps.ordered ?? 0, color: 'blue', icon: 'shopping_cart' },
+                    { label: 'Received', value: ps.received ?? 0, color: 'cyan', icon: 'inventory' },
+                    { label: 'Installed', value: ps.installed ?? 0, color: 'green', icon: 'check_circle' },
+                  ].map(({ label, value, color, icon }) => {
+                    const colorMap = {
+                      amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400',
+                      blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-400',
+                      cyan: 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-400',
+                      green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400',
+                    };
+                    return (
+                      <div key={label} className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border ${colorMap[color]}`}>
+                        <span className="material-symbols-outlined text-lg opacity-70">{icon}</span>
+                        <div className="text-2xl font-black leading-none">{value}</div>
+                        <div className="text-[11px] font-bold opacity-80">{label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Main 2-column grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                {/* Most-Used Parts table — 2/3 width */}
+                <div className="lg:col-span-2">
+                  <AnalyticsSectionCard title="Most-Used Parts" icon="build">
+                    {mu.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-2">No parts data</p>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto -mx-1">
+                          <table className="min-w-full text-left text-xs">
+                            <thead>
+                              <tr className="border-b border-slate-100 dark:border-slate-800">
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide w-6">#</th>
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide">Part</th>
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide hidden sm:table-cell">Part #</th>
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide text-right">Qty</th>
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide text-right hidden md:table-cell">Jobs</th>
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide text-right">Spend</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                              {muPage.map((part, i) => (
+                                <tr key={part.part_number || part.part_name || i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                  <td className="px-2 py-2 text-slate-400 font-bold">{page * pageSize + i + 1}</td>
+                                  <td className="px-2 py-2">
+                                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase block truncate max-w-[140px]">{part.part_name || '—'}</span>
+                                  </td>
+                                  <td className="px-2 py-2 hidden sm:table-cell">
+                                    <span className="text-slate-400 uppercase">{part.part_number || '—'}</span>
+                                  </td>
+                                  <td className="px-2 py-2 text-right font-black text-slate-700 dark:text-slate-200">{part.total_quantity}</td>
+                                  <td className="px-2 py-2 text-right text-slate-400 hidden md:table-cell">{part.job_count}</td>
+                                  <td className="px-2 py-2 text-right text-slate-500 dark:text-slate-400">{fmt$(part.total_spend)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-slate-400">Rows per page:</span>
+                            <div className="flex items-center gap-0.5">
+                              {PAGE_SIZES.map(size => (
+                                <button
+                                  key={size}
+                                  onClick={() => { setPageSize(size); setPage(0); }}
+                                  className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-colors ${
+                                    pageSize === size
+                                      ? 'bg-blue-600 text-white'
+                                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/40'
+                                  }`}
+                                >
+                                  {size}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {totalPages > 1 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[11px] text-slate-400 mr-1">
+                                {page * pageSize + 1}–{Math.min((page + 1) * pageSize, mu.length)} of {mu.length}
+                              </span>
+                              <button
+                                onClick={() => setPage(p => p - 1)}
+                                disabled={page === 0}
+                                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30 disabled:cursor-default transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-base">chevron_left</span>
+                              </button>
+                              <span className="text-[11px] font-bold text-slate-500 px-1">{page + 1} / {totalPages}</span>
+                              <button
+                                onClick={() => setPage(p => p + 1)}
+                                disabled={page >= totalPages - 1}
+                                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30 disabled:cursor-default transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-base">chevron_right</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </AnalyticsSectionCard>
+                </div>
+
+                {/* Sidebar — 1/3 width */}
+                <div className="space-y-4">
+
+                  {/* Top Suppliers */}
+                  <AnalyticsSectionCard title="Top Suppliers" icon="local_shipping">
+                    {ts.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-2">No supplier data</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {ts.map((s, i) => (
+                          <li key={s.supplier} className="flex items-center justify-between gap-2 py-1 border-b border-slate-50 dark:border-slate-800/40 last:border-0">
+                            <div className="min-w-0 flex items-start gap-1.5">
+                              <span className="text-[10px] font-black text-slate-400 flex-shrink-0 mt-0.5">{i + 1}</span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{s.supplier}</p>
+                                <p className="text-[10px] text-slate-400">{s.part_count} parts · {s.unique_part_count} unique</p>
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex-shrink-0">{fmt$(s.total_spend)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </AnalyticsSectionCard>
+
+                  {/* Avg Lead Times */}
+                  {lt.length > 0 && (
+                    <AnalyticsSectionCard title="Avg Lead Time" icon="schedule">
+                      <ul className="space-y-2">
+                        {lt.map((s) => (
+                          <li key={s.supplier} className="py-1 border-b border-slate-50 dark:border-slate-800/40 last:border-0">
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{s.supplier}</p>
+                            <div className="flex items-center justify-between gap-1 mt-0.5">
+                              <span className="text-[10px] text-slate-400">{s.sample_count} order{s.sample_count !== 1 ? 's' : ''}</span>
+                              <span className="text-xs font-black text-slate-600 dark:text-slate-300">
+                                {s.avg_lead_days.toFixed(1)}d
+                                <span className="text-[10px] font-normal text-slate-400 ml-1">({s.min_lead_days}–{s.max_lead_days})</span>
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </AnalyticsSectionCard>
+                  )}
+
+                  {/* Monthly Spend bar chart */}
+                  {ms.length > 0 && (
+                    <AnalyticsSectionCard title="Monthly Spend" icon="payments">
+                      <div className="space-y-1.5">
+                        {[...ms].reverse().map((m) => {
+                          const pct = Math.round(((m.total_cost || 0) / maxSpend) * 100);
+                          return (
+                            <div key={m.month} className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-400 w-12 flex-shrink-0">{m.month}</span>
+                              <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700/60 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-blue-500 dark:bg-blue-600 transition-all duration-500"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 w-16 text-right flex-shrink-0">{fmt$(m.total_cost)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </AnalyticsSectionCard>
+                  )}
+
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1364,6 +1660,9 @@ export default function PartsLibraryTab() {
         />
       ) : (
         <>
+          {/* Parts Analytics (lazy-loaded, collapsible) */}
+          <PartsAnalyticsSection />
+
           {/* How it works hint */}
           <div className="mb-5 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30 text-sm text-blue-700 dark:text-blue-300">
             <p className="font-medium mb-1 flex items-center gap-1.5">
