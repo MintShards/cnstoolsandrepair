@@ -566,6 +566,18 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         }},
         {"$sort": {"total_quantity": -1}},
         {"$limit": 25},
+        {"$lookup": {
+            "from": "compat_groups",
+            "let": {"lid": "$_id"},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$in": ["$$lid", {"$ifNull": ["$part_ids", []]}]},
+                    {"$eq": ["$active", True]},
+                ]}}},
+                {"$project": {"_id": 0, "name": 1}},
+            ],
+            "as": "compat_groups",
+        }},
         {"$project": {
             "_id": 0,
             "part_name": 1,
@@ -573,6 +585,7 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
             "total_quantity": 1,
             "job_count": 1,
             "total_spend": {"$round": ["$total_spend", 2]},
+            "compat_groups": {"$map": {"input": "$compat_groups", "as": "g", "in": "$$g.name"}},
         }},
     ]
 

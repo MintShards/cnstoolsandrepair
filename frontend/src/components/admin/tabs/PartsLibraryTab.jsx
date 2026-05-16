@@ -231,6 +231,7 @@ function PartsAnalyticsSection() {
                                 <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide hidden sm:table-cell">Part #</th>
                                 <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide text-right">Qty</th>
                                 <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide text-right hidden md:table-cell">Jobs</th>
+                                <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide hidden lg:table-cell">Compat</th>
                                 <th className="px-2 py-1.5 font-bold text-slate-400 uppercase tracking-wide text-right">Spend</th>
                               </tr>
                             </thead>
@@ -246,6 +247,15 @@ function PartsAnalyticsSection() {
                                   </td>
                                   <td className="px-2 py-2 text-right font-black text-slate-700 dark:text-slate-200">{part.total_quantity}</td>
                                   <td className="px-2 py-2 text-right text-slate-400 hidden md:table-cell">{part.job_count}</td>
+                                  <td className="px-2 py-2 hidden lg:table-cell">
+                                    {part.compat_groups?.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {part.compat_groups.map((g, j) => (
+                                          <span key={j} className="px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-medium">{g}</span>
+                                        ))}
+                                      </div>
+                                    ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                                  </td>
                                   <td className="px-2 py-2 text-right text-slate-500 dark:text-slate-400">{fmt$(part.total_spend)}</td>
                                 </tr>
                               ))}
