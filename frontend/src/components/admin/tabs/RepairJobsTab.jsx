@@ -7,6 +7,7 @@ import {
 } from '../../../constants/repairStatuses';
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
+import { openPrintToolTag } from '../PrintToolTag';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { useSettings } from '../../../contexts/SettingsContext';
@@ -1793,6 +1794,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               Edit
                             </button>
                           )}
+                          <button
+                            onClick={() => openPrintToolTag(selectedJob, tool, idx)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                            title="Print tool tag"
+                          >
+                            <span className="material-symbols-outlined text-base">label</span>
+                            Print Tag
+                          </button>
                           {selectedJob.tools.length > 1 && (
                             <button
                               onClick={() => handleRemoveTool(tool.tool_id)}
