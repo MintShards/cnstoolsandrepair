@@ -1342,6 +1342,13 @@ async def update_tool_status(
     if status_update.status == RepairStatus.COMPLETED:
         set_data[f"tools.{tool_index}.date_completed"] = now
 
+    # Auto-mark received parts as installed when tool moves to "ready"
+    if status_update.status == RepairStatus.READY:
+        parts = tools[tool_index].get("parts", [])
+        for pi, part in enumerate(parts):
+            if part.get("status") == "received":
+                set_data[f"tools.{tool_index}.parts.{pi}.status"] = "installed"
+
     # Update estimated_completion if provided
     if status_update.estimated_completion:
         set_data[f"tools.{tool_index}.estimated_completion"] = status_update.estimated_completion
