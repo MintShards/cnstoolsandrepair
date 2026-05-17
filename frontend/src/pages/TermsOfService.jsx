@@ -90,6 +90,9 @@ export default function TermsOfService() {
               <p className="mt-3">
                 Repair timelines are estimates only and may vary depending on parts availability, workload, and complexity of the repair. CNS Tool Repair is not liable for delays beyond its reasonable control.
               </p>
+              <p className="mt-3">
+                <strong className="text-slate-900 dark:text-white">If you choose not to proceed with a repair</strong>, your tool will be returned in its current condition at the time of that decision. If disassembly was required to perform the diagnosis, the tool will be returned in its disassembled state and may not be safe or functional to use. CNS Tool Repair is not responsible for the condition of tools returned following a declined repair. As an alternative, you may request that we dispose of or scrap the tool at our facility at no additional cost.
+              </p>
             </div>
 
             {/* Photo uploads */}

@@ -917,6 +917,19 @@ export default function Quote() {
             </div>
           )}
 
+          {/* Repair Decline Policy Notice */}
+          <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-accent-orange text-xl shrink-0 mt-0.5">info</span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Important — If You Choose Not to Proceed</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  If you decide not to proceed with the repair after diagnosis, your tool will be returned as-is. If disassembly was required for diagnosis, it will be returned in its disassembled state and may not be safe to use. You also have the option to have the tool scrapped at our facility at no additional cost.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Consent Notice */}
           <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
             By submitting, you agree to our{' '}
