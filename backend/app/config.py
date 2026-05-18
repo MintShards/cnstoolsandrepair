@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # SMTP (Hostinger) - for Parts Sourcing emails
     smtp_host: str = "smtp.hostinger.com"
-    smtp_port: int = 587
+    smtp_port: int = 465
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from_email: str = "purchasing@cnstoolrepair.com"

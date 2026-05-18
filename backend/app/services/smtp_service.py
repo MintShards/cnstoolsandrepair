@@ -160,7 +160,7 @@ async def send_sourcing_email(
             port=settings.smtp_port,
             username=settings.smtp_user,
             password=settings.smtp_password,
-            start_tls=True,
+            use_tls=True,
         )
         logger.info(f"Sourcing email sent to {to_email}")
         return True
