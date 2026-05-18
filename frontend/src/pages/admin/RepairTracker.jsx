@@ -5,6 +5,7 @@ import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
 import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
 import DashboardSummary from '../../components/admin/DashboardSummary';
 import PartsLibraryTab from '../../components/admin/tabs/PartsLibraryTab';
+import PartsSourcingTab from '../../components/admin/tabs/PartsSourcingTab';
 import ThemeToggle from '../../components/layout/ThemeToggle';
 import UserGuide from '../../components/admin/UserGuide';
 
@@ -121,6 +122,7 @@ export default function RepairTracker() {
     { id: 'requests', label: 'Repair Requests', icon: 'inbox' },
     { id: 'customers', label: 'Customers', icon: 'group' },
     { id: 'parts-library', label: 'Parts Library', icon: 'inventory_2' },
+    { id: 'parts-sourcing', label: 'Parts Sourcing', icon: 'local_shipping' },
   ];
 
   const handleCountUpdate = useCallback((tab, count) => {
@@ -294,6 +296,9 @@ export default function RepairTracker() {
             )}
             {activeTab === 'parts-library' && (
               <PartsLibraryTab />
+            )}
+            {activeTab === 'parts-sourcing' && (
+              <PartsSourcingTab />
             )}
             {activeTab === 'jobs' && (
               <RepairJobsTab

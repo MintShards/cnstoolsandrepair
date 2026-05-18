@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI, partsLibraryAPI, serviceAgreementAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI, partsLibraryAPI, serviceAgreementAPI, sourcingAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
@@ -1885,8 +1885,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
                             {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                               <div className="mt-1 space-y-1">
-                                {tool.parts.filter(p => p.name?.trim()).map((p, pi) => (
-                                  <div key={pi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
+                                {tool.parts.map((p, realPi) => p.name?.trim() ? (
+                                  <div key={realPi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-slate-700 dark:text-slate-200 font-medium flex-1 uppercase">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
                                       <span className="text-slate-500 text-xs">×{p.quantity}</span>
@@ -1899,6 +1899,29 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                         p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
                                         'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                                       }`} style={{fontSize:'11px'}}>{p.status}</span>
+                                      {/* Sourcing toggle button */}
+                                      <button
+                                        type="button"
+                                        title={p.needs_sourcing ? 'Remove from sourcing queue' : 'Flag for sourcing'}
+                                        onClick={async () => {
+                                          try {
+                                            await repairsAPI.togglePartSourcing(selectedJob.id, tool.tool_id, realPi);
+                                            const updated = await repairsAPI.get(selectedJob.id);
+                                            setSelectedJob(updated);
+                                          } catch (e) {
+                                            console.error('Failed to toggle sourcing flag', e);
+                                          }
+                                        }}
+                                        className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded-full font-bold transition-colors ${
+                                          p.needs_sourcing
+                                            ? 'bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400'
+                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-400 hover:bg-primary/20 hover:text-primary'
+                                        }`}
+                                        style={{fontSize:'11px'}}
+                                      >
+                                        <span className="material-symbols-outlined" style={{fontSize:'11px'}}>local_shipping</span>
+                                        {p.needs_sourcing ? 'sourcing' : 'source'}
+                                      </button>
                                     </div>
                                     {p.supplier && <div className="text-xs text-slate-500 dark:text-slate-400">{p.supplier}</div>}
                                     {p.order_link?.trim() && (
@@ -1918,7 +1941,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                       </div>
                                     )}
                                   </div>
-                                ))}
+                                ) : null)}
                                 {(() => {
                                   const total = tool.parts.filter(p => p.name?.trim() && (p.price != null && p.price !== '')).reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
                                   return total > 0 ? (
@@ -2713,9 +2736,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
 
   // Supplier dropdown state
   const [suppliers, setSuppliers] = useState([]);
-  const [addingSupplier, setAddingSupplier] = useState(false);
-  const [newSupplierName, setNewSupplierName] = useState('');
-  const [supplierSaving, setSupplierSaving] = useState(false);
+  const refreshSuppliers = () => suppliersAPI.getAll().then(setSuppliers).catch(() => {});
 
   // Parts Library autocomplete
   const [partSuggestions, setPartSuggestions] = useState([]);
@@ -2839,30 +2860,6 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
   useEffect(() => {
     suppliersAPI.getAll().then(setSuppliers).catch(() => {});
   }, []);
-
-  const handleAddSupplier = async () => {
-    if (!newSupplierName.trim()) return;
-    setSupplierSaving(true);
-    try {
-      const created = await suppliersAPI.create({ name: newSupplierName.trim() });
-      setSuppliers(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewSupplierName('');
-      setAddingSupplier(false);
-    } catch {
-      // duplicate or error — silently ignore (user can see name already in list)
-    } finally {
-      setSupplierSaving(false);
-    }
-  };
-
-  const handleRemoveSupplier = async (supplier) => {
-    try {
-      await suppliersAPI.remove(supplier.id);
-      setSuppliers(prev => prev.filter(s => s.id !== supplier.id));
-    } catch {
-      // ignore
-    }
-  };
 
   // Technician dropdown state
   const [technicians, setTechnicians] = useState([]);
@@ -3258,6 +3255,22 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       <option value="received">Received</option>
                       <option value="installed">Installed</option>
                     </select>
+                    <button type="button" onClick={async () => {
+                        const tool = data;
+                        await repairsAPI.togglePartSourcing(selectedJob.id, tool.tool_id, pi);
+                        const updated = await repairsAPI.get(selectedJob.id);
+                        setSelectedJob(updated);
+                        const updatedTool = updated.tools?.find(t => t.tool_id === tool.tool_id);
+                        if (updatedTool) handleChange('parts', updatedTool.parts);
+                      }}
+                      className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold transition-colors ${
+                        part.needs_sourcing
+                          ? 'bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-400 hover:bg-primary/20 hover:text-primary'
+                      }`} title={part.needs_sourcing ? 'Remove from sourcing queue' : 'Add to sourcing queue'}>
+                      <span className="material-symbols-outlined" style={{fontSize:'11px'}}>local_shipping</span>
+                      {part.needs_sourcing ? 'sourcing' : 'source'}
+                    </button>
                     <button type="button" onClick={() => handleChange('parts', data.parts.filter((_, i) => i !== pi))}
                       className="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors flex-shrink-0" title="Remove part">
                       <span className="material-symbols-outlined" style={{fontSize:'18px'}}>close</span>
@@ -3266,45 +3279,22 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
 
                   {/* Row 2: Supplier + Order link */}
                   <div className="flex gap-2 px-2.5 pb-2 flex-wrap">
-                    {/* Supplier input group */}
-                    {!addingSupplier ? (
-                      <div className="flex flex-1 min-w-[180px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
-                        <select value={part.supplier || ''} onChange={(e) => updatePart({ supplier: e.target.value })}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none border-none">
-                          <option value="">Supplier</option>
-                          {/* Show library suggested suppliers at top if available */}
-                          {(part._suggested_suppliers || []).filter(s => !suppliers.some(sup => sup.name === s)).map(s => (
-                            <option key={`lib-${s}`} value={s}>{s} (library)</option>
-                          ))}
-                          {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                        </select>
-                        {part.supplier && suppliers.find(s => s.name === part.supplier) && (
-                          <button type="button" title="Remove supplier" onClick={() => { const s = suppliers.find(x => x.name === part.supplier); if (s) handleRemoveSupplier(s); }}
-                            className="px-1.5 border-l border-slate-300 dark:border-slate-600 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                            <span className="material-symbols-outlined" style={{fontSize:'14px'}}>delete</span>
-                          </button>
+                    {/* Supplier dropdown */}
+                    <div className="flex flex-1 min-w-[180px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
+                      <select value={part.supplier || ''} onChange={(e) => updatePart({ supplier: e.target.value })}
+                        onFocus={refreshSuppliers}
+                        className="flex-1 min-w-0 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none border-none">
+                        <option value="">Supplier</option>
+                        {/* Show current value if it's not in the managed list (legacy/library name) */}
+                        {part.supplier && !suppliers.some(sup => sup.name === part.supplier) && !(part._suggested_suppliers || []).includes(part.supplier) && (
+                          <option value={part.supplier}>{part.supplier}</option>
                         )}
-                        <button type="button" onClick={() => setAddingSupplier(true)} title="Add supplier"
-                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-slate-400 hover:text-primary dark:hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
-                          <span className="material-symbols-outlined" style={{fontSize:'16px'}}>add</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-1 min-w-[180px] rounded border border-primary dark:border-primary/60 bg-white dark:bg-slate-800 overflow-hidden">
-                        <input autoFocus placeholder="New supplier name" value={newSupplierName}
-                          onChange={(e) => setNewSupplierName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSupplier(); } if (e.key === 'Escape') { setAddingSupplier(false); setNewSupplierName(''); } }}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-transparent text-slate-900 dark:text-white text-sm focus:outline-none border-none placeholder:text-slate-400 dark:placeholder:text-slate-500" />
-                        <button type="button" onClick={handleAddSupplier} disabled={supplierSaving}
-                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50">
-                          <span className="material-symbols-outlined" style={{fontSize:'16px'}}>check</span>
-                        </button>
-                        <button type="button" onClick={() => { setAddingSupplier(false); setNewSupplierName(''); }}
-                          className="px-2 border-l border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                          <span className="material-symbols-outlined" style={{fontSize:'16px'}}>close</span>
-                        </button>
-                      </div>
-                    )}
+                        {(part._suggested_suppliers || []).filter(s => !suppliers.some(sup => sup.name === s)).map(s => (
+                          <option key={`lib-${s}`} value={s}>{s} (library)</option>
+                        ))}
+                        {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                      </select>
+                    </div>
                     {/* Order link input group */}
                     <div className="flex flex-1 min-w-[180px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden focus-within:border-primary dark:focus-within:border-primary/70">
                       <span className="flex items-center pl-2 text-slate-400 dark:text-slate-500 pointer-events-none flex-shrink-0">

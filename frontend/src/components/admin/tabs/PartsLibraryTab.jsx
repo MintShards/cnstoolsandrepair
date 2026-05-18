@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { partsLibraryAPI, repairsAPI } from '../../../services/api';
+import { partsLibraryAPI, repairsAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -601,15 +601,17 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     suggested_price: part?.suggested_price ?? '',
     notes: part?.notes || '',
   });
-  const [supplierInput, setSupplierInput] = useState('');
+  const [suppliersList, setSuppliersList] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  const addSupplier = () => {
-    const s = supplierInput.trim();
-    if (s && !form.suggested_suppliers.includes(s)) {
-      setForm(f => ({ ...f, suggested_suppliers: [...f.suggested_suppliers, s] }));
+  const refreshSuppliers = () => suppliersAPI.getAll().then(setSuppliersList).catch(() => {});
+
+  useEffect(() => { refreshSuppliers(); }, []);
+
+  const addSupplier = (name) => {
+    if (name && !form.suggested_suppliers.includes(name)) {
+      setForm(f => ({ ...f, suggested_suppliers: [...f.suggested_suppliers, name] }));
     }
-    setSupplierInput('');
   };
 
   const toggleGroup = (gid) => {
@@ -691,26 +693,29 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
           {/* Suggested Suppliers */}
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Suppliers</label>
-            <div className="flex gap-2">
-              <input
-                value={supplierInput}
-                onChange={e => setSupplierInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSupplier(); } }}
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Supplier name, press Enter"
-              />
-              <button type="button" onClick={addSupplier} className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Add</button>
-            </div>
+            <select
+              onChange={e => { if (e.target.value) { addSupplier(e.target.value); e.target.value = ''; } }}
+              onFocus={refreshSuppliers}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{suppliersList.length === 0 ? 'No suppliers — add them in Parts Sourcing' : 'Select supplier...'}</option>
+              {suppliersList.filter(s => !form.suggested_suppliers.includes(s.name)).map(s => (
+                <option key={s.id} value={s.name}>{s.name}</option>
+              ))}
+            </select>
             {form.suggested_suppliers.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {form.suggested_suppliers.map((s, i) => (
-                  <span key={i} className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs rounded-lg px-2 py-0.5">
-                    {s}
-                    <button type="button" onClick={() => setForm(f => ({ ...f, suggested_suppliers: f.suggested_suppliers.filter((_, j) => j !== i) }))} className="hover:text-red-500 transition-colors">
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </span>
-                ))}
+                {form.suggested_suppliers.map((s, i) => {
+                  const isManaged = suppliersList.some(sup => sup.name === s);
+                  return (
+                    <span key={i} className={`flex items-center gap-1 text-xs rounded-lg px-2 py-0.5 ${isManaged ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'}`} title={isManaged ? '' : 'Not in managed suppliers list'}>
+                      {s}
+                      <button type="button" onClick={() => setForm(f => ({ ...f, suggested_suppliers: f.suggested_suppliers.filter((_, j) => j !== i) }))} className="hover:text-red-500 transition-colors">
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>

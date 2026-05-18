@@ -313,6 +313,10 @@ export const suppliersAPI = {
     const response = await api.post('/api/suppliers/', data);
     return response.data;
   },
+  update: async (id, data) => {
+    const response = await api.put(`/api/suppliers/${id}`, data);
+    return response.data;
+  },
   remove: async (id) => {
     await api.delete(`/api/suppliers/${id}`);
   },
@@ -358,6 +362,10 @@ export const repairsAPI = {
   },
   updateToolStatus: async (jobId, toolId, statusData) => {
     const response = await api.put(`/api/repairs/${jobId}/tools/${toolId}/status`, statusData);
+    return response.data;
+  },
+  togglePartSourcing: async (jobId, toolId, partIndex) => {
+    const response = await api.patch(`/api/repairs/${jobId}/tools/${toolId}/parts/${partIndex}/sourcing`);
     return response.data;
   },
   uploadToolPhoto: async (jobId, toolId, photoFile) => {
@@ -509,6 +517,22 @@ export const partsLibraryAPI = {
   // Search
   search: async (q, limit = 30) => {
     const response = await api.get('/api/parts-library/search', { params: { q, limit } });
+    return response.data;
+  },
+};
+
+// Parts Sourcing API (admin only)
+export const sourcingAPI = {
+  getQueue: async () => {
+    const response = await api.get('/api/parts-sourcing/queue');
+    return response.data;
+  },
+  send: async (data) => {
+    const response = await api.post('/api/parts-sourcing/send', data);
+    return response.data;
+  },
+  getHistory: async (page = 1, pageSize = 20) => {
+    const response = await api.get('/api/parts-sourcing/history', { params: { page, page_size: pageSize } });
     return response.data;
   },
 };

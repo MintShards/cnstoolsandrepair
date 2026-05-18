@@ -81,6 +81,8 @@ class PartItem(BaseModel):
     tracking: Optional[str] = Field(None, max_length=200)
     part_number: Optional[str] = Field(None, max_length=100)
     library_part_id: Optional[str] = Field(None, max_length=50)
+    needs_sourcing: bool = False
+    sourcing_emailed: bool = False
 
     @field_validator('price', mode='before')
     @classmethod

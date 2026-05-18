@@ -1289,6 +1289,54 @@ async def update_tool(
 
 
 # ──────────────────────────────────────────────
+# TOGGLE PART SOURCING FLAG
+# ──────────────────────────────────────────────
+
+@router.patch("/{job_id}/tools/{tool_id}/parts/{part_index}/sourcing")
+async def toggle_part_sourcing(
+    job_id: str,
+    tool_id: str,
+    part_index: int,
+    current_user: User = Depends(require_admin)
+):
+    """Toggle the needs_sourcing flag on a specific part without replacing the entire parts array."""
+    db = get_database()
+    if not ObjectId.is_valid(job_id):
+        raise HTTPException(status_code=404, detail="Repair job not found.")
+
+    job = await db.repairs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        raise HTTPException(status_code=404, detail="Repair job not found.")
+
+    # Find tool index by tool_id string
+    tools = job.get("tools", [])
+    tool_idx = None
+    for i, t in enumerate(tools):
+        if str(t.get("tool_id", "")) == tool_id or str(t.get("_id", "")) == tool_id:
+            tool_idx = i
+            break
+
+    if tool_idx is None:
+        raise HTTPException(status_code=404, detail="Tool not found on this repair job.")
+
+    parts = tools[tool_idx].get("parts", [])
+    if part_index < 0 or part_index >= len(parts):
+        raise HTTPException(status_code=404, detail="Part index out of range.")
+
+    current_value = parts[part_index].get("needs_sourcing", False)
+    new_value = not current_value
+
+    # Use positional update with array index path
+    field_path = f"tools.{tool_idx}.parts.{part_index}.needs_sourcing"
+    await db.repairs.update_one(
+        {"_id": ObjectId(job_id)},
+        {"$set": {field_path: new_value}}
+    )
+
+    return {"needs_sourcing": new_value, "part_index": part_index}
+
+
+# ──────────────────────────────────────────────
 # UPDATE TOOL STATUS
 # ──────────────────────────────────────────────
 

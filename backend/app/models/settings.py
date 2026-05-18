@@ -74,6 +74,74 @@ class ClaimsModel(BaseModel):
         populate_by_name = True
 
 
+class SourcingEmailTemplateModel(BaseModel):
+    default_subject: str = Field(
+        default="Parts Pricing Request - CNS Tool Repair",
+        max_length=200,
+        alias="defaultSubject",
+    )
+    greeting: str = Field(
+        default="Hi",
+        max_length=50,
+    )
+    body_text: str = Field(
+        default="We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.",
+        max_length=2000,
+        alias="bodyText",
+    )
+    closing_text: str = Field(
+        default="Thank you for your time. We look forward to hearing from you.",
+        max_length=500,
+        alias="closingText",
+    )
+    footer_tagline: str = Field(
+        default="Industrial Pneumatic Tool Repair & Maintenance",
+        max_length=200,
+        alias="footerTagline",
+    )
+    footer_email: str = Field(
+        default="purchasing@cnstoolrepair.com",
+        max_length=100,
+        alias="footerEmail",
+    )
+    footer_phone: str = Field(
+        default="778-488-0777",
+        max_length=30,
+        alias="footerPhone",
+    )
+    footer_website: str = Field(
+        default="cnstoolrepair.com",
+        max_length=100,
+        alias="footerWebsite",
+    )
+    footer_label: str = Field(
+        default="Supplier & Parts Inquiries",
+        max_length=100,
+        alias="footerLabel",
+    )
+    from_email: str = Field(
+        default="",
+        max_length=200,
+        alias="fromEmail",
+    )
+    from_name: str = Field(
+        default="",
+        max_length=100,
+        alias="fromName",
+    )
+    cc: str = Field(
+        default="",
+        max_length=500,
+    )
+    bcc: str = Field(
+        default="",
+        max_length=500,
+    )
+
+    class Config:
+        populate_by_name = True
+
+
 class BusinessSettingsUpdate(BaseModel):
     """Schema for updating business settings (admin use)"""
     contact: ContactModel
@@ -87,6 +155,7 @@ class BusinessSettingsUpdate(BaseModel):
     social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
     stale_days: int = Field(default=3, ge=1, le=30, alias="staleDays")  # Configurable stale threshold
+    sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
 
     class Config:
         populate_by_name = True
@@ -163,6 +232,7 @@ class BusinessSettingsResponse(BaseModel):
     social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
     stale_days: int = Field(default=3, alias="staleDays")
+    sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
 
     class Config:
         populate_by_name = True

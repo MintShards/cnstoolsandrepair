@@ -1,0 +1,692 @@
+import { useState, useEffect, useRef } from 'react';
+import { sourcingAPI, suppliersAPI, repairsAPI, settingsAPI } from '../../../services/api';
+import SourcingQueue from './parts-sourcing/SourcingQueue';
+import RecipientSelector from './parts-sourcing/RecipientSelector';
+import SourcingHistory from './parts-sourcing/SourcingHistory';
+import SupplierManager from './parts-sourcing/SupplierManager';
+
+export default function PartsSourcingTab() {
+  const [queue, setQueue] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Selection state
+  const [selected, setSelected] = useState(new Set()); // Set of "repairId-toolIdx-partIdx" keys
+  const [selectedItems, setSelectedItems] = useState({}); // key -> item map
+
+  // Manual parts — persisted to localStorage so they survive page refreshes
+  const [manualParts, setManualParts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sourcingManualParts') || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem('sourcingManualParts', JSON.stringify(manualParts));
+  }, [manualParts]);
+
+  // Recipients
+  const [recipients, setRecipients] = useState([]);
+
+  // Email compose
+  const [message, setMessage] = useState('');
+
+  // Send state
+  const [sending, setSending] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [sendResult, setSendResult] = useState(null);
+
+  // Notification
+  const [notification, setNotification] = useState(null);
+
+  // Email template settings
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [emailExpanded, setEmailExpanded] = useState(false);
+  const defaultTemplate = {
+    defaultSubject: 'Parts Pricing Request - CNS Tool Repair',
+    greeting: 'Hi',
+    bodyText: 'We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.',
+    closingText: 'Thank you for your time. We look forward to hearing from you.',
+    footerTagline: 'Industrial Pneumatic Tool Repair & Maintenance',
+    footerEmail: 'purchasing@cnstoolrepair.com',
+    footerPhone: '778-488-0777',
+    footerWebsite: 'cnstoolrepair.com',
+    footerLabel: 'Supplier & Parts Inquiries',
+    cc: '',
+    bcc: '',
+    fromEmail: '',
+    fromName: '',
+  };
+  const [emailTemplate, setEmailTemplate] = useState(defaultTemplate);
+  const savedTemplate = useRef(defaultTemplate);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [q, s] = await Promise.all([
+          sourcingAPI.getQueue(),
+          suppliersAPI.getAll(),
+        ]);
+        setQueue(q);
+        setSuppliers(s);
+
+        // Load email template from settings
+        try {
+          const settings = await settingsAPI.get();
+          if (settings.sourcingEmailTemplate) {
+            const loaded = { ...defaultTemplate, ...settings.sourcingEmailTemplate };
+            setEmailTemplate(loaded);
+            savedTemplate.current = loaded;
+          }
+        } catch (_) {
+          // Use defaults if settings not available
+        }
+      } catch (e) {
+        showNotif('Failed to load sourcing queue.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const showNotif = (msg, type = 'success') => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleToggle = (key, item) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+    setSelectedItems((prev) => {
+      if (prev[key]) {
+        const { [key]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: item };
+    });
+  };
+
+  const handleSelectAll = (selectAll) => {
+    if (selectAll) {
+      const keys = new Set();
+      const items = {};
+      queue.forEach((item) => {
+        const key = `${item.repair_id}-${item.tool_index}-${item.part_index}`;
+        keys.add(key);
+        items[key] = item;
+      });
+      manualParts.forEach((part, idx) => {
+        if (part.name.trim() && part.part_number?.trim()) {
+          const key = `manual-${idx}`;
+          keys.add(key);
+          items[key] = { manual: true, index: idx, part };
+        }
+      });
+      setSelected(keys);
+      setSelectedItems(items);
+    } else {
+      setSelected(new Set());
+      setSelectedItems({});
+    }
+  };
+
+  const handleRemove = async (item) => {
+    if (item.manual) {
+      // Manual part — remove from manualParts state only, no API call
+      setManualParts((prev) => prev.filter((_, i) => i !== item.index));
+      const key = `manual-${item.index}`;
+      setSelected((prev) => { const next = new Set(prev); next.delete(key); return next; });
+      setSelectedItems((prev) => { const { [key]: _, ...rest } = prev; return rest; });
+      return;
+    }
+    try {
+      await repairsAPI.togglePartSourcing(item.repair_id, item.tool_id, item.part_index);
+      const key = `${item.repair_id}-${item.tool_index}-${item.part_index}`;
+      setSelected((prev) => { const next = new Set(prev); next.delete(key); return next; });
+      setSelectedItems((prev) => { const { [key]: _, ...rest } = prev; return rest; });
+      const q = await sourcingAPI.getQueue();
+      setQueue(q);
+    } catch (e) {
+      showNotif('Failed to remove part from queue.', 'error');
+    }
+  };
+
+  const handleRemoveSelected = async () => {
+    const allItems = Object.values(selectedItems);
+    const queueItems = allItems.filter((item) => !item.manual);
+    const manualItems = allItems.filter((item) => item.manual);
+    try {
+      await Promise.all(
+        queueItems.map((item) => repairsAPI.togglePartSourcing(item.repair_id, item.tool_id, item.part_index))
+      );
+      // Remove selected manual parts by index (descending to keep indices stable)
+      if (manualItems.length > 0) {
+        const indicesToRemove = new Set(manualItems.map((item) => item.index));
+        setManualParts((prev) => prev.filter((_, i) => !indicesToRemove.has(i)));
+      }
+      setSelected(new Set());
+      setSelectedItems({});
+      if (queueItems.length > 0) {
+        const q = await sourcingAPI.getQueue();
+        setQueue(q);
+      }
+      showNotif(`Removed ${allItems.length} part${allItems.length !== 1 ? 's' : ''} from queue.`);
+    } catch (e) {
+      showNotif('Failed to remove selected parts.', 'error');
+    }
+  };
+
+  const buildPartsPayload = () => {
+    const fromQueue = Object.values(selectedItems)
+      .filter((item) => !item.manual)
+      .map((item) => ({
+        name: item.part.name,
+        part_number: item.part.part_number || null,
+        quantity: item.part.quantity,
+        repair_id: item.repair_id,
+        request_number: item.request_number,
+        tool_index: item.tool_index,
+        part_index: item.part_index,
+      }));
+    const fromManual = Object.values(selectedItems)
+      .filter((item) => item.manual)
+      .map((item) => ({
+        name: item.part.name.trim(),
+        part_number: item.part.part_number.trim(),
+        quantity: item.part.quantity || 1,
+      }));
+    return [...fromQueue, ...fromManual];
+  };
+
+  const totalParts = selected.size;
+  const canSend = totalParts > 0 && recipients.length > 0 && !sending;
+
+  const handleSend = async () => {
+    setSending(true);
+    setShowConfirm(false);
+    setSendResult(null);
+    try {
+      const result = await sourcingAPI.send({
+        recipients,
+        parts: buildPartsPayload(),
+        subject: undefined,
+        message: message.trim() || undefined,
+      });
+      setSendResult(result);
+      if (result.status === 'sent') {
+        showNotif(`Sent to ${result.sent_count} supplier${result.sent_count !== 1 ? 's' : ''} successfully.`, 'success');
+        setSelected(new Set());
+        setSelectedItems({});
+        setManualParts([]);
+        setRecipients([]);
+        setMessage('');
+        const q = await sourcingAPI.getQueue();
+        setQueue(q);
+      } else if (result.status === 'partial_failure') {
+        showNotif(`Sent to ${result.sent_count}, failed for ${result.failed_count}. Check history for details.`, 'error');
+        const q = await sourcingAPI.getQueue();
+        setQueue(q);
+      } else {
+        showNotif('All emails failed to send. Check SMTP settings.', 'error');
+      }
+    } catch (e) {
+      showNotif(e?.response?.data?.detail || 'Failed to send emails.', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleTemplateSave = async () => {
+    setTemplateSaving(true);
+    try {
+      const settings = await settingsAPI.get();
+      await settingsAPI.update({ ...settings, sourcingEmailTemplate: emailTemplate });
+      savedTemplate.current = emailTemplate;
+      showNotif('Email template saved.');
+    } catch (e) {
+      showNotif('Failed to save email template.', 'error');
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
+
+  const updateTemplate = (field, value) => {
+    setEmailTemplate((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const templateDirty = JSON.stringify(emailTemplate) !== JSON.stringify(savedTemplate.current);
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <p className="text-orange-500 dark:text-orange-400 text-xs uppercase tracking-[0.25em] font-semibold mb-2">Purchasing</p>
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase">Parts Sourcing</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+          Select parts flagged for sourcing, pick suppliers, and send bulk pricing request emails.
+        </p>
+      </div>
+
+      {/* Notification */}
+      {notification && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium ${
+          notification.type === 'success'
+            ? 'bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400'
+            : 'bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400'
+        }`}>
+          <span className="material-symbols-outlined text-base">
+            {notification.type === 'success' ? 'check_circle' : 'error'}
+          </span>
+          {notification.msg}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <span className="material-symbols-outlined text-4xl text-primary animate-spin">refresh</span>
+        </div>
+      ) : (
+        <>
+          {/* Section 1: Parts */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">queue</span>
+              Parts
+            </h3>
+            <SourcingQueue
+              items={queue}
+              selected={selected}
+              onToggle={handleToggle}
+              onSelectAll={handleSelectAll}
+              onRemove={handleRemove}
+              onRemoveSelected={handleRemoveSelected}
+              manualParts={manualParts}
+              onManualPartsChange={setManualParts}
+            />
+          </section>
+
+          {/* Section 3: Recipients */}
+          <section className="border-t border-slate-200 dark:border-slate-700/50 pt-6 space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">email</span>
+              Recipients
+            </h3>
+            <RecipientSelector
+              suppliers={suppliers}
+              recipients={recipients}
+              onChange={setRecipients}
+            />
+          </section>
+
+          {/* Section 4: Supplier management */}
+          <section className="border-t border-slate-200 dark:border-slate-700/50 pt-6 space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">inventory</span>
+              Suppliers
+            </h3>
+            <SupplierManager suppliers={suppliers} onSuppliersChange={setSuppliers} />
+          </section>
+
+          {/* Section 5: Email compose */}
+          <section className="border-t border-slate-200 dark:border-slate-700/50 pt-6 space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-primary">forward_to_inbox</span>
+              Email
+            </h3>
+            <button
+              onClick={() => setEmailExpanded(!emailExpanded)}
+              className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-base">
+                {emailExpanded ? 'expand_less' : 'expand_more'}
+              </span>
+              Email template
+              {templateDirty && (
+                <span className="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs px-2 py-0.5 rounded-full font-semibold">unsaved</span>
+              )}
+            </button>
+            {emailExpanded && (<div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Subject</label>
+                <input
+                  type="text"
+                  value={emailTemplate.defaultSubject}
+                  onChange={(e) => updateTemplate('defaultSubject', e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Greeting</label>
+                <input
+                  type="text"
+                  value={emailTemplate.greeting}
+                  onChange={(e) => updateTemplate('greeting', e.target.value)}
+                  placeholder="Hi"
+                  className="w-full sm:w-48 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Body Text</label>
+                <textarea
+                  rows={3}
+                  value={emailTemplate.bodyText}
+                  onChange={(e) => updateTemplate('bodyText', e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none resize-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                  Message <span className="text-slate-400 dark:text-slate-500">(optional additional note)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. We need these urgently, please advise availability..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none resize-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Closing Text</label>
+                <input
+                  type="text"
+                  value={emailTemplate.closingText}
+                  onChange={(e) => updateTemplate('closingText', e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Tagline</label>
+                  <input
+                    type="text"
+                    value={emailTemplate.footerTagline}
+                    onChange={(e) => updateTemplate('footerTagline', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Label</label>
+                  <input
+                    type="text"
+                    value={emailTemplate.footerLabel}
+                    onChange={(e) => updateTemplate('footerLabel', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Email</label>
+                  <input
+                    type="email"
+                    value={emailTemplate.footerEmail}
+                    onChange={(e) => updateTemplate('footerEmail', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Phone</label>
+                  <input
+                    type="text"
+                    value={emailTemplate.footerPhone}
+                    onChange={(e) => updateTemplate('footerPhone', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Website</label>
+                  <input
+                    type="text"
+                    value={emailTemplate.footerWebsite}
+                    onChange={(e) => updateTemplate('footerWebsite', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">CC <span className="text-slate-400 dark:text-slate-500">(comma-separated)</span></label>
+                  <input
+                    type="text"
+                    placeholder="email@example.com"
+                    value={emailTemplate.cc}
+                    onChange={(e) => updateTemplate('cc', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">BCC <span className="text-slate-400 dark:text-slate-500">(comma-separated)</span></label>
+                  <input
+                    type="text"
+                    placeholder="email@example.com"
+                    value={emailTemplate.bcc}
+                    onChange={(e) => updateTemplate('bcc', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                    From Email <span className="text-slate-400 dark:text-slate-500">(optional, overrides server default)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="purchasing@cnstoolrepair.com"
+                    value={emailTemplate.fromEmail}
+                    onChange={(e) => updateTemplate('fromEmail', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                    From Name <span className="text-slate-400 dark:text-slate-500">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="CNS Tool Repair"
+                    value={emailTemplate.fromName}
+                    onChange={(e) => updateTemplate('fromName', e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  onClick={() => setEmailTemplate(defaultTemplate)}
+                  className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  Reset to defaults
+                </button>
+                <button
+                  onClick={handleTemplateSave}
+                  disabled={templateSaving || !templateDirty}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-primary hover:bg-primary/80 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition-colors uppercase"
+                >
+                  {templateSaving ? (
+                    <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-sm">save</span>
+                  )}
+                  Save Template
+                </button>
+              </div>
+            </div>)}
+          </section>
+
+          {/* Send button */}
+          <section className="border-t border-slate-200 dark:border-slate-700/50 pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                {totalParts > 0 || recipients.length > 0 ? (
+                  <span>
+                    <span className="text-slate-900 dark:text-white font-semibold">{totalParts}</span> part{totalParts !== 1 ? 's' : ''} →{' '}
+                    <span className="text-slate-900 dark:text-white font-semibold">{recipients.length}</span> supplier{recipients.length !== 1 ? 's' : ''}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 dark:text-slate-500">Select parts and recipients to send</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowConfirm(true)}
+                disabled={!canSend}
+                className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm rounded-lg transition-colors uppercase tracking-wide"
+              >
+                {sending ? (
+                  <>
+                    <span className="material-symbols-outlined text-base animate-spin">refresh</span>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-base">send</span>
+                    Send Emails
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
+
+          {/* History */}
+          <section className="border-t border-slate-200 dark:border-slate-700/50 pt-6">
+            <SourcingHistory />
+          </section>
+        </>
+      )}
+
+      {/* Confirmation dialog */}
+      {showConfirm && (() => {
+        const confirmParts = buildPartsPayload();
+        const ccTrimmed = (emailTemplate.cc || '').trim();
+        const bccTrimmed = (emailTemplate.bcc || '').trim();
+        const msgTrimmed = message.trim();
+        return (
+          <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl max-w-md w-full flex flex-col max-h-[90vh]">
+
+              {/* Header */}
+              <div className="flex items-center gap-3 px-6 pt-6 pb-4">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary text-lg">send</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wide">Confirm Send</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {totalParts} part{totalParts !== 1 ? 's' : ''} → {recipients.length} supplier{recipients.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="overflow-y-auto px-6 pb-2 space-y-4 flex-1">
+
+                {/* Parts */}
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                    Parts ({confirmParts.length})
+                  </p>
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden">
+                    <div className="max-h-36 overflow-y-auto divide-y divide-slate-200 dark:divide-slate-700">
+                      {confirmParts.map((p, i) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2 gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{p.name}</p>
+                            {p.part_number && (
+                              <p className="text-xs text-slate-400 dark:text-slate-500">{p.part_number}</p>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">×{p.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recipients */}
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">To</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recipients.map((r, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2.5 py-1 rounded-full">
+                        <span className="material-symbols-outlined text-xs" style={{ fontSize: '12px' }}>person</span>
+                        {r.name ? `${r.name}` : r.email}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-xl divide-y divide-slate-200 dark:divide-slate-700 text-xs">
+                  {(emailTemplate.fromEmail || emailTemplate.fromName) && (
+                    <div className="flex gap-2 px-3 py-2.5">
+                      <span className="text-slate-400 dark:text-slate-500 w-14 flex-shrink-0">From</span>
+                      <span className="text-slate-900 dark:text-white break-all">
+                        {emailTemplate.fromName && emailTemplate.fromEmail
+                          ? `${emailTemplate.fromName} <${emailTemplate.fromEmail}>`
+                          : emailTemplate.fromEmail || emailTemplate.fromName}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex gap-2 px-3 py-2.5">
+                    <span className="text-slate-400 dark:text-slate-500 w-14 flex-shrink-0">Subject</span>
+                    <span className="text-slate-900 dark:text-white">{emailTemplate.defaultSubject}</span>
+                  </div>
+                  {ccTrimmed && (
+                    <div className="flex gap-2 px-3 py-2.5">
+                      <span className="text-slate-400 dark:text-slate-500 w-14 flex-shrink-0">CC</span>
+                      <span className="text-slate-900 dark:text-white break-all">{ccTrimmed}</span>
+                    </div>
+                  )}
+                  {bccTrimmed && (
+                    <div className="flex gap-2 px-3 py-2.5">
+                      <span className="text-slate-400 dark:text-slate-500 w-14 flex-shrink-0">BCC</span>
+                      <span className="text-slate-900 dark:text-white break-all">{bccTrimmed}</span>
+                    </div>
+                  )}
+                  {msgTrimmed && (
+                    <div className="flex gap-2 px-3 py-2.5">
+                      <span className="text-slate-400 dark:text-slate-500 w-14 flex-shrink-0">Note</span>
+                      <span className="text-slate-900 dark:text-white line-clamp-2">{msgTrimmed}</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSend}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/80 text-white font-bold text-sm rounded-xl transition-colors uppercase"
+                >
+                  <span className="material-symbols-outlined text-base">send</span>
+                  Send Now
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}

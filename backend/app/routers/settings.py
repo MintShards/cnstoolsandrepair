@@ -5,7 +5,8 @@ from app.database import get_database
 from app.models.settings import (
     BusinessSettingsUpdate,
     BusinessSettings,
-    BusinessSettingsResponse
+    BusinessSettingsResponse,
+    SourcingEmailTemplateModel,
 )
 from app.utils.helpers import convert_objectid_to_str
 from app.dependencies.auth import require_admin
@@ -81,6 +82,21 @@ DEFAULT_SETTINGS = {
         "instagram": ""
     },
     "staleDays": 3,
+    "sourcingEmailTemplate": {
+        "defaultSubject": "Parts Pricing Request - CNS Tool Repair",
+        "greeting": "Hi",
+        "bodyText": "We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.",
+        "closingText": "Thank you for your time. We look forward to hearing from you.",
+        "footerTagline": "Industrial Pneumatic Tool Repair & Maintenance",
+        "footerEmail": "purchasing@cnstoolrepair.com",
+        "footerPhone": "778-488-0777",
+        "footerWebsite": "cnstoolrepair.com",
+        "footerLabel": "Supplier & Parts Inquiries",
+        "cc": "",
+        "bcc": "",
+        "fromEmail": "",
+        "fromName": "",
+    },
 }
 
 
