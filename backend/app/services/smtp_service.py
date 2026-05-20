@@ -1,11 +1,11 @@
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import List, Optional
 
-import aiosmtplib
+import requests
 
 from app.config import settings
+
+RESEND_API_URL = "https://api.resend.com/emails"
 
 logger = logging.getLogger(__name__)
 
@@ -133,39 +133,40 @@ async def send_sourcing_email(
     from_email = (t.get("from_email") or "").strip() or settings.smtp_from_email
     from_name = (t.get("from_name") or "").strip() or settings.smtp_from_name
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"{from_name} <{from_email}>"
-    msg["To"] = f"{to_name} <{to_email}>" if to_name else to_email
-    msg["Reply-To"] = from_email
-
     # Add CC/BCC from template settings
     cc_raw = (t.get("cc") or "").strip()
     bcc_raw = (t.get("bcc") or "").strip()
     cc_list = [e.strip() for e in cc_raw.split(",") if e.strip()] if cc_raw else []
     bcc_list = [e.strip() for e in bcc_raw.split(",") if e.strip()] if bcc_raw else []
+
+    payload = {
+        "from": f"{from_name} <{from_email}>",
+        "to": [f"{to_name} <{to_email}>" if to_name else to_email],
+        "reply_to": from_email,
+        "subject": subject,
+        "html": html_body,
+    }
     if cc_list:
-        msg["Cc"] = ", ".join(cc_list)
-
-    msg.attach(MIMEText(html_body, "html"))
-
-    # Build full recipient list for SMTP envelope
-    all_recipients = [to_email] + cc_list + bcc_list
+        payload["cc"] = cc_list
+    if bcc_list:
+        payload["bcc"] = bcc_list
 
     try:
-        use_implicit_ssl = settings.smtp_port == 465
-        await aiosmtplib.send(
-            msg,
-            recipients=all_recipients,
-            hostname=settings.smtp_host,
-            port=settings.smtp_port,
-            username=settings.smtp_user,
-            password=settings.smtp_password,
-            use_tls=use_implicit_ssl,
-            start_tls=not use_implicit_ssl,
+        response = requests.post(
+            RESEND_API_URL,
+            headers={
+                "Authorization": f"Bearer {settings.resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=30,
         )
-        logger.info(f"Sourcing email sent to {to_email}")
-        return True
+        if response.status_code in (200, 201):
+            logger.info(f"Sourcing email sent to {to_email}")
+            return True
+        else:
+            logger.error(f"Failed to send sourcing email to {to_email}: {response.status_code} {response.text}")
+            return False
     except Exception as e:
         logger.error(f"Failed to send sourcing email to {to_email}: {e}")
         return False
@@ -205,6 +206,6 @@ async def send_bulk_sourcing_emails(
         if success:
             sent.append({"email": to_email, "name": to_name})
         else:
-            failed.append({"email": to_email, "error": "SMTP send failed"})
+            failed.append({"email": to_email, "error": "Send failed"})
 
     return {"sent": sent, "failed": failed}
