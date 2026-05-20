@@ -153,6 +153,7 @@ async def send_sourcing_email(
     all_recipients = [to_email] + cc_list + bcc_list
 
     try:
+        use_implicit_ssl = settings.smtp_port == 465
         await aiosmtplib.send(
             msg,
             recipients=all_recipients,
@@ -160,7 +161,8 @@ async def send_sourcing_email(
             port=settings.smtp_port,
             username=settings.smtp_user,
             password=settings.smtp_password,
-            use_tls=True,
+            use_tls=use_implicit_ssl,
+            start_tls=not use_implicit_ssl,
         )
         logger.info(f"Sourcing email sent to {to_email}")
         return True
