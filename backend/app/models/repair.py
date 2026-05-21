@@ -20,14 +20,16 @@ class RepairStatus(str, Enum):
     COMPLETED = "completed"
     ABANDONED = "abandoned"
     CLOSED = "closed"
+    NOT_WORTH_REPAIR = "not_worth_repair"
 
 
 ALLOWED_TRANSITIONS = {
-    "received":      {"diagnosed", "abandoned"},
-    "diagnosed":     {"quoted", "received", "abandoned"},
+    "received":          {"diagnosed", "abandoned"},
+    "diagnosed":         {"quoted", "not_worth_repair", "received", "abandoned"},
     "quoted":        {"approved", "declined", "diagnosed", "abandoned"},
     "approved":      {"parts_pending", "in_repair", "quoted", "abandoned"},
-    "declined":      {"closed", "abandoned"},
+    "declined":          {"closed", "abandoned"},
+    "not_worth_repair":  {"closed", "quoted", "abandoned"},
     "parts_pending": {"in_repair", "quoted", "approved", "abandoned"},
     "in_repair":     {"ready", "parts_pending", "approved", "abandoned"},
     "ready":         {"invoiced", "in_repair", "abandoned"},

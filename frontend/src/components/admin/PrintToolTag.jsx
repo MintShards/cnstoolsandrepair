@@ -16,11 +16,22 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// Human-readable status labels for print tags
+const STATUS_LABELS = {
+  received: 'Received', diagnosed: 'Diagnosed', quoted: 'Quoted',
+  approved: 'Approved', declined: 'Declined', parts_pending: 'Parts Pending',
+  in_repair: 'In Repair', ready: 'Ready for Pickup', invoiced: 'Invoiced',
+  completed: 'Completed', abandoned: 'Abandoned', closed: 'Closed',
+  not_worth_repair: 'Not Worth Repair',
+};
+
 function buildTagHTML(job, toolItem, toolIndex) {
   const toolLetter = TOOL_LETTERS[toolIndex] || String(toolIndex + 1);
   const tagId = `${job.request_number}-${toolLetter}`;
 
   const contactName = escHtml(`${job.first_name} ${job.last_name}`);
+
+  const statusLabel = STATUS_LABELS[toolItem.status] || escHtml(toolItem.status || 'Unknown');
 
   const dateReceived = toolItem.date_received
     ? escHtml(formatDateShortPacific(toolItem.date_received))
@@ -55,9 +66,12 @@ function buildTagHTML(job, toolItem, toolIndex) {
               <div class="value">${escHtml(toolItem.brand)} ${escHtml(toolItem.model_number)} · ${escHtml(toolItem.tool_type)}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number)}` : ''}</div>
             </div>
           </div>
-          <div class="section">
-            <div class="label">DATE RECEIVED</div>
-            <div class="value">${dateReceived}</div>
+          <div class="right-col">
+            <div class="section">
+              <div class="label">DATE RECEIVED</div>
+              <div class="value">${dateReceived}</div>
+            </div>
+            <div class="status-badge">${escHtml(statusLabel)}</div>
           </div>
         </div>
         <div class="divider"></div>
@@ -173,6 +187,23 @@ function getTagStyles(prefix) {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 4px 10px;
+    }
+    ${p}.right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+      text-align: right;
+    }
+    ${p}.status-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
+      border: 1.5px solid #000;
+      border-radius: 4px;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
     ${p}.customer { font-size: 13px; }
     ${p}.contact { font-size: 11px; color: #333; font-weight: 500; }

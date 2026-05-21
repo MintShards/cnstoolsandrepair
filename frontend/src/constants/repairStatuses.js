@@ -11,6 +11,7 @@ export const REPAIR_STATUSES = {
   ready:         { label: 'Ready for Pickup',  color: 'bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-600',          dot: 'bg-emerald-500 dark:bg-emerald-400',       step: 7 },
   invoiced:      { label: 'Invoiced',          color: 'bg-teal-100 text-teal-800 border-teal-400 dark:bg-teal-900/40 dark:text-teal-300 dark:border-teal-600',                           dot: 'bg-teal-500 dark:bg-teal-400',             step: 8 },
   // Off-ramps (step: null = not part of linear flow)
+  not_worth_repair: { label: 'Not Worth Repair', color: 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700',                               dot: 'bg-red-600 dark:bg-red-500',               step: null },
   declined:      { label: 'Declined',          color: 'bg-red-100 text-red-800 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-600',                                 dot: 'bg-red-500 dark:bg-red-400',               step: null },
   completed:     { label: 'Completed',         color: 'bg-green-200 text-green-900 border-green-500 dark:bg-green-800/60 dark:text-green-200 dark:border-green-500',                     dot: 'bg-green-600 dark:bg-green-300',           step: null },
   abandoned:     { label: 'Abandoned',         color: 'bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-600',                           dot: 'bg-rose-500 dark:bg-rose-400',             step: null },
@@ -30,9 +31,10 @@ export const MAIN_STAGES = [
 // Valid next statuses for each status (enforced on backend too)
 export const ALLOWED_TRANSITIONS = {
   received:      ['diagnosed', 'abandoned'],
-  diagnosed:     ['quoted', 'received', 'abandoned'],
+  diagnosed:     ['quoted', 'not_worth_repair', 'received', 'abandoned'],
   quoted:        ['approved', 'declined', 'diagnosed', 'abandoned'],
   approved:      ['parts_pending', 'in_repair', 'quoted', 'abandoned'],
+  not_worth_repair: ['closed', 'quoted', 'abandoned'],
   declined:      ['closed', 'abandoned'],
   parts_pending: ['in_repair', 'quoted', 'approved', 'abandoned'],
   in_repair:     ['ready', 'parts_pending', 'approved', 'abandoned'],

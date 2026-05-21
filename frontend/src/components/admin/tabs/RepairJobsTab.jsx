@@ -439,7 +439,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const formatDateShort = formatDateShortPacific;
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
-  const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined']);
+  const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined', 'not_worth_repair']);
   const now = new Date();
 
   const getDaysSinceLastUpdate = (tool) => {
@@ -542,7 +542,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   };
 
   // Priority order for dot sorting: most actionable first
-  const STATUS_PRIORITY = ['abandoned', 'declined', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
+  const STATUS_PRIORITY = ['abandoned', 'declined', 'not_worth_repair', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
   const byStatusPriority = (a, b) => {
     const ai = STATUS_PRIORITY.indexOf(a.status);
     const bi = STATUS_PRIORITY.indexOf(b.status);
@@ -845,7 +845,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // ── QUICK-ADVANCE STATUS ────────────────────────────
   const handleQuickAdvance = async (tool, targetStatus) => {
     setQuickAdvancing(tool.tool_id);
-    const TERMINAL_FOR_ADVANCE = new Set(['completed', 'abandoned', 'closed', 'declined']);
+    const TERMINAL_FOR_ADVANCE = new Set(['completed', 'abandoned', 'closed', 'declined', 'not_worth_repair']);
     try {
       const updated = await repairsAPI.updateToolStatus(selectedJob.id, tool.tool_id, {
         status: targetStatus,
