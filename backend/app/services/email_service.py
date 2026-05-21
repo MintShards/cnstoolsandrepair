@@ -1,15 +1,14 @@
 import logging
 import base64
-import requests
 import traceback
+import httpx
 from app.config import settings as app_settings
 from app.models.quote import Quote
 from app.routers.settings import DEFAULT_SETTINGS
+from app.services.resend_client import send_email_via_resend
 from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
-
-RESEND_API_URL = "https://api.resend.com/emails"
 
 
 def format_pst_datetime(utc_dt) -> str:
@@ -104,7 +103,8 @@ CNS Tool Repair | {city}, {province}
                     else:
                         photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/uploads/{photo}'
 
-                    response_photo = requests.get(photo_url, timeout=30)
+                    async with httpx.AsyncClient(timeout=30) as http_client:
+                        response_photo = await http_client.get(photo_url)
                     response_photo.raise_for_status()
                     photo_data = response_photo.content
 
@@ -174,23 +174,15 @@ CNS Tool Repair | {city}, {province}
         if attachments:
             payload["attachments"] = attachments
 
-        response = requests.post(
-            RESEND_API_URL,
-            headers={
-                "Authorization": f"Bearer {app_settings.resend_api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=30,
-        )
+        result = await send_email_via_resend(payload)
 
-        if response.status_code in (200, 201):
-            logger.info(f"Email sent. Status: {response.status_code} | Request: #{quote.request_number} | Customer: {subject_name}")
+        if result["success"]:
+            logger.info(f"Email sent. Request: #{quote.request_number} | Customer: {subject_name}")
             if attachment_errors:
                 logger.warning(f"{len(attachment_errors)} photo(s) failed to attach but email sent successfully")
             return True
         else:
-            logger.error(f"Resend API error for request #{quote.request_number}: {response.status_code} {response.text}")
+            logger.error(f"Resend API error for request #{quote.request_number}: {result['error']}")
             return False
 
     except Exception as e:

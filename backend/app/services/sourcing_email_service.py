@@ -1,11 +1,10 @@
 import logging
 from typing import List, Optional
 
-import requests
+from app.services.resend_client import send_email_via_resend
 
 from app.config import settings
 
-RESEND_API_URL = "https://api.resend.com/emails"
 
 logger = logging.getLogger(__name__)
 
@@ -124,8 +123,8 @@ async def send_sourcing_email(
     parts: List[dict],
     message: Optional[str] = None,
     template: Optional[dict] = None,
-) -> bool:
-    """Send a single sourcing email to one recipient. Returns True on success."""
+) -> dict:
+    """Send a single sourcing email to one recipient. Returns {"success": bool, "error": str|None}."""
     html_body = _build_sourcing_email_html(parts, message, to_name, template=template)
 
     t = template or {}
@@ -151,25 +150,10 @@ async def send_sourcing_email(
     if bcc_list:
         payload["bcc"] = bcc_list
 
-    try:
-        response = requests.post(
-            RESEND_API_URL,
-            headers={
-                "Authorization": f"Bearer {settings.resend_api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=30,
-        )
-        if response.status_code in (200, 201):
-            logger.info(f"Sourcing email sent to {to_email}")
-            return True
-        else:
-            logger.error(f"Failed to send sourcing email to {to_email}: {response.status_code} {response.text}")
-            return False
-    except Exception as e:
-        logger.error(f"Failed to send sourcing email to {to_email}: {e}")
-        return False
+    result = await send_email_via_resend(payload)
+    if result["success"]:
+        logger.info(f"Sourcing email sent to {to_email}")
+    return result
 
 
 async def send_bulk_sourcing_emails(
@@ -194,7 +178,7 @@ async def send_bulk_sourcing_emails(
             failed.append({"email": to_email, "error": "Empty email address"})
             continue
 
-        success = await send_sourcing_email(
+        result = await send_sourcing_email(
             to_email=to_email,
             to_name=to_name,
             subject=subject,
@@ -203,9 +187,9 @@ async def send_bulk_sourcing_emails(
             template=template,
         )
 
-        if success:
+        if result["success"]:
             sent.append({"email": to_email, "name": to_name})
         else:
-            failed.append({"email": to_email, "error": "Send failed"})
+            failed.append({"email": to_email, "error": result.get("error") or "Send failed"})
 
     return {"sent": sent, "failed": failed}

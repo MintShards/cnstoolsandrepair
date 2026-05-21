@@ -1,11 +1,11 @@
 import logging
-import requests as http_requests
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
 from app.config import settings
 from app.database import get_database
 from app.services.email_service import format_pst_datetime
+from app.services.resend_client import send_email_via_resend
 from app.routers.settings import DEFAULT_SETTINGS
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -109,25 +109,17 @@ MESSAGE:
 CNS Tool Repair | {city}, {province}
 """
 
-    try:
-        response = http_requests.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {settings.resend_api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "from": "Message <message@cnstoolrepair.com>",
-                "to": [settings.notification_email],
-                "reply_to": f"{contact.name} <{contact.email}>",
-                "subject": f"Contact Form: {contact.subject}",
-                "text": email_body,
-            },
-            timeout=30,
-        )
-        logger.info(f"Contact form email sent. Status: {response.status_code} | {contact.name} | {contact.subject}")
-    except Exception as e:
-        logger.error(f"Failed to send contact email: {str(e)}")
+    result = await send_email_via_resend({
+        "from": "Message <message@cnstoolrepair.com>",
+        "to": [settings.notification_email],
+        "reply_to": f"{contact.name} <{contact.email}>",
+        "subject": f"Contact Form: {contact.subject}",
+        "text": email_body,
+    })
+    if result["success"]:
+        logger.info(f"Contact form email sent | {contact.name} | {contact.subject}")
+    else:
+        logger.error(f"Failed to send contact email | {contact.name} | {contact.subject} | {result['error']}")
 
     return {
         "success": True,
