@@ -7,7 +7,7 @@ export const StatusBadge = ({ status, count }) => {
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold border ${cfg.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
       {count && <span className="opacity-70">{count}×</span>}
-      {cfg.label}
+      {cfg.shortLabel ?? cfg.label}
     </span>
   );
 };
