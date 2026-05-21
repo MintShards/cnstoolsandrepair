@@ -33,13 +33,9 @@ class Settings(BaseSettings):
     # Email logo (hosted on Spaces for use in sourcing emails)
     email_logo_url: str = ""  # Set to Spaces URL after uploading logo
 
-    # SMTP (Hostinger) - for Parts Sourcing emails
-    smtp_host: str = "smtp.hostinger.com"
-    smtp_port: int = 465
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from_email: str = "purchasing@cnstoolrepair.com"
-    smtp_from_name: str = "CNS Tool Repair Purchasing"
+    # Parts Sourcing emails (Resend API)
+    sourcing_from_email: str = "purchasing@cnstoolrepair.com"
+    sourcing_from_name: str = "CNS Tool Repair Purchasing"
 
     # Environment
     environment: str = "development"

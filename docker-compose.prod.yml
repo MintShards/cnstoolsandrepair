@@ -25,12 +25,8 @@ services:
       - UPLOAD_BASE_URL=${UPLOAD_BASE_URL}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-5242880}
       - ALLOWED_EXTENSIONS=${ALLOWED_EXTENSIONS:-jpg,jpeg,png,webp}
-      - SMTP_HOST=${SMTP_HOST:-smtp.hostinger.com}
-      - SMTP_PORT=${SMTP_PORT:-465}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-purchasing@cnstoolrepair.com}
-      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Purchasing | CNS Tool Repair}
+      - SOURCING_FROM_EMAIL=${SOURCING_FROM_EMAIL:-purchasing@cnstoolrepair.com}
+      - SOURCING_FROM_NAME=${SOURCING_FROM_NAME:-Purchasing | CNS Tool Repair}
       - EMAIL_LOGO_URL=${EMAIL_LOGO_URL}
     restart: unless-stopped
     networks:

@@ -11,7 +11,7 @@ from app.database import get_database
 from app.dependencies.auth import require_admin
 from app.models.auth import User
 from app.models.sourcing_request import SourcingRequest, SourcingQueueItem, SourcingLogEntry
-from app.services.smtp_service import send_bulk_sourcing_emails
+from app.services.sourcing_email_service import send_bulk_sourcing_emails
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/parts-sourcing", tags=["parts-sourcing"])

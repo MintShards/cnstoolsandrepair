@@ -130,8 +130,8 @@ async def send_sourcing_email(
 
     t = template or {}
 
-    from_email = (t.get("from_email") or "").strip() or settings.smtp_from_email
-    from_name = (t.get("from_name") or "").strip() or settings.smtp_from_name
+    from_email = (t.get("from_email") or "").strip() or settings.sourcing_from_email
+    from_name = (t.get("from_name") or "").strip() or settings.sourcing_from_name
 
     # Add CC/BCC from template settings
     cc_raw = (t.get("cc") or "").strip()

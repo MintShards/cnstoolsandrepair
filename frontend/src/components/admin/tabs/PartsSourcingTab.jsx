@@ -233,7 +233,7 @@ export default function PartsSourcingTab() {
         const q = await sourcingAPI.getQueue();
         setQueue(q);
       } else {
-        showNotif('All emails failed to send. Check SMTP settings.', 'error');
+        showNotif('All emails failed to send. Check email settings.', 'error');
       }
     } catch (e) {
       showNotif(e?.response?.data?.detail || 'Failed to send emails.', 'error');
