@@ -31,6 +31,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-purchasing@cnstoolrepair.com}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Purchasing | CNS Tool Repair}
+      - EMAIL_LOGO_URL=${EMAIL_LOGO_URL}
     restart: unless-stopped
     networks:
       - cns-network
