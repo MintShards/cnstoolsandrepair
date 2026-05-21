@@ -22,7 +22,7 @@ const STATUS_LABELS = {
   approved: 'Approved', declined: 'Declined', parts_pending: 'Parts Pending',
   in_repair: 'In Repair', ready: 'Ready for Pickup', invoiced: 'Invoiced',
   completed: 'Completed', abandoned: 'Abandoned', closed: 'Closed',
-  not_worth_repair: 'Not Worth Repair',
+  beyond_economical_repair: 'Beyond Economical Repair',
 };
 
 function buildTagHTML(job, toolItem, toolIndex) {
