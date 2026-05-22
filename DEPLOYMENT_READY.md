@@ -11,7 +11,7 @@ You have confirmed the following are ready:
 
 - [x] **MongoDB Atlas** - Production database created
 - [x] **Digital Ocean Spaces** - Storage bucket configured
-- [x] **SendGrid** - Email service ready
+- [x] **Resend** - Email service ready
 - [x] **Domain** - cnstoolrepair.com registered
 
 ---
@@ -35,9 +35,9 @@ Before deploying, collect these credentials from your services:
 - [ ] Region: (e.g., `nyc3`, `sfo3`, `sgp1`)
   - Get from: DO Dashboard → Spaces → API
 
-#### **SendGrid**
-- [ ] API Key (starts with `SG.`)
-  - Get from: SendGrid Dashboard → Settings → API Keys
+#### **Resend**
+- [ ] API Key (starts with `re_`)
+  - Get from: Resend Dashboard → Settings → API Keys
 - [ ] Verified sender email: `noreply@cnstoolrepair.com`
 - [ ] Notification email: Your business email
 
@@ -152,9 +152,9 @@ DATABASE_NAME=cnstoolsandrepair_db_prod
 # CORS - Production Domain
 CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 
-# SendGrid - Email Service
-SENDGRID_API_KEY=SG.YOUR_SENDGRID_API_KEY_HERE
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+# Resend - Email Service
+RESEND_API_KEY=re_YOUR_RESEND_API_KEY_HERE
+NOTIFICATION_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=your-business-email@example.com
 
 # Digital Ocean Spaces
@@ -175,7 +175,7 @@ JWT_EXPIRATION_HOURS=8
 VITE_API_URL=https://cnstoolrepair.com
 
 # File Upload
-MAX_FILE_SIZE=5242880
+MAX_FILE_SIZE=10485760
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 
 # Environment
@@ -196,7 +196,7 @@ nano .env
 
 Replace these placeholders:
 - `USERNAME:PASSWORD@CLUSTER` - Your MongoDB credentials
-- `SG.YOUR_SENDGRID_API_KEY_HERE` - Your SendGrid API key
+- `re_YOUR_RESEND_API_KEY_HERE` - Your Resend API key
 - `your-business-email@example.com` - Your notification email
 - `your-bucket-name` - Your Spaces bucket name
 - `DO00XXXXXXXXXXXXX` - Your Spaces access key
@@ -411,13 +411,13 @@ exit
 
 **Fix:**
 ```bash
-# Check SendGrid key
-docker exec cns-backend-prod printenv SENDGRID_API_KEY
+# Check Resend key
+docker exec cns-backend-prod printenv RESEND_API_KEY
 
 # View email-related logs
 docker logs cns-backend-prod | grep -i email
 
-# Verify sender domain in SendGrid dashboard
+# Verify sender domain in Resend dashboard
 ```
 
 ---

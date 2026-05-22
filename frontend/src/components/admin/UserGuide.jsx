@@ -10,6 +10,7 @@ const STATUS_LIST = [
   { key: 'ready',         label: 'Ready for Pickup', step: 7,    color: '#059669', bg: '#ecfdf5', desc: 'The tool is fixed and waiting for the customer to come pick it up.' },
   { key: 'invoiced',      label: 'Invoiced',         step: 8,    color: '#0d9488', bg: '#f0fdfa', desc: 'We have sent the customer a bill.' },
   { key: 'completed',     label: 'Completed',        step: null, color: '#15803d', bg: '#dcfce7', desc: 'The customer picked up their tool and paid. The job is done.' },
+  { key: 'beyond_economical_repair', label: 'Beyond Economical Repair', step: null, color: '#b91c1c', bg: '#fef2f2', desc: 'The cost to repair the tool is more than the tool is worth. It does not make financial sense to fix it. Also shown as "BER".' },
   { key: 'declined',      label: 'Declined',         step: null, color: '#dc2626', bg: '#fef2f2', desc: 'The customer said no — they did not want us to do the repair.' },
   { key: 'abandoned',     label: 'Abandoned',        step: null, color: '#f43f5e', bg: '#fff1f2', desc: 'The job was stopped — the customer stopped responding or never picked up.' },
   { key: 'closed',        label: 'Closed',           step: null, color: '#94a3b8', bg: '#f8fafc', desc: 'The job is fully finished and filed away.' },
@@ -17,9 +18,10 @@ const STATUS_LIST = [
 
 const TRANSITIONS = {
   received:      ['diagnosed', 'abandoned'],
-  diagnosed:     ['quoted', 'received', 'abandoned'],
+  diagnosed:     ['quoted', 'beyond_economical_repair', 'received', 'abandoned'],
   quoted:        ['approved', 'declined', 'diagnosed', 'abandoned'],
   approved:      ['parts_pending', 'in_repair', 'quoted', 'abandoned'],
+  beyond_economical_repair: ['closed', 'quoted', 'abandoned'],
   declined:      ['closed', 'abandoned'],
   parts_pending: ['in_repair', 'quoted', 'approved', 'abandoned'],
   in_repair:     ['ready', 'parts_pending', 'approved', 'abandoned'],
@@ -344,7 +346,7 @@ export default function UserGuide({ onClose }) {
                 </InfoBox>
               </SubSection>
 
-              <SubSection title="The 12-Status Job Lifecycle">
+              <SubSection title="The 13-Status Job Lifecycle">
                 <p className="mb-4">Every repair job moves through a series of steps called statuses. There are 8 main steps in order, plus 4 end states for jobs that are finished or stopped early:</p>
 
                 {/* Linear flow */}
@@ -1150,7 +1152,7 @@ export default function UserGuide({ onClose }) {
                   { term: 'Session', def: 'The period of time you are logged in. Lasts 8 hours, then you are automatically signed out.' },
                   { term: 'SKU', def: 'A unique code used to identify a part. Same as a Part Number.' },
                   { term: 'Source', def: 'How the repair job came in: Drop-off (customer brought it in), Online Request (from the website), Phone-in (called us), or Email.' },
-                  { term: 'Status', def: 'Where a repair job currently is in the process. There are 12 possible statuses, from Received to Closed.' },
+                  { term: 'Status', def: 'Where a repair job currently is in the process. There are 13 possible statuses, from Received to Closed.' },
                   { term: 'Suggestions', def: 'Matching options that appear below a field as you type. Click one to select it and fill in the field automatically.' },
                   { term: 'Tab', def: 'One of the clickable labels at the top of a page that switches between different sections — for example, the Dashboard tab, Repair Jobs tab, etc.' },
                   { term: 'Technician', def: 'A staff member who works on the tools. Each tool in a job can be assigned to a technician.' },

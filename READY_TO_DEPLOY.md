@@ -81,13 +81,13 @@ DATABASE_NAME=cnstoolsandrepair_db_prod
 # CORS Configuration (update with actual domain)
 CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 
-# Email Configuration (SendGrid)
-SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+# Email Configuration (Resend)
+RESEND_API_KEY=your_resend_api_key_here
+NOTIFICATION_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # File Upload Configuration
-MAX_FILE_SIZE=5242880
+MAX_FILE_SIZE=10485760
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 UPLOAD_DIR=uploads
 
@@ -109,7 +109,7 @@ JWT_EXPIRATION_HOURS=8
 ### Mark as Encrypted (Lock Icon)
 When adding to App Platform, check "Encrypt" for:
 - `MONGODB_URL`
-- `SENDGRID_API_KEY`
+- `RESEND_API_KEY`
 - `SPACES_SECRET`
 - `JWT_SECRET_KEY`
 
@@ -170,7 +170,7 @@ python scripts/post_deployment.py
 This script will:
 - Create admin user (prompts for email/password)
 - Create 10 database indexes for performance
-- Test email configuration via SendGrid
+- Test email configuration via Resend
 - Generate deployment report
 
 **⚠️ Save your admin credentials!**
@@ -226,7 +226,7 @@ Submit 5 quotes quickly - 6th should be blocked.
 - Frontend (Basic): $3/mo
 - Platform overhead: ~$4/mo
 - MongoDB Atlas: $0 (free tier)
-- SendGrid: $0 (free tier, 100 emails/day)
+- Resend: $0 (free tier, 100 emails/day)
 - **Total**: ~$12/month
 
 ---
@@ -261,9 +261,9 @@ MongoDB Atlas must allow `0.0.0.0/0` for App Platform to connect.
 **Fix**: Verify network access allows 0.0.0.0/0 in Atlas
 
 ### Email Not Sending
-**Check**: SendGrid dashboard activity log
+**Check**: Resend dashboard activity log
 **Common issue**: API key invalid or daily limit exceeded
-**Fix**: Verify `SENDGRID_API_KEY` is correct (100 emails/day free tier)
+**Fix**: Verify `RESEND_API_KEY` is correct (100 emails/day free tier)
 
 ### CORS Error
 **Check**: Browser console shows CORS error

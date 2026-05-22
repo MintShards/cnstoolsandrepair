@@ -55,7 +55,7 @@ async def validate_environment_variables():
         "MONGODB_URL": settings.mongodb_url,
         "DATABASE_NAME": settings.database_name,
         "CORS_ORIGINS": settings.cors_origins,
-        "SENDGRID_API_KEY": settings.sendgrid_api_key,
+        "RESEND_API_KEY": settings.resend_api_key,
         "JWT_SECRET_KEY": settings.jwt_secret_key,
         "SPACES_KEY": settings.spaces_key if settings.use_spaces else "N/A",
         "SPACES_SECRET": settings.spaces_secret if settings.use_spaces else "N/A",
@@ -106,11 +106,11 @@ async def validate_environment_variables():
         issues.append(f"JWT secret is only {len(settings.jwt_secret_key)} characters (minimum 32 required)")
         all_passed = False
 
-    # SendGrid API key format
-    passed = settings.sendgrid_api_key.startswith("SG.")
-    print_check(passed, f"SendGrid API key format valid")
+    # Resend API key format
+    passed = settings.resend_api_key.startswith("re_")
+    print_check(passed, f"Resend API key format valid")
     if not passed:
-        issues.append("SendGrid API key should start with 'SG.'")
+        issues.append("Resend API key should start with 're_'")
         all_passed = False
 
     # Environment setting
@@ -243,33 +243,33 @@ async def validate_mongodb_connection():
     return all_passed, issues
 
 
-async def validate_sendgrid():
-    """Validate SendGrid API key"""
+async def validate_resend():
+    """Validate Resend API key"""
     print_header("4. SENDGRID EMAIL VALIDATION")
 
     all_passed = True
     issues = []
 
-    print("\n🔍 Testing SendGrid API key...")
+    print("\n🔍 Testing Resend API key...")
     try:
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
+        from resend import ResendAPIClient
+        from resend.helpers.mail import Mail
 
-        sg = SendGridAPIClient(settings.sendgrid_api_key)
+        sg = ResendAPIClient(settings.resend_api_key)
 
         # Try to get API key permissions (validates key without sending email)
-        response = sg.client.api_keys._(settings.sendgrid_api_key.split('.')[2] if '.' in settings.sendgrid_api_key else 'test').get()
+        response = sg.client.api_keys._(settings.resend_api_key.split('.')[2] if '.' in settings.resend_api_key else 'test').get()
 
-        print_check(True, "SendGrid API key is valid")
+        print_check(True, "Resend API key is valid")
 
     except Exception as e:
         # Try a simpler validation - just check if the key format is correct
-        if settings.sendgrid_api_key.startswith("SG.") and len(settings.sendgrid_api_key) > 30:
-            print_check(True, "SendGrid API key format appears valid")
+        if settings.resend_api_key.startswith("re_") and len(settings.resend_api_key) > 30:
+            print_check(True, "Resend API key format appears valid")
             print("  ℹ️  Note: Full validation requires sending a test email")
         else:
-            print_check(False, f"SendGrid validation failed: {str(e)}")
-            issues.append("SendGrid API key may be invalid")
+            print_check(False, f"Resend validation failed: {str(e)}")
+            issues.append("Resend API key may be invalid")
             all_passed = False
 
     return all_passed, issues
@@ -340,8 +340,8 @@ async def main():
     passed, issues = await validate_mongodb_connection()
     results.append((passed, issues))
 
-    # 4. SendGrid
-    passed, issues = await validate_sendgrid()
+    # 4. Resend
+    passed, issues = await validate_resend()
     results.append((passed, issues))
 
     # Print summary and exit

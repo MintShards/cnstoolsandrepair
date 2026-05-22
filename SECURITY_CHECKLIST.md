@@ -47,7 +47,7 @@ grep -r "Mayo22pogiako" *.md
 # MongoDB passwords
 grep -r "Mayo22pogiako\|20Jessie02mi" .
 
-# SendGrid API keys
+# Resend API keys
 grep -r "SG\.znwx3LNHTrG3QhlljpvW-A" .
 
 # JWT secrets (example pattern)
@@ -131,8 +131,8 @@ git diff --cached
 - [ ] Generate new secure password
 - [ ] Update local `backend/.env.production`
 
-### SendGrid
-- [ ] Login to https://app.sendgrid.com
+### Resend
+- [ ] Login to https://app.resend.com
 - [ ] Go to Settings → API Keys
 - [ ] Delete old key (if exists): `znwx3LNHTrG3QhlljpvW-A`
 - [ ] Create new API key
@@ -159,12 +159,12 @@ git diff --cached
 
 ## 🚨 Emergency Response (Active Breach)
 
-**If GitHub/MongoDB/SendGrid sends security alert:**
+**If GitHub/MongoDB/Resend sends security alert:**
 
 ### Immediate Actions (Within 1 hour)
 1. **Assess exposure**:
    ```bash
-   git log --all --source --full-history -- '*.md' | grep -A 5 -B 5 "MongoDB\|SendGrid\|JWT"
+   git log --all --source --full-history -- '*.md' | grep -A 5 -B 5 "MongoDB\|Resend\|JWT"
    ```
 
 2. **Rotate ALL credentials** (use checklist above)
@@ -185,7 +185,7 @@ git diff --cached
 
 ### Follow-up Actions (Within 24 hours)
 - [ ] Monitor MongoDB Atlas for unauthorized access attempts
-- [ ] Check SendGrid activity log for suspicious emails
+- [ ] Check Resend activity log for suspicious emails
 - [ ] Review App Platform logs for failed authentication
 - [ ] Update credential rotation schedule
 - [ ] Document incident and lessons learned
@@ -220,13 +220,13 @@ else
     echo "✅ No MongoDB passwords in tracked files"
 fi
 
-# Check for SendGrid API keys
-echo -e "\n3. Scanning for SendGrid API keys..."
+# Check for Resend API keys
+echo -e "\n3. Scanning for Resend API keys..."
 if git ls-files | xargs grep -l "SG\.znwx3LNHTrG3QhlljpvW-A" 2>/dev/null; then
-    echo "❌ CRITICAL: SendGrid API key found in tracked files"
+    echo "❌ CRITICAL: Resend API key found in tracked files"
     exit 1
 else
-    echo "✅ No SendGrid API keys in tracked files"
+    echo "✅ No Resend API keys in tracked files"
 fi
 
 # Check for JWT secrets
@@ -295,7 +295,7 @@ chmod +x scripts/security-audit.sh
 - [ ] Database user has minimal required permissions
 
 ### Third-Party Services
-- [ ] SendGrid API key valid and active
+- [ ] Resend API key valid and active
 - [ ] Digital Ocean Spaces configured (if enabled)
 - [ ] All API keys tested before deployment
 

@@ -56,7 +56,7 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
   - ObjectId conversion: `convert_objectid_to_str()` + rename `_id` to `id` before returning to frontend
   - File uploads: `multipart/form-data` with `UploadFile`, saved to `uploads/` with UUID filenames
   - Email: Non-blocking Resend notifications (don't block quote creation)
-  - Email senders: `request@cnstoolrepair.com` (display: "Request") for repair requests, `message@cnstoolrepair.com` (display: "Message") for contact form. Reply-To is always set to customer email.
+  - Email senders: `request@cnstoolrepair.com` (display: "Request") for repair requests, `message@cnstoolrepair.com` (display: "Message") for contact form, `purchasing@cnstoolrepair.com` (display: "CNS Tool Repair Purchasing") for parts sourcing emails. Reply-To is always set to customer email.
   - Middleware: Request logging, CORS, static file serving (`/uploads`)
 
 ### Frontend (React)
@@ -110,6 +110,8 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 // gallery - Photo gallery
 // users - Admin authentication
 // counters - Atomic counters for request number generation
+// sourcing_logs - Parts sourcing history and email logs
+// service_agreement - Service agreement terms (singleton document)
 ```
 
 ## Critical Patterns
@@ -162,20 +164,48 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 
 ### Repair Job Lifecycle
 ```python
-# RepairStatus enum (12 states in order):
+# RepairStatus enum (13 states):
 # received → diagnosed → quoted → approved → parts_pending →
-# in_repair → quality_check → ready → invoiced → completed
-# (also: abandoned, closed)
+# in_repair → ready → invoiced → completed
+# (also: declined, beyond_economical_repair, abandoned, closed)
+
+# ALLOWED_TRANSITIONS (source: backend/app/models/repair.py):
+#   received      → diagnosed, abandoned
+#   diagnosed     → quoted, beyond_economical_repair, received, abandoned
+#   quoted        → approved, declined, diagnosed, abandoned
+#   approved      → parts_pending, in_repair, quoted, abandoned
+#   declined      → closed, abandoned
+#   beyond_economical_repair → closed, quoted, abandoned
+#   parts_pending → in_repair, quoted, approved, abandoned
+#   in_repair     → ready, parts_pending, approved, abandoned
+#   ready         → invoiced, in_repair, abandoned
+#   invoiced      → completed, ready, abandoned
+#   completed     → closed
+#   abandoned     → closed
+#   closed        → (none)
 
 # RepairSource enum: online_request | drop_off | phone_in | email
 # Priority enum: standard | rush | urgent
+# PartStatus enum: pending | ordered | received | installed
 
 # PartItem includes order tracking:
-# { name, part_number, quantity, unit_price, supplier,
-#   order_link, order_date, eta, date_received }
+# { name, part_number, quantity, price, supplier,
+#   order_link, order_date, eta, date_received,
+#   tracking, library_part_id, needs_sourcing, sourcing_emailed,
+#   notes, status (PartStatus) }
 ```
 
 Repairs router (`routers/repairs.py`) supports server-side pagination with filters, batch status updates, and work order generation.
+
+### Work Order Number Generation (ATOMIC)
+```python
+# Repair jobs get WO-YYYY-XXXX numbers (separate counter from REQ-YYYY-XXXX)
+work_order_number = await get_next_work_order_number()  # Returns "WO-2026-0001"
+
+# Backend: app/database.py:get_next_work_order_number()
+# Uses counters collection with atomic increment (separate from request counter)
+# Format: WO-2026-0001, WO-2026-0002, etc. (resets yearly)
+```
 
 ### Parts Library (3-Level Hierarchy)
 ```
@@ -184,6 +214,21 @@ library_brands → library_models → library_parts
 - `CompatGroup` links parts across brands (cross-brand interchangeable parts)
 - `/api/parts-library/compatible-parts/{model_id}` returns parts that fit a model, including cross-brand matches
 - Route order rule applies here too: specific paths before `/{id}` parameterized routes
+- Models support diagram image uploads
+
+### Parts Sourcing System
+- Router: `routers/sourcing.py` (prefix: `/api/parts-sourcing`)
+- Service: `services/sourcing_email_service.py`
+- Model: `models/sourcing_request.py`
+- Workflow: Parts with `needs_sourcing=True` appear in the sourcing queue. Admin can send bulk supplier emails via Resend, which sets `sourcing_emailed=True` on each part. History stored in `sourcing_logs`.
+- Sourcing email template is configurable via admin settings (`business_settings.sourcingEmailTemplate`)
+
+### Service Agreement System
+- Router: `routers/service_agreement.py` (prefix: `/api/service-agreement`)
+- Public `GET /api/service-agreement/` returns current terms; admin `PUT /api/service-agreement/` updates them
+- Stores: warranty terms, air supply requirements, general service terms
+- Single document in `service_agreement` collection
+- Used by `PrintWorkOrder.jsx` to print terms on work orders
 
 ### CRUD Pattern
 - **GET /** - List all (with `active_only` param)
@@ -219,6 +264,10 @@ SPACES_BUCKET=cnstoolsandrepair-photos
 SPACES_KEY=<key>
 SPACES_SECRET=<secret>
 SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
+# Parts sourcing emails
+EMAIL_LOGO_URL=<spaces-url-to-logo>
+SOURCING_FROM_EMAIL=purchasing@cnstoolrepair.com
+SOURCING_FROM_NAME=CNS Tool Repair Purchasing
 ```
 
 ### Frontend (optional `.env`)
@@ -228,14 +277,14 @@ VITE_API_URL=http://localhost:8000
 
 ## Admin Interface
 
-- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repairs` (hidden, no nav links)
+- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repair-tracker` (hidden, no nav links)
 - **Auth**: JWT-based (email + password), 8-hour expiration
 - **User creation**: `python scripts/create_admin.py`
 - **Settings tabs**: Home, Services, Industries, Gallery, About, Contact, Global, Parts Library, Repair Jobs, Repair Requests, Customers
 - **Services vs Tools**:
   - Services: Array in settings collection (no IDs)
   - Tools: Separate collection with CRUD API (categorized, soft-delete)
-- **Repair Tracker** (`/admin/repairs`): Server-side pagination, batch status updates, work order printing (inline DOM printing with new-tab fallback for mobile)
+- **Repair Tracker** (`/admin/repair-tracker`): Server-side pagination, batch status updates, work order printing (`PrintWorkOrder.jsx`), tool tag printing (`PrintToolTag.jsx` — 4×3 inch labels with status badge, warranty indicator, and parts list). Inline DOM printing with new-tab fallback for mobile.
 - **Parts Library tabs**: Brands → Models → Parts (3-level drill-down), plus Compatibility Groups for cross-brand interchangeable parts
 
 ## Development Workflows
@@ -310,15 +359,15 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 
 ## Known Limitations
 
-1. **No password reset** - Manual via MongoDB (see AUTH_SETUP_GUIDE.md)
-2. **Local file storage** - Production needs Digital Ocean Spaces/AWS S3 (see DEPLOYMENT.md)
+1. **No password reset** - Manual via MongoDB (connect with Compass, update `users` collection directly)
+2. **Local file storage** - Production needs Digital Ocean Spaces/AWS S3 (see DEPLOYMENT_CHECKLIST.md)
 3. **No pagination on quotes list** - Returns all (repairs tracker has server-side pagination)
 4. **Client-side SEO** - Meta tags via react-helmet-async (SSR/SSG would be better)
 5. **No test suite** - pytest + httpx are installed but no tests written yet
 
 ## Production Deployment
 
-**⚠️ CRITICAL**: Local file storage (`backend/uploads/`) will lose photos on deployment. Must integrate Digital Ocean Spaces before production. See `DEPLOYMENT.md` for:
+**⚠️ CRITICAL**: Local file storage (`backend/uploads/`) will lose photos on deployment. Must integrate Digital Ocean Spaces before production. See `DEPLOYMENT_CHECKLIST.md` for:
 - Spaces setup checklist
 - Environment configuration
 - Cost breakdown (~$17/month)
@@ -335,6 +384,10 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 
 ## Additional Documentation
 
-- `AUTH_SETUP_GUIDE.md` - Admin authentication setup
-- `DEPLOYMENT.md` - Production deployment guide (Digital Ocean Spaces integration)
-- `OG_IMAGE_GUIDE.md` - Social media preview image creation
+- `DEPLOYMENT_CHECKLIST.md` - Step-by-step production deployment checklist
+- `DEPLOYMENT_DO_DROPLET.md` - Digital Ocean Droplet deployment guide
+- `PRODUCTION.md` - General production deployment guide
+- `PRODUCTION_ENV_GUIDE.md` - Environment variable configuration guide
+- `PRODUCTION_READY.md` - Production launch readiness summary
+- `READY_TO_DEPLOY.md` - Production configuration guide
+- `SECURITY_CHECKLIST.md` - Pre-deployment security verification

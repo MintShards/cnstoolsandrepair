@@ -77,8 +77,8 @@ JWT_SECRET_KEY=<32+ char secret from above>
 CORS_ORIGINS=https://cnstoolrepair.com
 
 # Email
-SENDGRID_API_KEY=<your_key>
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+RESEND_API_KEY=<your_key>
+NOTIFICATION_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # Spaces
@@ -165,14 +165,14 @@ Digital Ocean App Platform
 └── FastAPI Backend
     ├── MongoDB Atlas (database)
     ├── DO Spaces (photo storage)
-    └── SendGrid (email)
+    └── Resend (email)
 ```
 
 **Cost**: $17/month
 - Spaces: $5/mo
 - App Platform: $12/mo
 - MongoDB: Free tier
-- SendGrid: Free tier
+- Resend: Free tier
 
 ---
 
@@ -208,13 +208,13 @@ Digital Ocean App Platform
 **Symptoms**: `email_sent: false` in API response
 
 **Fixes**:
-1. Verify SendGrid API key in `.env`
-2. Check SendGrid dashboard → Activity
+1. Verify Resend API key in `.env`
+2. Check Resend dashboard → Activity
 3. Check daily limit (100 emails/day free tier)
 4. Test API key:
 ```bash
-curl -X POST https://api.sendgrid.com/v3/mail/send \
-  -H "Authorization: Bearer $SENDGRID_API_KEY" \
+curl -X POST https://api.resend.com/v3/mail/send \
+  -H "Authorization: Bearer $RESEND_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"personalizations":[{"to":[{"email":"test@example.com"}]}],"from":{"email":"noreply@cnstoolrepair.com"},"subject":"Test","content":[{"type":"text/plain","value":"Test"}]}'
 ```
@@ -249,7 +249,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 ### Daily
 - App Platform → Check error logs
-- SendGrid → Delivery rate (should be >95%)
+- Resend → Delivery rate (should be >95%)
 
 ### Weekly
 - MongoDB Atlas → Storage usage (free tier: 512MB)
@@ -293,7 +293,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 **Support contacts**:
 - Digital Ocean: https://cloud.digitalocean.com/support
 - MongoDB Atlas: https://support.mongodb.com
-- SendGrid: https://support.sendgrid.com
+- Resend: https://support.resend.com
 
 ---
 
@@ -317,7 +317,7 @@ npm run dev
 ### Code Structure
 - `backend/app/routers/quotes.py` - Quote API
 - `backend/app/services/file_service.py` - Spaces integration
-- `backend/app/services/email_service.py` - SendGrid
+- `backend/app/services/email_service.py` - Resend
 - `frontend/src/pages/Quote.jsx` - Quote form
 - `frontend/src/components/admin/tabs/QuotesTab.jsx` - Admin
 

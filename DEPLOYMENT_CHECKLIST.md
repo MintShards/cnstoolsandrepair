@@ -11,7 +11,7 @@ Complete step-by-step checklist for deploying CNS Tool Repair to production.
 ## Pre-Deployment Phase (1 hour)
 
 ### ☐ Digital Ocean Spaces Setup (30 min)
-**Guide**: `SPACES_SETUP.md`
+**Guide**: `DEPLOYMENT_CHECKLIST.md`
 
 - [ ] Create bucket: `cnstoolsandrepair-photos` in NYC3
 - [ ] Generate and save Spaces API keys
@@ -33,7 +33,7 @@ grep "USE_SPACES=true" backend/.env
 ---
 
 ### ☐ Production Environment Configuration (15 min)
-**Guide**: `PRODUCTION_ENV_SETUP.md`
+**Guide**: `PRODUCTION_ENV_GUIDE.md`
 
 - [ ] Create MongoDB production database: `cnstoolsandrepair_db_prod`
 - [ ] Get Atlas connection string
@@ -41,7 +41,7 @@ grep "USE_SPACES=true" backend/.env
 - [ ] Create `backend/.env` with production values
 - [ ] Replace ALL placeholder values
 - [ ] Verify no localhost in CORS
-- [ ] Confirm SendGrid API key valid
+- [ ] Confirm Resend API key valid
 
 **Validation**:
 ```bash
@@ -105,10 +105,10 @@ Add all 20 variables:
 MONGODB_URL=...
 DATABASE_NAME=cnstoolsandrepair_db_prod
 CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
-SENDGRID_API_KEY=...
-SENDGRID_FROM_EMAIL=...
+RESEND_API_KEY=...
 NOTIFICATION_EMAIL=...
-MAX_FILE_SIZE=5242880
+NOTIFICATION_EMAIL=...
+MAX_FILE_SIZE=10485760
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 UPLOAD_DIR=uploads
 UPLOAD_BASE_URL=https://cnstoolrepair.com
@@ -126,7 +126,7 @@ JWT_EXPIRATION_HOURS=8
 
 **Mark as encrypted**:
 - `MONGODB_URL`
-- `SENDGRID_API_KEY`
+- `RESEND_API_KEY`
 - `SPACES_SECRET`
 - `JWT_SECRET_KEY`
 
@@ -441,7 +441,7 @@ python scripts/create_indexes.py
 - Digital Ocean App Platform: $12/mo (backend $5 + frontend $3 + overhead)
 - Digital Ocean Spaces: $5/mo
 - MongoDB Atlas: Free (512MB tier)
-- SendGrid: Free (100 emails/day tier)
+- Resend: Free (100 emails/day tier)
 
 **Total**: ~$17/month
 
@@ -487,10 +487,10 @@ python scripts/create_indexes.py
 
 ### Emails not sending
 **Check**:
-- SendGrid API key valid
+- Resend API key valid
 - Daily limit not exceeded (100/day free tier)
 - From email domain authenticated
-- SendGrid Activity log for rejections
+- Resend Activity log for rejections
 
 ### Rate limiting not working
 **Check**:
@@ -502,10 +502,10 @@ python scripts/create_indexes.py
 
 ## Documentation References
 
-- **Spaces Setup**: `SPACES_SETUP.md`
-- **Environment Config**: `PRODUCTION_ENV_SETUP.md`
+- **Spaces Setup**: `DEPLOYMENT_CHECKLIST.md`
+- **Environment Config**: `PRODUCTION_ENV_GUIDE.md`
 - **General Production Guide**: `PRODUCTION.md`
-- **Admin Auth**: `AUTH_SETUP_GUIDE.md`
+- **Admin Auth**: Manual via MongoDB (connect with Compass, update `users` collection)
 - **Project Overview**: `CLAUDE.md`
 
 ---
@@ -514,7 +514,7 @@ python scripts/create_indexes.py
 
 - **App Platform**: https://cloud.digitalocean.com/support
 - **MongoDB Atlas**: https://support.mongodb.com
-- **SendGrid**: https://support.sendgrid.com
+- **Resend**: https://support.resend.com
 - **DNS Issues**: Your domain registrar support
 
 ---

@@ -185,9 +185,9 @@ configure_environment() {
     read -p "MongoDB Database Name [cnstoolsandrepair_db_prod]: " DATABASE_NAME
     DATABASE_NAME=${DATABASE_NAME:-cnstoolsandrepair_db_prod}
 
-    read -p "SendGrid API Key: " SENDGRID_API_KEY
-    read -p "SendGrid From Email [noreply@cnstoolrepair.com]: " SENDGRID_FROM_EMAIL
-    SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-noreply@cnstoolrepair.com}
+    read -p "Resend API Key: " RESEND_API_KEY
+    read -p "Resend From Email [noreply@cnstoolrepair.com]: " NOTIFICATION_EMAIL
+    NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL:-noreply@cnstoolrepair.com}
     read -p "Notification Email: " NOTIFICATION_EMAIL
 
     read -p "Digital Ocean Spaces Region [nyc3]: " SPACES_REGION
@@ -205,9 +205,9 @@ DATABASE_NAME=$DATABASE_NAME
 # CORS - Production Domain
 CORS_ORIGINS=https://$DOMAIN,https://$WWW_DOMAIN
 
-# SendGrid - Email Service
-SENDGRID_API_KEY=$SENDGRID_API_KEY
-SENDGRID_FROM_EMAIL=$SENDGRID_FROM_EMAIL
+# Resend - Email Service
+RESEND_API_KEY=$RESEND_API_KEY
+NOTIFICATION_EMAIL=$NOTIFICATION_EMAIL
 NOTIFICATION_EMAIL=$NOTIFICATION_EMAIL
 
 # Digital Ocean Spaces
@@ -228,7 +228,7 @@ JWT_EXPIRATION_HOURS=8
 VITE_API_URL=https://$DOMAIN
 
 # File Upload
-MAX_FILE_SIZE=5242880
+MAX_FILE_SIZE=10485760
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 
 # Environment

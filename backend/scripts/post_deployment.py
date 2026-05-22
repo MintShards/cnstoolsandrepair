@@ -199,16 +199,16 @@ async def verify_spaces_connectivity():
 
 
 async def send_test_email():
-    """Send test email to verify SendGrid configuration"""
+    """Send test email to verify Resend configuration"""
     print("\n📧 Testing email configuration...")
 
     try:
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
+        from resend import ResendAPIClient
+        from resend.helpers.mail import Mail
 
         # Create test email
         message = Mail(
-            from_email=settings.sendgrid_from_email,
+            from_email=settings.resend_from_email,
             to_emails=settings.notification_email,
             subject='[CNS Tool Repair] Production Deployment Successful',
             html_content=f"""
@@ -218,12 +218,12 @@ async def send_test_email():
             <p><strong>Environment:</strong> {settings.environment}</p>
             <p><strong>Database:</strong> {settings.database_name}</p>
             <hr>
-            <p>This is an automated test email to verify SendGrid configuration.</p>
+            <p>This is an automated test email to verify Resend configuration.</p>
             <p><em>CNS Tool Repair - Automated Deployment System</em></p>
             """
         )
 
-        sg = SendGridAPIClient(settings.sendgrid_api_key)
+        sg = ResendAPIClient(settings.resend_api_key)
         response = sg.send(message)
 
         if response.status_code == 202:

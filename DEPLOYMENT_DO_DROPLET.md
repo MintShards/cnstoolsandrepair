@@ -21,7 +21,7 @@ Complete step-by-step guide for deploying CNS Tool Repair to production on Digit
 ### Required Accounts
 - [ ] Digital Ocean account with billing enabled
 - [ ] MongoDB Atlas account (free tier OK for initial deployment)
-- [ ] SendGrid account with verified sender domain
+- [ ] Resend account with verified sender domain
 - [ ] Domain name with DNS access
 
 ### Required Tools (Local)
@@ -34,7 +34,7 @@ Complete step-by-step guide for deploying CNS Tool Repair to production on Digit
 | DO Droplet | 4GB RAM, 2 vCPUs, 80GB SSD | $24 |
 | DO Spaces | 250GB storage, 1TB bandwidth | $5 |
 | MongoDB Atlas | M0 Free Tier | $0 |
-| SendGrid | Free (100 emails/day) | $0 |
+| Resend | Free (100 emails/day) | $0 |
 | **Total** | | **~$29/month** |
 
 ---
@@ -51,7 +51,7 @@ Complete step-by-step guide for deploying CNS Tool Repair to production on Digit
 
 ### Before You Start
 - [ ] Domain DNS propagated (point A record to droplet IP - you'll get this after creating droplet)
-- [ ] SendGrid sender domain verified
+- [ ] Resend sender domain verified
 - [ ] Production database created in MongoDB Atlas
 - [ ] Digital Ocean Spaces created and configured
 
@@ -310,9 +310,9 @@ DATABASE_NAME=cnstoolsandrepair_db_prod
 # CORS - Your Production Domain
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
-# SendGrid - Production Keys
-SENDGRID_API_KEY=SG.your_actual_production_key_here
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+# Resend - Production Keys
+RESEND_API_KEY=re_your_actual_production_key_here
+NOTIFICATION_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # Digital Ocean Spaces - Your Actual Credentials
@@ -353,8 +353,8 @@ cat > .env << 'EOF'
 MONGODB_URL=mongodb+srv://cns_prod_user:<PASSWORD>@cluster.mongodb.net/cnstoolsandrepair_db_prod?retryWrites=true&w=majority&tls=true
 DATABASE_NAME=cnstoolsandrepair_db_prod
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-SENDGRID_API_KEY=SG.your_actual_key
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+RESEND_API_KEY=re_your_actual_key
+NOTIFICATION_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 JWT_SECRET_KEY=your_generated_jwt_secret
 USE_SPACES=true
@@ -629,19 +629,19 @@ python -c "import boto3; s3=boto3.client('s3', endpoint_url='https://nyc3.digita
 
 ### Email Not Sending
 
-**Check SendGrid configuration:**
+**Check Resend configuration:**
 ```bash
-# Verify SendGrid API key
-docker exec cns-backend-prod printenv | grep SENDGRID
+# Verify Resend API key
+docker exec cns-backend-prod printenv | grep RESEND
 
 # Check backend logs for email errors
 docker logs cns-backend-prod | grep -i email
 ```
 
-**Common SendGrid issues:**
-- Invalid API key → regenerate in SendGrid dashboard
-- Sender domain not verified → verify domain in SendGrid
-- Daily limit exceeded → check SendGrid usage dashboard
+**Common Resend issues:**
+- Invalid API key → regenerate in Resend dashboard
+- Sender domain not verified → verify domain in Resend
+- Daily limit exceeded → check Resend usage dashboard
 
 ### High Memory Usage
 
@@ -786,7 +786,7 @@ docker-compose -f docker-compose.prod.yml up -d
 
 - **Digital Ocean Docs**: https://docs.digitalocean.com/
 - **MongoDB Atlas Docs**: https://docs.atlas.mongodb.com/
-- **SendGrid Docs**: https://docs.sendgrid.com/
+- **Resend Docs**: https://docs.resend.com/
 - **Let's Encrypt**: https://letsencrypt.org/docs/
 - **FastAPI Deployment**: https://fastapi.tiangolo.com/deployment/
 

@@ -61,9 +61,9 @@ These are standard values (customize if needed):
 | Variable | Value | Notes |
 |----------|-------|-------|
 | `DATABASE_NAME` | `cnstoolsandrepair_db_prod` | Production database name |
-| `SENDGRID_FROM_EMAIL` | `noreply@cnstoolrepair.com` | Email sender address |
+| `NOTIFICATION_EMAIL` | `noreply@cnstoolrepair.com` | Email sender address |
 | `NOTIFICATION_EMAIL` | `cnstoolrepair@gmail.com` | Quote notification recipient |
-| `MAX_FILE_SIZE` | `5242880` | 5MB file upload limit |
+| `MAX_FILE_SIZE` | `10485760` | 5MB file upload limit |
 | `ALLOWED_EXTENSIONS` | `jpg,jpeg,png,webp` | Image formats allowed |
 | `UPLOAD_DIR` | `uploads` | Upload directory path |
 | `USE_SPACES` | `false` | Disable Spaces storage |
@@ -80,11 +80,11 @@ These are standard values (customize if needed):
 
 These values must be generated fresh (never reuse from development):
 
-### SendGrid API Key
-**Variable**: `SENDGRID_API_KEY`
+### Resend API Key
+**Variable**: `RESEND_API_KEY`
 
 **How to generate**:
-1. Login to SendGrid: https://app.sendgrid.com
+1. Login to Resend: https://app.resend.com
 2. Navigate to Settings → API Keys
 3. Click "Create API Key"
 4. Name: `cnstoolsandrepair-production`
@@ -93,7 +93,7 @@ These values must be generated fresh (never reuse from development):
 
 **Format**:
 ```
-SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx.yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 ```
 
 ---
@@ -154,13 +154,13 @@ DATABASE_NAME=cnstoolsandrepair_db_prod
 # CORS Configuration (update with actual domain)
 CORS_ORIGINS=https://cnstoolrepair.com,https://www.cnstoolrepair.com
 
-# Email Configuration (SendGrid)
-SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com
+# Email Configuration (Resend)
+RESEND_API_KEY=your_resend_api_key_here
+NOTIFICATION_EMAIL=noreply@cnstoolrepair.com
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com
 
 # File Upload Configuration
-MAX_FILE_SIZE=5242880
+MAX_FILE_SIZE=10485760
 ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 UPLOAD_DIR=uploads
 
@@ -221,7 +221,7 @@ Visit: `http://localhost:8000/health`
 2. Add each variable from `.env.production`
 3. **Mark as Encrypted** (check lock icon):
    - `MONGODB_URL`
-   - `SENDGRID_API_KEY`
+   - `RESEND_API_KEY`
    - `SPACES_SECRET`
    - `JWT_SECRET_KEY`
 
@@ -266,13 +266,13 @@ This creates 10 performance indexes for quotes, tools, brands, etc.
 
 ### Credential Rotation Schedule
 - **MongoDB password**: Rotate every 90 days
-- **SendGrid API key**: Rotate every 180 days or after exposure
+- **Resend API key**: Rotate every 180 days or after exposure
 - **JWT secret**: Rotate if compromised or annually
 - **Spaces credentials**: Rotate every 180 days
 
 ### Emergency Rotation (If Exposed)
 1. **Immediately** change MongoDB password in Atlas
-2. **Immediately** delete and recreate SendGrid API key
+2. **Immediately** delete and recreate Resend API key
 3. **Immediately** generate new JWT secret
 4. Update `backend/.env.production` locally
 5. Update App Platform environment variables
@@ -301,10 +301,10 @@ This creates 10 performance indexes for quotes, tools, brands, etc.
 - Redeploy after changes
 
 ### "Email not sending"
-- Verify `SENDGRID_API_KEY` is valid (not deleted)
-- Check SendGrid dashboard for email status
+- Verify `RESEND_API_KEY` is valid (not deleted)
+- Check Resend dashboard for email status
 - Confirm not exceeding free tier (100 emails/day)
-- Test API key with SendGrid's test endpoint
+- Test API key with Resend's test endpoint
 
 ### "Placeholders still in config"
 - Run validation: `grep "your_.*_here" backend/.env.production`

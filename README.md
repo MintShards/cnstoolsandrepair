@@ -19,7 +19,7 @@
 - **Motor** - Async MongoDB driver for high-performance database operations
 - **Pydantic** - Data validation and settings management
 - **MongoDB Atlas** - Cloud database (no local MongoDB required)
-- **SendGrid** - Transactional email service for notifications
+- **Resend** - Transactional email service for notifications
 - **JWT Authentication** - Secure admin authentication with python-jose
 - **Passlib + Bcrypt** - Password hashing and verification
 - **Pillow** - Image processing for photo uploads
@@ -50,7 +50,7 @@
 ## Features
 
 ### Customer-Facing
-- ✅ **Quote Request System** - Online quote submission with multi-photo upload (max 5 photos, 5MB each)
+- ✅ **Quote Request System** - Online quote submission with multi-photo upload (max 5 photos, 10MB each)
 - ✅ **Industries Page** - Dynamic content showcasing 10 target industry sectors with tool badges
 - ✅ **Services Catalog** - Categorized repairable tools (air tools, electric tools, lifting equipment)
 - ✅ **Brand Partners** - Carousel display of supported brands with logos
@@ -71,7 +71,7 @@
 - ✅ **RESTful API** - FastAPI with automatic OpenAPI documentation at `/docs`
 - ✅ **Async Operations** - Non-blocking database and email operations using Motor
 - ✅ **File Upload** - Multipart form handling with UUID filenames and validation
-- ✅ **Email Notifications** - SendGrid integration for quote and contact form notifications
+- ✅ **Email Notifications** - Resend integration for quote, contact form, and parts sourcing notifications
 - ✅ **Request Logging** - Middleware for API request tracking and debugging
 
 ## Project Structure
@@ -128,7 +128,7 @@ cp .env.example .env
 
 # Edit .env and add your credentials:
 # - MongoDB Atlas connection string
-# - SendGrid API key (free tier: 100 emails/day)
+# - Resend API key (get from https://resend.com)
 # - JWT secret key (generate with: python -c "import secrets; print(secrets.token_urlsafe(32))")
 # See "Environment Variables" section below for complete list
 
@@ -187,9 +187,8 @@ DATABASE_NAME=cnstoolsandrepair_db_dev  # Use _prod for production
 # CORS (required)
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000  # Add production domain for prod
 
-# SendGrid Email (required)
-SENDGRID_API_KEY=<your_sendgrid_api_key>  # Get from https://app.sendgrid.com/settings/api_keys
-SENDGRID_FROM_EMAIL=noreply@cnstoolrepair.com  # Must be verified sender
+# Resend Email (required)
+RESEND_API_KEY=<your_resend_api_key>  # Get from https://resend.com/api-keys
 NOTIFICATION_EMAIL=cnstoolrepair@gmail.com  # Receives quote/contact notifications
 
 # JWT Authentication (required for admin)
@@ -198,8 +197,8 @@ JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=8
 
 # File Upload (optional - defaults shown)
-MAX_FILE_SIZE=5242880  # 5MB in bytes
-ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
+MAX_FILE_SIZE=10485760  # 10MB in bytes
+ALLOWED_EXTENSIONS=jpg,jpeg,png,webp,pdf
 ```
 
 **Generate JWT Secret**:
@@ -207,11 +206,11 @@ ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-**SendGrid Setup** (Free tier: 100 emails/day):
-1. Sign up at https://sendgrid.com
-2. Verify sender identity (email or domain)
-3. Create API key: Settings → API Keys → Create API Key
-4. Copy key to `SENDGRID_API_KEY` (starts with `SG.`)
+**Resend Setup**:
+1. Sign up at https://resend.com
+2. Verify sender domain (`cnstoolrepair.com`) in Resend dashboard
+3. Create API key: API Keys → Create API Key
+4. Copy key to `RESEND_API_KEY` (starts with `re_`)
 
 ### Frontend (.env) - Optional
 ```env
@@ -297,8 +296,7 @@ python scripts/create_admin.py
 - **Global Tab**: Business hours, metadata, site-wide settings
 
 ### Password Management
-- **No password reset feature** - Manual reset required via MongoDB
-- See `AUTH_SETUP_GUIDE.md` for manual password reset instructions
+- **No password reset feature** - Manual reset required via MongoDB (connect with Compass, update `users` collection)
 - Recommendation: Use strong password manager
 
 ## Database Schema
@@ -306,18 +304,26 @@ python scripts/create_admin.py
 MongoDB collections in `cnstoolsandrepair_db_dev`:
 
 ```javascript
-// quotes - Customer quote requests
+// quotes - Customer quote requests (multi-tool)
 {
   _id: ObjectId,
-  customer_name: string,
+  request_number: string,  // e.g. "REQ-2026-0001" (auto-generated)
+  company_name: string | null,
+  first_name: string,
+  last_name: string,
   email: string,
-  phone: string,
-  company_name: string,
-  tool_description: string,
-  issue_description: string,
-  photos: [string],  // Array of /uploads/{uuid}.ext
+  phone: string,  // Format: ###-###-####
+  tools: [{
+    tool_type: string,       // Auto-capitalized
+    tool_brand: string,      // Auto-capitalized
+    tool_model: string,      // Auto-capitalized
+    quantity: number,
+    problem_description: string
+  }],
+  photos: [string],  // Array of /uploads/quotes/{uuid}.ext
+  status: "pending" | "in_progress" | "completed",
   created_at: datetime,
-  status: string
+  updated_at: datetime
 }
 
 // tools_catalog - Repairable tools (categorized)
@@ -386,7 +392,7 @@ MongoDB collections in `cnstoolsandrepair_db_dev`:
 
 **⚠️ CRITICAL**: Local file storage (`backend/uploads/`) will **lose all photos** on deployment. Must integrate **Digital Ocean Spaces** (object storage) before production.
 
-See **`DEPLOYMENT.md`** for complete production deployment guide including:
+See **`DEPLOYMENT_CHECKLIST.md`** for complete production deployment guide including:
 - Digital Ocean Spaces setup and code integration
 - Environment configuration for production
 - MongoDB Atlas production database setup
@@ -397,7 +403,7 @@ See **`DEPLOYMENT.md`** for complete production deployment guide including:
 - [ ] ⚠️ **Integrate Digital Ocean Spaces** (required for file uploads)
 - [ ] Create MongoDB Atlas production cluster (`cnstoolsandrepair_db_prod`)
 - [ ] Generate production JWT secret key
-- [ ] Verify SendGrid sender domain
+- [ ] Verify Resend sender domain
 - [ ] Set `CORS_ORIGINS` to production domain only
 - [ ] Configure Hostinger DNS → Digital Ocean
 - [ ] Setup SSL certificate (Let's Encrypt or DO managed)
@@ -443,7 +449,7 @@ cd frontend && npm run dev
 **Test Steps**:
 1. Navigate to http://localhost:5173/quote
 2. Fill out form with test data
-3. Upload 1-5 photos (max 5MB each, jpg/png/webp)
+3. Upload 1-5 photos (max 10MB each, jpg/png/webp/pdf)
 4. Submit form
 5. **Verify backend logs**: "Email sent! Status code: 202"
 6. **Check email**: Notification sent to `NOTIFICATION_EMAIL`
@@ -575,9 +581,9 @@ return QuoteResponse(**created_quote)
 **Symptom**: Quote submitted but no email received
 
 **Checks**:
-1. Verify `SENDGRID_API_KEY` in `.env`
-2. Check backend logs for "Email sent! Status code: 202"
-3. Verify sender email in SendGrid dashboard
+1. Verify `RESEND_API_KEY` in `.env`
+2. Check backend logs for "Email sent. Status: 202"
+3. Verify sender domain in Resend dashboard (`cnstoolrepair.com`)
 4. Check spam folder for notifications
 5. Free tier limit: 100 emails/day
 
@@ -605,9 +611,8 @@ localStorage.getItem('theme')  // Should return 'dark' or 'light'
 
 ## Known Limitations
 
-1. **No rate limiting** - Production needs slowapi middleware for brute-force protection
-2. **No password reset** - Admin password reset requires manual MongoDB update (see `AUTH_SETUP_GUIDE.md`)
-3. **Local file storage** - Production requires Digital Ocean Spaces integration (see `DEPLOYMENT.md`)
+1. **No password reset** - Admin password reset requires manual MongoDB update
+2. **Local file storage** - Production requires Digital Ocean Spaces integration (see `DEPLOYMENT_CHECKLIST.md`)
 4. **No pagination** - Quote/tools lists return all results (add pagination for >1000 records)
 5. **Client-side SEO** - Meta tags via react-helmet-async (SSR/SSG would improve crawlability)
 6. **No image CDN** - Production should use Spaces CDN for faster global delivery
@@ -615,18 +620,19 @@ localStorage.getItem('theme')  // Should return 'dark' or 'light'
 
 ## Additional Documentation
 
-- **`AUTH_SETUP_GUIDE.md`** - Admin authentication setup, password reset procedures
-- **`DEPLOYMENT.md`** - Production deployment guide with Digital Ocean Spaces integration
-- **`OG_IMAGE_GUIDE.md`** - Creating social media preview images for SEO
+- **`DEPLOYMENT_CHECKLIST.md`** - Step-by-step production deployment checklist
+- **`DEPLOYMENT_DO_DROPLET.md`** - Digital Ocean Droplet deployment guide
+- **`PRODUCTION_ENV_GUIDE.md`** - Environment variable configuration guide
+- **`SECURITY_CHECKLIST.md`** - Pre-deployment security verification
 - **`CLAUDE.md`** - Development notes and patterns for Claude Code AI
 
 ## Architecture Decisions
 
-### Why SendGrid Instead of SMTP?
+### Why Resend Instead of SMTP?
 - **Reliability**: Better deliverability than Gmail SMTP
-- **Scalability**: Handles high volume without rate limits
-- **Features**: Email tracking, templates, analytics
-- **Cost**: Free tier (100 emails/day) sufficient for MVP
+- **Simplicity**: Clean REST API, no complex SMTP configuration
+- **Features**: Email tracking, async retry logic, domain verification
+- **Cost**: Free tier sufficient for MVP
 
 ### Why MongoDB Atlas?
 - **No local setup**: Cloud-first, no MongoDB installation required
@@ -644,7 +650,7 @@ localStorage.getItem('theme')  // Should return 'dark' or 'light'
 - **Simplicity**: No cloud setup for MVP development
 - **Cost**: Free for development/testing
 - **Speed**: Fast local access for development
-- **Production**: Upgrade to Spaces before deployment (see `DEPLOYMENT.md`)
+- **Production**: Upgrade to Spaces before deployment (see `DEPLOYMENT_CHECKLIST.md`)
 
 ## Support
 
@@ -652,4 +658,4 @@ For questions or issues, contact the development team.
 
 ## License
 
-Proprietary - CNS Tool Repair © 2024
+Proprietary - CNS Tool Repair © 2026
