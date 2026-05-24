@@ -519,6 +519,20 @@ export const partsLibraryAPI = {
     const response = await api.get('/api/parts-library/search', { params: { q, limit } });
     return response.data;
   },
+
+  // Inventory
+  getLowStock: async (limit = 50) => {
+    const response = await api.get('/api/parts-library/low-stock', { params: { limit } });
+    return response.data;
+  },
+  adjustStock: async (id, data) => {
+    const response = await api.patch(`/api/parts-library/parts/${id}/adjust-stock`, data);
+    return response.data;
+  },
+  getStockHistory: async (id) => {
+    const response = await api.get(`/api/parts-library/parts/${id}/stock-history`);
+    return response.data;
+  },
 };
 
 // Parts Sourcing API (admin only)

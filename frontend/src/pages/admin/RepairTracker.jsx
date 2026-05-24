@@ -88,6 +88,7 @@ function ToastContainer({ toasts, onDismiss }) {
 export default function RepairTracker() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [partsLibraryFilter, setPartsLibraryFilter] = useState(null);
   const [preselectedCustomer, setPreselectedCustomer] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [tabCounts, setTabCounts] = useState({ customers: null, requests: null, jobs: null });
@@ -142,6 +143,9 @@ export default function RepairTracker() {
     setActiveTab(tabId);
     if (tabId !== 'jobs') {
       setPreselectedCustomer(null);
+    }
+    if (tabId !== 'parts-library') {
+      setPartsLibraryFilter(null);
     }
   };
 
@@ -277,6 +281,7 @@ export default function RepairTracker() {
                 onAttentionUpdate={handleAttentionUpdate}
                 onStaleDaysUpdate={handleStaleDaysUpdate}
                 onOpenJob={handleDashboardOpenJob}
+                onGoToPartsLibrary={() => { setPartsLibraryFilter('low-stock'); setActiveTab('parts-library'); }}
                 asTab
               />
             )}
@@ -295,7 +300,10 @@ export default function RepairTracker() {
               />
             )}
             {activeTab === 'parts-library' && (
-              <PartsLibraryTab />
+              <PartsLibraryTab
+                initialFilter={partsLibraryFilter}
+                key={partsLibraryFilter}
+              />
             )}
             {activeTab === 'parts-sourcing' && (
               <PartsSourcingTab />

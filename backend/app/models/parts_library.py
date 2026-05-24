@@ -205,6 +205,10 @@ class LibraryPartCreate(BaseModel):
     suggested_suppliers: List[str] = Field(default_factory=list)
     suggested_price: Optional[float] = Field(None, ge=0)
     notes: Optional[str] = Field(None, max_length=2000)
+    quantity_on_hand: int = Field(default=0, ge=0)
+    reorder_point: int = Field(default=0, ge=0)
+    reorder_quantity: int = Field(default=0, ge=0)
+    location: Optional[str] = Field(None, max_length=100)
 
     @field_validator('part_number', mode='before')
     @classmethod
@@ -220,7 +224,7 @@ class LibraryPartCreate(BaseModel):
             return v.strip().upper()
         return v or None
 
-    @field_validator('notes', mode='before')
+    @field_validator('notes', 'location', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
         if v == '' or v is None:
@@ -246,6 +250,10 @@ class LibraryPartUpdate(BaseModel):
     suggested_suppliers: Optional[List[str]] = None
     suggested_price: Optional[float] = Field(None, ge=0)
     notes: Optional[str] = Field(None, max_length=2000)
+    quantity_on_hand: Optional[int] = Field(None, ge=0)
+    reorder_point: Optional[int] = Field(None, ge=0)
+    reorder_quantity: Optional[int] = Field(None, ge=0)
+    location: Optional[str] = Field(None, max_length=100)
 
     @field_validator('part_number', mode='before')
     @classmethod
@@ -261,7 +269,7 @@ class LibraryPartUpdate(BaseModel):
             return v.strip().upper()
         return v or None
 
-    @field_validator('notes', mode='before')
+    @field_validator('notes', 'location', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
         if v == '' or v is None:
@@ -274,6 +282,11 @@ class LibraryPartUpdate(BaseModel):
         if v == '' or v is None:
             return None
         return v
+
+
+class StockAdjustment(BaseModel):
+    delta: int
+    reason: str = Field(..., min_length=1, max_length=500)
 
 
 class LibraryPartResponse(BaseModel):
@@ -292,6 +305,11 @@ class LibraryPartResponse(BaseModel):
     suggested_suppliers: List[str] = []
     suggested_price: Optional[float] = None
     notes: Optional[str] = None
+    quantity_on_hand: int = 0
+    reorder_point: int = 0
+    reorder_quantity: int = 0
+    location: Optional[str] = None
+    low_stock: bool = False
     active: bool
     created_at: datetime
     updated_at: datetime

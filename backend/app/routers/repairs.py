@@ -34,6 +34,38 @@ def _pacific_date_to_utc(dt: datetime) -> datetime:
     return aware.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
 
+async def _adjust_library_part_stock(db, library_part_id: str, delta: int, reason: str,
+                                      job_id: str = None, tool_id: str = None):
+    """Adjust stock for a library part. Floors at 0. Appends to stock_history."""
+    try:
+        oid = ObjectId(library_part_id)
+    except Exception:
+        return
+    part = await db.parts_library_parts.find_one({"_id": oid})
+    if not part:
+        return
+    old_qty = part.get("quantity_on_hand", 0) or 0
+    new_qty = max(0, old_qty + delta)
+    now = datetime.utcnow()
+    history_entry = {
+        "timestamp": now,
+        "delta": delta,
+        "reason": reason,
+        "resulting_quantity": new_qty,
+        "reference_job_id": job_id,
+        "reference_tool_id": tool_id,
+        "adjusted_by": "system",
+        "source": "auto",
+    }
+    await db.parts_library_parts.update_one(
+        {"_id": oid},
+        {
+            "$set": {"quantity_on_hand": new_qty, "updated_at": now},
+            "$push": {"stock_history": {"$each": [history_entry], "$slice": -200}}
+        }
+    )
+
+
 def _migrate_tool_parts(tool: dict) -> dict:
     """Migrate old parts_needed string to parts list for backward compat"""
     if "parts_needed" in tool and "parts" not in tool:
@@ -484,6 +516,13 @@ async def get_repair_summary(
     pending_approvals.sort(key=lambda x: -x["days_waiting"])
     pending_approvals = pending_approvals[:15]
 
+    # Low-stock parts count
+    low_stock_count = await db.parts_library_parts.count_documents({
+        "active": True,
+        "reorder_point": {"$gt": 0},
+        "$expr": {"$lte": ["$quantity_on_hand", "$reorder_point"]}
+    })
+
     return {
         "status_counts": status_counts,
         "overdue_count": overdue_count,
@@ -492,6 +531,7 @@ async def get_repair_summary(
         "rush_urgent_active": rush_urgent_active,
         "updated_today": updated_today,
         "total_active_jobs": total_active_jobs,
+        "low_stock_count": low_stock_count,
         # New fields
         "technician_summary": technician_summary_list,
         "today_activity": {
@@ -1267,21 +1307,37 @@ async def update_tool(
     update_fields = tool_update.model_dump(exclude_unset=True)
 
     # Auto-set order_date and date_received when part status changes
+    # Also track stock adjustments for inventory
+    stock_adjustments = []
     if "parts" in update_fields:
         now = datetime.utcnow()
         old_parts = {p.get("name", ""): p for p in tools[tool_index].get("parts", [])}
         for part in update_fields["parts"]:
             old = old_parts.get(part.get("name", ""), {})
             new_status = part.get("status")
-            if new_status == "ordered" and not part.get("order_date") and old.get("status") != "ordered":
+            old_status = old.get("status")
+            if new_status == "ordered" and not part.get("order_date") and old_status != "ordered":
                 part["order_date"] = now
-            if new_status == "received" and not part.get("date_received") and old.get("status") != "received":
+            if new_status == "received" and not part.get("date_received") and old_status != "received":
                 part["date_received"] = now
+            # Stock: decrement when installed, increment back if reversed from installed
+            lib_id = part.get("library_part_id") or old.get("library_part_id")
+            if lib_id:
+                qty = part.get("quantity", 1) or 1
+                if new_status == "installed" and old_status != "installed":
+                    stock_adjustments.append((lib_id, -qty, "installed_in_job"))
+                elif old_status == "installed" and new_status != "installed":
+                    stock_adjustments.append((lib_id, qty, "reversed_from_installed"))
 
     set_data = {f"tools.{tool_index}.{k}": v for k, v in update_fields.items()}
     set_data["updated_at"] = datetime.utcnow()
 
     await db.repairs.update_one({"_id": object_id}, {"$set": set_data})
+
+    # Apply stock adjustments after successful DB update
+    job_id_str = str(object_id)
+    for lib_id, delta, reason in stock_adjustments:
+        await _adjust_library_part_stock(db, lib_id, delta, reason, job_id=job_id_str, tool_id=tool_id)
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
@@ -1391,11 +1447,17 @@ async def update_tool_status(
         set_data[f"tools.{tool_index}.date_completed"] = now
 
     # Auto-mark received parts as installed when tool moves to "ready"
+    # and decrement stock for each promoted part
+    ready_stock_adjustments = []
     if status_update.status == RepairStatus.READY:
         parts = tools[tool_index].get("parts", [])
         for pi, part in enumerate(parts):
             if part.get("status") == "received":
                 set_data[f"tools.{tool_index}.parts.{pi}.status"] = "installed"
+                lib_id = part.get("library_part_id")
+                if lib_id:
+                    qty = part.get("quantity", 1) or 1
+                    ready_stock_adjustments.append((lib_id, -qty))
 
     # Update estimated_completion if provided
     if status_update.estimated_completion:
@@ -1408,6 +1470,13 @@ async def update_tool_status(
             "$push": {f"tools.{tool_index}.status_history": history_entry}
         }
     )
+
+    # Apply stock decrements for parts auto-promoted to installed
+    job_id_str = str(object_id)
+    for lib_id, delta in ready_stock_adjustments:
+        await _adjust_library_part_stock(
+            db, lib_id, delta, "auto_installed_ready", job_id=job_id_str, tool_id=tool_id
+        )
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)

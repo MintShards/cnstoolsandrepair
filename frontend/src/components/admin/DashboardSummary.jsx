@@ -70,7 +70,7 @@ function StatusBadge({ status }) {
 
 export default function DashboardSummary({
   onStatusFilter, onTechFilter, onNewJob, onNewCustomer, onGoToRequests,
-  onAttentionUpdate, onStaleDaysUpdate, onOpenJob,
+  onAttentionUpdate, onStaleDaysUpdate, onOpenJob, onGoToPartsLibrary,
   collapsed: initialCollapsed = false,
   asTab = false,
 }) {
@@ -117,6 +117,7 @@ export default function DashboardSummary({
   const priorityJobs = data?.priority_jobs ?? [];
   const activeCustomers = data?.active_customers ?? [];
   const pendingApprovals = data?.pending_approvals ?? [];
+  const lowStockCount = data?.low_stock_count ?? 0;
   const hasAttention = overdueCount > 0 || (data?.stale_count ?? 0) > 0 || (data?.rush_urgent_active ?? 0) > 0;
 
   const maxStatusCount = Math.max(1, ...MAIN_STAGES.map(s => sc[s] ?? 0));
@@ -158,6 +159,17 @@ export default function DashboardSummary({
       priority: 'Low',
       priorityColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
       onClick: () => nav('ready'),
+    },
+    {
+      icon: 'inventory_2',
+      label: `${lowStockCount} part${lowStockCount !== 1 ? 's' : ''} low on stock`,
+      detail: 'Below reorder point',
+      count: lowStockCount,
+      priority: lowStockCount > 3 ? 'High' : 'Medium',
+      priorityColor: lowStockCount > 3
+        ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30'
+        : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
+      onClick: onGoToPartsLibrary,
     },
   ];
 

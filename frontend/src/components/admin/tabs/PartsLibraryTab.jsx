@@ -600,6 +600,10 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     suggested_suppliers: part?.suggested_suppliers || [],
     suggested_price: part?.suggested_price ?? '',
     notes: part?.notes || '',
+    quantity_on_hand: part?.quantity_on_hand ?? 0,
+    reorder_point: part?.reorder_point ?? 0,
+    reorder_quantity: part?.reorder_quantity ?? 0,
+    location: part?.location || '',
   });
   const [suppliersList, setSuppliersList] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -631,6 +635,10 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
         ...form,
         suggested_price: form.suggested_price === '' ? null : Number(form.suggested_price),
         notes: form.notes || null,
+        location: form.location || null,
+        quantity_on_hand: Number(form.quantity_on_hand) || 0,
+        reorder_point: Number(form.reorder_point) || 0,
+        reorder_quantity: Number(form.reorder_quantity) || 0,
       };
       const saved = part?.id
         ? await partsLibraryAPI.updatePart(part.id, payload)
@@ -740,6 +748,55 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
             </div>
           )}
 
+          {/* Inventory */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">inventory_2</span>
+              Inventory
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Qty on Hand</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.quantity_on_hand}
+                  onChange={e => setForm(f => ({ ...f, quantity_on_hand: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Reorder Point</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.reorder_point}
+                  onChange={e => setForm(f => ({ ...f, reorder_point: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Reorder Qty</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.reorder_quantity}
+                  onChange={e => setForm(f => ({ ...f, reorder_quantity: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Location</label>
+                <input
+                  value={form.location}
+                  onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Shelf B-3"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Notes</label>
             <textarea
@@ -839,7 +896,11 @@ function PartsView({ model, compatGroups, onBack }) {
   const [editingPart, setEditingPart] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedPart, setExpandedPart] = useState(null);
-  const [uploadingDiagramFor, setUploadingDiagramFor] = useState(null);
+  const [stockAdjust, setStockAdjust] = useState(null); // { partId, delta: '', reason: '' }
+  const [adjustingStock, setAdjustingStock] = useState(false);
+  const [stockHistory, setStockHistory] = useState(null); // { partId, entries: [] }
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyLimit, setHistoryLimit] = useState(20);
   const [compatibleFor, setCompatibleFor] = useState(null);
   const [compatData, setCompatData] = useState(null);
   const [uploadingModelDiagram, setUploadingModelDiagram] = useState(false);
@@ -870,26 +931,37 @@ function PartsView({ model, compatGroups, onBack }) {
     setConfirmDelete(null);
   };
 
-  const handleUploadPartDiagram = async (partId, file) => {
-    setUploadingDiagramFor(partId);
+  const handleStockAdjust = async (partId) => {
+    if (!stockAdjust || !stockAdjust.delta || !stockAdjust.reason.trim()) return;
+    setAdjustingStock(true);
+    const rawQty = Math.abs(Number(stockAdjust.delta));
+    const delta = stockAdjust.mode === 'remove' ? -rawQty : rawQty;
     try {
-      const updated = await partsLibraryAPI.uploadPartDiagram(partId, file);
+      const updated = await partsLibraryAPI.adjustStock(partId, {
+        delta,
+        reason: stockAdjust.reason.trim(),
+      });
       setParts(p => p.map(x => x.id === partId ? updated : x));
-      toast('success', 'Diagram uploaded');
+      setStockAdjust(null);
+      toast('success', 'Stock adjusted');
     } catch (err) {
-      toast('error', err.response?.data?.detail || 'Upload failed');
+      toast('error', err.response?.data?.detail || 'Failed to adjust stock');
     } finally {
-      setUploadingDiagramFor(null);
+      setAdjustingStock(false);
     }
   };
 
-  const handleDeletePartDiagram = async (partId, url) => {
+  const handleLoadStockHistory = async (partId) => {
+    if (stockHistory?.partId === partId) { setStockHistory(null); return; }
+    setLoadingHistory(true);
+    setHistoryLimit(20);
     try {
-      await partsLibraryAPI.deletePartDiagram(partId, url);
-      setParts(p => p.map(x => x.id === partId ? { ...x, diagram_urls: x.diagram_urls.filter(u => u !== url) } : x));
-      toast('success', 'Diagram removed');
+      const entries = await partsLibraryAPI.getStockHistory(partId);
+      setStockHistory({ partId, entries });
     } catch {
-      toast('error', 'Failed to remove diagram');
+      toast('error', 'Failed to load stock history');
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -939,10 +1011,9 @@ function PartsView({ model, compatGroups, onBack }) {
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Model Breakdown Diagrams</span>
           <UploadDiagramButton onUpload={handleUploadModelDiagram} loading={uploadingModelDiagram} />
         </div>
-        {currentModel.diagram_urls?.length > 0
-          ? <DiagramList urls={currentModel.diagram_urls} onDelete={handleDeleteModelDiagram} />
-          : <p className="text-xs text-slate-400">No diagrams uploaded yet</p>
-        }
+        {currentModel.diagram_urls?.length > 0 && (
+          <DiagramList urls={currentModel.diagram_urls} onDelete={handleDeleteModelDiagram} />
+        )}
         {model.specifications && (
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{model.specifications}</p>
         )}
@@ -1012,6 +1083,18 @@ function PartsView({ model, compatGroups, onBack }) {
                         {part.compatibility_group_ids.length} compat
                       </span>
                     )}
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                      part.low_stock
+                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                        : part.quantity_on_hand > 0
+                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                    }`}>
+                      {part.quantity_on_hand} in stock
+                    </span>
+                    {part.location && (
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{part.location}</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -1070,19 +1153,268 @@ function PartsView({ model, compatGroups, onBack }) {
                       <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-line">{part.notes}</p>
                     </div>
                   )}
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Diagrams</span>
-                      <UploadDiagramButton onUpload={(f) => handleUploadPartDiagram(part.id, f)} loading={uploadingDiagramFor === part.id} />
+
+                  {/* Inventory */}
+                  <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 overflow-hidden">
+                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm text-primary dark:text-blue-400">inventory_2</span>
+                        Inventory
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleLoadStockHistory(part.id)}
+                          className={`text-[10px] font-medium px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                            stockHistory?.partId === part.id
+                              ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                              : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize:'13px'}}>history</span>
+                          {stockHistory?.partId === part.id ? 'Hide' : 'History'}
+                        </button>
+                        <button
+                          onClick={() => setStockAdjust(stockAdjust?.partId === part.id ? null : { partId: part.id, delta: '', reason: '', mode: 'add' })}
+                          className={`text-[10px] font-medium px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                            stockAdjust?.partId === part.id
+                              ? 'bg-primary/10 dark:bg-blue-500/20 text-primary dark:text-blue-300'
+                              : 'text-primary dark:text-blue-400 hover:bg-primary/10 dark:hover:bg-blue-500/20'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined" style={{fontSize:'13px'}}>tune</span>
+                          Adjust
+                        </button>
+                      </div>
                     </div>
-                    <DiagramList
-                      urls={part.diagram_urls}
-                      onDelete={(url) => handleDeletePartDiagram(part.id, url)}
-                    />
-                    {(!part.diagram_urls || part.diagram_urls.length === 0) && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">No diagrams uploaded</p>
-                    )}
+                    <div className="px-3.5 py-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className={`rounded-lg px-3 py-2 text-center ${
+                          part.low_stock
+                            ? 'bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/40'
+                            : part.quantity_on_hand > 0
+                              ? 'bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-200 dark:border-emerald-800/40'
+                              : 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
+                        }`}>
+                          <span className="block text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">On Hand</span>
+                          <span className={`block text-lg font-black mt-0.5 ${
+                            part.low_stock
+                              ? 'text-red-600 dark:text-red-400'
+                              : part.quantity_on_hand > 0
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-slate-400 dark:text-slate-500'
+                          }`}>{part.quantity_on_hand}</span>
+                        </div>
+                        <div className="rounded-lg px-3 py-2 text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <span className="block text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Reorder At</span>
+                          <span className="block text-lg font-black text-slate-600 dark:text-slate-300 mt-0.5">{part.reorder_point || '—'}</span>
+                        </div>
+                        <div className="rounded-lg px-3 py-2 text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <span className="block text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Order Qty</span>
+                          <span className="block text-lg font-black text-slate-600 dark:text-slate-300 mt-0.5">{part.reorder_quantity || '—'}</span>
+                        </div>
+                        <div className="rounded-lg px-3 py-2 text-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <span className="block text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Location</span>
+                          <span className="block text-sm font-bold text-slate-600 dark:text-slate-300 mt-1 truncate">{part.location || '—'}</span>
+                        </div>
+                      </div>
+
+                      {/* Adjust stock inline form */}
+                      {stockAdjust?.partId === part.id && (() => {
+                        const rawQty = Math.abs(Number(stockAdjust.delta) || 0);
+                        const previewDelta = stockAdjust.mode === 'remove' ? -rawQty : rawQty;
+                        const previewQty = Math.max(0, (part.quantity_on_hand || 0) + previewDelta);
+                        const quickReasons = [
+                          { label: 'Received shipment', icon: 'local_shipping' },
+                          { label: 'Inventory correction', icon: 'edit_note' },
+                          { label: 'Damaged / defective', icon: 'broken_image' },
+                          { label: 'Returned to supplier', icon: 'undo' },
+                        ];
+                        return (
+                        <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/50 dark:bg-blue-900/10 p-3">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Stock Adjustment</span>
+                            {rawQty > 0 && (
+                              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                {part.quantity_on_hand} <span className="text-slate-400 dark:text-slate-500">→</span>{' '}
+                                <span className={`font-bold ${previewQty <= (part.reorder_point || 0) && part.reorder_point > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{previewQty}</span>
+                              </span>
+                            )}
+                          </div>
+                          {/* Add / Remove toggle */}
+                          <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 mb-3 w-fit">
+                            <button
+                              onClick={() => setStockAdjust(s => ({ ...s, mode: 'add' }))}
+                              className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-colors ${
+                                stockAdjust.mode === 'add'
+                                  ? 'bg-emerald-500 text-white'
+                                  : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined" style={{fontSize:'14px'}}>add</span>
+                              Add Stock
+                            </button>
+                            <button
+                              onClick={() => setStockAdjust(s => ({ ...s, mode: 'remove' }))}
+                              className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1 transition-colors border-l border-slate-200 dark:border-slate-600 ${
+                                stockAdjust.mode === 'remove'
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined" style={{fontSize:'14px'}}>remove</span>
+                              Remove Stock
+                            </button>
+                          </div>
+                          {/* Quantity + quick qty buttons */}
+                          <div className="flex items-end gap-2 mb-3 flex-wrap">
+                            <div>
+                              <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Quantity</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={stockAdjust.delta}
+                                onChange={e => setStockAdjust(s => ({ ...s, delta: e.target.value }))}
+                                className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="5"
+                              />
+                            </div>
+                            <div className="flex gap-1">
+                              {[1, 5, 10, 25].map(n => (
+                                <button
+                                  key={n}
+                                  onClick={() => setStockAdjust(s => ({ ...s, delta: String(n) }))}
+                                  className={`px-2 py-1.5 rounded-md text-[11px] font-bold transition-colors ${
+                                    String(n) === stockAdjust.delta
+                                      ? 'bg-primary text-white'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-600'
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Quick-pick reasons */}
+                          <div className="mb-2">
+                            <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-1">Reason</label>
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                              {quickReasons.map(r => (
+                                <button
+                                  key={r.label}
+                                  onClick={() => setStockAdjust(s => ({ ...s, reason: r.label }))}
+                                  className={`text-[10px] px-2 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                                    stockAdjust.reason === r.label
+                                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-600'
+                                  }`}
+                                >
+                                  <span className="material-symbols-outlined" style={{fontSize:'12px'}}>{r.icon}</span>
+                                  {r.label}
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              value={stockAdjust.reason}
+                              onChange={e => setStockAdjust(s => ({ ...s, reason: e.target.value }))}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Or type a custom reason…"
+                            />
+                          </div>
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 mt-3">
+                            <button
+                              onClick={() => handleStockAdjust(part.id)}
+                              disabled={adjustingStock || !stockAdjust.delta || !stockAdjust.reason.trim()}
+                              className={`px-4 py-1.5 rounded-lg text-white text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm ${
+                                stockAdjust.mode === 'remove' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'
+                              }`}
+                            >
+                              {adjustingStock ? 'Saving…' : stockAdjust.mode === 'remove' ? 'Remove Stock' : 'Add Stock'}
+                            </button>
+                            <button
+                              onClick={() => setStockAdjust(null)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        );
+                      })()}
+
+                      {/* Stock history */}
+                      {loadingHistory && stockHistory?.partId !== part.id && (
+                        <div className="mt-3 text-xs text-slate-400 flex items-center justify-center gap-1.5 py-3">
+                          <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                          Loading history…
+                        </div>
+                      )}
+                      {stockHistory?.partId === part.id && (
+                        <div className="mt-3">
+                          <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Recent Changes</span>
+                          {stockHistory.entries.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic py-2 text-center">No stock changes recorded</p>
+                          ) : (
+                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                              {stockHistory.entries.slice(0, historyLimit).map((entry, i) => (
+                                <div key={i} className={`flex items-start gap-2.5 px-3 py-2.5 text-[11px] ${
+                                  i % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-800/40' : 'bg-white dark:bg-slate-800/20'
+                                } ${i > 0 ? 'border-t border-slate-100 dark:border-slate-700/50' : ''}`}>
+                                  {/* Delta badge */}
+                                  <span className={`inline-flex items-center justify-center w-10 py-0.5 rounded-md text-[11px] font-bold flex-shrink-0 mt-0.5 ${
+                                    entry.delta > 0
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                  }`}>
+                                    {entry.delta > 0 ? '+' : ''}{entry.delta}
+                                  </span>
+                                  {/* Result qty */}
+                                  <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] mt-0.5 flex-shrink-0">→ {entry.resulting_quantity}</span>
+                                  {/* Main content */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                      {/* Source badge */}
+                                      <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                                        entry.source === 'auto'
+                                          ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+                                          : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                                      }`}>
+                                        {entry.source === 'auto' ? 'Auto' : 'Manual'}
+                                      </span>
+                                      {/* Job reference */}
+                                      {entry.reference_job_id && (
+                                        <span className="text-[9px] font-mono bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded">
+                                          Job: {entry.reference_job_id.slice(-6)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-slate-600 dark:text-slate-300 block truncate">{entry.reason}</span>
+                                    {entry.adjusted_by && (
+                                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{entry.adjusted_by}</span>
+                                    )}
+                                  </div>
+                                  {/* Date */}
+                                  <span className="text-slate-400 dark:text-slate-500 flex-shrink-0 text-[10px] mt-0.5">
+                                    {new Date(entry.timestamp).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              ))}
+                              {/* Load more */}
+                              {stockHistory.entries.length > historyLimit && (
+                                <button
+                                  onClick={() => setHistoryLimit(l => l + 20)}
+                                  className="w-full py-2 text-[11px] text-primary dark:text-blue-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-700/50"
+                                >
+                                  Show more ({stockHistory.entries.length - historyLimit} remaining)
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                 </div>
               )}
             </div>
@@ -1453,7 +1785,7 @@ function CompatGroupsPanel({ onClose }) {
 
 // ─── Main PartsLibraryTab ─────────────────────────────────────────────────────
 
-export default function PartsLibraryTab() {
+export default function PartsLibraryTab({ initialFilter } = {}) {
   const toast = useToast();
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1462,6 +1794,11 @@ export default function PartsLibraryTab() {
   // Navigation state: null=brands list, {brand}=models view, {brand,model}=parts view
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
+
+  // Low-stock filter view
+  const [showLowStockOnly, setShowLowStockOnly] = useState(initialFilter === 'low-stock');
+  const [lowStockParts, setLowStockParts] = useState([]);
+  const [loadingLowStock, setLoadingLowStock] = useState(false);
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -1506,6 +1843,15 @@ export default function PartsLibraryTab() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!showLowStockOnly) { setLowStockParts([]); return; }
+    setLoadingLowStock(true);
+    partsLibraryAPI.getLowStock(200)
+      .then(parts => setLowStockParts(parts))
+      .catch(() => toast('error', 'Failed to load low-stock parts'))
+      .finally(() => setLoadingLowStock(false));
+  }, [showLowStockOnly]);
 
   const handleSearchCompat = async (part) => {
     try {
@@ -1570,6 +1916,18 @@ export default function PartsLibraryTab() {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            onClick={() => setShowLowStockOnly(v => !v)}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+              showLowStockOnly
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-600 dark:text-red-400'
+                : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">warning</span>
+            <span className="hidden sm:inline">Low Stock</span>
+            {!showLowStockOnly && lowStockParts.length === 0 && brands.length > 0 && null}
+          </button>
+          <button
             onClick={() => setShowCompatGroups(true)}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
@@ -1608,8 +1966,72 @@ export default function PartsLibraryTab() {
         )}
       </div>
 
+      {/* Low-stock filter view */}
+      {showLowStockOnly && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="material-symbols-outlined text-red-500 dark:text-red-400">warning</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Parts Below Reorder Point</span>
+            {!loadingLowStock && (
+              <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">{lowStockParts.length}</span>
+            )}
+            <button
+              onClick={() => setShowLowStockOnly(false)}
+              className="ml-auto text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center gap-1 transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+              Clear filter
+            </button>
+          </div>
+          {loadingLowStock && (
+            <div className="flex items-center justify-center py-16">
+              <span className="material-symbols-outlined animate-spin text-slate-400 text-4xl">progress_activity</span>
+            </div>
+          )}
+          {!loadingLowStock && lowStockParts.length === 0 && (
+            <div className="text-center py-16">
+              <span className="material-symbols-outlined text-4xl text-emerald-400 dark:text-emerald-500 mb-2 block">check_circle</span>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">All stocked up</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No parts are below their reorder point</p>
+            </div>
+          )}
+          {!loadingLowStock && lowStockParts.length > 0 && (
+            <div className="space-y-2">
+              {lowStockParts.map(part => (
+                <div key={part.id} className="flex items-center gap-3 p-3 border border-red-200 dark:border-red-800/40 rounded-xl bg-red-50/40 dark:bg-red-900/10">
+                  <span className="material-symbols-outlined text-red-400 flex-shrink-0">inventory_2</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase">{part.name}</span>
+                      {part.part_number && (
+                        <span className="text-xs font-mono text-primary bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded">{part.part_number}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {part.brand_name && <span>{part.brand_name}</span>}
+                      {part.model_names?.length > 0 && <span>{part.model_names.slice(0,2).join(', ')}</span>}
+                      {part.location && <span className="flex items-center gap-0.5"><span className="material-symbols-outlined" style={{fontSize:'12px'}}>location_on</span>{part.location}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0 text-right">
+                    <div>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-wide">On Hand</span>
+                      <span className="text-lg font-black text-red-600 dark:text-red-400">{part.quantity_on_hand}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-wide">Reorder At</span>
+                      <span className="text-lg font-black text-slate-600 dark:text-slate-300">{part.reorder_point}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content: search results OR drill-down view */}
-      {isSearchActive ? (
+      {!showLowStockOnly && isSearchActive ? (
         <div>
           {searchLoading && (
             <div className="flex items-center justify-center py-16">

@@ -12,6 +12,7 @@ from app.models.parts_library import (
     LibraryPartCreate, LibraryPartUpdate, LibraryPartResponse,
     CompatGroupCreate, CompatGroupUpdate, CompatGroupResponse,
     CompatiblePartsResponse, CompatiblePartsGroup,
+    StockAdjustment,
 )
 from app.models.auth import User
 from app.dependencies.auth import require_admin
@@ -56,6 +57,10 @@ def _doc_to_part(doc: dict, brand_name: str = "", model_names: Optional[List[str
     doc["brand_name"] = brand_name
     doc["model_names"] = model_names or []
     doc["compatibility_group_names"] = group_names or []
+    # Compute low_stock flag
+    reorder_pt = doc.get("reorder_point", 0) or 0
+    qty = doc.get("quantity_on_hand", 0) or 0
+    doc["low_stock"] = reorder_pt > 0 and qty <= reorder_pt
     return LibraryPartResponse(**doc)
 
 
@@ -593,6 +598,21 @@ async def list_library_parts(
     }
 
 
+@router.get("/low-stock", response_model=List[LibraryPartResponse])
+async def get_low_stock_parts(
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(require_admin),
+):
+    db = get_database()
+    cursor = db.parts_library_parts.find({
+        "active": True,
+        "reorder_point": {"$gt": 0},
+        "$expr": {"$lte": ["$quantity_on_hand", "$reorder_point"]}
+    }).sort("quantity_on_hand", 1).limit(limit)
+    docs = await cursor.to_list(length=limit)
+    return await _enrich_parts_batch(db, docs)
+
+
 @router.post("/parts", response_model=LibraryPartResponse)
 async def create_library_part(
     body: LibraryPartCreate,
@@ -716,6 +736,57 @@ async def get_compatible_parts(
         compatibility_groups.append(CompatiblePartsGroup(group=group_response, parts=group_parts))
 
     return CompatiblePartsResponse(part=part_response, compatibility_groups=compatibility_groups)
+
+
+@router.patch("/parts/{part_id}/adjust-stock", response_model=LibraryPartResponse)
+async def adjust_part_stock(
+    part_id: str,
+    body: StockAdjustment,
+    current_user: User = Depends(require_admin),
+):
+    db = get_database()
+    doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    old_qty = doc.get("quantity_on_hand", 0) or 0
+    new_qty = max(0, old_qty + body.delta)
+    now = datetime.utcnow()
+
+    history_entry = {
+        "timestamp": now,
+        "delta": body.delta,
+        "reason": body.reason,
+        "resulting_quantity": new_qty,
+        "adjusted_by": current_user.email,
+        "source": "manual",
+    }
+
+    await db.parts_library_parts.update_one(
+        {"_id": _to_object_id(part_id)},
+        {
+            "$set": {"quantity_on_hand": new_qty, "updated_at": now},
+            "$push": {"stock_history": {"$each": [history_entry], "$slice": -200}}
+        }
+    )
+
+    updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    return await _enrich_part(db, updated)
+
+
+@router.get("/parts/{part_id}/stock-history")
+async def get_stock_history(
+    part_id: str,
+    current_user: User = Depends(require_admin),
+):
+    db = get_database()
+    doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    history = doc.get("stock_history", [])
+    history.reverse()
+    return history
 
 
 @router.post("/parts/{part_id}/diagrams", response_model=LibraryPartResponse)

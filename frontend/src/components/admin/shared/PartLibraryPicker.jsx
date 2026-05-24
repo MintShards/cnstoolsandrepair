@@ -15,6 +15,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
   const [selectedPart, setSelectedPart] = useState(null);
   const [compatParts, setCompatParts] = useState(null);
   const [loadingCompat, setLoadingCompat] = useState(false);
+  const [confirmOutOfStock, setConfirmOutOfStock] = useState(null);
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -70,7 +71,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
     }
   };
 
-  const handlePickPart = (part) => {
+  const doPickPart = (part) => {
     const supplier = part.suggested_suppliers?.[0] || '';
     const price = part.suggested_price != null ? String(part.suggested_price) : '';
     onSelect({
@@ -84,6 +85,14 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
       notes: part.notes || '',
     });
     onClose();
+  };
+
+  const handlePickPart = (part) => {
+    if (!part.quantity_on_hand || part.quantity_on_hand <= 0) {
+      setConfirmOutOfStock(part);
+      return;
+    }
+    doPickPart(part);
   };
 
   const totalCompat = compatParts
@@ -186,6 +195,15 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                       {part.suggested_price != null && (
                         <span className="text-xs font-bold text-green-600 dark:text-green-400">${Number(part.suggested_price).toFixed(2)}</span>
                       )}
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                        part.low_stock
+                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                          : part.quantity_on_hand > 0
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {part.low_stock ? `Low stock (${part.quantity_on_hand})` : part.quantity_on_hand > 0 ? `${part.quantity_on_hand} in stock` : 'Out of stock'}
+                      </span>
                       {part.compatibility_group_ids?.length > 0 && (
                         <span className="text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                           <span className="material-symbols-outlined" style={{fontSize:'11px'}}>hub</span>
@@ -234,6 +252,15 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                       {selectedPart.suggested_price != null && (
                         <span className="font-bold text-green-600 dark:text-green-400 text-sm">${Number(selectedPart.suggested_price).toFixed(2)}</span>
                       )}
+                      <span className={`px-1.5 py-0.5 rounded font-medium ${
+                        selectedPart.low_stock
+                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                          : selectedPart.quantity_on_hand > 0
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {selectedPart.low_stock ? `Low stock (${selectedPart.quantity_on_hand})` : selectedPart.quantity_on_hand > 0 ? `${selectedPart.quantity_on_hand} in stock` : 'Out of stock'}
+                      </span>
                       {selectedPart.suggested_suppliers?.length > 0 && (
                         <span className="text-slate-500 dark:text-slate-400">
                           <span className="text-slate-400 dark:text-slate-500">Supplier: </span>
@@ -242,13 +269,21 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handlePickPart(selectedPart)}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-base">add_circle</span>
-                    Use This Part
-                  </button>
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handlePickPart(selectedPart)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-base">add_circle</span>
+                      Use This Part
+                    </button>
+                    {(!selectedPart.quantity_on_hand || selectedPart.quantity_on_hand <= 0) && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 text-center flex items-center justify-center gap-0.5">
+                        <span className="material-symbols-outlined" style={{fontSize:'12px'}}>warning</span>
+                        Not in stock
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -338,6 +373,33 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Out-of-stock confirmation overlay */}
+      {confirmOutOfStock && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 max-w-sm mx-4 text-center">
+            <span className="material-symbols-outlined text-4xl text-amber-500 mb-2 block">inventory_2</span>
+            <h3 className="text-base font-black text-slate-800 dark:text-white mb-1">Out of Stock</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              <strong className="text-slate-700 dark:text-slate-200">{confirmOutOfStock.name}</strong> has 0 units in stock. You can still add it to the repair job, but you may need to order it.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => { doPickPart(confirmOutOfStock); setConfirmOutOfStock(null); }}
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+              >
+                Add Anyway
+              </button>
+              <button
+                onClick={() => setConfirmOutOfStock(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
