@@ -114,6 +114,76 @@ def _build_job_response(job: dict) -> RepairJobResponse:
 # SUMMARY (before LIST and /{id} to avoid routing conflict)
 # ──────────────────────────────────────────────
 
+@router.get("/lifetime-stats")
+async def get_lifetime_stats(
+    current_user: User = Depends(require_admin)
+):
+    """
+    Returns lifetime/historical stats for the dashboard:
+    - total_tools_repaired: all tools with completed or closed status
+    - completed_this_month: tools completed in the current calendar month
+    - avg_turnaround_days: average days from received → completed (last 90 days)
+    - total_jobs_created: total number of repair job documents
+    """
+    db = get_database()
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    ninety_days_ago = datetime.utcfromtimestamp(now.timestamp() - 90 * 86400)
+
+    # Total tools repaired (completed or closed)
+    pipeline_total = [
+        {"$unwind": "$tools"},
+        {"$match": {"tools.status": {"$in": ["completed", "closed"]}}},
+        {"$count": "total"},
+    ]
+    result = await db.repairs.aggregate(pipeline_total).to_list(length=1)
+    total_tools_repaired = result[0]["total"] if result else 0
+
+    # Tools completed this month
+    pipeline_month = [
+        {"$unwind": "$tools"},
+        {"$match": {
+            "tools.status": {"$in": ["completed", "closed"]},
+            "tools.date_completed": {"$gte": month_start},
+        }},
+        {"$count": "total"},
+    ]
+    result_month = await db.repairs.aggregate(pipeline_month).to_list(length=1)
+    completed_this_month = result_month[0]["total"] if result_month else 0
+
+    # Average turnaround: date_completed - date_received in days (last 90 days)
+    pipeline_avg = [
+        {"$unwind": "$tools"},
+        {"$match": {
+            "tools.status": {"$in": ["completed", "closed"]},
+            "tools.date_completed": {"$gte": ninety_days_ago},
+            "tools.date_received": {"$exists": True, "$ne": None},
+        }},
+        {"$project": {
+            "days": {
+                "$divide": [
+                    {"$subtract": ["$tools.date_completed", "$tools.date_received"]},
+                    86400000  # ms → days
+                ]
+            }
+        }},
+        {"$match": {"days": {"$gt": 0}}},
+        {"$group": {"_id": None, "avg_days": {"$avg": "$days"}}},
+    ]
+    result_avg = await db.repairs.aggregate(pipeline_avg).to_list(length=1)
+    avg_turnaround_days = round(result_avg[0]["avg_days"], 1) if result_avg else None
+
+    # Total jobs ever created
+    total_jobs_created = await db.repairs.count_documents({})
+
+    return {
+        "total_tools_repaired": total_tools_repaired,
+        "completed_this_month": completed_this_month,
+        "avg_turnaround_days": avg_turnaround_days,
+        "total_jobs_created": total_jobs_created,
+    }
+
+
 @router.get("/summary")
 async def get_repair_summary(
     current_user: User = Depends(require_admin)

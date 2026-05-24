@@ -82,6 +82,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   useEffect(() => {
     serviceAgreementAPI.get().then(setServiceAgreement).catch(() => {});
   }, []);
+  const [lifetimeStats, setLifetimeStats] = useState(null);
+  useEffect(() => {
+    repairsAPI.lifetimeStats().then(setLifetimeStats).catch(() => {});
+  }, []);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -1100,6 +1104,31 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           <span className="material-symbols-outlined text-base">add</span>
           <span className="hidden sm:inline">New Repair Job</span>
         </button>
+      </div>
+
+      {/* Lifetime Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5">
+        {[
+          { icon: 'construction', label: 'Tools Repaired', value: lifetimeStats ? lifetimeStats.total_tools_repaired.toLocaleString() : '—', sub: 'All time', color: 'indigo' },
+          { icon: 'trending_up',  label: 'This Month',     value: lifetimeStats ? lifetimeStats.completed_this_month.toLocaleString() : '—', sub: 'Completed this month', color: 'violet' },
+          { icon: 'avg_pace',     label: 'Avg Turnaround', value: lifetimeStats ? (lifetimeStats.avg_turnaround_days != null ? `${lifetimeStats.avg_turnaround_days}d` : '—') : '—', sub: 'Last 90 days', color: 'teal' },
+          { icon: 'handyman',     label: 'Total Jobs',     value: lifetimeStats ? lifetimeStats.total_jobs_created.toLocaleString() : '—', sub: 'All time', color: 'slate' },
+        ].map(card => {
+          const colorMap = {
+            indigo: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/40 text-indigo-700 dark:text-indigo-400',
+            violet: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800/40 text-violet-700 dark:text-violet-400',
+            teal:   'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800/40 text-teal-700 dark:text-teal-400',
+            slate:  'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/40 text-slate-600 dark:text-slate-400',
+          };
+          return (
+            <div key={card.label} className={`flex flex-col gap-0.5 sm:gap-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border ${colorMap[card.color]}`}>
+              <span className="material-symbols-outlined text-lg sm:text-xl opacity-70">{card.icon}</span>
+              <div className="text-2xl sm:text-3xl font-black leading-none">{card.value}</div>
+              <div className="text-[11px] sm:text-xs font-bold opacity-80 leading-tight">{card.label}</div>
+              <div className="text-[10px] sm:text-xs opacity-50 leading-tight hidden sm:block">{card.sub}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Filters */}

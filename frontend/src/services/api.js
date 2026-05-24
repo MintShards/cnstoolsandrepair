@@ -328,6 +328,10 @@ export const repairsAPI = {
     const response = await api.get('/api/repairs/summary');
     return response.data;
   },
+  lifetimeStats: async () => {
+    const response = await api.get('/api/repairs/lifetime-stats');
+    return response.data;
+  },
   list: async (params = {}) => {
     const response = await api.get('/api/repairs/', { params });
     const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
