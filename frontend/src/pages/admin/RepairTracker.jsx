@@ -117,12 +117,12 @@ export default function RepairTracker() {
   }, []);
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'jobs', label: 'Repair Jobs', icon: 'build_circle' },
-    { id: 'requests', label: 'Repair Requests', icon: 'inbox' },
-    { id: 'customers', label: 'Customers', icon: 'group' },
-    { id: 'parts-library', label: 'Parts Library', icon: 'inventory_2' },
-    { id: 'parts-sourcing', label: 'Parts Sourcing', icon: 'local_shipping' },
+    { id: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', icon: 'dashboard' },
+    { id: 'jobs', label: 'Repair Jobs', shortLabel: 'Jobs', icon: 'build_circle' },
+    { id: 'requests', label: 'Repair Requests', shortLabel: 'Requests', icon: 'inbox' },
+    { id: 'customers', label: 'Customers', shortLabel: 'Customers', icon: 'group' },
+    { id: 'parts-library', label: 'Parts Library', shortLabel: 'Parts', icon: 'inventory_2' },
+    { id: 'parts-sourcing', label: 'Parts Sourcing', shortLabel: 'Sourcing', icon: 'local_shipping' },
   ];
 
   const handleCountUpdate = useCallback((tab, count) => {
@@ -231,24 +231,39 @@ export default function RepairTracker() {
         <main className="flex-1 max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 w-full">
 
           {/* Tab Navigation */}
-          <div className="mb-6 overflow-x-auto -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6">
-            <nav className="flex gap-1.5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-1.5 w-fit shadow-lg shadow-black/5 dark:shadow-black/20">
+          <div className="mb-6">
+            <nav className="flex gap-1.5 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-1.5 w-full shadow-lg shadow-black/5 dark:shadow-black/20">
               {tabs.map((tab) => {
                 const count = tabCounts[tab.id];
                 return (
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
-                    className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+                    className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold transition-all duration-200 ${
                       activeTab === tab.id
                         ? 'bg-primary text-white shadow-md shadow-primary/25'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-xl">{tab.icon}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <div className="relative flex items-center justify-center">
+                      <span className="material-symbols-outlined text-xl">{tab.icon}</span>
+                      {count !== null && count > 0 && (
+                        <span className={`sm:hidden absolute -top-1.5 -right-2.5 text-[10px] font-black px-1 py-0 rounded-full min-w-[16px] text-center leading-tight ${
+                          activeTab === tab.id
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                        }`}>
+                          {count}
+                        </span>
+                      )}
+                      {tab.id === 'jobs' && jobsNeedAttention && activeTab !== 'jobs' && (
+                        <span className="sm:hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      )}
+                    </div>
+                    <span className="sm:hidden text-[10px] leading-tight">{tab.shortLabel}</span>
+                    <span className="hidden sm:inline text-sm leading-tight">{tab.label}</span>
                     {count !== null && count > 0 && (
-                      <span className={`text-xs font-black px-2 py-0.5 rounded-full min-w-[22px] text-center leading-none ${
+                      <span className={`hidden sm:inline text-xs font-black px-2 py-0.5 rounded-full min-w-[22px] text-center leading-none ${
                         activeTab === tab.id
                           ? 'bg-white/20 text-white'
                           : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
@@ -257,7 +272,7 @@ export default function RepairTracker() {
                       </span>
                     )}
                     {tab.id === 'jobs' && jobsNeedAttention && activeTab !== 'jobs' && (
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" title="Jobs need attention" />
+                      <span className="hidden sm:flex w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" title="Jobs need attention" />
                     )}
                   </button>
                 );
