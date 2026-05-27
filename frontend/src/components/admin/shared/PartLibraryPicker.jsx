@@ -192,8 +192,11 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                           {part.model_names.slice(0, 2).join(', ')}{part.model_names.length > 2 ? ` +${part.model_names.length - 2}` : ''}
                         </span>
                       )}
+                      {part.cost != null && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${Number(part.cost).toFixed(2)}</span>
+                      )}
                       {part.suggested_price != null && (
-                        <span className="text-xs font-bold text-green-600 dark:text-green-400">${Number(part.suggested_price).toFixed(2)}</span>
+                        <span className="text-xs font-bold text-green-600 dark:text-green-400">Sell: ${Number(part.suggested_price).toFixed(2)}</span>
                       )}
                       <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                         part.low_stock
@@ -249,8 +252,11 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                       )}
                     </div>
                     <div className="flex items-center gap-4 mt-2 flex-wrap text-xs">
+                      {selectedPart.cost != null && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${Number(selectedPart.cost).toFixed(2)}</span>
+                      )}
                       {selectedPart.suggested_price != null && (
-                        <span className="font-bold text-green-600 dark:text-green-400 text-sm">${Number(selectedPart.suggested_price).toFixed(2)}</span>
+                        <span className="font-bold text-green-600 dark:text-green-400 text-sm">Sell: ${Number(selectedPart.suggested_price).toFixed(2)}</span>
                       )}
                       <span className={`px-1.5 py-0.5 rounded font-medium ${
                         selectedPart.low_stock
@@ -330,8 +336,11 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
                                   <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 mt-0.5 flex-wrap">
                                     {cp.brand_name && <span>{cp.brand_name}</span>}
                                     {cp.model_names?.length > 0 && <span>{cp.model_names.slice(0, 2).join(', ')}</span>}
+                                    {cp.cost != null && (
+                                      <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${Number(cp.cost).toFixed(2)}</span>
+                                    )}
                                     {cp.suggested_price != null && (
-                                      <span className="font-bold text-green-600 dark:text-green-400">${Number(cp.suggested_price).toFixed(2)}</span>
+                                      <span className="font-bold text-green-600 dark:text-green-400">Sell: ${Number(cp.suggested_price).toFixed(2)}</span>
                                     )}
                                   </div>
                                 </div>

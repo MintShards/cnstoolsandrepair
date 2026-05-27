@@ -155,6 +155,7 @@ class BusinessSettingsUpdate(BaseModel):
     social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
     stale_days: int = Field(default=3, ge=1, le=30, alias="staleDays")  # Configurable stale threshold
+    default_markup_percentage: float = Field(default=30.0, ge=0, le=500, alias="defaultMarkupPercentage")  # Default parts markup %
     sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
 
     class Config:
@@ -232,6 +233,7 @@ class BusinessSettingsResponse(BaseModel):
     social: Optional[SocialMediaModel] = Field(default_factory=SocialMediaModel)  # Legacy field
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
     stale_days: int = Field(default=3, alias="staleDays")
+    default_markup_percentage: float = Field(default=30.0, alias="defaultMarkupPercentage")
     sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
 
     class Config:

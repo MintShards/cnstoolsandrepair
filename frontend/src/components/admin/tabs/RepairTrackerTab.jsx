@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import AdminInput from '../AdminInput';
 import AdminTextarea from '../AdminTextarea';
-import { serviceAgreementAPI } from '../../../services/api';
+import { serviceAgreementAPI, settingsAPI } from '../../../services/api';
+import { useSettings } from '../../../contexts/SettingsContext';
 
 export default function RepairTrackerTab() {
+  const { settings, refreshSettings } = useSettings();
   const [formData, setFormData] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
@@ -134,7 +137,64 @@ export default function RepairTrackerTab() {
         </div>
       )}
 
-      {/* Info box */}
+      {/* Repair Tracker Settings */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 space-y-4">
+        <h3 className="text-sm font-black text-white uppercase tracking-tight">General Settings</h3>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-3 flex-1 p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+            <span className="material-symbols-outlined text-amber-500 text-xl flex-shrink-0">warning</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white">Stale Job Threshold</p>
+              <p className="text-[11px] text-slate-400">Tools with no status update for this many days are flagged as stale in the dashboard.</p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <input
+                type="number" min="1" max="30"
+                value={settings?.staleDays ?? 3}
+                onChange={async (e) => {
+                  const val = Math.max(1, Math.min(30, parseInt(e.target.value) || 3));
+                  setSavingSettings(true);
+                  try {
+                    await settingsAPI.update({ ...settings, staleDays: val });
+                    await refreshSettings();
+                  } catch { showNotification('Failed to save setting.', 'error'); }
+                  finally { setSavingSettings(false); }
+                }}
+                disabled={savingSettings}
+                className="w-14 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-sm text-white text-center focus:border-primary focus:outline-none"
+              />
+              <span className="text-xs text-slate-400">days</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-1 p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+            <span className="material-symbols-outlined text-green-500 text-xl flex-shrink-0">sell</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white">Default Parts Markup</p>
+              <p className="text-[11px] text-slate-400">When a part cost is entered, the selling price is auto-calculated using this markup. The price can still be edited manually.</p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <input
+                type="number" min="0" max="500" step="1"
+                value={settings?.defaultMarkupPercentage ?? 30}
+                onChange={async (e) => {
+                  const val = Math.max(0, Math.min(500, parseFloat(e.target.value) || 0));
+                  setSavingSettings(true);
+                  try {
+                    await settingsAPI.update({ ...settings, defaultMarkupPercentage: val });
+                    await refreshSettings();
+                  } catch { showNotification('Failed to save setting.', 'error'); }
+                  finally { setSavingSettings(false); }
+                }}
+                disabled={savingSettings}
+                className="w-14 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-sm text-white text-center focus:border-primary focus:outline-none"
+              />
+              <span className="text-xs text-slate-400">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Service Agreement */}
       <div className="flex gap-3 p-4 bg-blue-900/20 border border-blue-800 rounded-xl text-sm text-blue-300">
         <span className="material-symbols-outlined text-base flex-shrink-0 mt-0.5">info</span>
         <span>These terms appear at the bottom of every printed work order under <strong>Service Agreement</strong>. Changes take effect on the next print — no restart needed.</span>

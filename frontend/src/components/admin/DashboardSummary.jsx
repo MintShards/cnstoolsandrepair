@@ -70,7 +70,7 @@ function StatusBadge({ status }) {
 
 export default function DashboardSummary({
   onStatusFilter, onTechFilter, onNewJob, onNewCustomer, onGoToRequests,
-  onAttentionUpdate, onStaleDaysUpdate, onOpenJob, onGoToPartsLibrary,
+  onAttentionUpdate, onOpenJob, onGoToPartsLibrary,
   collapsed: initialCollapsed = false,
   asTab = false,
 }) {
@@ -85,15 +85,12 @@ export default function DashboardSummary({
       if (onAttentionUpdate) {
         onAttentionUpdate((result.overdue_count > 0) || (result.stale_count > 0) || (result.rush_urgent_active > 0));
       }
-      if (onStaleDaysUpdate && result.stale_days != null) {
-        onStaleDaysUpdate(result.stale_days);
-      }
     } catch {
       // Silently fail — dashboard is non-critical
     } finally {
       setLoading(false);
     }
-  }, [onAttentionUpdate, onStaleDaysUpdate]);
+  }, [onAttentionUpdate]);
 
   useEffect(() => {
     fetchSummary();

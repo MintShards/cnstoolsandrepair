@@ -75,9 +75,10 @@ const getEmptyJob = () => ({
   address: '', customer_notes: '', source: 'drop_off', tools: [getEmptyTool()]
 });
 
-export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied, externalTechFilter, onExternalTechFilterApplied, externalOpenNewJob, onExternalOpenNewJobHandled, externalOpenJobId, onExternalOpenJobHandled, staleDays = 3 }) {
+export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied, externalTechFilter, onExternalTechFilterApplied, externalOpenNewJob, onExternalOpenNewJobHandled, externalOpenJobId, onExternalOpenJobHandled }) {
   const showToast = useToast();
   const { settings } = useSettings();
+  const staleDays = settings?.staleDays ?? 3;
   const [serviceAgreement, setServiceAgreement] = useState(null);
   useEffect(() => {
     serviceAgreementAPI.get().then(setServiceAgreement).catch(() => {});
@@ -1097,13 +1098,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Repair Jobs</h2>
           <p className="text-slate-500 text-sm mt-0.5">Manage work orders and tool repairs</p>
         </div>
-        <button
-          onClick={handleOpenNewJob}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30"
-        >
-          <span className="material-symbols-outlined text-base">add</span>
-          <span className="hidden sm:inline">New Repair Job</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenNewJob}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30"
+          >
+            <span className="material-symbols-outlined text-base">add</span>
+            <span className="hidden sm:inline">New Repair Job</span>
+          </button>
+        </div>
       </div>
 
       {/* Lifetime Stats */}

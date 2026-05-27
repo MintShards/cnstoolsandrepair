@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { partsLibraryAPI, repairsAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
+import { useSettings } from '../../../contexts/SettingsContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -591,6 +592,10 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
 
 function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved }) {
   const toast = useToast();
+  const { settings } = useSettings();
+  const defaultMarkup = settings?.defaultMarkupPercentage ?? 30;
+  // Track whether suggested_price was manually overridden by the user
+  const [priceManuallySet, setPriceManuallySet] = useState(part?.suggested_price != null && part?.cost == null);
   const [form, setForm] = useState({
     part_number: (part?.part_number || '').toUpperCase(),
     name: (part?.name || '').toUpperCase(),
@@ -598,6 +603,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     model_ids: part?.model_ids || (modelId ? [modelId] : []),
     compatibility_group_ids: part?.compatibility_group_ids || [],
     suggested_suppliers: part?.suggested_suppliers || [],
+    cost: part?.cost ?? '',
     suggested_price: part?.suggested_price ?? '',
     notes: part?.notes || '',
     quantity_on_hand: part?.quantity_on_hand ?? 0,
@@ -633,6 +639,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     try {
       const payload = {
         ...form,
+        cost: form.cost === '' ? null : Number(form.cost),
         suggested_price: form.suggested_price === '' ? null : Number(form.suggested_price),
         notes: form.notes || null,
         location: form.location || null,
@@ -673,7 +680,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               placeholder="e.g. O-RING KIT"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Part Number *</label>
               <input
@@ -685,13 +692,41 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Price ($)</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Cost ($)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.cost}
+                onChange={e => {
+                  const costVal = e.target.value;
+                  setForm(f => {
+                    const newForm = { ...f, cost: costVal };
+                    if (!priceManuallySet) {
+                      const parsed = parseFloat(costVal);
+                      newForm.suggested_price = isNaN(parsed) ? '' : (parsed * (1 + defaultMarkup / 100)).toFixed(2);
+                    }
+                    return newForm;
+                  });
+                }}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Sell Price ($)
+                {!priceManuallySet && form.cost !== '' && <span className="ml-1 text-slate-400">(auto)</span>}
+              </label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 value={form.suggested_price}
-                onChange={e => setForm(f => ({ ...f, suggested_price: e.target.value }))}
+                onChange={e => {
+                  setPriceManuallySet(true);
+                  setForm(f => ({ ...f, suggested_price: e.target.value }));
+                }}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00"
               />
@@ -1020,7 +1055,7 @@ function PartsView({ model, compatGroups, onBack }) {
       </div>
 
       {/* Parts header */}
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-slate-400">settings</span>
           <h3 className="font-semibold text-slate-800 dark:text-slate-100">Parts ({parts.length})</h3>
@@ -1030,14 +1065,15 @@ function PartsView({ model, compatGroups, onBack }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search parts…"
-            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+            className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
           />
           <button
             onClick={() => { setEditingPart(null); setShowPartForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex-shrink-0"
           >
             <span className="material-symbols-outlined text-sm">add</span>
-            Add Part
+            <span className="hidden sm:inline">Add Part</span>
+            <span className="sm:hidden">Add</span>
           </button>
         </div>
       </div>
@@ -1056,16 +1092,29 @@ function PartsView({ model, compatGroups, onBack }) {
           {filtered.map(part => (
             <div key={part.id} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
               <div
-                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 onClick={() => setExpandedPart(expandedPart === part.id ? null : part.id)}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                    {part.cost != null && (
+                      <span className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
+                    )}
                     {part.suggested_price != null && (
-                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">${part.suggested_price.toFixed(2)}</span>
+                      <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                    )}
+                    <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium ${
+                      part.low_stock
+                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                        : part.quantity_on_hand > 0
+                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                    }`}>
+                      {part.quantity_on_hand} in stock
+                    </span>
+                    {part.location && (
+                      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300">Note: {part.location}</span>
                     )}
                     {part.suggested_suppliers?.length > 0 && (
                       <span className="text-xs text-slate-400 dark:text-slate-500">
@@ -1082,18 +1131,6 @@ function PartsView({ model, compatGroups, onBack }) {
                       <span className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full">
                         {part.compatibility_group_ids.length} compat
                       </span>
-                    )}
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                      part.low_stock
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                        : part.quantity_on_hand > 0
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                    }`}>
-                      {part.quantity_on_hand} in stock
-                    </span>
-                    {part.location && (
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{part.location}</span>
                     )}
                   </div>
                 </div>
@@ -1512,9 +1549,14 @@ function CompatiblePartsModal({ part, data, onClose }) {
                             <div className="text-xs text-slate-400 mt-0.5">{p.suggested_suppliers.join(', ')}</div>
                           )}
                         </div>
-                        {p.suggested_price != null && (
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300 flex-shrink-0">${p.suggested_price.toFixed(2)}</span>
-                        )}
+                        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                          {p.cost != null && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${p.cost.toFixed(2)}</span>
+                          )}
+                          {p.suggested_price != null && (
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Sell: ${p.suggested_price.toFixed(2)}</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1877,24 +1919,24 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
   return (
     <div>
       {/* Header with breadcrumb */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-4">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0">inventory_2</span>
+      <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4">
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap min-w-0">
+          <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 text-lg sm:text-xl">inventory_2</span>
           <button
             onClick={() => { setSelectedBrand(null); setSelectedModel(null); setSearchQuery(''); }}
-            className={`text-base sm:text-lg font-bold transition-colors flex-shrink-0 ${selectedBrand || selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
+            className={`text-sm sm:text-lg font-bold transition-colors flex-shrink-0 ${selectedBrand || selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
           >
-            Parts Library
+            {selectedBrand ? <span className="hidden sm:inline">Parts Library</span> : 'Parts Library'}
           </button>
           {!selectedBrand && !selectedModel && (
             <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full flex-shrink-0">{brands.length} brands</span>
           )}
           {selectedBrand && (
             <>
-              <span className="material-symbols-outlined text-slate-400 text-sm flex-shrink-0">chevron_right</span>
+              <span className="material-symbols-outlined text-slate-400 text-xs sm:text-sm flex-shrink-0">chevron_right</span>
               <button
                 onClick={() => { setSelectedModel(null); setSearchQuery(''); }}
-                className={`text-base sm:text-lg font-bold transition-colors truncate max-w-[120px] sm:max-w-xs uppercase ${selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
+                className={`text-sm sm:text-lg font-bold transition-colors truncate max-w-[100px] sm:max-w-xs uppercase ${selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
                 title={selectedBrand.name}
               >
                 {selectedBrand.name}
@@ -1903,18 +1945,18 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
           )}
           {selectedModel && (
             <>
-              <span className="material-symbols-outlined text-slate-400 text-sm flex-shrink-0">chevron_right</span>
-              <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[120px] sm:max-w-xs uppercase" title={selectedModel.name}>{selectedModel.name}</span>
+              <span className="material-symbols-outlined text-slate-400 text-xs sm:text-sm flex-shrink-0">chevron_right</span>
+              <span className="text-sm sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[100px] sm:max-w-xs uppercase" title={selectedModel.name}>{selectedModel.name}</span>
               {selectedModel.category && (
-                <span className="text-base text-slate-500 dark:text-slate-300 flex-shrink-0 uppercase">— {selectedModel.category}</span>
+                <span className="text-xs sm:text-base text-slate-500 dark:text-slate-300 flex-shrink-0 uppercase">— {selectedModel.category}</span>
               )}
               {selectedModel.discontinued && (
-                <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full flex-shrink-0">Discontinued</span>
+                <span className="text-[10px] sm:text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 sm:px-2 py-0.5 rounded-full flex-shrink-0">Discontinued</span>
               )}
             </>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <button
             onClick={() => setShowLowStockOnly(v => !v)}
             className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
@@ -1947,8 +1989,8 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
         </div>
       </div>
 
-      {/* Persistent search bar */}
-      <div className="mb-4 relative">
+      {/* Persistent search bar — hidden when drilled into a model (PartsView has its own) */}
+      {!selectedModel && <div className="mb-4 relative">
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">search</span>
         <input
           value={searchQuery}
@@ -1964,7 +2006,7 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
         )}
-      </div>
+      </div>}
 
       {/* Low-stock filter view */}
       {showLowStockOnly && (
@@ -2064,9 +2106,14 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    {part.suggested_price != null && (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">${part.suggested_price.toFixed(2)}</span>
-                    )}
+                    <div className="flex flex-col items-end gap-0.5">
+                      {part.cost != null && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
+                      )}
+                      {part.suggested_price != null && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                      )}
+                    </div>
                     {part.compatibility_group_ids?.length > 0 && (
                       <button
                         onClick={() => handleSearchCompat(part)}

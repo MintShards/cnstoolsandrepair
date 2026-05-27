@@ -82,6 +82,7 @@ DEFAULT_SETTINGS = {
         "instagram": ""
     },
     "staleDays": 3,
+    "defaultMarkupPercentage": 30.0,
     "sourcingEmailTemplate": {
         "defaultSubject": "Parts Pricing Request - CNS Tool Repair",
         "greeting": "Hi",

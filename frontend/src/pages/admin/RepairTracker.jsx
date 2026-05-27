@@ -97,7 +97,6 @@ export default function RepairTracker() {
   const [dashboardOpenNewJob, setDashboardOpenNewJob] = useState(false);
   const [dashboardOpenNewCustomer, setDashboardOpenNewCustomer] = useState(false);
   const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
-  const [staleDays, setStaleDays] = useState(3);
   const [dashboardOpenJobId, setDashboardOpenJobId] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -182,9 +181,6 @@ export default function RepairTracker() {
     setJobsNeedAttention(hasAttention);
   }, []);
 
-  const handleStaleDaysUpdate = useCallback((days) => {
-    setStaleDays(days);
-  }, []);
 
   return (
     <ToastContext.Provider value={showToast}>
@@ -279,7 +275,6 @@ export default function RepairTracker() {
                 onNewCustomer={handleDashboardNewCustomer}
                 onGoToRequests={handleGoToRequests}
                 onAttentionUpdate={handleAttentionUpdate}
-                onStaleDaysUpdate={handleStaleDaysUpdate}
                 onOpenJob={handleDashboardOpenJob}
                 onGoToPartsLibrary={() => { setPartsLibraryFilter('low-stock'); setActiveTab('parts-library'); }}
                 asTab
@@ -321,7 +316,6 @@ export default function RepairTracker() {
                 onExternalOpenNewJobHandled={() => setDashboardOpenNewJob(false)}
                 externalOpenJobId={dashboardOpenJobId}
                 onExternalOpenJobHandled={() => setDashboardOpenJobId(null)}
-                staleDays={staleDays}
               />
             )}
           </div>

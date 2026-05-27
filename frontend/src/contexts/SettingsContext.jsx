@@ -104,6 +104,7 @@ export function SettingsProvider({ children }) {
       },
       social: BUSINESS_INFO.social || {},
       socialMedia: [],  // Empty array as default for new dynamic social media
+      defaultMarkupPercentage: 30.0,
     };
   };
 
