@@ -2099,7 +2099,7 @@ function CompatGroupsPanel({ onClose }) {
                                     <p className="text-[10px] text-slate-400 uppercase truncate">{p.brand_name}{p.model_names?.length > 0 ? ` — ${p.model_names.join(', ')}` : ''}</p>
                                   </div>
                                   <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                                    {p.cost != null && <span className="text-[10px] text-amber-600 dark:text-amber-400 hidden sm:inline">${p.cost.toFixed(2)}</span>}
+                                    {p.suggested_price != null && <span className="text-[10px] text-slate-600 dark:text-slate-300 hidden sm:inline">Sell: ${p.suggested_price.toFixed(2)}</span>}
                                     <button
                                       onClick={() => handleRemoveFromGroup(p, g.id)}
                                       className="p-0.5 rounded text-slate-400 sm:text-slate-300 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 sm:opacity-0 sm:group-hover/part:opacity-100 transition-all"
