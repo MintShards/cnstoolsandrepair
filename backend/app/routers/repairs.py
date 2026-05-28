@@ -682,7 +682,7 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
             "let": {"pid": "$_id"},
             "pipeline": [
                 {"$match": {"$expr": {"$eq": [{"$toString": "$_id"}, "$$pid"]}}},
-                {"$project": {"name": 1, "part_number": 1, "compatibility_group_ids": 1}},
+                {"$project": {"name": 1, "part_number": 1, "compatibility_group_ids": 1, "cost": 1}},
             ],
             "as": "library_part",
         }},
@@ -712,7 +712,17 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
             "part_number": {"$ifNull": ["$library_part.part_number", "$part_number"]},
             "total_quantity": 1,
             "job_count": 1,
-            "total_spend": {"$round": ["$total_spend", 2]},
+            "total_spend": {"$round": [
+                {"$cond": [
+                    {"$and": [
+                        {"$eq": ["$total_spend", 0]},
+                        {"$gt": ["$library_part.cost", None]},
+                    ]},
+                    {"$multiply": ["$library_part.cost", "$total_quantity"]},
+                    "$total_spend",
+                ]},
+                2,
+            ]},
             "compat_groups": {"$map": {"input": "$compat_groups", "as": "g", "in": "$$g.name"}},
         }},
     ]
