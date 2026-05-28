@@ -731,12 +731,29 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         {"$unwind": "$tools"},
         {"$unwind": "$tools.parts"},
         {"$match": {"tools.parts.supplier": {"$exists": True, "$ne": "", "$ne": None}}},
+        # Resolve library cost for parts without a price
+        {"$lookup": {
+            "from": "parts_library_parts",
+            "let": {"pid": {"$ifNull": ["$tools.parts.library_part_id", ""]}},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$ne": ["$$pid", ""]},
+                    {"$eq": [{"$toString": "$_id"}, "$$pid"]},
+                ]}}},
+                {"$project": {"cost": 1}},
+            ],
+            "as": "_lib",
+        }},
+        {"$addFields": {
+            "_lib_cost": {"$ifNull": [{"$arrayElemAt": ["$_lib.cost", 0]}, None]},
+            "_effective_price": {"$ifNull": ["$tools.parts.price", {"$ifNull": [{"$arrayElemAt": ["$_lib.cost", 0]}, 0]}]},
+        }},
         {"$group": {
             "_id": "$tools.parts.supplier",
             "part_count": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
             "total_spend": {"$sum": {
                 "$multiply": [
-                    {"$ifNull": ["$tools.parts.price", 0]},
+                    "$_effective_price",
                     {"$ifNull": ["$tools.parts.quantity", 1]}
                 ]
             }},
@@ -794,6 +811,19 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         {"$unwind": "$tools"},
         {"$unwind": "$tools.parts"},
         {"$match": {"tools.parts.status": "installed"}},
+        # Resolve library cost for parts without a price
+        {"$lookup": {
+            "from": "parts_library_parts",
+            "let": {"pid": {"$ifNull": ["$tools.parts.library_part_id", ""]}},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$ne": ["$$pid", ""]},
+                    {"$eq": [{"$toString": "$_id"}, "$$pid"]},
+                ]}}},
+                {"$project": {"cost": 1}},
+            ],
+            "as": "_lib",
+        }},
         {"$addFields": {
             "month_key": {"$dateToString": {
                 "format": "%Y-%m",
@@ -801,7 +831,7 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
             }},
             "line_cost": {
                 "$multiply": [
-                    {"$ifNull": ["$tools.parts.price", 0]},
+                    {"$ifNull": ["$tools.parts.price", {"$ifNull": [{"$arrayElemAt": ["$_lib.cost", 0]}, 0]}]},
                     {"$ifNull": ["$tools.parts.quantity", 1]}
                 ]
             }
