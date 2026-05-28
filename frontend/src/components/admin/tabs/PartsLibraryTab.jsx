@@ -1579,6 +1579,9 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
   const [showModelForm, setShowModelForm] = useState(false);
   const [editingModel, setEditingModel] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [modelSearch, setModelSearch] = useState('');
+  const [partResults, setPartResults] = useState([]);
+  const [partSearchLoading, setPartSearchLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1594,6 +1597,26 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const filteredModels = models.filter(m =>
+    !modelSearch ||
+    m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
+    (m.category && m.category.toLowerCase().includes(modelSearch.toLowerCase()))
+  );
+
+  // Also search parts via API when query is 2+ chars
+  useEffect(() => {
+    if (!modelSearch.trim() || modelSearch.trim().length < 2) { setPartResults([]); return; }
+    const timer = setTimeout(async () => {
+      setPartSearchLoading(true);
+      try {
+        const data = await partsLibraryAPI.search(modelSearch.trim());
+        setPartResults(data);
+      } catch { /* silent */ }
+      finally { setPartSearchLoading(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [modelSearch]);
+
   const handleDelete = async () => {
     try {
       await partsLibraryAPI.deleteModel(confirmDelete.id);
@@ -1607,6 +1630,27 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
 
   return (
     <div>
+      {models.length > 0 && (
+        <div className="relative mb-4">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">search</span>
+          <input
+            type="text"
+            value={modelSearch}
+            onChange={e => setModelSearch(e.target.value)}
+            placeholder="Search models and parts…"
+            className="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {modelSearch && (
+            <button
+              onClick={() => setModelSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-slate-800 dark:text-slate-100">Models ({models.length})</h3>
         <button
@@ -1627,9 +1671,14 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
           <span className="material-symbols-outlined text-4xl mb-2 block">build_circle</span>
           No models yet. Add the first model for {brand.name}.
         </div>
+      ) : filteredModels.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">
+          <span className="material-symbols-outlined text-4xl mb-2 block">search_off</span>
+          No models match &ldquo;{modelSearch}&rdquo;.
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {models.map(model => (
+          {filteredModels.map(model => (
             <div
               key={model.id}
               className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
@@ -1680,6 +1729,54 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
         </div>
       )}
 
+      {/* Parts search results */}
+      {modelSearch.trim().length >= 2 && (
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-sm">settings</span>
+            Parts
+          </h4>
+          {partSearchLoading && (
+            <div className="flex items-center justify-center py-8">
+              <span className="material-symbols-outlined animate-spin text-slate-400 text-2xl">progress_activity</span>
+            </div>
+          )}
+          {!partSearchLoading && partResults.length === 0 && (
+            <p className="text-sm text-slate-400 py-4 text-center">No parts found for &ldquo;{modelSearch}&rdquo;</p>
+          )}
+          {!partSearchLoading && partResults.length > 0 && (
+            <div className="space-y-2">
+              {partResults.map(part => (
+                <div
+                  key={part.id}
+                  className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
+                  onClick={() => {
+                    const model = models.find(m => part.model_ids?.includes(m.id));
+                    if (model) { onSelectModel(model); }
+                  }}
+                >
+                  <span className="material-symbols-outlined text-slate-400 mt-0.5">settings</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 uppercase">
+                      {part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                    {part.cost != null && (
+                      <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
+                    )}
+                    {part.suggested_price != null && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {showModelForm && (
         <ModelFormModal
           model={editingModel}
@@ -1715,6 +1812,19 @@ function CompatGroupsPanel({ onClose }) {
   const [showForm, setShowForm] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [search, setSearch] = useState('');
+
+  // Expanded group state
+  const [expandedGroupId, setExpandedGroupId] = useState(null);
+  const [groupParts, setGroupParts] = useState([]);
+  const [loadingParts, setLoadingParts] = useState(false);
+
+  // Add-parts picker state
+  const [showAddParts, setShowAddParts] = useState(false);
+  const [addSearch, setAddSearch] = useState('');
+  const [addResults, setAddResults] = useState([]);
+  const [addSearching, setAddSearching] = useState(false);
+  const [addingIds, setAddingIds] = useState(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1730,10 +1840,84 @@ function CompatGroupsPanel({ onClose }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const filteredGroups = groups.filter(g =>
+    !search ||
+    g.name.toLowerCase().includes(search.toLowerCase()) ||
+    (g.description && g.description.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const toggleExpand = async (groupId) => {
+    if (expandedGroupId === groupId) {
+      setExpandedGroupId(null);
+      setShowAddParts(false);
+      setAddSearch('');
+      setAddResults([]);
+      return;
+    }
+    setExpandedGroupId(groupId);
+    setShowAddParts(false);
+    setAddSearch('');
+    setAddResults([]);
+    setLoadingParts(true);
+    try {
+      const parts = await partsLibraryAPI.getCompatGroupParts(groupId);
+      setGroupParts(parts);
+    } catch {
+      toast('error', 'Failed to load group parts');
+    } finally {
+      setLoadingParts(false);
+    }
+  };
+
+  const handleRemoveFromGroup = async (part, groupId) => {
+    try {
+      const newIds = (part.compatibility_group_ids || []).filter(id => id !== groupId);
+      await partsLibraryAPI.updatePart(part.id, { compatibility_group_ids: newIds });
+      setGroupParts(prev => prev.filter(p => p.id !== part.id));
+      setGroups(g => g.map(x => x.id === groupId ? { ...x, part_count: Math.max(0, (x.part_count || 1) - 1) } : x));
+      toast('success', `Removed ${part.name}`);
+    } catch {
+      toast('error', 'Failed to remove part');
+    }
+  };
+
+  const handleAddToGroup = async (part, groupId) => {
+    setAddingIds(prev => new Set(prev).add(part.id));
+    try {
+      const newIds = [...(part.compatibility_group_ids || []), groupId];
+      const updated = await partsLibraryAPI.updatePart(part.id, { compatibility_group_ids: newIds });
+      setGroupParts(prev => [...prev, updated]);
+      setAddResults(prev => prev.filter(p => p.id !== part.id));
+      setGroups(g => g.map(x => x.id === groupId ? { ...x, part_count: (x.part_count || 0) + 1 } : x));
+      toast('success', `Added ${part.name}`);
+    } catch {
+      toast('error', 'Failed to add part');
+    } finally {
+      setAddingIds(prev => { const s = new Set(prev); s.delete(part.id); return s; });
+    }
+  };
+
+  // Add-parts search with debounce
+  useEffect(() => {
+    if (!showAddParts || !addSearch.trim() || addSearch.trim().length < 2) { setAddResults([]); return; }
+    const timer = setTimeout(async () => {
+      setAddSearching(true);
+      try {
+        const data = await partsLibraryAPI.search(addSearch.trim());
+        // Filter out parts already in this group
+        const memberIds = new Set(groupParts.map(p => p.id));
+        setAddResults(data.filter(p => !memberIds.has(p.id) && !(p.compatibility_group_ids || []).includes(expandedGroupId)));
+      } catch { /* silent */ }
+      finally { setAddSearching(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [addSearch, showAddParts, expandedGroupId, groupParts]);
+
   const handleDelete = async () => {
     try {
       await partsLibraryAPI.deleteCompatGroup(confirmDelete.id);
       setGroups(g => g.filter(x => x.id !== confirmDelete.id));
+      if (expandedGroupId === confirmDelete.id) setExpandedGroupId(null);
       toast('success', 'Group removed');
     } catch {
       toast('error', 'Failed to remove group');
@@ -1743,24 +1927,40 @@ function CompatGroupsPanel({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg sm:mx-4 border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85vh]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-          <div>
-            <h3 className="font-bold text-slate-800 dark:text-slate-100">Compatibility Groups</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Parts in the same group are interchangeable across brands</p>
+      <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl sm:mx-4 border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base">Compatibility Groups</h3>
+            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">Parts in the same group are interchangeable across brands</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0 ml-2">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6">
-          <button
-            onClick={() => { setEditingGroup(null); setShowForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors mb-4"
-          >
-            <span className="material-symbols-outlined text-sm">add</span>
-            New Group
-          </button>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <button
+              onClick={() => { setEditingGroup(null); setShowForm(true); }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-sm">add</span>
+              New Group
+            </button>
+            <div className="relative flex-1">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">search</span>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Filter groups…"
+                className="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              )}
+            </div>
+          </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -1768,30 +1968,154 @@ function CompatGroupsPanel({ onClose }) {
             </div>
           ) : groups.length === 0 ? (
             <div className="text-center py-8 text-slate-400 text-sm">No compatibility groups yet</div>
+          ) : filteredGroups.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">
+              <span className="material-symbols-outlined text-3xl mb-1 block">search_off</span>
+              No groups match &ldquo;{search}&rdquo;
+            </div>
           ) : (
             <div className="space-y-2">
-              {groups.map(g => (
-                <div key={g.id} className="flex items-start gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                  <span className="material-symbols-outlined text-green-600 dark:text-green-400 mt-0.5">link</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{g.name}</p>
-                    {g.description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{g.description}</p>}
-                    <p className="text-xs text-slate-400 mt-0.5">{g.part_count ?? 0} parts</p>
+              {filteredGroups.map(g => (
+                <div key={g.id} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden transition-colors">
+                  {/* Group header row */}
+                  <div
+                    className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors"
+                    onClick={() => toggleExpand(g.id)}
+                  >
+                    <span className={`material-symbols-outlined text-sm mt-1 transition-transform ${expandedGroupId === g.id ? 'rotate-180' : ''} text-slate-400 flex-shrink-0`}>expand_more</span>
+                    <span className="material-symbols-outlined text-green-600 dark:text-green-400 mt-0.5 hidden sm:block flex-shrink-0">link</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{g.name}</p>
+                      {g.description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{g.description}</p>}
+                      <p className="text-xs text-slate-400 mt-0.5">{g.part_count ?? 0} parts</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => { setEditingGroup(g); setShowForm(true); }}
+                        className="p-1 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-sm">edit</span>
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(g)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => { setEditingGroup(g); setShowForm(true); }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm">edit</span>
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(g)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
-                  </div>
+
+                  {/* Expanded: member parts */}
+                  {expandedGroupId === g.id && (
+                    <div className="border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-3 sm:px-4 py-3">
+                      {loadingParts ? (
+                        <div className="flex items-center justify-center py-4">
+                          <span className="material-symbols-outlined animate-spin text-slate-400 text-xl">progress_activity</span>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Action bar */}
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Member Parts ({groupParts.length})</span>
+                            <button
+                              onClick={() => { setShowAddParts(v => !v); setAddSearch(''); setAddResults([]); }}
+                              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                showAddParts
+                                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                  : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-sm">{showAddParts ? 'close' : 'add'}</span>
+                              {showAddParts ? 'Cancel' : 'Add Parts'}
+                            </button>
+                          </div>
+
+                          {/* Add-parts picker */}
+                          {showAddParts && (
+                            <div className="mb-3 p-2 sm:p-3 border border-green-200 dark:border-green-800/40 rounded-xl bg-green-50/50 dark:bg-green-900/10">
+                              <div className="relative mb-2">
+                                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">search</span>
+                                <input
+                                  value={addSearch}
+                                  onChange={e => setAddSearch(e.target.value)}
+                                  placeholder="Search parts to add…"
+                                  className="w-full pl-8 pr-8 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                  autoFocus
+                                />
+                                {addSearch && (
+                                  <button onClick={() => { setAddSearch(''); setAddResults([]); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                    <span className="material-symbols-outlined text-sm">close</span>
+                                  </button>
+                                )}
+                              </div>
+                              {addSearching && (
+                                <div className="flex items-center justify-center py-3">
+                                  <span className="material-symbols-outlined animate-spin text-slate-400 text-sm">progress_activity</span>
+                                </div>
+                              )}
+                              {!addSearching && addSearch.trim().length >= 2 && addResults.length === 0 && (
+                                <p className="text-xs text-slate-400 text-center py-2">No parts found</p>
+                              )}
+                              {!addSearching && addResults.length > 0 && (
+                                <div className="space-y-1 max-h-40 overflow-y-auto">
+                                  {addResults.map(p => (
+                                    <div key={p.id} className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                          <span className="text-xs font-medium text-slate-800 dark:text-slate-100 uppercase truncate">{p.name}</span>
+                                          {p.part_number && <span className="text-[10px] text-slate-400 flex-shrink-0">#{p.part_number}</span>}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 uppercase truncate">{p.brand_name}{p.model_names?.length > 0 ? ` — ${p.model_names.join(', ')}` : ''}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleAddToGroup(p, g.id)}
+                                        disabled={addingIds.has(p.id)}
+                                        className="px-2 py-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-medium transition-colors flex-shrink-0"
+                                      >
+                                        {addingIds.has(p.id) ? '…' : 'Add'}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Parts list */}
+                          {groupParts.length === 0 ? (
+                            <p className="text-xs text-slate-400 text-center py-3">No parts in this group yet</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {groupParts.map(p => (
+                                <div key={p.id} className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 group/part">
+                                  <span className="material-symbols-outlined text-slate-400 text-sm hidden sm:block">settings</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                                      <span className="text-xs font-medium text-slate-800 dark:text-slate-100 uppercase truncate">{p.name}</span>
+                                      {p.part_number && (
+                                        <span className="text-[10px] font-mono text-primary bg-primary/10 dark:bg-primary/20 px-1 py-0.5 rounded flex-shrink-0">{p.part_number}</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 uppercase truncate">{p.brand_name}{p.model_names?.length > 0 ? ` — ${p.model_names.join(', ')}` : ''}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                                    {p.cost != null && <span className="text-[10px] text-amber-600 dark:text-amber-400 hidden sm:inline">${p.cost.toFixed(2)}</span>}
+                                    <button
+                                      onClick={() => handleRemoveFromGroup(p, g.id)}
+                                      className="p-0.5 rounded text-slate-400 sm:text-slate-300 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 sm:opacity-0 sm:group-hover/part:opacity-100 transition-all"
+                                      title="Remove from group"
+                                    >
+                                      <span className="material-symbols-outlined text-sm">close</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1916,6 +2240,30 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
 
   const isSearchActive = searchQuery.trim().length >= 2;
 
+  // Filter brands client-side when search is active
+  const filteredBrands = isSearchActive
+    ? brands.filter(b => b.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
+
+  // Extract unique models from parts search results
+  const matchedModels = isSearchActive && searchResults.length > 0
+    ? (() => {
+        const seen = new Set();
+        const models = [];
+        searchResults.forEach(part => {
+          if (part.model_ids && part.model_names) {
+            part.model_ids.forEach((mid, i) => {
+              if (!seen.has(mid) && part.model_names[i]?.toLowerCase().includes(searchQuery.trim().toLowerCase())) {
+                seen.add(mid);
+                models.push({ id: mid, name: part.model_names[i], brand_name: part.brand_name, brand_id: part.brand_id });
+              }
+            });
+          }
+        });
+        return models;
+      })()
+    : [];
+
   return (
     <div>
       {/* Header with breadcrumb */}
@@ -1989,13 +2337,13 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
         </div>
       </div>
 
-      {/* Persistent search bar — hidden when drilled into a model (PartsView has its own) */}
-      {!selectedModel && <div className="mb-4 relative">
+      {/* Persistent search bar — only at top-level brands view (models & parts views have their own) */}
+      {!selectedBrand && !selectedModel && <div className="mb-4 relative">
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">search</span>
         <input
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search parts…"
+          placeholder="Search brands, models, and parts…"
           className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2 sm:py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-slate-400"
         />
         {searchQuery && (
@@ -2074,58 +2422,136 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
 
       {/* Content: search results OR drill-down view */}
       {!showLowStockOnly && isSearchActive ? (
-        <div>
-          {searchLoading && (
-            <div className="flex items-center justify-center py-16">
-              <span className="material-symbols-outlined animate-spin text-slate-400 text-4xl">progress_activity</span>
+        <div className="space-y-5">
+          {/* Brands section */}
+          {filteredBrands.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">build</span>
+                Brands ({filteredBrands.length})
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {filteredBrands.map(brand => (
+                  <div
+                    key={brand.id}
+                    className="flex items-center gap-2.5 p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
+                    onClick={() => { setSelectedBrand(brand); setSearchQuery(''); }}
+                  >
+                    {brand.logo_url ? (
+                      <img
+                        src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`}
+                        alt={brand.name}
+                        className="h-6 w-auto object-contain rounded"
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span className="material-symbols-outlined text-slate-400 text-sm">build</span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{brand.name}</span>
+                      <span className="text-xs text-slate-400 ml-2">{brand.model_count ?? 0} models</span>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-sm">arrow_forward</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-          {!searchLoading && searchResults.length === 0 && (
-            <div className="text-center py-16 text-slate-400 text-sm">No parts found for &ldquo;{searchQuery}&rdquo;</div>
+
+          {/* Models section */}
+          {matchedModels.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">build_circle</span>
+                Models ({matchedModels.length})
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {matchedModels.map(model => (
+                  <div
+                    key={model.id}
+                    className="flex items-center gap-2.5 p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
+                    onClick={() => {
+                      const brand = brands.find(b => b.id === model.brand_id);
+                      if (brand) { setSelectedBrand(brand); }
+                      setSearchQuery('');
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-slate-400 text-sm">build_circle</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{model.name}</span>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">{model.brand_name}</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-sm">arrow_forward</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-          {!searchLoading && searchResults.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;</p>
-              {searchResults.map(part => (
-                <div
-                  key={part.id}
-                  className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
-                  onClick={() => {
-                    const brand = brands.find(b => b.id === part.brand_id);
-                    if (brand) { setSelectedBrand(brand); setSelectedModel(null); }
-                    setSearchQuery('');
-                  }}
-                >
-                  <span className="material-symbols-outlined text-slate-400 mt-0.5">settings</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+
+          {/* Parts section */}
+          {(searchLoading || searchResults.length > 0) && (
+          <div>
+            <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">settings</span>
+              Parts
+            </h4>
+            {searchLoading && (
+              <div className="flex items-center justify-center py-8">
+                <span className="material-symbols-outlined animate-spin text-slate-400 text-3xl">progress_activity</span>
+              </div>
+            )}
+            {!searchLoading && searchResults.length > 0 && (
+              <div className="space-y-2">
+                {searchResults.map(part => (
+                  <div
+                    key={part.id}
+                    className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
+                    onClick={() => {
+                      const brand = brands.find(b => b.id === part.brand_id);
+                      if (brand) { setSelectedBrand(brand); setSelectedModel(null); }
+                      setSearchQuery('');
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-slate-400 mt-0.5">settings</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <span className="uppercase">{part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}</span>
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      <span className="uppercase">{part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <div className="flex flex-col items-end gap-0.5">
-                      {part.cost != null && (
-                        <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
-                      )}
-                      {part.suggested_price != null && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                      <div className="flex flex-col items-end gap-0.5">
+                        {part.cost != null && (
+                          <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
+                        )}
+                        {part.suggested_price != null && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                        )}
+                      </div>
+                      {part.compatibility_group_ids?.length > 0 && (
+                        <button
+                          onClick={() => handleSearchCompat(part)}
+                          className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                          title="View cross-compatible parts"
+                        >
+                          <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                        </button>
                       )}
                     </div>
-                    {part.compatibility_group_ids?.length > 0 && (
-                      <button
-                        onClick={() => handleSearchCompat(part)}
-                        className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                        title="View cross-compatible parts"
-                      >
-                        <span className="material-symbols-outlined text-sm">swap_horiz</span>
-                      </button>
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* No results at all */}
+          {!searchLoading && filteredBrands.length === 0 && matchedModels.length === 0 && searchResults.length === 0 && (
+            <div className="text-center py-12 text-slate-400">
+              <span className="material-symbols-outlined text-4xl mb-2 block">search_off</span>
+              <p className="text-sm">No results for &ldquo;{searchQuery}&rdquo;</p>
             </div>
           )}
         </div>
