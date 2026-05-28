@@ -676,12 +676,30 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         }},
         {"$sort": {"total_quantity": -1}},
         {"$limit": 25},
+        # Resolve canonical name/part_number and compat group IDs from parts library
         {"$lookup": {
-            "from": "compat_groups",
-            "let": {"lid": "$_id"},
+            "from": "parts_library_parts",
+            "let": {"pid": "$_id"},
+            "pipeline": [
+                {"$match": {"$expr": {"$eq": [{"$toString": "$_id"}, "$$pid"]}}},
+                {"$project": {"name": 1, "part_number": 1, "compatibility_group_ids": 1}},
+            ],
+            "as": "library_part",
+        }},
+        {"$addFields": {
+            "library_part": {"$arrayElemAt": ["$library_part", 0]},
+        }},
+        # Look up compat group names via parts library (relationship stored on parts, not groups)
+        {"$lookup": {
+            "from": "parts_library_compat_groups",
+            "let": {"group_ids": {"$map": {
+                "input": {"$ifNull": ["$library_part.compatibility_group_ids", []]},
+                "as": "gid",
+                "in": {"$toObjectId": "$$gid"},
+            }}},
             "pipeline": [
                 {"$match": {"$expr": {"$and": [
-                    {"$in": ["$$lid", {"$ifNull": ["$part_ids", []]}]},
+                    {"$in": ["$_id", "$$group_ids"]},
                     {"$eq": ["$active", True]},
                 ]}}},
                 {"$project": {"_id": 0, "name": 1}},
@@ -690,8 +708,8 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         }},
         {"$project": {
             "_id": 0,
-            "part_name": 1,
-            "part_number": 1,
+            "part_name": {"$ifNull": ["$library_part.name", "$part_name"]},
+            "part_number": {"$ifNull": ["$library_part.part_number", "$part_number"]},
             "total_quantity": 1,
             "job_count": 1,
             "total_spend": {"$round": ["$total_spend", 2]},
