@@ -450,9 +450,9 @@ async def get_repair_summary(
             # Completed this month financial value
             if dc_dt >= month_start_utc:
                 tool_parts_cost = sum(
-                    float(p.get("unit_cost", 0) or 0) * int(p.get("quantity", 1) or 1)
+                    float(p.get("price") or p.get("unit_cost") or 0) * int(p.get("quantity", 1) or 1)
                     for p in tool.get("parts", [])
-                    if p.get("unit_cost") is not None
+                    if p.get("price") is not None or p.get("unit_cost") is not None
                 )
                 labour_h = tool.get("labour_hours")
                 labour_r = tool.get("hourly_rate")
