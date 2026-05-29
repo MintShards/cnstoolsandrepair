@@ -605,6 +605,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     suggested_suppliers: part?.suggested_suppliers || [],
     cost: part?.cost ?? '',
     suggested_price: part?.suggested_price ?? '',
+    market_price: part?.market_price ?? '',
     notes: part?.notes || '',
     quantity_on_hand: part?.quantity_on_hand ?? 0,
     reorder_point: part?.reorder_point ?? 0,
@@ -641,6 +642,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
         ...form,
         cost: form.cost === '' ? null : Number(form.cost),
         suggested_price: form.suggested_price === '' ? null : Number(form.suggested_price),
+        market_price: form.market_price === '' ? null : Number(form.market_price),
         notes: form.notes || null,
         location: form.location || null,
         quantity_on_hand: Number(form.quantity_on_hand) || 0,
@@ -727,6 +729,21 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
                   setPriceManuallySet(true);
                   setForm(f => ({ ...f, suggested_price: e.target.value }));
                 }}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Market Price ($)
+                <span className="ml-1 text-slate-400 font-normal">MSRP / competitor</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.market_price}
+                onChange={e => setForm(f => ({ ...f, market_price: e.target.value }))}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00"
               />
@@ -1103,6 +1120,9 @@ function PartsView({ model, compatGroups, onBack }) {
                     )}
                     {part.suggested_price != null && (
                       <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                    )}
+                    {part.market_price != null && (
+                      <span className="text-xs sm:text-sm text-violet-600 dark:text-violet-400">Mkt: ${part.market_price.toFixed(2)}</span>
                     )}
                     <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium ${
                       part.low_stock
@@ -1556,6 +1576,9 @@ function CompatiblePartsModal({ part, data, onClose }) {
                           {p.suggested_price != null && (
                             <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Sell: ${p.suggested_price.toFixed(2)}</span>
                           )}
+                          {p.market_price != null && (
+                            <span className="text-xs text-violet-600 dark:text-violet-400">Mkt: ${p.market_price.toFixed(2)}</span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1768,6 +1791,9 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                     )}
                     {part.suggested_price != null && (
                       <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                    )}
+                    {part.market_price != null && (
+                      <span className="text-xs text-violet-600 dark:text-violet-400">Mkt: ${part.market_price.toFixed(2)}</span>
                     )}
                   </div>
                 </div>
@@ -2100,6 +2126,7 @@ function CompatGroupsPanel({ onClose }) {
                                   </div>
                                   <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                                     {p.suggested_price != null && <span className="text-[10px] text-slate-600 dark:text-slate-300 hidden sm:inline">Sell: ${p.suggested_price.toFixed(2)}</span>}
+                                    {p.market_price != null && <span className="text-[10px] text-violet-600 dark:text-violet-400 hidden sm:inline">Mkt: ${p.market_price.toFixed(2)}</span>}
                                     <button
                                       onClick={() => handleRemoveFromGroup(p, g.id)}
                                       className="p-0.5 rounded text-slate-400 sm:text-slate-300 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 sm:opacity-0 sm:group-hover/part:opacity-100 transition-all"
@@ -2528,6 +2555,9 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
                         )}
                         {part.suggested_price != null && (
                           <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
+                        )}
+                        {part.market_price != null && (
+                          <span className="text-xs text-violet-600 dark:text-violet-400">Mkt: ${part.market_price.toFixed(2)}</span>
                         )}
                       </div>
                       {part.compatibility_group_ids?.length > 0 && (

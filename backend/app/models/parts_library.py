@@ -205,6 +205,7 @@ class LibraryPartCreate(BaseModel):
     suggested_suppliers: List[str] = Field(default_factory=list)
     cost: Optional[float] = Field(None, ge=0)
     suggested_price: Optional[float] = Field(None, ge=0)
+    market_price: Optional[float] = Field(None, ge=0)
     notes: Optional[str] = Field(None, max_length=2000)
     quantity_on_hand: int = Field(default=0, ge=0)
     reorder_point: int = Field(default=0, ge=0)
@@ -232,7 +233,7 @@ class LibraryPartCreate(BaseModel):
             return None
         return v
 
-    @field_validator('cost', 'suggested_price', mode='before')
+    @field_validator('cost', 'suggested_price', 'market_price', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
@@ -251,6 +252,7 @@ class LibraryPartUpdate(BaseModel):
     suggested_suppliers: Optional[List[str]] = None
     cost: Optional[float] = Field(None, ge=0)
     suggested_price: Optional[float] = Field(None, ge=0)
+    market_price: Optional[float] = Field(None, ge=0)
     notes: Optional[str] = Field(None, max_length=2000)
     quantity_on_hand: Optional[int] = Field(None, ge=0)
     reorder_point: Optional[int] = Field(None, ge=0)
@@ -278,7 +280,7 @@ class LibraryPartUpdate(BaseModel):
             return None
         return v
 
-    @field_validator('cost', 'suggested_price', mode='before')
+    @field_validator('cost', 'suggested_price', 'market_price', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
@@ -307,6 +309,7 @@ class LibraryPartResponse(BaseModel):
     suggested_suppliers: List[str] = []
     cost: Optional[float] = None
     suggested_price: Optional[float] = None
+    market_price: Optional[float] = None
     notes: Optional[str] = None
     quantity_on_hand: int = 0
     reorder_point: int = 0
