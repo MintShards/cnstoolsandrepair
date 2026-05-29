@@ -672,17 +672,17 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Part Name *</label>
-            <input
-              required
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g. O-RING KIT"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Part Name *</label>
+              <input
+                required
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. O-RING KIT"
+              />
+            </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Part Number *</label>
               <input
@@ -693,6 +693,8 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
                 placeholder="e.g. IR-231C-601"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Cost ($)</label>
               <input
@@ -734,10 +736,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                Market Price ($)
-                <span className="ml-1 text-slate-400 font-normal">MSRP / competitor</span>
-              </label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">MSRP ($)</label>
               <input
                 type="number"
                 min="0"
@@ -1122,7 +1121,7 @@ function PartsView({ model, compatGroups, onBack }) {
                       <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sell: ${part.suggested_price.toFixed(2)}</span>
                     )}
                     {part.market_price != null && (
-                      <span className="text-xs sm:text-sm text-violet-600 dark:text-violet-400">Mkt: ${part.market_price.toFixed(2)}</span>
+                      <span className="text-xs sm:text-sm text-violet-600 dark:text-violet-400">MSRP: ${part.market_price.toFixed(2)}</span>
                     )}
                     <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium ${
                       part.low_stock
@@ -1577,7 +1576,7 @@ function CompatiblePartsModal({ part, data, onClose }) {
                             <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Sell: ${p.suggested_price.toFixed(2)}</span>
                           )}
                           {p.market_price != null && (
-                            <span className="text-xs text-violet-600 dark:text-violet-400">Mkt: ${p.market_price.toFixed(2)}</span>
+                            <span className="text-xs text-violet-600 dark:text-violet-400">MSRP: ${p.market_price.toFixed(2)}</span>
                           )}
                         </div>
                       </div>
@@ -1793,7 +1792,7 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                       <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
                     )}
                     {part.market_price != null && (
-                      <span className="text-xs text-violet-600 dark:text-violet-400">Mkt: ${part.market_price.toFixed(2)}</span>
+                      <span className="text-xs text-violet-600 dark:text-violet-400">MSRP: ${part.market_price.toFixed(2)}</span>
                     )}
                   </div>
                 </div>
@@ -2126,7 +2125,7 @@ function CompatGroupsPanel({ onClose }) {
                                   </div>
                                   <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                                     {p.suggested_price != null && <span className="text-[10px] text-slate-600 dark:text-slate-300 hidden sm:inline">Sell: ${p.suggested_price.toFixed(2)}</span>}
-                                    {p.market_price != null && <span className="text-[10px] text-violet-600 dark:text-violet-400 hidden sm:inline">Mkt: ${p.market_price.toFixed(2)}</span>}
+                                    {p.market_price != null && <span className="text-[10px] text-violet-600 dark:text-violet-400 hidden sm:inline">MSRP: ${p.market_price.toFixed(2)}</span>}
                                     <button
                                       onClick={() => handleRemoveFromGroup(p, g.id)}
                                       className="p-0.5 rounded text-slate-400 sm:text-slate-300 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 sm:opacity-0 sm:group-hover/part:opacity-100 transition-all"
@@ -2557,7 +2556,7 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
                           <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
                         )}
                         {part.market_price != null && (
-                          <span className="text-xs text-violet-600 dark:text-violet-400">Mkt: ${part.market_price.toFixed(2)}</span>
+                          <span className="text-xs text-violet-600 dark:text-violet-400">MSRP: ${part.market_price.toFixed(2)}</span>
                         )}
                       </div>
                       {part.compatibility_group_ids?.length > 0 && (
