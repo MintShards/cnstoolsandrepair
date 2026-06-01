@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 
 
@@ -133,6 +133,7 @@ class LibraryModelResponse(BaseModel):
     category: Optional[str] = None
     specifications: Optional[str] = None
     diagram_urls: List[str] = []
+    diagram_labels: Dict[str, str] = {}
     discontinued: bool
     active: bool
     part_count: Optional[int] = None

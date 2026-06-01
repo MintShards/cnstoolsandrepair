@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PaginationBar from '../../shared/PaginationBar';
 
-export default function SourcingQueue({ items, selected, onToggle, onSelectAll, onRemove, onRemoveSelected, manualParts, onManualPartsChange }) {
+export default function SourcingQueue({ items, selected, onToggle, onSelectAll, onRemove, onRemoveSelected, manualParts, onManualPartsChange, onUpdateQuantity }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [touched, setTouched] = useState({}); // "idx-field" -> true
@@ -81,8 +81,8 @@ export default function SourcingQueue({ items, selected, onToggle, onSelectAll, 
                   <th className="w-10 px-3 py-2.5"></th>
                   <th className="w-[28%] px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Part</th>
                   <th className="w-[25%] px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Part #</th>
-                  <th className="w-[8%] px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Qty</th>
-                  <th className="w-[10%] px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="w-[12%] sm:w-[8%] px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Qty</th>
+                  <th className="w-[14%] sm:w-[10%] px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
                   <th className="w-[29%] px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Source</th>
                   <th className="w-10 px-3 py-2.5"></th>
                 </tr>
@@ -112,19 +112,29 @@ export default function SourcingQueue({ items, selected, onToggle, onSelectAll, 
                       <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 hidden sm:table-cell">
                         {item.part.part_number || <span className="text-slate-400 dark:text-slate-600">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-center text-slate-900 dark:text-white">{item.part.quantity}</td>
+                      <td className="px-3 py-2.5 text-center">
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.part.quantity ?? ''}
+                          onChange={(e) => { e.stopPropagation(); onUpdateQuantity(items.indexOf(item), e.target.value === '' ? '' : parseInt(e.target.value)); }}
+                          onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) onUpdateQuantity(items.indexOf(item), 1); }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-12 sm:w-14 px-1 sm:px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </td>
                       <td className="px-3 py-2.5 text-center">
                         {item.part.sourcing_emailed
                           ? (
                             <span className="inline-flex items-center gap-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-1.5 py-0.5 rounded-full">
                               <span className="material-symbols-outlined text-xs">mark_email_read</span>
-                              Emailed
+                              <span className="hidden sm:inline">Emailed</span>
                             </span>
                           )
                           : (
                             <span className="inline-flex items-center gap-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-semibold px-1.5 py-0.5 rounded-full">
                               <span className="material-symbols-outlined text-xs">schedule</span>
-                              Pending
+                              <span className="hidden sm:inline">Pending</span>
                             </span>
                           )
                         }
@@ -178,7 +188,7 @@ export default function SourcingQueue({ items, selected, onToggle, onSelectAll, 
                         className={`w-full bg-white dark:bg-slate-800/80 border rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none uppercase ${isTouched(idx, 'name') && !part.name.trim() ? 'border-red-400 dark:border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
                       />
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-2.5 hidden sm:table-cell">
                       <input
                         type="text"
                         placeholder="Part # *"

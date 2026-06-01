@@ -119,8 +119,8 @@ export default function RepairTracker() {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', icon: 'dashboard' },
     { id: 'jobs', label: 'Repair Jobs', shortLabel: 'Jobs', icon: 'build_circle' },
-    { id: 'requests', label: 'Repair Requests', shortLabel: 'Requests', icon: 'inbox' },
     { id: 'customers', label: 'Customers', shortLabel: 'Customers', icon: 'group' },
+    { id: 'requests', label: 'Repair Requests', shortLabel: 'Requests', icon: 'inbox' },
     { id: 'parts-library', label: 'Parts Library', shortLabel: 'Parts', icon: 'inventory_2' },
     { id: 'parts-sourcing', label: 'Parts Sourcing', shortLabel: 'Sourcing', icon: 'local_shipping' },
   ];
@@ -260,7 +260,7 @@ export default function RepairTracker() {
                         <span className="sm:hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                       )}
                     </div>
-                    <span className="sm:hidden text-[10px] leading-tight">{tab.shortLabel}</span>
+                    <span className="sm:hidden text-[10px] leading-tight truncate max-w-full">{tab.shortLabel}</span>
                     <span className="hidden sm:inline text-sm leading-tight">{tab.label}</span>
                     {count !== null && count > 0 && (
                       <span className={`hidden sm:inline text-xs font-black px-2 py-0.5 rounded-full min-w-[22px] text-center leading-none ${

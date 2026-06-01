@@ -5,30 +5,59 @@ import { useSettings } from '../../../contexts/SettingsContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function DiagramList({ urls, onDelete, readonly = false }) {
+function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }) {
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editName, setEditName] = useState('');
   if (!urls || urls.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2 mt-2">
       {urls.map((url, i) => {
         const isPdf = url.toLowerCase().endsWith('.pdf');
         const ext = url.split('.').pop()?.toLowerCase() || '';
-        const displayName = isPdf ? `Diagram ${i + 1}.pdf` : `Diagram ${i + 1}${ext ? `.${ext}` : ''}`;
+        const customName = labels[url];
+        const displayName = customName || (isPdf ? `Diagram ${i + 1}.pdf` : `Diagram ${i + 1}${ext ? `.${ext}` : ''}`);
         const fullUrl = url.startsWith('http') ? url : `/uploads/${url}`;
+        const isEditing = editingIdx === i;
         return (
           <div key={i} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1 text-xs">
             <span className="material-symbols-outlined text-sm text-slate-500">
               {isPdf ? 'picture_as_pdf' : 'image'}
             </span>
-            <a
-              href={fullUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline max-w-[120px] truncate"
-              title={displayName}
-            >
-              {displayName}
-            </a>
-            {!readonly && onDelete && (
+            {isEditing ? (
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { if (editName.trim() && onRename) onRename(url, editName.trim().toUpperCase()); setEditingIdx(null); }
+                  if (e.key === 'Escape') setEditingIdx(null);
+                }}
+                onBlur={() => { if (editName.trim() && onRename) onRename(url, editName.trim().toUpperCase()); setEditingIdx(null); }}
+                className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary w-32 uppercase"
+              />
+            ) : (
+              <>
+                <a
+                  href={fullUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline max-w-[160px] truncate uppercase"
+                  title={displayName}
+                >
+                  {displayName}
+                </a>
+                {!readonly && onRename && (
+                  <button
+                    onClick={() => { setEditingIdx(i); setEditName(customName || ''); }}
+                    className="text-slate-400 hover:text-blue-500 transition-colors"
+                    title="Rename diagram"
+                  >
+                    <span className="material-symbols-outlined text-sm">edit</span>
+                  </button>
+                )}
+              </>
+            )}
+            {!readonly && onDelete && !isEditing && (
               <button
                 onClick={() => onDelete(url)}
                 className="text-slate-400 hover:text-red-500 transition-colors ml-0.5"
@@ -1032,10 +1061,23 @@ function PartsView({ model, compatGroups, onBack }) {
   const handleDeleteModelDiagram = async (url) => {
     try {
       await partsLibraryAPI.deleteModelDiagram(model.id, url);
-      setCurrentModel(m => ({ ...m, diagram_urls: m.diagram_urls.filter(u => u !== url) }));
+      setCurrentModel(m => {
+        const labels = { ...(m.diagram_labels || {}) };
+        delete labels[url];
+        return { ...m, diagram_urls: m.diagram_urls.filter(u => u !== url), diagram_labels: labels };
+      });
       toast('success', 'Diagram removed');
     } catch {
       toast('error', 'Failed to remove diagram');
+    }
+  };
+
+  const handleRenameModelDiagram = async (url, name) => {
+    try {
+      await partsLibraryAPI.renameModelDiagram(model.id, url, name);
+      setCurrentModel(m => ({ ...m, diagram_labels: { ...(m.diagram_labels || {}), [url]: name } }));
+    } catch {
+      toast('error', 'Failed to rename diagram');
     }
   };
 
@@ -1063,7 +1105,7 @@ function PartsView({ model, compatGroups, onBack }) {
           <UploadDiagramButton onUpload={handleUploadModelDiagram} loading={uploadingModelDiagram} />
         </div>
         {currentModel.diagram_urls?.length > 0 && (
-          <DiagramList urls={currentModel.diagram_urls} onDelete={handleDeleteModelDiagram} />
+          <DiagramList urls={currentModel.diagram_urls} labels={currentModel.diagram_labels} onDelete={handleDeleteModelDiagram} onRename={handleRenameModelDiagram} />
         )}
         {model.specifications && (
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{model.specifications}</p>

@@ -451,6 +451,29 @@ async def delete_model_diagram(
     return {"message": "Diagram removed"}
 
 
+@router.patch("/models/{model_id}/diagrams/rename")
+async def rename_model_diagram(
+    model_id: str,
+    url: str = Query(...),
+    name: str = Query(...),
+    current_user: User = Depends(require_admin),
+):
+    db = get_database()
+    doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Model not found")
+    if url not in doc.get("diagram_urls", []):
+        raise HTTPException(status_code=404, detail="Diagram URL not found on this model")
+
+    labels = doc.get("diagram_labels", {})
+    labels[url] = name.strip()
+    await db.parts_library_models.update_one(
+        {"_id": _to_object_id(model_id)},
+        {"$set": {"diagram_labels": labels, "updated_at": datetime.utcnow()}}
+    )
+    return {"message": "Diagram renamed"}
+
+
 # ─── Compatibility Groups ─────────────────────────────────────────────────────
 
 @router.get("/compat-groups", response_model=List[CompatGroupResponse])

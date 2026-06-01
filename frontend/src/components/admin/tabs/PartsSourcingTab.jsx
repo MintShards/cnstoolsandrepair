@@ -308,6 +308,7 @@ export default function PartsSourcingTab() {
               onRemoveSelected={handleRemoveSelected}
               manualParts={manualParts}
               onManualPartsChange={setManualParts}
+              onUpdateQuantity={(idx, qty) => setQueue(prev => prev.map((item, i) => i === idx ? { ...item, part: { ...item.part, quantity: qty } } : item))}
             />
           </section>
 

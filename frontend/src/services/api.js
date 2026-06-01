@@ -460,6 +460,9 @@ export const partsLibraryAPI = {
   deleteModelDiagram: async (id, url) => {
     await api.delete(`/api/parts-library/models/${id}/diagrams`, { params: { url } });
   },
+  renameModelDiagram: async (id, url, name) => {
+    await api.patch(`/api/parts-library/models/${id}/diagrams/rename`, null, { params: { url, name } });
+  },
 
   // Parts
   listParts: async (params = {}) => {

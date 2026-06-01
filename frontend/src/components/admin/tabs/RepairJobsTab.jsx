@@ -248,6 +248,45 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalOpenJobId]);
 
+  // Enrich parts with library stock data when a job is loaded or refreshed
+  // Build a key from all library_part_ids missing stock data to detect when enrichment is needed
+  const missingStockKey = React.useMemo(() => {
+    if (!selectedJob?.tools?.length) return '';
+    const ids = [];
+    selectedJob.tools.forEach(t => (t.parts || []).forEach(p => {
+      if (p.library_part_id && p._library_qty == null) ids.push(p.library_part_id);
+    }));
+    return ids.sort().join(',');
+  }, [selectedJob]);
+
+  useEffect(() => {
+    if (!missingStockKey) return;
+    const unique = [...new Set(missingStockKey.split(','))];
+    let cancelled = false;
+    (async () => {
+      const stockMap = {};
+      await Promise.all(unique.map(async (id) => {
+        try {
+          const lp = await partsLibraryAPI.getPart(id);
+          stockMap[id] = { qty: lp.quantity_on_hand ?? 0, low: lp.low_stock ?? false };
+        } catch { /* part may have been deleted */ }
+      }));
+      if (cancelled || !Object.keys(stockMap).length) return;
+      setSelectedJob(prev => {
+        if (!prev) return prev;
+        return { ...prev, tools: prev.tools.map(t => ({
+          ...t,
+          parts: (t.parts || []).map(p =>
+            p.library_part_id && stockMap[p.library_part_id]
+              ? { ...p, _library_qty: stockMap[p.library_part_id].qty, _library_low_stock: stockMap[p.library_part_id].low }
+              : p
+          ),
+        }))};
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [missingStockKey]);
+
   // Debounced customer search
   const searchCustomersDebounced = useCallback(
     (() => {
@@ -937,6 +976,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // ── EDIT TOOL DETAILS ───────────────────────────────
   const handleStartToolEdit = (tool) => {
     setEditingToolId(tool.tool_id);
+    const parts = tool.parts?.length > 0
+      ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' }))
+      : [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }];
     setToolEditForm({
       tool_type: (tool.tool_type || '').toUpperCase(),
       brand: (tool.brand || '').toUpperCase(),
@@ -944,7 +986,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       serial_number: (tool.serial_number || '').toUpperCase(),
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
-      parts: tool.parts?.length > 0 ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' })) : [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
+      parts,
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
       priority: tool.priority || 'standard',
@@ -954,6 +996,23 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
     });
+    // Enrich parts with library stock data
+    const libraryIds = [...new Set(parts.filter(p => p.library_part_id).map(p => p.library_part_id))];
+    if (libraryIds.length) {
+      Promise.all(libraryIds.map(id => partsLibraryAPI.getPart(id).catch(() => null)))
+        .then(results => {
+          const stockMap = {};
+          results.forEach(lp => { if (lp) stockMap[lp.id] = { qty: lp.quantity_on_hand ?? 0, low: lp.low_stock ?? false }; });
+          setToolEditForm(prev => prev ? ({
+            ...prev,
+            parts: prev.parts.map(p =>
+              p.library_part_id && stockMap[p.library_part_id]
+                ? { ...p, _library_qty: stockMap[p.library_part_id].qty, _library_low_stock: stockMap[p.library_part_id].low }
+                : p
+            ),
+          }) : prev);
+        });
+    }
   };
 
   const handleCancelToolEdit = () => {
@@ -1931,6 +1990,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                         p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
                                         'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                                       }`} style={{fontSize:'11px'}}>{p.status}</span>
+                                      {p.library_part_id && p._library_qty != null && (
+                                        <span title={p._library_qty > 0 ? (p._library_low_stock ? `Low stock (${p._library_qty})` : `${p._library_qty} in stock`) : 'Out of stock'} className={`flex-shrink-0 ${
+                                          p._library_qty > 0
+                                            ? p._library_low_stock ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400'
+                                            : 'text-red-500 dark:text-red-400'
+                                        }`}>
+                                          <span className="material-symbols-outlined" style={{fontSize:'14px'}}>inventory_2</span>
+                                        </span>
+                                      )}
                                       {/* Sourcing toggle button */}
                                       <button
                                         type="button"
@@ -2819,6 +2887,8 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
       status: 'pending',
       tracking: '',
       eta: '',
+      _library_qty: libPart.quantity_on_hand ?? 0,
+      _library_low_stock: libPart.low_stock ?? false,
     });
     handleChange('parts', updated);
   };
@@ -2860,6 +2930,8 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
       price: part.suggested_price != null ? String(part.suggested_price) : '',
       order_link: '',
       notes: part.notes || '',
+      _library_qty: part.quantity_on_hand ?? 0,
+      _library_low_stock: part.low_stock ?? false,
     });
     setPartSuggestions([]);
     setActiveSuggestionPi(null);
@@ -3199,7 +3271,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         autoComplete="off"
                       />
                       {activeSuggestionPi === pi && suggestionAnchor === 'name' && (partSuggestions.length > 0 || partSuggestionsLoading) && (
-                        <div className="absolute z-50 left-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto min-w-[300px]">
+                        <div className="absolute z-50 left-0 right-0 sm:right-auto top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto sm:min-w-[300px]">
                           {partSuggestionsLoading ? (
                             <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-400">
                               <span className="material-symbols-outlined text-sm animate-spin">autorenew</span>
@@ -3212,16 +3284,26 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                               ref={el => { if (idx === highlightIndex) el?.scrollIntoView({ block: 'nearest' }); }}
                               onMouseDown={() => handleSelectSuggestion(s, updatePart)}
                               onMouseEnter={() => setHighlightIndex(idx)}
-                              className={`w-full text-left px-3 py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+                              className={`w-full text-left px-3 py-2 sm:py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
                             >
-                              <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}</span>
-                                {s.part_number && <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase flex-shrink-0">{s.part_number}</span>}
-                                {s.brand_name && <span className="text-[11px] text-slate-400 flex-shrink-0">· {s.brand_name}</span>}
-                                {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0">${s.suggested_price.toFixed(2)}</span>}
-                                {s.compatibility_group_names?.length > 0 && (
-                                  <span className="text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1 py-0.5 rounded flex-shrink-0">{s.compatibility_group_names.join(', ')}</span>
-                                )}
+                              <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
+                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[120px]">{s.model_names.join(', ')}</span>}
+                                <span className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                                  {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${s.suggested_price.toFixed(2)}</span>}
+                                  <span title={s.quantity_on_hand > 0 ? (s.low_stock ? `Low stock (${s.quantity_on_hand})` : `${s.quantity_on_hand} in stock`) : 'Out of stock'} className={
+                                    s.quantity_on_hand > 0
+                                      ? s.low_stock ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400'
+                                      : 'text-red-500 dark:text-red-400'
+                                  }>
+                                    <span className="material-symbols-outlined" style={{fontSize:'14px'}}>inventory_2</span>
+                                  </span>
+                                  {s.compatibility_group_names?.length > 0 && (
+                                    <span title={s.compatibility_group_names.join(', ')} className="text-green-500 dark:text-green-400">
+                                      <span className="material-symbols-outlined" style={{fontSize:'14px'}}>sync_alt</span>
+                                    </span>
+                                  )}
+                                </span>
                               </div>
                             </button>
                           ))}
@@ -3239,7 +3321,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                         autoComplete="off"
                       />
                       {activeSuggestionPi === pi && suggestionAnchor === 'partnum' && (partSuggestions.length > 0 || partSuggestionsLoading) && (
-                        <div className="absolute z-50 left-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto min-w-[300px]">
+                        <div className="absolute z-50 left-0 right-0 sm:right-auto top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl max-h-60 overflow-y-auto sm:min-w-[300px]">
                           {partSuggestionsLoading ? (
                             <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-400">
                               <span className="material-symbols-outlined text-sm animate-spin">autorenew</span>
@@ -3252,27 +3334,32 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                               ref={el => { if (idx === highlightIndex) el?.scrollIntoView({ block: 'nearest' }); }}
                               onMouseDown={() => handleSelectSuggestion(s, updatePart)}
                               onMouseEnter={() => setHighlightIndex(idx)}
-                              className={`w-full text-left px-3 py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+                              className={`w-full text-left px-3 py-2 sm:py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
                             >
-                              <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}</span>
-                                {s.part_number && <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase flex-shrink-0">{s.part_number}</span>}
-                                {s.brand_name && <span className="text-[11px] text-slate-400 flex-shrink-0">· {s.brand_name}</span>}
-                                {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0">${s.suggested_price.toFixed(2)}</span>}
-                                {s.compatibility_group_names?.length > 0 && (
-                                  <span className="text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-1 py-0.5 rounded flex-shrink-0">{s.compatibility_group_names.join(', ')}</span>
-                                )}
+                              <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
+                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[120px]">{s.model_names.join(', ')}</span>}
+                                <span className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                                  {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${s.suggested_price.toFixed(2)}</span>}
+                                  <span title={s.quantity_on_hand > 0 ? (s.low_stock ? `Low stock (${s.quantity_on_hand})` : `${s.quantity_on_hand} in stock`) : 'Out of stock'} className={
+                                    s.quantity_on_hand > 0
+                                      ? s.low_stock ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400'
+                                      : 'text-red-500 dark:text-red-400'
+                                  }>
+                                    <span className="material-symbols-outlined" style={{fontSize:'14px'}}>inventory_2</span>
+                                  </span>
+                                  {s.compatibility_group_names?.length > 0 && (
+                                    <span title={s.compatibility_group_names.join(', ')} className="text-green-500 dark:text-green-400">
+                                      <span className="material-symbols-outlined" style={{fontSize:'14px'}}>sync_alt</span>
+                                    </span>
+                                  )}
+                                </span>
                               </div>
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
-                    {part.library_part_id && (
-                      <span title="Linked to Parts Library" className="flex items-center text-violet-500 dark:text-violet-400 flex-shrink-0">
-                        <span className="material-symbols-outlined" style={{fontSize:'16px'}}>inventory_2</span>
-                      </span>
-                    )}
                     <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => updatePart({ quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })}
                       className={`w-14 ${partInputCls}`} />
                     <div className="relative">
@@ -3287,20 +3374,23 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       <option value="received">Received</option>
                       <option value="installed">Installed</option>
                     </select>
-                    <button type="button" onClick={async () => {
-                        const tool = data;
-                        await repairsAPI.togglePartSourcing(selectedJob.id, tool.tool_id, pi);
-                        const updated = await repairsAPI.get(selectedJob.id);
-                        setSelectedJob(updated);
-                        const updatedTool = updated.tools?.find(t => t.tool_id === tool.tool_id);
-                        if (updatedTool) handleChange('parts', updatedTool.parts);
-                      }}
-                      className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold transition-colors ${
+                    {part.library_part_id && (
+                      <span title={part._library_qty != null ? (part._library_qty > 0 ? (part._library_low_stock ? `Low stock (${part._library_qty})` : `${part._library_qty} in stock`) : 'Out of stock') : 'Linked to Parts Library'} className={`flex-shrink-0 ${
+                        part._library_qty == null ? 'text-violet-500 dark:text-violet-400'
+                        : part._library_qty > 0
+                          ? part._library_low_stock ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400'
+                          : 'text-red-500 dark:text-red-400'
+                      }`}>
+                        <span className="material-symbols-outlined" style={{fontSize:'18px'}}>inventory_2</span>
+                      </span>
+                    )}
+                    <button type="button" onClick={() => updatePart({ needs_sourcing: !part.needs_sourcing })}
+                      className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-bold transition-colors ${
                         part.needs_sourcing
                           ? 'bg-primary/20 text-primary hover:bg-red-500/20 hover:text-red-400'
                           : 'bg-slate-200 dark:bg-slate-700 text-slate-400 hover:bg-primary/20 hover:text-primary'
                       }`} title={part.needs_sourcing ? 'Remove from sourcing queue' : 'Add to sourcing queue'}>
-                      <span className="material-symbols-outlined" style={{fontSize:'11px'}}>local_shipping</span>
+                      <span className="material-symbols-outlined" style={{fontSize:'14px'}}>local_shipping</span>
                       {part.needs_sourcing ? 'sourcing' : 'source'}
                     </button>
                     <button type="button" onClick={() => handleChange('parts', data.parts.filter((_, i) => i !== pi))}
