@@ -8,6 +8,7 @@ import {
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 import { openPrintToolTag } from '../PrintToolTag';
+import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { useSettings } from '../../../contexts/SettingsContext';
@@ -137,6 +138,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(null); // toolId
   const detailCloseRef = useRef(null);
+
+  // Work order email modal state
+  const [emailModalJob, setEmailModalJob] = useState(null); // job to email; null = closed
 
   // New job form state
   const [newJobForm, setNewJobForm] = useState(getEmptyJob());
@@ -751,6 +755,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           handleCloseNewJob();
           showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
           setSavingJob(false);
+          if (finalJob?.email) setEmailModalJob(finalJob);
           return;
         }
       }
@@ -760,6 +765,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
       setSavingJob(false);
+      if (finalJob?.email) setEmailModalJob(finalJob);
     } catch (err) {
       showToast('error', getErrorMessage(err, 'Failed to create repair job'));
     } finally {
@@ -1738,6 +1744,21 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEmailModalJob(selectedJob)}
+                  className={`w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all ${
+                    selectedJob?.work_order_emails_sent?.length
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                      : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400'
+                  }`}
+                  title={selectedJob?.work_order_emails_sent?.length
+                    ? `Work order emailed (${selectedJob.work_order_emails_sent.length}x) — click to resend`
+                    : 'Email work order to customer'}
+                >
+                  <span className="material-symbols-outlined" style={{fontSize:'18px'}}>
+                    {selectedJob?.work_order_emails_sent?.length ? 'mark_email_read' : 'mail'}
+                  </span>
+                </button>
                 <button
                   onClick={() => openPrintWorkOrder(selectedJob, settings?.contact, serviceAgreement)}
                   className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
@@ -2812,6 +2833,26 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             </div>
           </div>
         </div>
+      )}
+
+      {/* Send Work Order Email Modal */}
+      {emailModalJob && (
+        <SendWorkOrderEmailModal
+          job={emailModalJob}
+          template={settings?.workOrderEmailTemplate}
+          onClose={() => setEmailModalJob(null)}
+          onSuccess={(sentTo) => {
+            setEmailModalJob(null);
+            showToast('success', `Work order emailed to ${sentTo}`);
+            // Mark job as emailed locally so the icon updates immediately
+            const emailRecord = { sent_at: new Date().toISOString(), sent_to: sentTo, success: true };
+            if (selectedJob) {
+              const updated = { ...selectedJob, work_order_emails_sent: [...(selectedJob.work_order_emails_sent || []), emailRecord] };
+              setSelectedJob(updated);
+              setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+            }
+          }}
+        />
       )}
     </div>
   );

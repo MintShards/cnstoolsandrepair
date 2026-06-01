@@ -15,11 +15,13 @@ from app.models.repair import (
     ToolItemCreate, ToolItemUpdate, ToolStatusUpdate,
     ToolItem, ToolItemResponse, RepairStatus, RepairSource,
     StatusHistoryEntry, ALLOWED_TRANSITIONS, validate_status_transition,
-    BatchStatusRequest, BatchStatusResponse, BatchStatusResult
+    BatchStatusRequest, BatchStatusResponse, BatchStatusResult,
+    WorkOrderEmailSendRequest,
 )
 from app.models.auth import User
 from app.dependencies.auth import require_admin
 from app.services.file_service import save_upload_file, delete_file
+from app.services.work_order_email_service import send_work_order_email
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
@@ -1754,3 +1756,65 @@ async def remove_tool(
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
     return _build_job_response(updated_job)
+
+
+@router.post("/{job_id}/send-work-order-email", dependencies=[Depends(require_admin)])
+async def send_work_order_email_endpoint(
+    job_id: str,
+    request: WorkOrderEmailSendRequest,
+    current_user: User = Depends(require_admin),
+):
+    """Send the work order PDF + tool photos to the customer via email."""
+    db = get_database()
+
+    try:
+        object_id = ObjectId(job_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid job ID")
+
+    job_doc = await db.repairs.find_one({"_id": object_id})
+    if not job_doc:
+        raise HTTPException(status_code=404, detail="Repair job not found")
+
+    job_doc = convert_objectid_to_str(job_doc)
+    job = _build_job_response(job_doc).model_dump()
+
+    to_email = (request.recipient_email or "").strip() or (job.get("email") or "").strip()
+    if not to_email:
+        raise HTTPException(
+            status_code=422,
+            detail="No recipient email address. Add an email to the customer record or provide one in the request."
+        )
+
+    biz_settings = await db.business_settings.find_one({"active": True}) or {}
+    template = biz_settings.get("workOrderEmailTemplate") or {}
+    contact = biz_settings.get("contact") or {}
+    business_info = {
+        "companyName": "CNS Tool Repair",
+        "phone": contact.get("phone") or "",
+        "email": contact.get("email") or "",
+        "address": contact.get("address") or {},
+    }
+
+    service_agreement = await db.service_agreement.find_one({}) or {}
+
+    result = await send_work_order_email(
+        db=db,
+        job=job,
+        template=template,
+        business_info=business_info,
+        service_agreement=service_agreement,
+        recipient_email=request.recipient_email,
+        subject_override=request.subject,
+        custom_message=request.custom_message,
+        sent_by=current_user.email if hasattr(current_user, "email") else "admin",
+    )
+
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result.get("error") or "Failed to send email")
+
+    return {
+        "success": True,
+        "message": f"Work order email sent to {result['sent_to']}",
+        "sent_to": result["sent_to"],
+    }

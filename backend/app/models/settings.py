@@ -142,6 +142,69 @@ class SourcingEmailTemplateModel(BaseModel):
         populate_by_name = True
 
 
+class WorkOrderEmailTemplateModel(BaseModel):
+    from_email: str = Field(
+        default="service@cnstoolrepair.com",
+        max_length=200,
+        alias="fromEmail",
+    )
+    from_name: str = Field(
+        default="CNS Tool Repair",
+        max_length=100,
+        alias="fromName",
+    )
+    default_subject: str = Field(
+        default="Your Work Order {work_order_number} - CNS Tool Repair",
+        max_length=200,
+        alias="defaultSubject",
+    )
+    greeting: str = Field(
+        default="Hi {customer_name},",
+        max_length=200,
+    )
+    body_text: str = Field(
+        default="Thank you for bringing your tool(s) in for service. Please find your work order attached. We will be in touch once our technician has had a chance to assess your equipment.",
+        max_length=2000,
+        alias="bodyText",
+    )
+    closing_text: str = Field(
+        default="If you have any questions, feel free to reply to this email or give us a call.",
+        max_length=500,
+        alias="closingText",
+    )
+    footer_tagline: str = Field(
+        default="Industrial Pneumatic Tool Repair & Maintenance",
+        max_length=200,
+        alias="footerTagline",
+    )
+    footer_email: str = Field(
+        default="service@cnstoolrepair.com",
+        max_length=100,
+        alias="footerEmail",
+    )
+    footer_phone: str = Field(
+        default="(236) 885-9782",
+        max_length=30,
+        alias="footerPhone",
+    )
+    footer_website: str = Field(
+        default="cnstoolrepair.com",
+        max_length=100,
+        alias="footerWebsite",
+    )
+    cc: str = Field(
+        default="",
+        max_length=500,
+    )
+    bcc: str = Field(
+        default="",
+        max_length=500,
+    )
+
+    class Config:
+        populate_by_name = True
+
+
 class BusinessSettingsUpdate(BaseModel):
     """Schema for updating business settings (admin use)"""
     contact: ContactModel
@@ -157,6 +220,7 @@ class BusinessSettingsUpdate(BaseModel):
     stale_days: int = Field(default=3, ge=1, le=30, alias="staleDays")  # Configurable stale threshold
     default_markup_percentage: float = Field(default=30.0, ge=0, le=500, alias="defaultMarkupPercentage")  # Default parts markup %
     sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
+    work_order_email_template: Optional[WorkOrderEmailTemplateModel] = Field(default_factory=WorkOrderEmailTemplateModel, alias="workOrderEmailTemplate")
 
     class Config:
         populate_by_name = True
@@ -235,6 +299,7 @@ class BusinessSettingsResponse(BaseModel):
     stale_days: int = Field(default=3, alias="staleDays")
     default_markup_percentage: float = Field(default=30.0, alias="defaultMarkupPercentage")
     sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
+    work_order_email_template: Optional[WorkOrderEmailTemplateModel] = Field(default_factory=WorkOrderEmailTemplateModel, alias="workOrderEmailTemplate")
 
     class Config:
         populate_by_name = True

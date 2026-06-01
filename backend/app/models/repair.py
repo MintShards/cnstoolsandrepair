@@ -302,8 +302,15 @@ class RepairJobResponse(BaseModel):
     source: RepairSource
     source_quote_id: Optional[str] = None
     tools: List[ToolItemResponse]
+    work_order_emails_sent: Optional[List[dict]] = None
     created_at: datetime
     updated_at: datetime
+
+
+class WorkOrderEmailSendRequest(BaseModel):
+    recipient_email: Optional[EmailStr] = None
+    subject: Optional[str] = Field(None, max_length=300)
+    custom_message: Optional[str] = Field(None, max_length=2000)
 
 
 class BatchStatusItem(BaseModel):

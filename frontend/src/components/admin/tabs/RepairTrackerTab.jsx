@@ -1,8 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AdminInput from '../AdminInput';
 import AdminTextarea from '../AdminTextarea';
 import { serviceAgreementAPI, settingsAPI } from '../../../services/api';
 import { useSettings } from '../../../contexts/SettingsContext';
+
+const DEFAULT_SOURCING_EMAIL_TEMPLATE = {
+  defaultSubject: 'Parts Pricing Request - CNS Tool Repair',
+  greeting: 'Hi',
+  bodyText: 'We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.',
+  closingText: 'Thank you for your time. We look forward to hearing from you.',
+  footerTagline: 'Industrial Pneumatic Tool Repair & Maintenance',
+  footerEmail: 'purchasing@cnstoolrepair.com',
+  footerPhone: '778-488-0777',
+  footerWebsite: 'cnstoolrepair.com',
+  footerLabel: 'Supplier & Parts Inquiries',
+  cc: '',
+  bcc: '',
+  fromEmail: '',
+  fromName: '',
+};
+
+const DEFAULT_WO_EMAIL_TEMPLATE = {
+  fromEmail: 'service@cnstoolrepair.com',
+  fromName: 'CNS Tool Repair',
+  defaultSubject: 'Your Work Order {work_order_number} - CNS Tool Repair',
+  greeting: 'Hi {customer_name},',
+  bodyText: 'Thank you for bringing your tool(s) in for service. Please find your work order attached. We will be in touch once our technician has had a chance to assess your equipment.',
+  closingText: 'If you have any questions, feel free to reply to this email or give us a call.',
+  footerTagline: 'Industrial Pneumatic Tool Repair & Maintenance',
+  footerEmail: 'service@cnstoolrepair.com',
+  footerPhone: '(236) 885-9782',
+  footerWebsite: 'cnstoolrepair.com',
+  cc: '',
+  bcc: '',
+};
 
 export default function RepairTrackerTab() {
   const { settings, refreshSettings } = useSettings();
@@ -11,6 +42,16 @@ export default function RepairTrackerTab() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [notification, setNotification] = useState(null);
 
+  // Work Order Email Template
+  const [woEmailTemplate, setWoEmailTemplate] = useState(DEFAULT_WO_EMAIL_TEMPLATE);
+  const savedWoTemplate = useRef(DEFAULT_WO_EMAIL_TEMPLATE);
+  const [savingWoTemplate, setSavingWoTemplate] = useState(false);
+
+  // Sourcing Email Template
+  const [sourcingEmailTemplate, setSourcingEmailTemplate] = useState(DEFAULT_SOURCING_EMAIL_TEMPLATE);
+  const savedSourcingTemplate = useRef(DEFAULT_SOURCING_EMAIL_TEMPLATE);
+  const [savingSourcingTemplate, setSavingSourcingTemplate] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -18,6 +59,21 @@ export default function RepairTrackerTab() {
         setFormData(data);
       } catch (error) {
         console.error('Failed to fetch service agreement:', error);
+      }
+      try {
+        const s = await settingsAPI.get();
+        if (s.workOrderEmailTemplate) {
+          const loaded = { ...DEFAULT_WO_EMAIL_TEMPLATE, ...s.workOrderEmailTemplate };
+          setWoEmailTemplate(loaded);
+          savedWoTemplate.current = loaded;
+        }
+        if (s.sourcingEmailTemplate) {
+          const loaded = { ...DEFAULT_SOURCING_EMAIL_TEMPLATE, ...s.sourcingEmailTemplate };
+          setSourcingEmailTemplate(loaded);
+          savedSourcingTemplate.current = loaded;
+        }
+      } catch (error) {
+        console.error('Failed to fetch email templates:', error);
       }
     };
     fetchData();
@@ -40,6 +96,48 @@ export default function RepairTrackerTab() {
       setSaving(false);
     }
   };
+
+  const updateWoTemplate = (field, value) => {
+    setWoEmailTemplate(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveWoTemplate = async () => {
+    setSavingWoTemplate(true);
+    try {
+      const current = await settingsAPI.get();
+      await settingsAPI.update({ ...current, workOrderEmailTemplate: woEmailTemplate });
+      savedWoTemplate.current = woEmailTemplate;
+      await refreshSettings();
+      showNotification('Work order email template saved!', 'success');
+    } catch {
+      showNotification('Failed to save work order email template.', 'error');
+    } finally {
+      setSavingWoTemplate(false);
+    }
+  };
+
+  const woTemplateDirty = JSON.stringify(woEmailTemplate) !== JSON.stringify(savedWoTemplate.current);
+
+  const updateSourcingTemplate = (field, value) => {
+    setSourcingEmailTemplate(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveSourcingTemplate = async () => {
+    setSavingSourcingTemplate(true);
+    try {
+      const current = await settingsAPI.get();
+      await settingsAPI.update({ ...current, sourcingEmailTemplate: sourcingEmailTemplate });
+      savedSourcingTemplate.current = sourcingEmailTemplate;
+      await refreshSettings();
+      showNotification('Sourcing email template saved!', 'success');
+    } catch {
+      showNotification('Failed to save sourcing email template.', 'error');
+    } finally {
+      setSavingSourcingTemplate(false);
+    }
+  };
+
+  const sourcingTemplateDirty = JSON.stringify(sourcingEmailTemplate) !== JSON.stringify(savedSourcingTemplate.current);
 
   const updateSectionTitle = (sIdx, value) => {
     setFormData((prev) => {
@@ -192,6 +290,281 @@ export default function RepairTrackerTab() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Work Order Email Template */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 space-y-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+              <span className="material-symbols-outlined text-blue-400 text-base">mail</span>
+              Work Order Email Template
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Customize the email sent to customers when you email their work order from the repair tracker.
+              Use <code className="bg-slate-700 px-1 rounded text-blue-300 text-xs">{'{work_order_number}'}</code>,{' '}
+              <code className="bg-slate-700 px-1 rounded text-blue-300 text-xs">{'{customer_name}'}</code>,{' '}
+              <code className="bg-slate-700 px-1 rounded text-blue-300 text-xs">{'{company_name}'}</code> as variables.
+            </p>
+          </div>
+          {woTemplateDirty && (
+            <button
+              onClick={handleSaveWoTemplate}
+              disabled={savingWoTemplate}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">{savingWoTemplate ? 'refresh' : 'save'}</span>
+              {savingWoTemplate ? 'Saving…' : 'Save Template'}
+            </button>
+          )}
+        </div>
+
+        {/* Sender */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Sender</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">From Email</label>
+              <input
+                type="email"
+                value={woEmailTemplate.fromEmail}
+                onChange={e => updateWoTemplate('fromEmail', e.target.value)}
+                placeholder="service@cnstoolrepair.com"
+                className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">From Name</label>
+              <input
+                type="text"
+                value={woEmailTemplate.fromName}
+                onChange={e => updateWoTemplate('fromName', e.target.value)}
+                placeholder="CNS Tool Repair"
+                className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Subject & Greeting */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Message</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Default Subject</label>
+              <input
+                type="text"
+                value={woEmailTemplate.defaultSubject}
+                onChange={e => updateWoTemplate('defaultSubject', e.target.value)}
+                placeholder="Your Work Order {work_order_number} - CNS Tool Repair"
+                className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Greeting</label>
+              <input
+                type="text"
+                value={woEmailTemplate.greeting}
+                onChange={e => updateWoTemplate('greeting', e.target.value)}
+                placeholder="Hi {customer_name},"
+                className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Body Text</label>
+              <textarea
+                value={woEmailTemplate.bodyText}
+                onChange={e => updateWoTemplate('bodyText', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Closing Text</label>
+              <textarea
+                value={woEmailTemplate.closingText}
+                onChange={e => updateWoTemplate('closingText', e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Footer</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Tagline</label>
+              <input type="text" value={woEmailTemplate.footerTagline} onChange={e => updateWoTemplate('footerTagline', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Email</label>
+              <input type="email" value={woEmailTemplate.footerEmail} onChange={e => updateWoTemplate('footerEmail', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Phone</label>
+              <input type="text" value={woEmailTemplate.footerPhone} onChange={e => updateWoTemplate('footerPhone', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Website</label>
+              <input type="text" value={woEmailTemplate.footerWebsite} onChange={e => updateWoTemplate('footerWebsite', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+
+        {/* CC / BCC */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">CC / BCC</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">CC <span className="font-normal text-slate-500">(comma-separated)</span></label>
+              <input type="text" value={woEmailTemplate.cc} onChange={e => updateWoTemplate('cc', e.target.value)} placeholder="e.g. manager@company.com" className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">BCC <span className="font-normal text-slate-500">(comma-separated)</span></label>
+              <input type="text" value={woEmailTemplate.bcc} onChange={e => updateWoTemplate('bcc', e.target.value)} placeholder="e.g. records@company.com" className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+
+        {woTemplateDirty && (
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleSaveWoTemplate}
+              disabled={savingWoTemplate}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-colors"
+            >
+              <span className="material-symbols-outlined text-base">{savingWoTemplate ? 'refresh' : 'save'}</span>
+              {savingWoTemplate ? 'Saving…' : 'Save Template'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Sourcing Email Template */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 space-y-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+              <span className="material-symbols-outlined text-blue-400 text-base">forward_to_inbox</span>
+              Sourcing Email Template
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Customize the email sent to suppliers when requesting parts pricing from the sourcing queue.
+            </p>
+          </div>
+          {sourcingTemplateDirty && (
+            <button
+              onClick={handleSaveSourcingTemplate}
+              disabled={savingSourcingTemplate}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">{savingSourcingTemplate ? 'refresh' : 'save'}</span>
+              {savingSourcingTemplate ? 'Saving…' : 'Save Template'}
+            </button>
+          )}
+        </div>
+
+        {/* Sender */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Sender</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">From Email <span className="font-normal text-slate-500">(optional, overrides default)</span></label>
+              <input type="email" value={sourcingEmailTemplate.fromEmail} onChange={e => updateSourcingTemplate('fromEmail', e.target.value)} placeholder="purchasing@cnstoolrepair.com" className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">From Name <span className="font-normal text-slate-500">(optional)</span></label>
+              <input type="text" value={sourcingEmailTemplate.fromName} onChange={e => updateSourcingTemplate('fromName', e.target.value)} placeholder="CNS Tool Repair" className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+
+        {/* Message */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Message</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Subject</label>
+              <input type="text" value={sourcingEmailTemplate.defaultSubject} onChange={e => updateSourcingTemplate('defaultSubject', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Greeting</label>
+              <input type="text" value={sourcingEmailTemplate.greeting} onChange={e => updateSourcingTemplate('greeting', e.target.value)} placeholder="Hi" className="w-full sm:w-48 px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Body Text</label>
+              <textarea rows={3} value={sourcingEmailTemplate.bodyText} onChange={e => updateSourcingTemplate('bodyText', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary resize-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Closing Text</label>
+              <input type="text" value={sourcingEmailTemplate.closingText} onChange={e => updateSourcingTemplate('closingText', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Footer</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Tagline</label>
+              <input type="text" value={sourcingEmailTemplate.footerTagline} onChange={e => updateSourcingTemplate('footerTagline', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Label</label>
+              <input type="text" value={sourcingEmailTemplate.footerLabel} onChange={e => updateSourcingTemplate('footerLabel', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Email</label>
+              <input type="email" value={sourcingEmailTemplate.footerEmail} onChange={e => updateSourcingTemplate('footerEmail', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Phone</label>
+              <input type="text" value={sourcingEmailTemplate.footerPhone} onChange={e => updateSourcingTemplate('footerPhone', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Footer Website</label>
+              <input type="text" value={sourcingEmailTemplate.footerWebsite} onChange={e => updateSourcingTemplate('footerWebsite', e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+
+        {/* CC / BCC */}
+        <div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">CC / BCC</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">CC <span className="font-normal text-slate-500">(comma-separated)</span></label>
+              <input type="text" value={sourcingEmailTemplate.cc} onChange={e => updateSourcingTemplate('cc', e.target.value)} placeholder="e.g. manager@company.com" className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">BCC <span className="font-normal text-slate-500">(comma-separated)</span></label>
+              <input type="text" value={sourcingEmailTemplate.bcc} onChange={e => updateSourcingTemplate('bcc', e.target.value)} placeholder="e.g. records@company.com" className="w-full px-3 py-2 text-sm bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary" />
+            </div>
+          </div>
+        </div>
+
+        {sourcingTemplateDirty && (
+          <div className="flex items-center justify-between pt-1">
+            <button
+              onClick={() => setSourcingEmailTemplate(DEFAULT_SOURCING_EMAIL_TEMPLATE)}
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Reset to defaults
+            </button>
+            <button
+              onClick={handleSaveSourcingTemplate}
+              disabled={savingSourcingTemplate}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-colors"
+            >
+              <span className="material-symbols-outlined text-base">{savingSourcingTemplate ? 'refresh' : 'save'}</span>
+              {savingSourcingTemplate ? 'Saving…' : 'Save Template'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Service Agreement */}

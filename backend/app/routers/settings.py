@@ -7,6 +7,7 @@ from app.models.settings import (
     BusinessSettings,
     BusinessSettingsResponse,
     SourcingEmailTemplateModel,
+    WorkOrderEmailTemplateModel,
 )
 from app.utils.helpers import convert_objectid_to_str
 from app.dependencies.auth import require_admin
@@ -97,6 +98,20 @@ DEFAULT_SETTINGS = {
         "bcc": "",
         "fromEmail": "",
         "fromName": "",
+    },
+    "workOrderEmailTemplate": {
+        "fromEmail": "service@cnstoolrepair.com",
+        "fromName": "CNS Tool Repair",
+        "defaultSubject": "Your Work Order {work_order_number} - CNS Tool Repair",
+        "greeting": "Hi {customer_name},",
+        "bodyText": "Thank you for bringing your tool(s) in for service. Please find your work order attached. We will be in touch once our technician has had a chance to assess your equipment.",
+        "closingText": "If you have any questions, feel free to reply to this email or give us a call.",
+        "footerTagline": "Industrial Pneumatic Tool Repair & Maintenance",
+        "footerEmail": "service@cnstoolrepair.com",
+        "footerPhone": "(236) 885-9782",
+        "footerWebsite": "cnstoolrepair.com",
+        "cc": "",
+        "bcc": "",
     },
 }
 

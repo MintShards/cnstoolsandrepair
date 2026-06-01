@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { sourcingAPI, suppliersAPI, repairsAPI, settingsAPI } from '../../../services/api';
+import { useState, useEffect } from 'react';
+import { sourcingAPI, suppliersAPI, repairsAPI } from '../../../services/api';
 import SourcingQueue from './parts-sourcing/SourcingQueue';
 import RecipientSelector from './parts-sourcing/RecipientSelector';
 import SourcingHistory from './parts-sourcing/SourcingHistory';
@@ -36,27 +36,6 @@ export default function PartsSourcingTab() {
   // Notification
   const [notification, setNotification] = useState(null);
 
-  // Email template settings
-  const [templateSaving, setTemplateSaving] = useState(false);
-  const [emailExpanded, setEmailExpanded] = useState(false);
-  const defaultTemplate = {
-    defaultSubject: 'Parts Pricing Request - CNS Tool Repair',
-    greeting: 'Hi',
-    bodyText: 'We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.',
-    closingText: 'Thank you for your time. We look forward to hearing from you.',
-    footerTagline: 'Industrial Pneumatic Tool Repair & Maintenance',
-    footerEmail: 'purchasing@cnstoolrepair.com',
-    footerPhone: '778-488-0777',
-    footerWebsite: 'cnstoolrepair.com',
-    footerLabel: 'Supplier & Parts Inquiries',
-    cc: '',
-    bcc: '',
-    fromEmail: '',
-    fromName: '',
-  };
-  const [emailTemplate, setEmailTemplate] = useState(defaultTemplate);
-  const savedTemplate = useRef(defaultTemplate);
-
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -67,18 +46,6 @@ export default function PartsSourcingTab() {
         ]);
         setQueue(q);
         setSuppliers(s);
-
-        // Load email template from settings
-        try {
-          const settings = await settingsAPI.get();
-          if (settings.sourcingEmailTemplate) {
-            const loaded = { ...defaultTemplate, ...settings.sourcingEmailTemplate };
-            setEmailTemplate(loaded);
-            savedTemplate.current = loaded;
-          }
-        } catch (_) {
-          // Use defaults if settings not available
-        }
       } catch (e) {
         showNotif('Failed to load sourcing queue.', 'error');
       } finally {
@@ -242,26 +209,6 @@ export default function PartsSourcingTab() {
     }
   };
 
-  const handleTemplateSave = async () => {
-    setTemplateSaving(true);
-    try {
-      const settings = await settingsAPI.get();
-      await settingsAPI.update({ ...settings, sourcingEmailTemplate: emailTemplate });
-      savedTemplate.current = emailTemplate;
-      showNotif('Email template saved.');
-    } catch (e) {
-      showNotif('Failed to save email template.', 'error');
-    } finally {
-      setTemplateSaving(false);
-    }
-  };
-
-  const updateTemplate = (field, value) => {
-    setEmailTemplate((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const templateDirty = JSON.stringify(emailTemplate) !== JSON.stringify(savedTemplate.current);
-
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -334,198 +281,27 @@ export default function PartsSourcingTab() {
             <SupplierManager suppliers={suppliers} onSuppliersChange={setSuppliers} />
           </section>
 
-          {/* Section 5: Email compose */}
+          {/* Section 5: Message */}
           <section className="border-t border-slate-200 dark:border-slate-700/50 pt-6 space-y-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
               <span className="material-symbols-outlined text-base text-primary">forward_to_inbox</span>
               Email
             </h3>
-            <button
-              onClick={() => setEmailExpanded(!emailExpanded)}
-              className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <span className="material-symbols-outlined text-base">
-                {emailExpanded ? 'expand_less' : 'expand_more'}
-              </span>
-              Email template
-              {templateDirty && (
-                <span className="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs px-2 py-0.5 rounded-full font-semibold">unsaved</span>
-              )}
-            </button>
-            {emailExpanded && (<div className="space-y-3">
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Subject</label>
-                <input
-                  type="text"
-                  value={emailTemplate.defaultSubject}
-                  onChange={(e) => updateTemplate('defaultSubject', e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Greeting</label>
-                <input
-                  type="text"
-                  value={emailTemplate.greeting}
-                  onChange={(e) => updateTemplate('greeting', e.target.value)}
-                  placeholder="Hi"
-                  className="w-full sm:w-48 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Body Text</label>
-                <textarea
-                  rows={3}
-                  value={emailTemplate.bodyText}
-                  onChange={(e) => updateTemplate('bodyText', e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none resize-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                  Message <span className="text-slate-400 dark:text-slate-500">(optional additional note)</span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="e.g. We need these urgently, please advise availability..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none resize-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Closing Text</label>
-                <input
-                  type="text"
-                  value={emailTemplate.closingText}
-                  onChange={(e) => updateTemplate('closingText', e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Tagline</label>
-                  <input
-                    type="text"
-                    value={emailTemplate.footerTagline}
-                    onChange={(e) => updateTemplate('footerTagline', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Label</label>
-                  <input
-                    type="text"
-                    value={emailTemplate.footerLabel}
-                    onChange={(e) => updateTemplate('footerLabel', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Email</label>
-                  <input
-                    type="email"
-                    value={emailTemplate.footerEmail}
-                    onChange={(e) => updateTemplate('footerEmail', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Phone</label>
-                  <input
-                    type="text"
-                    value={emailTemplate.footerPhone}
-                    onChange={(e) => updateTemplate('footerPhone', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Footer Website</label>
-                  <input
-                    type="text"
-                    value={emailTemplate.footerWebsite}
-                    onChange={(e) => updateTemplate('footerWebsite', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">CC <span className="text-slate-400 dark:text-slate-500">(comma-separated)</span></label>
-                  <input
-                    type="text"
-                    placeholder="email@example.com"
-                    value={emailTemplate.cc}
-                    onChange={(e) => updateTemplate('cc', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">BCC <span className="text-slate-400 dark:text-slate-500">(comma-separated)</span></label>
-                  <input
-                    type="text"
-                    placeholder="email@example.com"
-                    value={emailTemplate.bcc}
-                    onChange={(e) => updateTemplate('bcc', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                    From Email <span className="text-slate-400 dark:text-slate-500">(optional, overrides server default)</span>
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="purchasing@cnstoolrepair.com"
-                    value={emailTemplate.fromEmail}
-                    onChange={(e) => updateTemplate('fromEmail', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
-                    From Name <span className="text-slate-400 dark:text-slate-500">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="CNS Tool Repair"
-                    value={emailTemplate.fromName}
-                    onChange={(e) => updateTemplate('fromName', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  onClick={() => setEmailTemplate(defaultTemplate)}
-                  className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                >
-                  Reset to defaults
-                </button>
-                <button
-                  onClick={handleTemplateSave}
-                  disabled={templateSaving || !templateDirty}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-primary hover:bg-primary/80 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition-colors uppercase"
-                >
-                  {templateSaving ? (
-                    <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-sm">save</span>
-                  )}
-                  Save Template
-                </button>
-              </div>
-            </div>)}
+            <div>
+              <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                Message <span className="text-slate-400 dark:text-slate-500">(optional additional note)</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. We need these urgently, please advise availability..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none resize-none transition-colors"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                Appears above the parts table. To edit the email template, go to <strong>Admin Settings → Repair Tracker</strong>.
+              </p>
+            </div>
           </section>
 
           {/* Send button */}

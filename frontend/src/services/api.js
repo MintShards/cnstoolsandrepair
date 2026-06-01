@@ -398,6 +398,10 @@ export const repairsAPI = {
     const response = await api.get('/api/repairs/parts-analytics');
     return response.data;
   },
+  sendWorkOrderEmail: async (jobId, data) => {
+    const response = await api.post(`/api/repairs/${jobId}/send-work-order-email`, data);
+    return response.data;
+  },
 };
 
 // Parts Library API (admin only)
