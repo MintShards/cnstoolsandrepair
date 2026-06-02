@@ -255,7 +255,24 @@ export default function PartsSourcingTab() {
               onRemoveSelected={handleRemoveSelected}
               manualParts={manualParts}
               onManualPartsChange={setManualParts}
-              onUpdateQuantity={(idx, qty) => setQueue(prev => prev.map((item, i) => i === idx ? { ...item, part: { ...item.part, quantity: qty } } : item))}
+              onUpdateQuantity={async (idx, qty) => {
+                // Update local state immediately for responsive UI
+                setQueue(prev => prev.map((item, i) => i === idx ? { ...item, part: { ...item.part, quantity: qty } } : item));
+                // Persist to backend
+                const item = queue[idx];
+                if (!item || !item.repair_id || !item.tool_id || qty === '' || qty < 1) return;
+                try {
+                  const job = await repairsAPI.get(item.repair_id);
+                  const tool = job.tools?.find(t => t.tool_id === item.tool_id);
+                  if (!tool) return;
+                  const updatedParts = tool.parts.map((p, pi) =>
+                    pi === item.part_index ? { ...p, quantity: qty } : p
+                  );
+                  await repairsAPI.updateTool(item.repair_id, item.tool_id, { parts: updatedParts });
+                } catch {
+                  showNotif('Failed to save quantity change.', 'error');
+                }
+              }}
             />
           </section>
 
