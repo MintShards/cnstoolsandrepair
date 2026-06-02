@@ -67,11 +67,11 @@ def _build_work_order_email_html(job: dict, template: dict, custom_message: Opti
         qty = tool.get("quantity") or 1
         tool_rows += f"""
                         <tr>
-                            <td style="padding:14px 24px;border-bottom:1px solid #e2e8f0;color:#334155;text-align:center;">{idx}</td>
-                            <td style="padding:14px 24px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-weight:600;">{brand}</td>
-                            <td style="padding:14px 24px;border-bottom:1px solid #e2e8f0;color:#1e293b;">{model}</td>
-                            <td style="padding:14px 24px;border-bottom:1px solid #e2e8f0;color:#1e293b;">{tool_type}</td>
-                            <td style="padding:14px 24px;border-bottom:1px solid #e2e8f0;color:#1e293b;text-align:center;">{qty}</td>
+                            <td style="padding:12px 12px;border-bottom:1px solid #e2e8f0;color:#334155;text-align:center;">{idx}</td>
+                            <td style="padding:12px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b;font-weight:600;">{brand}</td>
+                            <td style="padding:12px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b;">{model}</td>
+                            <td style="padding:12px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b;">{tool_type}</td>
+                            <td style="padding:12px 12px;border-bottom:1px solid #e2e8f0;color:#1e293b;text-align:center;">{qty}</td>
                         </tr>"""
 
     custom_message_block = ""
@@ -88,7 +88,7 @@ def _build_work_order_email_html(job: dict, template: dict, custom_message: Opti
 <head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
 <div style="background:#f6f6f8;padding:20px 0;">
-    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;">
+    <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;">
 
         <!-- Header: Logo + Tagline -->
         <div style="background:#ffffff;padding:24px 32px;border-bottom:4px solid #1152d4;">
@@ -138,11 +138,11 @@ def _build_work_order_email_html(job: dict, template: dict, custom_message: Opti
                 <table style="width:100%;border-collapse:collapse;font-size:14px;" border="0" cellspacing="0" cellpadding="0">
                     <thead>
                         <tr style="background:#f1f5f9;">
-                            <th style="padding:10px 24px;text-align:center;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">#</th>
-                            <th style="padding:10px 24px;text-align:left;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Brand</th>
-                            <th style="padding:10px 24px;text-align:left;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Model</th>
-                            <th style="padding:10px 24px;text-align:left;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Type</th>
-                            <th style="padding:10px 24px;text-align:center;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Qty</th>
+                            <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:32px;">#</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Brand</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Model</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Type</th>
+                            <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#334155;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:40px;">Qty</th>
                         </tr>
                     </thead>
                     <tbody>{tool_rows}

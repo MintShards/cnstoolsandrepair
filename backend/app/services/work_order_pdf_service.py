@@ -282,6 +282,7 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
     pdf.ln(6)
 
     # ── Tools ────────────────────────────────────────────────────
+    pdf.ln(3)
     pdf.set_font("Helvetica", "B", 8.5)  # section-title: CSS 10px
     pdf.set_text_color(85, 85, 85)  # #555
     pdf.cell(page_w, 4, f"TOOLS ({len(tools)})", ln=1)
@@ -404,22 +405,6 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
 
         pdf.ln(4)
 
-        # Status row (serial is already in the title line)
-        if status != "received":
-            extra_y = pdf.get_y()
-            pdf.set_font("Helvetica", "B", 8.5)  # field-label: CSS 10px
-            pdf.set_text_color(85, 85, 85)  # #555
-            pdf.set_xy(lm, extra_y)
-            pdf.cell(dcol_w, 3.5, "STATUS", ln=0)
-            pdf.ln(3.5)
-
-            val_y2 = pdf.get_y()
-            pdf.set_font("Helvetica", "", 8.75)  # body default: CSS 12px
-            pdf.set_text_color(0, 0, 0)  # #000
-            pdf.set_xy(lm, val_y2)
-            pdf.cell(dcol_w, 4, STATUS_LABELS.get(status, status), ln=0)
-            pdf.ln(5)
-
         # Remarks
         if remarks:
             rem_y = pdf.get_y()
@@ -436,17 +421,19 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
         parts = [p for p in (tool.get("parts") or []) if (p.get("name") or "").strip()]
         if parts:
             pdf.ln(2)
-            col_widths = [page_w * 0.32, page_w * 0.08, page_w * 0.12, page_w * 0.20, page_w * 0.14, page_w * 0.14]
+            tbl_x = lm + card_pad  # indent table inside card padding
+            tbl_w = page_w - card_pad * 2  # table width inside card
+            col_widths = [tbl_w * 0.47, tbl_w * 0.07, tbl_w * 0.10, tbl_w * 0.15, tbl_w * 0.11, tbl_w * 0.10]
             headers = ["PART", "QTY", "PRICE", "SUPPLIER", "STATUS", "TOTAL"]
             aligns = ["L", "C", "R", "L", "C", "R"]
             # Header row
-            pdf.set_font("Helvetica", "B", 8.5)  # parts-table th: CSS 10px
+            pdf.set_font("Helvetica", "B", 7.5)  # parts-table th: CSS 9px
             pdf.set_text_color(51, 51, 51)  # #333
-            pdf.set_fill_color(245, 245, 245)  # #f5f5f5
+            pdf.set_fill_color(255, 255, 255)  # white
             pdf.set_draw_color(204, 204, 204)  # #ccc
             for ci, hdr in enumerate(headers):
-                pdf.set_x(lm + sum(col_widths[:ci]))
-                pdf.cell(col_widths[ci], 5, hdr, border=1, fill=True, align=aligns[ci], ln=0)
+                pdf.set_x(tbl_x + sum(col_widths[:ci]))
+                pdf.cell(col_widths[ci], 7, hdr, border=1, fill=True, align=aligns[ci], ln=0)
             pdf.ln()
 
             # Data rows
@@ -469,13 +456,14 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
                     price_str = "--"
                     total_str = "--"
 
-                pdf.set_font("Helvetica", "", 9)  # parts-table body: CSS 11px
+                pdf.set_font("Helvetica", "", 8)  # parts-table body: CSS 10px
                 pdf.set_text_color(0, 0, 0)
+                pdf.set_fill_color(255, 255, 255)  # reset fill to white so header grey doesn't bleed
                 pdf.set_draw_color(204, 204, 204)  # #ccc
                 row_data = [p_label, str(p_qty), price_str, p_supplier, p_status, total_str]
                 for ci, val in enumerate(row_data):
-                    pdf.set_x(lm + sum(col_widths[:ci]))
-                    pdf.cell(col_widths[ci], 5, val, border=1, align=aligns[ci], ln=0)
+                    pdf.set_x(tbl_x + sum(col_widths[:ci]))
+                    pdf.cell(col_widths[ci], 7, val, border=1, fill=True, align=aligns[ci], ln=0)
                 pdf.ln()
 
             # Subtotal row
@@ -484,7 +472,7 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
                 pdf.set_text_color(0, 0, 0)
                 pdf.set_draw_color(226, 232, 240)  # #e2e8f0
                 sub_w = sum(col_widths[:5])
-                pdf.set_x(lm)
+                pdf.set_x(tbl_x)
                 pdf.cell(sub_w, 6, "Parts Subtotal", border="T", align="R", ln=0)
                 pdf.cell(col_widths[5], 6, f"${parts_total:.2f}", border="T", align="R", ln=1)
 
