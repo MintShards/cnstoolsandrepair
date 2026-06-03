@@ -1,11 +1,30 @@
 import { useState, useEffect } from 'react';
 import { sourcingAPI, suppliersAPI, repairsAPI } from '../../../services/api';
+import { useSettings } from '../../../contexts/SettingsContext';
 import SourcingQueue from './parts-sourcing/SourcingQueue';
 import RecipientSelector from './parts-sourcing/RecipientSelector';
 import SourcingHistory from './parts-sourcing/SourcingHistory';
 import SupplierManager from './parts-sourcing/SupplierManager';
 
+const DEFAULT_SOURCING_EMAIL_TEMPLATE = {
+  defaultSubject: 'Parts Pricing Request - CNS Tool Repair',
+  greeting: 'Hi',
+  bodyText: 'We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.',
+  closingText: 'Thank you for your time. We look forward to hearing from you.',
+  footerTagline: 'Industrial Pneumatic Tool Repair & Maintenance',
+  footerEmail: 'purchasing@cnstoolrepair.com',
+  footerPhone: '778-488-0777',
+  footerWebsite: 'cnstoolrepair.com',
+  footerLabel: 'Supplier & Parts Inquiries',
+  cc: '',
+  bcc: '',
+  fromEmail: '',
+  fromName: '',
+};
+
 export default function PartsSourcingTab() {
+  const { settings } = useSettings();
+  const emailTemplate = { ...DEFAULT_SOURCING_EMAIL_TEMPLATE, ...(settings?.sourcingEmailTemplate || {}) };
   const [queue, setQueue] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
