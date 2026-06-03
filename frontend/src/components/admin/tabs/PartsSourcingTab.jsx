@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { sourcingAPI, suppliersAPI, repairsAPI } from '../../../services/api';
 import { useSettings } from '../../../contexts/SettingsContext';
+import { useToast } from '../../../pages/admin/RepairTracker';
 import SourcingQueue from './parts-sourcing/SourcingQueue';
 import RecipientSelector from './parts-sourcing/RecipientSelector';
 import SourcingHistory from './parts-sourcing/SourcingHistory';
@@ -9,6 +10,7 @@ import SupplierManager from './parts-sourcing/SupplierManager';
 export default function PartsSourcingTab() {
   const { settings } = useSettings();
   const emailTemplate = settings?.sourcingEmailTemplate || {};
+  const showToast = useToast();
   const [queue, setQueue] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +36,7 @@ export default function PartsSourcingTab() {
   // Send state
   const [sending, setSending] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [sendResult, setSendResult] = useState(null);
 
-  // Notification
-  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -50,18 +49,13 @@ export default function PartsSourcingTab() {
         setQueue(q);
         setSuppliers(s);
       } catch (e) {
-        showNotif('Failed to load sourcing queue.', 'error');
+        showToast('error', 'Failed to load sourcing queue.');
       } finally {
         setLoading(false);
       }
     };
     load();
   }, []);
-
-  const showNotif = (msg, type = 'success') => {
-    setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 5000);
-  };
 
   const handleToggle = (key, item) => {
     setSelected((prev) => {
@@ -123,7 +117,7 @@ export default function PartsSourcingTab() {
       const q = await sourcingAPI.getQueue();
       setQueue(q);
     } catch (e) {
-      showNotif('Failed to remove part from queue.', 'error');
+      showToast('error', 'Failed to remove part from queue.');
     }
   };
 
@@ -146,9 +140,9 @@ export default function PartsSourcingTab() {
         const q = await sourcingAPI.getQueue();
         setQueue(q);
       }
-      showNotif(`Removed ${allItems.length} part${allItems.length !== 1 ? 's' : ''} from queue.`);
+      showToast('success', `Removed ${allItems.length} part${allItems.length !== 1 ? 's' : ''} from queue.`);
     } catch (e) {
-      showNotif('Failed to remove selected parts.', 'error');
+      showToast('error', 'Failed to remove selected parts.');
     }
   };
 
@@ -180,7 +174,7 @@ export default function PartsSourcingTab() {
   const handleSend = async () => {
     setSending(true);
     setShowConfirm(false);
-    setSendResult(null);
+
     try {
       const result = await sourcingAPI.send({
         recipients,
@@ -188,9 +182,9 @@ export default function PartsSourcingTab() {
         subject: undefined,
         message: message.trim() || undefined,
       });
-      setSendResult(result);
+
       if (result.status === 'sent') {
-        showNotif(`Sent to ${result.sent_count} supplier${result.sent_count !== 1 ? 's' : ''} successfully.`, 'success');
+        showToast('success', `Sent to ${result.sent_count} supplier${result.sent_count !== 1 ? 's' : ''} successfully.`);
         setSelected(new Set());
         setSelectedItems({});
         setManualParts([]);
@@ -199,14 +193,14 @@ export default function PartsSourcingTab() {
         const q = await sourcingAPI.getQueue();
         setQueue(q);
       } else if (result.status === 'partial_failure') {
-        showNotif(`Sent to ${result.sent_count}, failed for ${result.failed_count}. Check history for details.`, 'error');
+        showToast('error', `Sent to ${result.sent_count}, failed for ${result.failed_count}. Check history for details.`);
         const q = await sourcingAPI.getQueue();
         setQueue(q);
       } else {
-        showNotif('All emails failed to send. Check email settings.', 'error');
+        showToast('error', 'All emails failed to send. Check email settings.');
       }
     } catch (e) {
-      showNotif(e?.response?.data?.detail || 'Failed to send emails.', 'error');
+      showToast('error', e?.response?.data?.detail || 'Failed to send emails.');
     } finally {
       setSending(false);
     }
@@ -222,20 +216,6 @@ export default function PartsSourcingTab() {
           Select parts flagged for sourcing, pick suppliers, and send bulk pricing request emails.
         </p>
       </div>
-
-      {/* Notification */}
-      {notification && (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium ${
-          notification.type === 'success'
-            ? 'bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400'
-            : 'bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400'
-        }`}>
-          <span className="material-symbols-outlined text-base">
-            {notification.type === 'success' ? 'check_circle' : 'error'}
-          </span>
-          {notification.msg}
-        </div>
-      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -273,7 +253,7 @@ export default function PartsSourcingTab() {
                   );
                   await repairsAPI.updateTool(item.repair_id, item.tool_id, { parts: updatedParts });
                 } catch {
-                  showNotif('Failed to save quantity change.', 'error');
+                  showToast('error', 'Failed to save quantity change.');
                 }
               }}
             />
