@@ -65,7 +65,7 @@ async def get_sourcing_queue(
                         part={
                             "name": part.get("name", ""),
                             "part_number": part.get("part_number"),
-                            "quantity": part.get("quantity", 1),
+                            "quantity": part.get("sourcing_quantity") or part.get("quantity", 1),
                             "supplier": part.get("supplier"),
                             "status": part.get("status", "pending"),
                             "sourcing_emailed": part.get("sourcing_emailed", False),
@@ -73,6 +73,44 @@ async def get_sourcing_queue(
                     ))
 
     return queue
+
+
+@router.patch("/queue/{repair_id}/{tool_id}/{part_index}/quantity")
+async def update_sourcing_quantity(
+    repair_id: str,
+    tool_id: str,
+    part_index: int,
+    quantity: int = Query(..., gt=0),
+    current_user: User = Depends(require_admin),
+):
+    """Update the sourcing_quantity for a specific part without affecting the repair part quantity."""
+    db = get_database()
+    try:
+        oid = ObjectId(repair_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid repair ID")
+
+    job = await db.repairs.find_one({"_id": oid})
+    if not job:
+        raise HTTPException(status_code=404, detail="Repair job not found")
+
+    tools = job.get("tools", [])
+    tool_idx = next((i for i, t in enumerate(tools) if t.get("tool_id") == tool_id), None)
+    if tool_idx is None:
+        raise HTTPException(status_code=404, detail="Tool not found")
+
+    parts = tools[tool_idx].get("parts", [])
+    if part_index < 0 or part_index >= len(parts):
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    await db.repairs.update_one(
+        {"_id": oid},
+        {"$set": {
+            f"tools.{tool_idx}.parts.{part_index}.sourcing_quantity": quantity,
+            "updated_at": datetime.utcnow(),
+        }}
+    )
+    return {"message": "Sourcing quantity updated"}
 
 
 @router.post("/send")

@@ -238,7 +238,12 @@ export default function PartsSourcingTab() {
               onRemoveSelected={handleRemoveSelected}
               manualParts={manualParts}
               onManualPartsChange={setManualParts}
-              onUpdateQuantity={(idx, qty) => setQueue(prev => prev.map((item, i) => i === idx ? { ...item, part: { ...item.part, quantity: qty } } : item))}
+              onUpdateQuantity={(idx, qty) => {
+                setQueue(prev => prev.map((item, i) => i === idx ? { ...item, part: { ...item.part, quantity: qty } } : item));
+                const item = queue[idx];
+                if (!item || qty === '' || qty < 1) return;
+                sourcingAPI.updateSourcingQuantity(item.repair_id, item.tool_id, item.part_index, qty).catch(() => {});
+              }}
             />
           </section>
 

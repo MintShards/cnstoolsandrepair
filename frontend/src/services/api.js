@@ -560,6 +560,9 @@ export const sourcingAPI = {
     const response = await api.get('/api/parts-sourcing/history', { params: { page, page_size: pageSize } });
     return response.data;
   },
+  updateSourcingQuantity: async (repairId, toolId, partIndex, quantity) => {
+    await api.patch(`/api/parts-sourcing/queue/${repairId}/${toolId}/${partIndex}/quantity`, null, { params: { quantity } });
+  },
 };
 
 // Service Agreement API
