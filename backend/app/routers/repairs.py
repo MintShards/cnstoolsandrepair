@@ -1007,6 +1007,19 @@ async def batch_update_tool_status(
             if item.new_status == RepairStatus.COMPLETED:
                 set_data[f"tools.{tool_index}.date_completed"] = now
 
+            # Auto-mark all parts as installed when tool moves to "ready"
+            # If a part wasn't used, it should be deleted from the job before reaching ready
+            ready_stock_adjustments = []
+            if item.new_status == RepairStatus.READY:
+                tool_parts = tools[tool_index].get("parts", [])
+                for pi, part in enumerate(tool_parts):
+                    if part.get("status") != "installed":
+                        set_data[f"tools.{tool_index}.parts.{pi}.status"] = "installed"
+                        lib_id = part.get("library_part_id")
+                        if lib_id:
+                            qty = part.get("quantity", 1) or 1
+                            ready_stock_adjustments.append((lib_id, -qty))
+
             try:
                 await db.repairs.update_one(
                     {"_id": object_id},
@@ -1017,6 +1030,17 @@ async def batch_update_tool_status(
                 )
                 # Update local copy so subsequent items in same job see new status
                 tools[tool_index]["status"] = new_status
+                if item.new_status == RepairStatus.READY:
+                    for _part in tools[tool_index].get("parts", []):
+                        if _part.get("status") != "installed":
+                            _part["status"] = "installed"
+                # Apply stock decrements for auto-installed parts
+                job_id_str = str(object_id)
+                for lib_id, delta in ready_stock_adjustments:
+                    await _adjust_library_part_stock(
+                        db, lib_id, delta, "auto_installed_ready",
+                        job_id=job_id_str, tool_id=item.tool_id
+                    )
                 results.append(BatchStatusResult(
                     job_id=job_id, tool_id=item.tool_id,
                     success=True, new_status=new_status
@@ -1576,13 +1600,13 @@ async def update_tool_status(
     if status_update.status == RepairStatus.COMPLETED:
         set_data[f"tools.{tool_index}.date_completed"] = now
 
-    # Auto-mark received parts as installed when tool moves to "ready"
-    # and decrement stock for each promoted part
+    # Auto-mark all parts as installed when tool moves to "ready"
+    # If a part wasn't used, it should be deleted from the job before reaching ready
     ready_stock_adjustments = []
     if status_update.status == RepairStatus.READY:
         parts = tools[tool_index].get("parts", [])
         for pi, part in enumerate(parts):
-            if part.get("status") == "received":
+            if part.get("status") != "installed":
                 set_data[f"tools.{tool_index}.parts.{pi}.status"] = "installed"
                 lib_id = part.get("library_part_id")
                 if lib_id:
