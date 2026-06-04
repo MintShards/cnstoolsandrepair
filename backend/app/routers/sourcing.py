@@ -49,6 +49,7 @@ async def get_sourcing_queue(
             tool_id = tool.get("tool_id", str(tool_idx))
             tool_type = tool.get("tool_type", "Unknown")
             tool_brand = tool.get("brand", None)
+            tool_model = tool.get("model_number", None)
 
             for part_idx, part in enumerate(tool.get("parts", [])):
                 if part.get("needs_sourcing", False):
@@ -59,6 +60,7 @@ async def get_sourcing_queue(
                         tool_id=str(tool_id),
                         tool_type=tool_type,
                         tool_brand=tool_brand,
+                        tool_model=tool_model,
                         part_index=part_idx,
                         part={
                             "name": part.get("name", ""),

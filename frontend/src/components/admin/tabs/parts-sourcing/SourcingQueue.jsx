@@ -141,7 +141,7 @@ export default function SourcingQueue({ items, selected, onToggle, onSelectAll, 
                       </td>
                       <td className="px-3 py-2.5 hidden md:table-cell">
                         <span className="text-primary text-xs font-mono">{item.request_number}</span>
-                        <span className="text-slate-400 dark:text-slate-500 text-xs ml-2">{item.tool_type}{item.tool_brand ? ` · ${item.tool_brand}` : ''}</span>
+                        <span className="text-slate-400 dark:text-slate-500 text-xs ml-2">{item.tool_brand || item.tool_type}{item.tool_model ? ` · ${item.tool_model}` : ''}</span>
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         <button

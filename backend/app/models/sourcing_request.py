@@ -41,6 +41,7 @@ class SourcingQueueItem(BaseModel):
     tool_id: str
     tool_type: str
     tool_brand: Optional[str] = None
+    tool_model: Optional[str] = None
     part_index: int
     part: dict
 
