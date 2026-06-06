@@ -84,6 +84,7 @@ class LibraryModelCreate(BaseModel):
     category: Optional[str] = Field(None, max_length=100)
     specifications: Optional[str] = Field(None, max_length=2000)
     discontinued: bool = False
+    retail_price: Optional[float] = Field(None, ge=0)
 
     @field_validator('name', 'category', mode='before')
     @classmethod
@@ -99,6 +100,13 @@ class LibraryModelCreate(BaseModel):
             return None
         return v
 
+    @field_validator('retail_price', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
 
 class LibraryModelUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -107,6 +115,7 @@ class LibraryModelUpdate(BaseModel):
     category: Optional[str] = Field(None, max_length=100)
     specifications: Optional[str] = Field(None, max_length=2000)
     discontinued: Optional[bool] = None
+    retail_price: Optional[float] = Field(None, ge=0)
 
     @field_validator('name', 'category', mode='before')
     @classmethod
@@ -118,6 +127,13 @@ class LibraryModelUpdate(BaseModel):
     @field_validator('specifications', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
+    @field_validator('retail_price', mode='before')
+    @classmethod
+    def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
             return None
         return v
@@ -135,6 +151,7 @@ class LibraryModelResponse(BaseModel):
     diagram_urls: List[str] = []
     diagram_labels: Dict[str, str] = {}
     discontinued: bool
+    retail_price: Optional[float] = None
     active: bool
     part_count: Optional[int] = None
     created_at: datetime

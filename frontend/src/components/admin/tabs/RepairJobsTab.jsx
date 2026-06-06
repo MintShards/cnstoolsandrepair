@@ -91,6 +91,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [retailPriceMap, setRetailPriceMap] = useState({}); // { tool_id: price | null }
+  const libraryBrandsCache = useRef(null);
   const [showNewJobForm, setShowNewJobForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Initialize filter from external prop if present (dashboard click-through)
@@ -290,6 +292,40 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     })();
     return () => { cancelled = true; };
   }, [missingStockKey]);
+
+  // Pre-fetch library brands on mount so retail price lookups are instant
+  useEffect(() => {
+    partsLibraryAPI.listBrands().then(b => { libraryBrandsCache.current = b; }).catch(() => {});
+  }, []);
+
+  // Look up retail prices from parts library when a job is loaded
+  useEffect(() => {
+    if (!selectedJob?.tools?.length) { setRetailPriceMap({}); return; }
+    let cancelled = false;
+    (async () => {
+      const brands = libraryBrandsCache.current || await partsLibraryAPI.listBrands().catch(() => []);
+      if (!libraryBrandsCache.current) libraryBrandsCache.current = brands;
+      // Group tools by brand to fetch models once per unique brand
+      const brandGroups = {};
+      for (const tool of selectedJob.tools) {
+        if (!tool.brand || !tool.model_number) continue;
+        const key = tool.brand.trim().toLowerCase();
+        if (!brandGroups[key]) brandGroups[key] = { brand: brands.find(b => b.name.toLowerCase() === key), tools: [] };
+        brandGroups[key].tools.push(tool);
+      }
+      const priceMap = {};
+      await Promise.all(Object.values(brandGroups).map(async ({ brand, tools }) => {
+        if (!brand) { tools.forEach(t => { priceMap[t.tool_id] = null; }); return; }
+        const models = await partsLibraryAPI.listModels(brand.id).catch(() => []);
+        for (const tool of tools) {
+          const match = models.find(m => m.name.toLowerCase() === tool.model_number.trim().toLowerCase());
+          priceMap[tool.tool_id] = match?.retail_price ?? null;
+        }
+      }));
+      if (!cancelled) setRetailPriceMap(priceMap);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedJob?.id]);
 
   // Debounced customer search
   const searchCustomersDebounced = useCallback(
@@ -1874,6 +1910,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               <div className="text-sm text-slate-500 mt-0.5 uppercase">
                                 {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                 {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
+                                {retailPriceMap[tool.tool_id] != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Retail: ${parseFloat(retailPriceMap[tool.tool_id]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
                             </div>

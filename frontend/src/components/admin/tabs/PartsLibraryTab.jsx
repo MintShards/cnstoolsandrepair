@@ -537,6 +537,7 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
     category: (model?.category || '').toUpperCase(),
     specifications: model?.specifications || '',
     discontinued: model?.discontinued || false,
+    retail_price: model?.retail_price ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -594,6 +595,18 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
               rows={3}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Drive size, max torque, etc."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Retail Price ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.retail_price}
+              onChange={e => setForm(f => ({ ...f, retail_price: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. 599.99"
             />
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -1749,14 +1762,13 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
               onClick={() => onSelectModel(model)}
             >
               <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800 dark:text-slate-100 uppercase">{model.name}</span>
-                    {model.discontinued && (
-                      <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full">Discontinued</span>
-                    )}
-                  </div>
-                  {model.category && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 uppercase">{model.category}</p>}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase whitespace-nowrap overflow-hidden text-ellipsis">
+                    {model.name}
+                    {model.category && <span className="font-normal text-slate-500 dark:text-slate-400"><span className="mx-1.5">·</span>{model.category}</span>}
+                    {model.retail_price != null && <span className="font-normal text-slate-500 dark:text-slate-400 normal-case"><span className="mx-1.5">·</span>${parseFloat(model.retail_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                    {model.discontinued && <span className="ml-2 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full normal-case font-medium">Discontinued</span>}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                   <button
