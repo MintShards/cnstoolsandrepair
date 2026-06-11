@@ -240,9 +240,12 @@ async def get_repair_summary(
     # ── 24h ago for recent completions ──
     one_day_ago = datetime.utcfromtimestamp(now.timestamp() - 86400)
 
-    # ── Pull all active (non-terminal) tools to compute stale/overdue ──
+    # ── Pull all jobs that have at least one non-terminal tool ──
+    # Using $nin on an array field excludes jobs where ANY element matches,
+    # so we use $in with all non-terminal statuses instead.
+    active_statuses = ["received", "diagnosed", "quoted", "approved", "parts_pending", "in_repair", "ready", "invoiced"]
     active_jobs_cursor = db.repairs.find(
-        {"tools.status": {"$nin": list(terminal_statuses)}}
+        {"tools.status": {"$in": active_statuses}}
     )
     active_jobs = await active_jobs_cursor.to_list(length=2000)
 
@@ -419,12 +422,9 @@ async def get_repair_summary(
             # ── Ready for Repair detection ──
             READY_PART_STATUSES = {"in_stock", "received", "installed"}
             if tool_status in ("approved", "parts_pending"):
-                part_statuses = [p.get("status") for p in tool_parts_list]
-                all_ready = len(tool_parts_list) == 0 or all(
-                    s in READY_PART_STATUSES for s in part_statuses
-                )
-                logger.info(f"READY-CHECK: {request_number} {tool.get('brand')} {tool.get('model_number')} tool_status={tool_status} parts={part_statuses} all_ready={all_ready}")
-                if all_ready:
+                if len(tool_parts_list) == 0 or all(
+                    p.get("status") in READY_PART_STATUSES for p in tool_parts_list
+                ):
                     ready_for_repair.append({
                         "request_number": job.get("request_number", ""),
                         "job_id": str(job.get("_id", "")),
@@ -499,7 +499,7 @@ async def get_repair_summary(
 
     # ── Total active jobs ──
     total_active_jobs = await db.repairs.count_documents(
-        {"tools.status": {"$nin": list(terminal_statuses)}}
+        {"tools.status": {"$in": active_statuses}}
     )
 
     # ── Ready for Pickup / Invoiced list ──
