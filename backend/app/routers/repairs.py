@@ -410,6 +410,11 @@ async def get_repair_summary(
                     parts_received += 1
                 elif part_status == "installed":
                     parts_installed += 1
+                unit_cost = part.get("price") if part.get("price") is not None else part.get("unit_cost")
+                qty = part.get("quantity", 1) or 1
+                if unit_cost is not None:
+                    parts_total_cost += float(unit_cost) * int(qty)
+                    parts_has_cost = True
 
             # ── Ready for Repair detection ──
             READY_PART_STATUSES = {"in_stock", "received", "installed"}
@@ -429,11 +434,6 @@ async def get_repair_summary(
                         "assigned_technician": (tool.get("assigned_technician") or "").strip() or "Unassigned",
                         "priority": tool.get("priority", "standard"),
                     })
-                unit_cost = part.get("price") if part.get("price") is not None else part.get("unit_cost")
-                qty = part.get("quantity", 1) or 1
-                if unit_cost is not None:
-                    parts_total_cost += float(unit_cost) * int(qty)
-                    parts_has_cost = True
 
             # ── Financial: active job value ──
             tool_parts_cost = sum(
