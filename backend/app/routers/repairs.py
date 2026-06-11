@@ -256,10 +256,12 @@ async def get_repair_summary(
     recent_completions = []
     parts_pending = 0
     parts_ordered = 0
+    parts_in_stock = 0
     parts_received = 0
     parts_installed = 0
     parts_total_cost = 0.0
     parts_has_cost = False
+    ready_for_repair = []
     active_value = 0.0
     tools_priced = 0
     tools_total = 0
@@ -395,16 +397,38 @@ async def get_repair_summary(
                 })
 
             # ── Parts aggregation ──
-            for part in tool.get("parts", []):
+            tool_parts_list = tool.get("parts", [])
+            for part in tool_parts_list:
                 part_status = part.get("status", "pending")
                 if part_status == "pending":
                     parts_pending += 1
                 elif part_status == "ordered":
                     parts_ordered += 1
+                elif part_status == "in_stock":
+                    parts_in_stock += 1
                 elif part_status == "received":
                     parts_received += 1
                 elif part_status == "installed":
                     parts_installed += 1
+
+            # ── Ready for Repair detection ──
+            READY_PART_STATUSES = {"in_stock", "received", "installed"}
+            if tool_status in ("approved", "parts_pending"):
+                if len(tool_parts_list) == 0 or all(
+                    p.get("status") in READY_PART_STATUSES for p in tool_parts_list
+                ):
+                    ready_for_repair.append({
+                        "request_number": job.get("request_number", ""),
+                        "job_id": str(job.get("_id", "")),
+                        "tool_type": tool.get("tool_type", ""),
+                        "brand": tool.get("brand", ""),
+                        "model_number": tool.get("model_number", ""),
+                        "customer_name": cust_name,
+                        "status": tool_status,
+                        "parts_count": len(tool_parts_list),
+                        "assigned_technician": (tool.get("assigned_technician") or "").strip() or "Unassigned",
+                        "priority": tool.get("priority", "standard"),
+                    })
                 unit_cost = part.get("price") if part.get("price") is not None else part.get("unit_cost")
                 qty = part.get("quantity", 1) or 1
                 if unit_cost is not None:
@@ -522,6 +546,11 @@ async def get_repair_summary(
     # ── Pending repair requests (unconverted online quotes) ──
     pending_requests_count = await db.quotes.count_documents({"status": "pending"})
 
+    # ── Ready for Repair: sort by priority (urgent first) and trim ──
+    priority_rank = {"urgent": 0, "rush": 1, "standard": 2}
+    ready_for_repair.sort(key=lambda x: priority_rank.get(x["priority"], 2))
+    ready_for_repair = ready_for_repair[:15]
+
     # ── Priority jobs: sort and trim ──
     priority_jobs.sort(key=lambda x: x["_urgency"])
     priority_jobs = priority_jobs[:15]
@@ -615,10 +644,13 @@ async def get_repair_summary(
         "parts_summary": {
             "pending": parts_pending,
             "ordered": parts_ordered,
+            "in_stock": parts_in_stock,
             "received": parts_received,
             "installed": parts_installed,
             "total_cost": round(parts_total_cost, 2) if parts_has_cost else None,
         },
+        "ready_for_repair": ready_for_repair,
+        "ready_for_repair_count": len(ready_for_repair),
         "financial_summary": {
             "active_value": round(active_value, 2),
             "completed_month_value": round(completed_month_value, 2),
@@ -1474,11 +1506,12 @@ async def update_tool(
                 part["order_date"] = now
             if new_status == "received" and not part.get("date_received") and old_status != "received":
                 part["date_received"] = now
+            # in_stock: part available from inventory — no order/receive dates needed
             # Stock: decrement when installed, increment back if reversed from installed
             lib_id = part.get("library_part_id") or old.get("library_part_id")
             if lib_id:
                 qty = part.get("quantity", 1) or 1
-                if new_status == "installed" and old_status != "installed":
+                if new_status == "installed" and old_status not in ("installed",):
                     stock_adjustments.append((lib_id, -qty, "installed_in_job"))
                 elif old_status == "installed" and new_status != "installed":
                     stock_adjustments.append((lib_id, qty, "reversed_from_installed"))

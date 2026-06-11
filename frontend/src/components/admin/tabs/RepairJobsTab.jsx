@@ -97,7 +97,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [searchQuery, setSearchQuery] = useState('');
   // Initialize filter from external prop if present (dashboard click-through)
   // Capture the initial prop in a ref so StrictMode double-mount doesn't lose it
-  const SPECIAL_FILTERS = new Set(['__all__', '__attention__', '__overdue__', '__stuck__']);
+  const SPECIAL_FILTERS = new Set(['__all__', '__attention__', '__overdue__', '__stuck__', '__ready_for_repair__']);
   const initialExternalStatus = useRef(externalStatusFilter);
   const ext = initialExternalStatus.current;
   const initStatus = ext && ext !== '' && !SPECIAL_FILTERS.has(ext) ? ext : '';
@@ -119,7 +119,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [batchApplying, setBatchApplying] = useState(false);
   const [attentionFilter, setAttentionFilter] = useState(ext === '__attention__');
   // Specific dashboard filters: 'overdue' = past estimated_completion, 'stuck' = diagnosed/in_repair 24h+
-  const initSpecial = ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : '';
+  const initSpecial = ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : ext === '__ready_for_repair__' ? 'ready_for_repair' : '';
   const [specialFilter, setSpecialFilter] = useState(initSpecial);
 
   // Detail view state
@@ -191,12 +191,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const isAll = externalStatusFilter === '__all__';
       const isOverdue = externalStatusFilter === '__overdue__';
       const isStuck = externalStatusFilter === '__stuck__';
-      const isSpecial = isAttention || isAll || isOverdue || isStuck;
+      const isReadyForRepair = externalStatusFilter === '__ready_for_repair__';
+      const isSpecial = isAttention || isAll || isOverdue || isStuck || isReadyForRepair;
       const newStatus = isSpecial ? '' : externalStatusFilter;
 
       setStatusFilter(newStatus);
       setAttentionFilter(isAttention);
-      setSpecialFilter(isOverdue ? 'overdue' : isStuck ? 'stuck' : '');
+      setSpecialFilter(isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : '');
       setSearchQuery('');
       setPriorityFilter('');
       setCurrentPage(1);
@@ -585,6 +586,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           return (now - new Date(ts)) / (1000 * 60 * 60);
         })();
         return hours >= 24;
+      }));
+    }
+    if (specialFilter === 'ready_for_repair') {
+      const READY_REPAIR_STATUSES = new Set(['approved', 'parts_pending']);
+      const PARTS_OK = new Set(['in_stock', 'received', 'installed']);
+      base = base.filter(job => job.tools.some(t => {
+        if (!READY_REPAIR_STATUSES.has(t.status)) return false;
+        const parts = t.parts || [];
+        return parts.length === 0 || parts.every(p => PARTS_OK.has(p.status));
       }));
     }
     if (SERVER_SORT_FIELDS.has(sortField)) return base; // already sorted by server
@@ -1300,10 +1310,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             <span className="material-symbols-outlined text-base">notification_important</span>
           </button>
           {specialFilter && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold">
-              <span className="material-symbols-outlined text-sm">{specialFilter === 'overdue' ? 'schedule' : 'block'}</span>
-              {specialFilter === 'overdue' ? 'Overdue' : 'Stuck 24h+'}
-              <button onClick={() => setSpecialFilter('')} className="ml-0.5 hover:text-amber-900 dark:hover:text-amber-100">
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold ${
+              specialFilter === 'ready_for_repair'
+                ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+            }`}>
+              <span className="material-symbols-outlined text-sm">
+                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : 'construction'}
+              </span>
+              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : 'Ready for Repair'}
+              <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </span>
@@ -1389,10 +1405,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             Attention
           </button>
           {specialFilter && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold">
-              <span className="material-symbols-outlined text-sm">{specialFilter === 'overdue' ? 'schedule' : 'block'}</span>
-              {specialFilter === 'overdue' ? 'Overdue' : 'Stuck 24h+'}
-              <button onClick={() => setSpecialFilter('')} className="ml-0.5 hover:text-amber-900 dark:hover:text-amber-100">
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold ${
+              specialFilter === 'ready_for_repair'
+                ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+            }`}>
+              <span className="material-symbols-outlined text-sm">
+                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : 'construction'}
+              </span>
+              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : 'Ready for Repair'}
+              <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </span>
@@ -2962,7 +2984,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
       _suggested_suppliers: libPart.suggested_suppliers || [],
       order_link: '',
       notes: libPart.notes || '',
-      status: 'pending',
+      status: (libPart.quantity_on_hand ?? 0) > 0 ? 'in_stock' : 'pending',
       tracking: '',
       eta: '',
       _library_qty: libPart.quantity_on_hand ?? 0,
@@ -3008,6 +3030,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
       price: part.suggested_price != null ? String(part.suggested_price) : '',
       order_link: '',
       notes: part.notes || '',
+      status: (part.quantity_on_hand ?? 0) > 0 ? 'in_stock' : 'pending',
       _library_qty: part.quantity_on_hand ?? 0,
       _library_low_stock: part.low_stock ?? false,
     });
@@ -3332,7 +3355,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                 updated[pi] = { ...part, ...fields };
                 handleChange('parts', updated);
               };
-              const isPostOrder = ['ordered', 'received', 'installed'].includes(part.status);
+              const isPostOrder = ['ordered', 'received', 'installed'].includes(part.status); // in_stock skips ordering so no tracking fields
               const partInputCls = "px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary";
               return (
                 <div key={pi} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden">
@@ -3449,6 +3472,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       className={`w-28 ${partInputCls}`}>
                       <option value="pending">Pending</option>
                       <option value="ordered">Ordered</option>
+                      <option value="in_stock">In Stock</option>
                       <option value="received">Received</option>
                       <option value="installed">Installed</option>
                     </select>

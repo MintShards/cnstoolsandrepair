@@ -115,11 +115,12 @@ export default function DashboardSummary({
   const activeCustomers = data?.active_customers ?? [];
   const pendingApprovals = data?.pending_approvals ?? [];
   const lowStockCount = data?.low_stock_count ?? 0;
+  const readyForRepairCount = data?.ready_for_repair_count ?? 0;
   const hasAttention = overdueCount > 0 || (data?.stale_count ?? 0) > 0 || (data?.rush_urgent_active ?? 0) > 0;
 
   const maxStatusCount = Math.max(1, ...MAIN_STAGES.map(s => sc[s] ?? 0));
 
-  // Action Required items
+  // Action Required items — ordered by shop workflow priority
   const actionItems = [
     {
       icon: 'schedule',
@@ -131,13 +132,13 @@ export default function DashboardSummary({
       onClick: () => nav('__overdue__'),
     },
     {
-      icon: 'hourglass_top',
-      label: `${pendingApprovalStale} waiting approval 2+ days`,
-      detail: 'Customers have not responded',
-      count: pendingApprovalStale,
+      icon: 'construction',
+      label: `${readyForRepairCount} ready for repair`,
+      detail: 'All parts in stock — can begin work',
+      count: readyForRepairCount,
       priority: 'Medium',
-      priorityColor: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
-      onClick: () => nav('quoted'),
+      priorityColor: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30',
+      onClick: () => nav('__ready_for_repair__'),
     },
     {
       icon: 'block',
@@ -147,6 +148,15 @@ export default function DashboardSummary({
       priority: 'Medium',
       priorityColor: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
       onClick: () => nav('__stuck__'),
+    },
+    {
+      icon: 'hourglass_top',
+      label: `${pendingApprovalStale} waiting approval 2+ days`,
+      detail: 'Customers have not responded',
+      count: pendingApprovalStale,
+      priority: 'Medium',
+      priorityColor: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
+      onClick: () => nav('quoted'),
     },
     {
       icon: 'storefront',

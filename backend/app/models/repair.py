@@ -65,6 +65,7 @@ class Priority(str, Enum):
 class PartStatus(str, Enum):
     PENDING = "pending"
     ORDERED = "ordered"
+    IN_STOCK = "in_stock"
     RECEIVED = "received"
     INSTALLED = "installed"
 
