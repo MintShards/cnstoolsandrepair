@@ -32,6 +32,53 @@ def _to_object_id(id_str: str) -> ObjectId:
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
 
+async def _auto_update_repair_parts_to_in_stock(db, library_part_id: str) -> int:
+    """
+    When a library part comes into stock, find all active repair job parts
+    linked to it with status 'pending' or 'ordered' and flip them to 'in_stock'.
+    Returns the number of parts updated.
+    """
+    terminal_statuses = {"completed", "abandoned", "closed", "declined", "beyond_economical_repair"}
+    now = datetime.utcnow()
+    updated_count = 0
+
+    cursor = db.repairs.find({
+        "tools.parts": {
+            "$elemMatch": {
+                "library_part_id": library_part_id,
+                "status": {"$in": ["pending", "ordered"]}
+            }
+        }
+    })
+
+    async for job in cursor:
+        job_id = str(job["_id"])
+        tools = job.get("tools", [])
+        modified = False
+
+        for tool in tools:
+            if tool.get("status") in terminal_statuses:
+                continue
+            for part in tool.get("parts", []):
+                if (part.get("library_part_id") == library_part_id
+                        and part.get("status") in ("pending", "ordered")):
+                    part["status"] = "in_stock"
+                    modified = True
+                    updated_count += 1
+                    logger.info(
+                        f"Auto-set part to in_stock: job={job_id} "
+                        f"part='{part.get('name')}' library_part_id={library_part_id}"
+                    )
+
+        if modified:
+            await db.repairs.update_one(
+                {"_id": job["_id"]},
+                {"$set": {"tools": tools, "updated_at": now}}
+            )
+
+    return updated_count
+
+
 def _doc_to_brand(doc: dict, model_count: Optional[int] = None) -> LibraryBrandResponse:
     doc = convert_objectid_to_str(doc)
     doc["id"] = doc.pop("_id")
@@ -704,6 +751,16 @@ async def update_library_part(
 
     updates["updated_at"] = datetime.utcnow()
     await db.parts_library_parts.update_one({"_id": _to_object_id(part_id)}, {"$set": updates})
+
+    # Auto-update repair job parts to in_stock if quantity_on_hand increased to > 0
+    if "quantity_on_hand" in updates:
+        old_qty = doc.get("quantity_on_hand", 0) or 0
+        new_qty = updates["quantity_on_hand"] or 0
+        if new_qty > 0 and new_qty > old_qty:
+            count = await _auto_update_repair_parts_to_in_stock(db, part_id)
+            if count:
+                logger.info(f"update-part: auto-updated {count} repair part(s) to in_stock for library part {part_id}")
+
     updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
     return await _enrich_part(db, updated)
 
@@ -792,6 +849,12 @@ async def adjust_part_stock(
             "$push": {"stock_history": {"$each": [history_entry], "$slice": -200}}
         }
     )
+
+    # Auto-update repair job parts to in_stock if stock increased to > 0
+    if new_qty > 0 and new_qty > old_qty:
+        count = await _auto_update_repair_parts_to_in_stock(db, part_id)
+        if count:
+            logger.info(f"adjust-stock: auto-updated {count} repair part(s) to in_stock for library part {part_id}")
 
     updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
     return await _enrich_part(db, updated)
