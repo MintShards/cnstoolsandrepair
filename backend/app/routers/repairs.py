@@ -419,9 +419,12 @@ async def get_repair_summary(
             # ── Ready for Repair detection ──
             READY_PART_STATUSES = {"in_stock", "received", "installed"}
             if tool_status in ("approved", "parts_pending"):
-                if len(tool_parts_list) == 0 or all(
-                    p.get("status") in READY_PART_STATUSES for p in tool_parts_list
-                ):
+                part_statuses = [p.get("status") for p in tool_parts_list]
+                all_ready = len(tool_parts_list) == 0 or all(
+                    s in READY_PART_STATUSES for s in part_statuses
+                )
+                logger.info(f"READY-CHECK: {request_number} {tool.get('brand')} {tool.get('model_number')} tool_status={tool_status} parts={part_statuses} all_ready={all_ready}")
+                if all_ready:
                     ready_for_repair.append({
                         "request_number": job.get("request_number", ""),
                         "job_id": str(job.get("_id", "")),
