@@ -2068,8 +2068,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                         p.status === 'installed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
                                         p.status === 'received' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400' :
                                         p.status === 'ordered' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
+                                        p.status === 'in_stock' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
                                         'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                                      }`} style={{fontSize:'11px'}}>{p.status}</span>
+                                      }`} style={{fontSize:'11px'}}>{p.status.replace(/_/g, ' ')}</span>
                                       {p.library_part_id && p._library_qty != null && (
                                         <span title={p._library_qty > 0 ? (p._library_low_stock ? `Low stock (${p._library_qty})` : `${p._library_qty} in stock`) : 'Out of stock'} className={`flex-shrink-0 ${
                                           p._library_qty > 0
