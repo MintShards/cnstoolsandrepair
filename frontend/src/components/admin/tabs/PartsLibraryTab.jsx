@@ -2231,7 +2231,7 @@ function CompatGroupsPanel({ onClose }) {
 
 // ─── Main PartsLibraryTab ─────────────────────────────────────────────────────
 
-export default function PartsLibraryTab({ initialFilter } = {}) {
+export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
   const toast = useToast();
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2276,6 +2276,20 @@ export default function PartsLibraryTab({ initialFilter } = {}) {
   }, []);
 
   useEffect(() => { loadBrands(); }, [loadBrands]);
+
+  // Auto-navigate to a specific brand/model when opened from the work order view
+  useEffect(() => {
+    if (!initialNav || !brands.length) return;
+    const { brandName, modelName } = initialNav;
+    const brand = brands.find(b => b.name.toLowerCase() === brandName?.trim().toLowerCase());
+    if (!brand) return;
+    setSelectedBrand(brand);
+    // Load models for this brand and auto-select the matching model
+    partsLibraryAPI.listModels(brand.id).then(models => {
+      const model = models.find(m => m.name.toLowerCase() === modelName?.trim().toLowerCase());
+      if (model) setSelectedModel(model);
+    }).catch(() => {});
+  }, [initialNav, brands]);
 
   useEffect(() => {
     if (!searchQuery.trim() || searchQuery.trim().length < 2) { setSearchResults([]); return; }

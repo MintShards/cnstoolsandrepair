@@ -41,7 +41,10 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
       const params = statusFilter ? { status: statusFilter } : {};
       const data = await quotesAPI.list(params);
       setQuotes(data);
-      if (onCountUpdate) onCountUpdate(data.filter(q => q.status === 'pending').length);
+      // Only update the tab badge when the full dataset is loaded (no status filter).
+      // With a status filter active, the API returns only filtered quotes, so
+      // counting pending among them would give a wrong (usually 0) result.
+      if (onCountUpdate && !statusFilter) onCountUpdate(data.filter(q => q.status === 'pending').length);
     } catch {
       showToast('error', 'Failed to load repair requests');
     } finally {
@@ -58,7 +61,11 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
     setConvertingId(convertConfirm.id);
     try {
       await repairsAPI.convertFromRequest(convertConfirm.id);
-      setQuotes(prev => prev.map(q => q.id === convertConfirm.id ? { ...q, status: 'converted' } : q));
+      setQuotes(prev => {
+        const updated = prev.map(q => q.id === convertConfirm.id ? { ...q, status: 'converted' } : q);
+        if (onCountUpdate) onCountUpdate(updated.filter(q => q.status === 'pending').length);
+        return updated;
+      });
       showToast('success', `Request ${convertConfirm.request_number} converted to Work Order. Find it in the Repair Jobs tab.`);
       setConvertConfirm(null);
       setSelectedQuote(null);
@@ -90,8 +97,15 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
       return;
     }
     showToast('success', 'Repair request deleted successfully');
+    const deletedQuote = deleteConfirmId;
     const deletedId = deleteConfirmId.id;
-    setQuotes(prev => prev.filter(q => q.id !== deletedId));
+    setQuotes(prev => {
+      const updated = prev.filter(q => q.id !== deletedId);
+      if (onCountUpdate && deletedQuote.status === 'pending') {
+        onCountUpdate(updated.filter(q => q.status === 'pending').length);
+      }
+      return updated;
+    });
     setDeleteConfirmId(null);
     if (selectedQuote?.id === deletedId) setSelectedQuote(null);
   };

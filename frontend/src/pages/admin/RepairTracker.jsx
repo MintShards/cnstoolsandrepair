@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { repairsAPI, customersAPI, quotesAPI } from '../../services/api';
 import CustomersTab from '../../components/admin/tabs/CustomersTab';
 import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
 import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
@@ -98,6 +99,7 @@ export default function RepairTracker() {
   const [dashboardOpenNewCustomer, setDashboardOpenNewCustomer] = useState(false);
   const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
   const [dashboardOpenJobId, setDashboardOpenJobId] = useState(null);
+  const [partsLibraryNav, setPartsLibraryNav] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
 
   const handleLogout = () => {
@@ -133,6 +135,32 @@ export default function RepairTracker() {
   const handleRequestsCountUpdate = useCallback((n) => handleCountUpdate('requests', n), [handleCountUpdate]);
   const handleJobsCountUpdate = useCallback((n) => handleCountUpdate('jobs', n), [handleCountUpdate]);
 
+  // Fetch all tab counts independently of which tab is active.
+  // This prevents badges from blinking (null → number) when tabs mount/unmount,
+  // and ensures counts always reflect unfiltered totals.
+  const fetchTabCounts = useCallback(async () => {
+    try {
+      const [jobsResult, customers, quotes] = await Promise.all([
+        repairsAPI.list({ skip: 0, limit: 1 }),
+        customersAPI.list({ limit: 200 }),
+        quotesAPI.list({}),
+      ]);
+      setTabCounts({
+        jobs: jobsResult.total,
+        customers: customers.length,
+        requests: quotes.filter(q => q.status === 'pending').length,
+      });
+    } catch {
+      // Silently fail — counts are non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTabCounts();
+    const interval = setInterval(fetchTabCounts, 60000);
+    return () => clearInterval(interval);
+  }, [fetchTabCounts]);
+
   const handleNewJobFromCustomer = (customer) => {
     setPreselectedCustomer(customer);
     setActiveTab('jobs');
@@ -145,6 +173,7 @@ export default function RepairTracker() {
     }
     if (tabId !== 'parts-library') {
       setPartsLibraryFilter(null);
+      setPartsLibraryNav(null);
     }
   };
 
@@ -181,6 +210,11 @@ export default function RepairTracker() {
     setJobsNeedAttention(hasAttention);
   }, []);
 
+  const handleGoToPartsLibraryForTool = useCallback((brandName, modelName) => {
+    setPartsLibraryNav({ brandName, modelName });
+    setPartsLibraryFilter(null);
+    setActiveTab('parts-library');
+  }, []);
 
   return (
     <ToastContext.Provider value={showToast}>
@@ -312,7 +346,8 @@ export default function RepairTracker() {
             {activeTab === 'parts-library' && (
               <PartsLibraryTab
                 initialFilter={partsLibraryFilter}
-                key={partsLibraryFilter}
+                initialNav={partsLibraryNav}
+                key={partsLibraryNav ? JSON.stringify(partsLibraryNav) : partsLibraryFilter}
               />
             )}
             {activeTab === 'parts-sourcing' && (
@@ -323,6 +358,7 @@ export default function RepairTracker() {
                 preselectedCustomer={preselectedCustomer}
                 onPreselectedCustomerUsed={() => setPreselectedCustomer(null)}
                 onCountUpdate={handleJobsCountUpdate}
+                onGoToPartsLibrary={handleGoToPartsLibraryForTool}
                 externalStatusFilter={dashboardStatusFilter}
                 onExternalStatusFilterApplied={() => setDashboardStatusFilter('')}
                 externalTechFilter={dashboardTechFilter}

@@ -157,7 +157,9 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
         const data = await customersAPI.list({ ...params, limit: 200 });
         if (cancelled) return;
         setCustomers(data);
-        if (onCountUpdate) onCountUpdate(data.length);
+        // Only update the tab badge when not searching — a search result
+        // would show a filtered count instead of the total.
+        if (onCountUpdate && !searchQuery) onCountUpdate(data.length);
       } catch {
         if (!cancelled) showToast('error', 'Failed to load customers');
       } finally {
@@ -255,7 +257,11 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       setCreating(false);
       return;
     }
-    setCustomers(prev => [created, ...prev]);
+    setCustomers(prev => {
+      const updated = [created, ...prev];
+      if (onCountUpdate) onCountUpdate(updated.length);
+      return updated;
+    });
     setShowNewForm(false);
     setNewForm(EMPTY_CUSTOMER);
     showToast('success', `Customer ${created.first_name} ${created.last_name} created successfully`);
@@ -267,7 +273,9 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
     if (!deleteConfirm) return;
     try {
       await customersAPI.delete(deleteConfirm.id);
-      setCustomers(customers.filter(c => c.id !== deleteConfirm.id));
+      const remaining = customers.filter(c => c.id !== deleteConfirm.id);
+      setCustomers(remaining);
+      if (onCountUpdate) onCountUpdate(remaining.length);
       if (selectedCustomer?.id === deleteConfirm.id) setSelectedCustomer(null);
       setDeleteConfirm(null);
       showToast('success', 'Customer deleted successfully');

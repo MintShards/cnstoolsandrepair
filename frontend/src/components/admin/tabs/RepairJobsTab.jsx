@@ -76,7 +76,7 @@ const getEmptyJob = () => ({
   address: '', customer_notes: '', source: 'drop_off', tools: [getEmptyTool()]
 });
 
-export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalStatusFilter, onExternalStatusFilterApplied, externalTechFilter, onExternalTechFilterApplied, externalOpenNewJob, onExternalOpenNewJobHandled, externalOpenJobId, onExternalOpenJobHandled }) {
+export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, onGoToPartsLibrary, externalStatusFilter, onExternalStatusFilterApplied, externalTechFilter, onExternalTechFilterApplied, externalOpenNewJob, onExternalOpenNewJobHandled, externalOpenJobId, onExternalOpenJobHandled }) {
   const showToast = useToast();
   const { settings } = useSettings();
   const staleDays = settings?.staleDays ?? 3;
@@ -509,7 +509,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const { jobs: data, total } = await repairsAPI.list(params);
       setJobs(data);
       setTotalCount(isBulkFilter ? data.length : total);
-      if (onCountUpdate) onCountUpdate(isBulkFilter ? data.length : total);
+      // Only update the tab badge with the unfiltered server total.
+      // When any filter is active the count would reflect filtered results,
+      // so we skip the update and let the parent's independent fetch own the count.
+      const hasActiveFilter = isBulkFilter || statusFilter || priorityFilter || technicianFilter || searchQuery.trim();
+      if (onCountUpdate && !hasActiveFilter) onCountUpdate(total);
       // Accumulate known technicians across pages for filter dropdown
       const newTechs = data.flatMap(j => j.tools.map(t => t.assigned_technician).filter(Boolean));
       setKnownTechnicians(prev => [...new Set([...prev, ...newTechs])].sort());
@@ -1926,9 +1930,20 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               {idx + 1}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 dark:text-white text-base uppercase">
-                                {tool.brand} {tool.model_number}
-                              </div>
+                              {onGoToPartsLibrary ? (
+                                <button
+                                  onClick={() => onGoToPartsLibrary(tool.brand, tool.model_number)}
+                                  className="font-bold text-slate-900 dark:text-white text-base uppercase text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
+                                  title="View in Parts Library"
+                                >
+                                  {tool.brand} {tool.model_number}
+                                  <span className="material-symbols-outlined text-sm opacity-0 group-hover/pl:opacity-60 transition-opacity">inventory_2</span>
+                                </button>
+                              ) : (
+                                <div className="font-bold text-slate-900 dark:text-white text-base uppercase">
+                                  {tool.brand} {tool.model_number}
+                                </div>
+                              )}
                               <div className="text-sm text-slate-500 mt-0.5 uppercase">
                                 {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                 {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
