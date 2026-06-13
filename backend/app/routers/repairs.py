@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 
 _PACIFIC = ZoneInfo("America/Vancouver")
 
+# Status tier for smart sort (lower = higher priority / shown first)
+_STATUS_TIER = {
+    "quoted": 1, "diagnosed": 1, "ready": 1, "invoiced": 1,
+    "approved": 2, "parts_pending": 2, "in_repair": 2, "received": 2,
+    "completed": 3, "closed": 3, "declined": 3,
+    "beyond_economical_repair": 3, "abandoned": 3,
+}
+
 
 def _pacific_date_to_utc(dt: datetime) -> datetime:
     """Convert a naive datetime (interpreted as Pacific midnight) to naive UTC for MongoDB storage."""
@@ -917,7 +925,7 @@ async def list_repair_jobs(
     search: Optional[str] = None,
     customer_id: Optional[str] = None,
     assigned_technician: Optional[str] = None,
-    sort_by: Optional[str] = Query(default="created_at", regex="^(created_at|updated_at|request_number)$"),
+    sort_by: Optional[str] = Query(default="smart", regex="^(created_at|updated_at|request_number|smart)$"),
     sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
     current_user: User = Depends(require_admin)
 ):
@@ -953,17 +961,58 @@ async def list_repair_jobs(
             {"tools.serial_number": {"$regex": escaped, "$options": "i"}},
         ]
 
-    sort_direction = 1 if sort_order == "asc" else -1
-    sort_field = sort_by if sort_by in ("created_at", "updated_at", "request_number") else "created_at"
-
     total = await db.repairs.count_documents(query)
     response.headers["X-Total-Count"] = str(total)
     response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
 
-    cursor = db.repairs.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit)
-    jobs = await cursor.to_list(length=limit)
-    jobs = [convert_objectid_to_str(j) for j in jobs]
+    if sort_by == "smart":
+        # Compute Pacific midnight as naive UTC for MongoDB comparison
+        now_pacific = datetime.now(_PACIFIC)
+        today_start_utc = now_pacific.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
+        # Build $switch branches mapping each status string to its tier
+        tier_branches = [
+            {"case": {"$eq": ["$$t.status", status]}, "then": tier}
+            for status, tier in _STATUS_TIER.items()
+        ]
+
+        pipeline = [
+            {"$match": query},
+            {"$addFields": {
+                # 0 = updated today (sorts first), 1 = older
+                "_updated_today": {"$cond": [{"$gte": ["$updated_at", today_start_utc]}, 0, 1]},
+                # Best (lowest) tier across all tools on this job
+                "_smart_tier": {
+                    "$min": {
+                        "$map": {
+                            "input": "$tools",
+                            "as": "t",
+                            "in": {
+                                "$switch": {
+                                    "branches": tier_branches,
+                                    "default": 3,
+                                }
+                            },
+                        }
+                    }
+                },
+            }},
+            {"$sort": {"_updated_today": 1, "_smart_tier": 1, "updated_at": -1}},
+            {"$skip": skip},
+            {"$limit": limit},
+            {"$unset": ["_updated_today", "_smart_tier"]},
+        ]
+
+        jobs = await db.repairs.aggregate(pipeline).to_list(length=limit)
+    else:
+        sort_direction = 1 if sort_order == "asc" else -1
+        sort_field = sort_by if sort_by in ("created_at", "updated_at", "request_number") else "created_at"
+        cursor = db.repairs.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit)
+        jobs = await cursor.to_list(length=limit)
+
+    jobs = [convert_objectid_to_str(j) for j in jobs]
     return [_build_job_response(j) for j in jobs]
 
 

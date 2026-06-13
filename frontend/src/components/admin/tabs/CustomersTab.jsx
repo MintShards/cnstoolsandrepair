@@ -101,6 +101,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortField, setSortField] = useState('smart');
+  const [sortDir, setSortDir] = useState('desc');
 
   // Profile view
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -154,6 +156,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       setLoading(true);
       try {
         const params = searchQuery ? { search: searchQuery } : {};
+        params.sort_by = sortField;
+        params.sort_order = sortDir;
         const data = await customersAPI.list({ ...params, limit: 200 });
         if (cancelled) return;
         setCustomers(data);
@@ -169,8 +173,21 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
     load();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [searchQuery, sortField, sortDir]);
   useEffect(() => { setCurrentPage(1); }, [searchQuery]);
+
+  const handleSort = (field) => {
+    if (field === 'smart') {
+      setSortField('smart');
+      setSortDir('desc');
+    } else if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'created_at' || field === 'updated_at' ? 'desc' : 'asc');
+    }
+    setCurrentPage(1);
+  };
 
   // Clean up remove-confirm timer on unmount
   useEffect(() => {
@@ -1380,11 +1397,28 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
               <table className="w-full text-base text-left">
                 <thead className="text-sm uppercase text-slate-500 bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60">
                   <tr>
-                    <th className="py-3 px-4 font-bold">Company / Contact</th>
-                    <th className="py-3 px-4 font-bold hidden md:table-cell">Email</th>
-                    <th className="py-3 px-4 font-bold hidden md:table-cell">Phone</th>
-                    <th className="py-3 px-4 font-bold hidden lg:table-cell">Address</th>
-                    <th className="py-3 px-4 font-bold hidden lg:table-cell">Since</th>
+                    {[
+                      { field: 'company_name', label: 'Company / Contact', cls: '' },
+                      { field: 'email', label: 'Email', cls: 'hidden md:table-cell' },
+                      { field: 'phone', label: 'Phone', cls: 'hidden md:table-cell', sortable: false },
+                      { field: 'address', label: 'Address', cls: 'hidden lg:table-cell', sortable: false },
+                      { field: 'created_at', label: 'Since', cls: 'hidden lg:table-cell' },
+                    ].map(({ field, label, cls, sortable = true }) => (
+                      <th
+                        key={field}
+                        className={`py-3 px-4 font-bold ${sortable ? 'cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300' : ''} transition-colors ${cls}`}
+                        onClick={sortable ? () => handleSort(field) : undefined}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {label}
+                          {sortable && (
+                            <span className="material-symbols-outlined text-xs opacity-50" style={{fontSize:'14px'}}>
+                              {sortField === field ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                            </span>
+                          )}
+                        </span>
+                      </th>
+                    ))}
                     <th className="py-3 px-4 text-right font-bold">Actions</th>
                   </tr>
                 </thead>

@@ -107,7 +107,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [technicianFilter, setTechnicianFilter] = useState(() => localStorage.getItem('rt_technician_filter') || '');
-  const [sortField, setSortField] = useState('created_at');
+  const [sortField, setSortField] = useState('smart');
   const [sortDir, setSortDir] = useState('desc');
   const [totalCount, setTotalCount] = useState(0);
   const [knownTechnicians, setKnownTechnicians] = useState([]);
@@ -440,7 +440,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   }, [searchQuery]);
 
   const handleSort = (field) => {
-    if (sortField === field) {
+    if (field === 'smart') {
+      setSortField('smart');
+      setSortDir('desc');
+    } else if (sortField === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
@@ -485,7 +488,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, editingJob, deleteConfirmId, selectedJob]);
 
-  const SERVER_SORT_FIELDS = new Set(['created_at', 'updated_at', 'request_number']);
+  const SERVER_SORT_FIELDS = new Set(['created_at', 'updated_at', 'request_number', 'smart']);
 
   const fetchJobs = async (page, size, attention) => {
     try {

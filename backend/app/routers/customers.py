@@ -1,9 +1,10 @@
 import logging
 import re
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Response
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.database import get_database
 from app.models.customer import CustomerCreate, CustomerUpdate, CustomerResponse
@@ -15,6 +16,11 @@ from app.routers.repairs import _migrate_tool_parts, _build_job_response
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
 logger = logging.getLogger(__name__)
+
+_PACIFIC = ZoneInfo("America/Vancouver")
+
+# Terminal repair statuses — customers with only these are "inactive"
+_TERMINAL_STATUSES = ["completed", "closed", "declined", "beyond_economical_repair", "abandoned"]
 
 
 def _build_customer_response(doc: dict) -> CustomerResponse:
@@ -48,9 +54,12 @@ async def search_customer_by_email(
 
 @router.get("/", response_model=List[CustomerResponse])
 async def list_customers(
+    response: Response,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     search: Optional[str] = None,
+    sort_by: Optional[str] = Query(default="smart", regex="^(created_at|updated_at|company_name|smart)$"),
+    sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
     current_user: User = Depends(require_admin)
 ):
     """List customers with optional search by company, contact, or email"""
@@ -66,10 +75,75 @@ async def list_customers(
             {"email": {"$regex": escaped, "$options": "i"}},
         ]
 
-    cursor = db.customers.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    docs = await cursor.to_list(length=limit)
-    docs = [convert_objectid_to_str(d) for d in docs]
+    total = await db.customers.count_documents(query)
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
 
+    if sort_by == "smart":
+        # Customers with active (non-terminal) repair jobs sort first,
+        # then by most recent job activity, then by customer creation date.
+        pipeline = [
+            {"$match": query},
+            # Lookup repairs for each customer (by string customer_id)
+            {"$addFields": {"_cid_str": {"$toString": "$_id"}}},
+            {"$lookup": {
+                "from": "repairs",
+                "localField": "_cid_str",
+                "foreignField": "customer_id",
+                "as": "_repairs",
+            }},
+            {"$addFields": {
+                # Does this customer have any non-terminal tool status?
+                "_has_active": {
+                    "$cond": [
+                        {"$gt": [
+                            {"$size": {
+                                "$filter": {
+                                    "input": {"$ifNull": ["$_repairs", []]},
+                                    "as": "r",
+                                    "cond": {
+                                        "$gt": [
+                                            {"$size": {
+                                                "$filter": {
+                                                    "input": {"$ifNull": ["$$r.tools", []]},
+                                                    "as": "t",
+                                                    "cond": {"$not": [{"$in": ["$$t.status", _TERMINAL_STATUSES]}]},
+                                                }
+                                            }},
+                                            0,
+                                        ]
+                                    },
+                                }
+                            }},
+                            0,
+                        ]},
+                        0,  # has active jobs → sort first
+                        1,  # no active jobs → sort after
+                    ]
+                },
+                # Most recent job updated_at (for secondary sort)
+                "_latest_job_activity": {
+                    "$max": "$_repairs.updated_at"
+                },
+            }},
+            {"$sort": {
+                "_has_active": 1,
+                "_latest_job_activity": -1,
+                "created_at": -1,
+            }},
+            {"$skip": skip},
+            {"$limit": limit},
+            {"$unset": ["_cid_str", "_repairs", "_has_active", "_latest_job_activity"]},
+        ]
+
+        docs = await db.customers.aggregate(pipeline).to_list(length=limit)
+    else:
+        sort_direction = 1 if sort_order == "asc" else -1
+        sort_field = sort_by if sort_by in ("created_at", "updated_at", "company_name") else "created_at"
+        cursor = db.customers.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit)
+        docs = await cursor.to_list(length=limit)
+
+    docs = [convert_objectid_to_str(d) for d in docs]
     return [_build_customer_response(d) for d in docs]
 
 
