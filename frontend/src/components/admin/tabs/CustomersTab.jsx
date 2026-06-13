@@ -9,6 +9,7 @@ import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusB
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
+import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { useSettings } from '../../../contexts/SettingsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -137,6 +138,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
   // WO detail dialog
   const [woDialogJob, setWoDialogJob] = useState(null);
   const [deleteJobConfirm, setDeleteJobConfirm] = useState(null);
+  const [emailModalJob, setEmailModalJob] = useState(null);
   const [statusUpdateModal, setStatusUpdateModal] = useState(null);
   const [statusUpdateForm, setStatusUpdateForm] = useState({ status: '', notes: '', estimated_completion: '' });
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -331,8 +333,9 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       if (woDialogJob?.id === deleteJobConfirm.id) setWoDialogJob(null);
       setDeleteJobConfirm(null);
       showToast('success', 'Repair job deleted');
-    } catch {
-      showToast('error', 'Failed to delete repair job');
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Failed to delete repair job';
+      showToast('error', msg);
       setDeleteJobConfirm(null);
     }
   };
@@ -750,11 +753,37 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                                 Open
                               </button>
                               <button
-                                onClick={() => setDeleteJobConfirm(job)}
-                                className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
+                                onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement)}
+                                className="hidden sm:flex p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 border border-slate-200 hover:border-slate-300 dark:border-slate-600/50 dark:hover:border-slate-500 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-all items-center justify-center"
+                                title="Print Work Order"
                               >
-                                <span className="material-symbols-outlined text-base">delete</span>
+                                <span className="material-symbols-outlined text-base">print</span>
                               </button>
+                              {job.email && (
+                                <button
+                                  onClick={() => setEmailModalJob(job)}
+                                  className={`hidden sm:flex p-1.5 border rounded-lg transition-all items-center justify-center ${
+                                    job.work_order_emails_sent?.length
+                                      ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50 border-green-200 hover:border-green-300 dark:border-green-800/40 dark:hover:border-green-700 text-green-600 dark:text-green-400'
+                                      : 'bg-slate-100 hover:bg-blue-50 dark:bg-slate-700/60 dark:hover:bg-blue-900/30 border-slate-200 hover:border-blue-300 dark:border-slate-600/50 dark:hover:border-blue-700 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'
+                                  }`}
+                                  title={job.work_order_emails_sent?.length
+                                    ? `Work order emailed (${job.work_order_emails_sent.length}x) — click to resend`
+                                    : 'Email work order to customer'}
+                                >
+                                  <span className="material-symbols-outlined text-base">
+                                    {job.work_order_emails_sent?.length ? 'mark_email_read' : 'mail'}
+                                  </span>
+                                </button>
+                              )}
+                              {job.tools?.every(t => t.status === 'received') && (
+                                <button
+                                  onClick={() => setDeleteJobConfirm(job)}
+                                  className="p-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/60 border border-red-200 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-all"
+                                >
+                                  <span className="material-symbols-outlined text-base">delete</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1289,7 +1318,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 <p className="text-slate-600 dark:text-slate-300 text-center mb-1">
                   Delete job <span className="font-bold text-slate-900 dark:text-white font-mono">{deleteJobConfirm.request_number}</span>?
                 </p>
-                <p className="text-red-600/80 dark:text-red-300/80 text-sm text-center mb-6">This will permanently delete all tool data and photos.</p>
+                <p className="text-red-600/80 dark:text-red-300/80 text-sm text-center mb-6">For correcting data entry mistakes only. All tool data and photos will be permanently removed.</p>
                 <div className="flex gap-3">
                   <button onClick={() => setDeleteJobConfirm(null)} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all">Cancel</button>
                   <button onClick={handleDeleteJob} className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 dark:bg-red-900/60 dark:hover:bg-red-800/80 border border-red-500 dark:border-red-700/50 text-white dark:text-red-200 rounded-xl font-bold transition-all">
@@ -1299,6 +1328,28 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
               </div>
             </div>
           </div>
+        )}
+
+        {/* Send Work Order Email Modal */}
+        {emailModalJob && (
+          <SendWorkOrderEmailModal
+            job={emailModalJob}
+            template={settings?.workOrderEmailTemplate}
+            onClose={() => setEmailModalJob(null)}
+            onSuccess={(sentTo) => {
+              const jobId = emailModalJob.id;
+              setEmailModalJob(null);
+              showToast('success', `Work order emailed to ${sentTo}`);
+              const emailRecord = { sent_at: new Date().toISOString(), sent_to: sentTo, success: true };
+              setCustomerJobs(prev => prev.map(j => j.id === jobId
+                ? { ...j, work_order_emails_sent: [...(j.work_order_emails_sent || []), emailRecord] }
+                : j
+              ));
+              if (woDialogJob?.id === jobId) {
+                setWoDialogJob(prev => ({ ...prev, work_order_emails_sent: [...(prev.work_order_emails_sent || []), emailRecord] }));
+              }
+            }}
+          />
         )}
 
         {/* Photo Lightbox */}

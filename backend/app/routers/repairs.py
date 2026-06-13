@@ -1453,6 +1453,14 @@ async def delete_repair_job(
     if not job:
         raise HTTPException(status_code=404, detail="Repair job not found")
 
+    # Only allow deletion of jobs where all tools are still in 'received' status
+    for tool in job.get("tools", []):
+        if tool.get("status") != "received":
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot delete: one or more tools have progressed beyond received status. Use the status workflow (abandoned/closed) instead."
+            )
+
     # Delete all photos across all tools
     for tool in job.get("tools", []):
         for photo in tool.get("photos", []):
