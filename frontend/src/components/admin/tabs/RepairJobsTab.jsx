@@ -1514,7 +1514,76 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
+            {/* ── MOBILE CARD LIST (< sm) ─────────────────────── */}
+            <div className="sm:hidden divide-y divide-slate-200 dark:divide-slate-700/40">
+              {paginatedJobs.map((job) => {
+                const alertLevel = getJobAlertLevel(job);
+                return (
+                  <div
+                    key={job.id}
+                    onClick={() => !batchMode && openJob(job)}
+                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-slate-100 dark:active:bg-slate-700/40 transition-colors ${
+                      alertLevel === 'overdue' ? 'bg-red-50/50 dark:bg-red-900/10' :
+                      alertLevel === 'stale' ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''
+                    }`}
+                  >
+                    {/* Left: WO number */}
+                    <div className="flex-shrink-0 w-12 text-right">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <span className="font-mono font-bold text-xs text-slate-500 dark:text-slate-400">
+                          {job.request_number?.split('-').pop()}
+                        </span>
+                        {alertLevel === 'overdue' && (
+                          <span className="material-symbols-outlined text-red-500" style={{fontSize:'13px'}}>schedule</span>
+                        )}
+                        {alertLevel === 'stale' && (
+                          <span className="material-symbols-outlined text-amber-500" style={{fontSize:'13px'}}>warning</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Middle: customer + status */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-slate-900 dark:text-white truncate uppercase leading-tight">
+                        {job.company_name || `${job.first_name} ${job.last_name}`}
+                      </div>
+                      {job.company_name && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate uppercase">{job.first_name} {job.last_name}</div>
+                      )}
+                      <div className="mt-1">
+                        {job.tools?.length === 1 ? (
+                          <StatusBadge status={job.tools[0].status} />
+                        ) : (() => {
+                          const summary = (getToolStatusSummary(job.tools) || []).sort(byStatusPriority);
+                          const tooltip = summary.map(s => `${REPAIR_STATUSES[s.status]?.label || s.status}: ${s.count}`).join(', ');
+                          return (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50" title={tooltip}>
+                              {summary.map(({ status }) => (
+                                <span key={status} className={`w-2 h-2 rounded-full flex-shrink-0 ${REPAIR_STATUSES[status]?.dot || 'bg-slate-400'}`} />
+                              ))}
+                              <span className="text-xs text-slate-500">{job.tools.length} tools</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    {/* Right: open button */}
+                    <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => openJob(job)}
+                        className="p-2 bg-primary/90 hover:bg-primary text-white rounded-lg transition-all shadow-sm"
+                        title="Open"
+                      >
+                        <span className="material-symbols-outlined text-base">open_in_new</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── DESKTOP TABLE (≥ sm) ────────────────────────── */}
+            <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60">
@@ -1523,7 +1592,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     { field: 'customer', label: 'Customer', cls: '' },
                     { field: 'tools', label: 'Tools', cls: 'hidden md:table-cell' },
                     { field: 'priority', label: 'Priority', cls: 'hidden md:table-cell' },
-                    { field: 'status', label: 'Status', cls: 'hidden sm:table-cell' },
+                    { field: 'status', label: 'Status', cls: '' },
                     { field: 'created_at', label: 'Created / Due', cls: 'hidden lg:table-cell' },
                     { field: 'updated_at', label: 'Updated', cls: 'hidden xl:table-cell' },
                   ].map(({ field, label, cls }) => (
@@ -1540,7 +1609,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </span>
                     </th>
                   ))}
-                  <th className="py-3 px-2 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500 w-14 sm:w-auto">
+                  <th className="py-3 px-3 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
                     {batchMode ? (
                       <label className="inline-flex items-center gap-1.5 cursor-pointer" title={allPageSelected ? 'Deselect all on page' : 'Select all on page'}>
                         <input
@@ -1551,7 +1620,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         />
                         <span className="text-xs">All</span>
                       </label>
-                    ) : <span className="hidden sm:inline">Actions</span>}
+                    ) : 'Actions'}
                   </th>
                 </tr>
               </thead>
@@ -1567,48 +1636,38 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     }`}
                     onClick={() => !batchMode && openJob(job)}
                   >
-                    <td className="py-3 px-2 sm:px-4 w-[5.5rem] sm:w-auto">
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">
-                          <span className="hidden sm:inline">{job.request_number}</span>
-                          <span className="sm:hidden">{job.request_number?.split('-').pop()}</span>
-                        </span>
+                    <td className="py-3 px-3 sm:px-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">{job.request_number}</span>
                         {alertLevel === 'overdue' && (
-                          <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{fontSize:'13px'}} title="Overdue">schedule</span>
+                          <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{fontSize:'14px'}} title="Overdue">schedule</span>
                         )}
                         {alertLevel === 'stale' && (
-                          <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{fontSize:'13px'}} title={`No update in ${staleDays}+ days`}>warning</span>
+                          <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{fontSize:'14px'}} title={`No update in ${staleDays}+ days`}>warning</span>
                         )}
                       </div>
                       {job.source === 'online_request' && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>public</span>
                           Online
                         </span>
                       )}
                       {job.source === 'phone_in' && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-violet-400 mt-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs text-violet-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>call</span>
                           Phone
                         </span>
                       )}
                       {job.source === 'email' && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-emerald-400 mt-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>mail</span>
                           Email
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-2 sm:px-4">
-                      <div className="text-slate-900 dark:text-white font-semibold text-xs sm:text-sm truncate uppercase">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
+                    <td className="py-3 px-3 sm:px-4 max-w-[180px] lg:max-w-[240px]">
+                      <div className="text-slate-900 dark:text-white font-semibold text-sm truncate uppercase">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
                       {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{job.first_name} {job.last_name}</div>}
-                      <div className="sm:hidden mt-0.5">
-                        {job.tools?.length === 1 ? (
-                          <StatusBadge status={job.tools[0].status} />
-                        ) : (
-                          <span className="text-xs text-slate-500">{job.tools?.length} tools</span>
-                        )}
-                      </div>
                     </td>
                     <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
@@ -1619,7 +1678,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <PriorityBadge priority={getHighestPriority(job.tools)} />
                     </td>
-                    <td className="py-3 px-3 sm:px-4 hidden sm:table-cell">
+                    <td className="py-3 px-3 sm:px-4">
                       {job.tools?.length === 1 ? (
                         <StatusBadge status={job.tools[0].status} />
                       ) : (() => {
@@ -1659,7 +1718,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       })()}
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-slate-500 text-sm hidden xl:table-cell">{formatDateShort(job.updated_at)}</td>
-                    <td className="py-3 px-2 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-3 px-3 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {!batchMode && (
                           <>
@@ -1747,6 +1806,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
 
