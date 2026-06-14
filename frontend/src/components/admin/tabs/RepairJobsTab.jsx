@@ -1540,7 +1540,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </span>
                     </th>
                   ))}
-                  <th className="py-3 px-3 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
+                  <th className="py-3 px-2 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500 w-14 sm:w-auto">
                     {batchMode ? (
                       <label className="inline-flex items-center gap-1.5 cursor-pointer" title={allPageSelected ? 'Deselect all on page' : 'Select all on page'}>
                         <input
@@ -1551,7 +1551,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         />
                         <span className="text-xs">All</span>
                       </label>
-                    ) : 'Actions'}
+                    ) : <span className="hidden sm:inline">Actions</span>}
                   </th>
                 </tr>
               </thead>
@@ -1567,38 +1567,48 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     }`}
                     onClick={() => !batchMode && openJob(job)}
                   >
-                    <td className="py-3 px-3 sm:px-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">{job.request_number}</span>
+                    <td className="py-3 px-2 sm:px-4 w-[5.5rem] sm:w-auto">
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">
+                          <span className="hidden sm:inline">{job.request_number}</span>
+                          <span className="sm:hidden">{job.request_number?.split('-').pop()}</span>
+                        </span>
                         {alertLevel === 'overdue' && (
-                          <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{fontSize:'14px'}} title="Overdue">schedule</span>
+                          <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{fontSize:'13px'}} title="Overdue">schedule</span>
                         )}
                         {alertLevel === 'stale' && (
-                          <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{fontSize:'14px'}} title={`No update in ${staleDays}+ days`}>warning</span>
+                          <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{fontSize:'13px'}} title={`No update in ${staleDays}+ days`}>warning</span>
                         )}
                       </div>
                       {job.source === 'online_request' && (
-                        <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>public</span>
                           Online
                         </span>
                       )}
                       {job.source === 'phone_in' && (
-                        <span className="inline-flex items-center gap-1 text-xs text-violet-400 mt-0.5">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-violet-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>call</span>
                           Phone
                         </span>
                       )}
                       {job.source === 'email' && (
-                        <span className="inline-flex items-center gap-1 text-xs text-emerald-400 mt-0.5">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-emerald-400 mt-0.5">
                           <span className="material-symbols-outlined text-sm" style={{fontSize:'13px'}}>mail</span>
                           Email
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 max-w-[180px] lg:max-w-[240px]">
-                      <div className="text-slate-900 dark:text-white font-semibold text-sm truncate uppercase">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
+                    <td className="py-3 px-2 sm:px-4">
+                      <div className="text-slate-900 dark:text-white font-semibold text-xs sm:text-sm truncate uppercase">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
                       {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{job.first_name} {job.last_name}</div>}
+                      <div className="sm:hidden mt-0.5">
+                        {job.tools?.length === 1 ? (
+                          <StatusBadge status={job.tools[0].status} />
+                        ) : (
+                          <span className="text-xs text-slate-500">{job.tools?.length} tools</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
@@ -1649,7 +1659,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       })()}
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-slate-500 text-sm hidden xl:table-cell">{formatDateShort(job.updated_at)}</td>
-                    <td className="py-3 px-3 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-3 px-2 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {!batchMode && (
                           <>
