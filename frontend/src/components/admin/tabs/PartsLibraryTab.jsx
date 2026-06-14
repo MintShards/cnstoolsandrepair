@@ -470,7 +470,7 @@ function BrandFormModal({ brand, onClose, onSaved }) {
             <input
               required
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
+              onChange={e => { const pos = e.target.selectionStart; setForm(f => ({ ...f, name: e.target.value.toUpperCase() })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. INGERSOLL RAND"
             />
@@ -479,7 +479,7 @@ function BrandFormModal({ brand, onClose, onSaved }) {
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Short Code</label>
             <input
               value={form.short_code}
-              onChange={e => setForm(f => ({ ...f, short_code: e.target.value.toUpperCase() }))}
+              onChange={e => { const pos = e.target.selectionStart; setForm(f => ({ ...f, short_code: e.target.value.toUpperCase() })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. IR"
               maxLength={10}
@@ -573,7 +573,7 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
             <input
               required
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
+              onChange={e => { const pos = e.target.selectionStart; setForm(f => ({ ...f, name: e.target.value.toUpperCase() })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. 2135TIMAX"
             />
@@ -582,7 +582,7 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Category</label>
             <input
               value={form.category}
-              onChange={e => setForm(f => ({ ...f, category: e.target.value.toUpperCase() }))}
+              onChange={e => { const pos = e.target.selectionStart; setForm(f => ({ ...f, category: e.target.value.toUpperCase() })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. IMPACT WRENCH"
             />
@@ -720,7 +720,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               <input
                 required
                 value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value.toUpperCase() }))}
+                onChange={e => { const pos = e.target.selectionStart; setForm(f => ({ ...f, name: e.target.value.toUpperCase() })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g. O-RING KIT"
               />
@@ -730,7 +730,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               <input
                 required
                 value={form.part_number}
-                onChange={e => setForm(f => ({ ...f, part_number: e.target.value.toUpperCase() }))}
+                onChange={e => { const pos = e.target.selectionStart; setForm(f => ({ ...f, part_number: e.target.value.toUpperCase() })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g. IR-231C-601"
               />

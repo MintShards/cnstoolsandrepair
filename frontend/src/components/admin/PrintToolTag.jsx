@@ -42,8 +42,8 @@ function buildTagHTML(job, toolItem, toolIndex) {
     ? parts.map(p =>
         `<li>
           <span class="part-qty">×${p.quantity || 1}</span>
-          <span class="part-name">${escHtml(p.name)}</span>
-          ${p.part_number ? `<span class="part-num">${escHtml(p.part_number)}</span>` : ''}
+          <span class="part-name">${escHtml((p.name || '').toUpperCase())}</span>
+          ${p.part_number ? `<span class="part-num">${escHtml(p.part_number.toUpperCase())}</span>` : ''}
         </li>`
       ).join('')
     : '<li class="none">No parts listed</li>';
@@ -63,7 +63,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
               ${toolItem.warranty ? '<div class="warranty-badge">WARRANTY</div>' : ''}
             </div>
             <div class="section">
-              <div class="value">${escHtml(toolItem.brand)} ${escHtml(toolItem.model_number)} · ${escHtml(toolItem.tool_type)}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number)}` : ''}</div>
+              <div class="value">${escHtml((toolItem.brand || '').toUpperCase())} ${escHtml((toolItem.model_number || '').toUpperCase())} · ${escHtml((toolItem.tool_type || '').toUpperCase())}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number.toUpperCase())}` : ''}</div>
             </div>
           </div>
           <div class="right-col">

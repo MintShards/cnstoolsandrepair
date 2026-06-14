@@ -2526,7 +2526,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               </label>
                               <input
                                 value={newJobForm.first_name || ''}
-                                onChange={(e) => setNewJobForm({ ...newJobForm, first_name: e.target.value })}
+                                onChange={(e) => { const pos = e.target.selectionStart; setNewJobForm({ ...newJobForm, first_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                               />
                             </div>
@@ -2536,7 +2536,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               </label>
                               <input
                                 value={newJobForm.last_name || ''}
-                                onChange={(e) => setNewJobForm({ ...newJobForm, last_name: e.target.value })}
+                                onChange={(e) => { const pos = e.target.selectionStart; setNewJobForm({ ...newJobForm, last_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                               />
                             </div>
@@ -2549,7 +2549,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <input
                               placeholder="Optional"
                               value={newJobForm.company_name || ''}
-                              onChange={(e) => setNewJobForm({ ...newJobForm, company_name: e.target.value })}
+                              onChange={(e) => { const pos = e.target.selectionStart; setNewJobForm({ ...newJobForm, company_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                           </div>
@@ -2572,7 +2572,17 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               </label>
                               <input
                                 value={newJobForm.phone || ''}
-                                onChange={(e) => setNewJobForm({ ...newJobForm, phone: formatPhone(e.target.value) })}
+                                onChange={(e) => {
+                                  const input = e.target;
+                                  const cursorPos = input.selectionStart;
+                                  const prevLen = input.value.length;
+                                  const formatted = formatPhone(input.value);
+                                  setNewJobForm({ ...newJobForm, phone: formatted });
+                                  requestAnimationFrame(() => {
+                                    const adjusted = Math.max(0, cursorPos + (formatted.length - prevLen));
+                                    input.setSelectionRange(adjusted, adjusted);
+                                  });
+                                }}
                                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                               />
                             </div>
@@ -2585,7 +2595,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <input
                               placeholder="Optional"
                               value={newJobForm.address || ''}
-                              onChange={(e) => setNewJobForm({ ...newJobForm, address: e.target.value })}
+                              onChange={(e) => { const pos = e.target.selectionStart; setNewJobForm({ ...newJobForm, address: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                           </div>
@@ -2869,16 +2879,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">First Name *</label>
-                  <input value={jobEditForm.first_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <input value={jobEditForm.first_name || ''} onChange={(e) => { const pos = e.target.selectionStart; setJobEditForm({ ...jobEditForm, first_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Last Name *</label>
-                  <input value={jobEditForm.last_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, last_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <input value={jobEditForm.last_name || ''} onChange={(e) => { const pos = e.target.selectionStart; setJobEditForm({ ...jobEditForm, last_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Company</label>
-                <input value={jobEditForm.company_name || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                <input value={jobEditForm.company_name || ''} onChange={(e) => { const pos = e.target.selectionStart; setJobEditForm({ ...jobEditForm, company_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -2887,16 +2897,26 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Phone *</label>
-                  <input value={jobEditForm.phone || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, phone: formatPhone(e.target.value) })} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <input value={jobEditForm.phone || ''} onChange={(e) => {
+                    const input = e.target;
+                    const cursorPos = input.selectionStart;
+                    const prevLen = input.value.length;
+                    const formatted = formatPhone(input.value);
+                    setJobEditForm({ ...jobEditForm, phone: formatted });
+                    requestAnimationFrame(() => {
+                      const adjusted = Math.max(0, cursorPos + (formatted.length - prevLen));
+                      input.setSelectionRange(adjusted, adjusted);
+                    });
+                  }} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Address</label>
-                <input value={jobEditForm.address || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, address: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                <input value={jobEditForm.address || ''} onChange={(e) => { const pos = e.target.selectionStart; setJobEditForm({ ...jobEditForm, address: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Notes (Internal)</label>
-                <textarea value={jobEditForm.customer_notes || ''} onChange={(e) => setJobEditForm({ ...jobEditForm, customer_notes: e.target.value })} rows={3} placeholder="Internal notes (not visible to customer)" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none" />
+                <textarea value={jobEditForm.customer_notes || ''} onChange={(e) => { const pos = e.target.selectionStart; setJobEditForm({ ...jobEditForm, customer_notes: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} rows={3} placeholder="Internal notes (not visible to customer)" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none" />
               </div>
             </div>
             <div className="px-6 pb-6 flex gap-3">
@@ -3059,14 +3079,22 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
     }, 300);
   };
 
-  const handlePartNameChange = (pi, value, updatePart) => {
+  const handlePartNameChange = (pi, value, updatePart, e) => {
     updatePart({ name: value.toUpperCase() });
     triggerPartSearch(pi, value, 'name');
+    if (e?.target) {
+      const pos = e.target.selectionStart;
+      requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
+    }
   };
 
-  const handlePartNumberChange = (pi, value, updatePart) => {
+  const handlePartNumberChange = (pi, value, updatePart, e) => {
     updatePart({ part_number: value.toUpperCase() });
     triggerPartSearch(pi, value, 'partnum');
+    if (e?.target) {
+      const pos = e.target.selectionStart;
+      requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
+    }
   };
 
   const handleSelectSuggestion = (part, updatePart) => {
@@ -3195,7 +3223,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             <div className="relative">
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Brand <span className="text-red-400">*</span></label>
               <input required value={data.brand || ''} autoComplete="off"
-                onChange={(e) => { handleChange('brand', e.target.value.toUpperCase()); setShowBrandDropdown(true); }}
+                onChange={(e) => { const pos = e.target.selectionStart; handleChange('brand', e.target.value.toUpperCase()); setShowBrandDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 onFocus={() => setShowBrandDropdown(true)}
                 onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
                 placeholder="e.g., Ingersoll Rand" className={inputCls} />
@@ -3216,7 +3244,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             <div className="relative">
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
               <input required value={data.model_number || ''} autoComplete="off"
-                onChange={(e) => { handleChange('model_number', e.target.value.toUpperCase()); setShowModelDropdown(true); }}
+                onChange={(e) => { const pos = e.target.selectionStart; handleChange('model_number', e.target.value.toUpperCase()); setShowModelDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 onFocus={() => { if (libraryModels.length > 0) setShowModelDropdown(true); }}
                 onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
                 placeholder="e.g., 2135TIMAX" className={inputCls} />
@@ -3241,12 +3269,12 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
-              <input required value={data.tool_type || ''} onChange={(e) => handleChange('tool_type', e.target.value.toUpperCase())}
+              <input required value={data.tool_type || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('tool_type', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 placeholder="e.g., Impact Wrench" className={inputCls} />
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Serial Number</label>
-              <input value={data.serial_number || ''} onChange={(e) => handleChange('serial_number', e.target.value.toUpperCase())}
+              <input value={data.serial_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('serial_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 placeholder="Optional" className={inputCls} />
             </div>
           </div>
@@ -3272,7 +3300,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Remarks / Description</label>
-              <textarea value={data.remarks || ''} onChange={(e) => handleChange('remarks', e.target.value.toUpperCase())}
+              <textarea value={data.remarks || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('remarks', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 rows={3} placeholder="Customer's description of the problem"
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
             </div>
@@ -3414,7 +3442,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       <input
                         placeholder="Part name *"
                         value={part.name || ''}
-                        onChange={(e) => handlePartNameChange(pi, e.target.value, updatePart)}
+                        onChange={(e) => handlePartNameChange(pi, e.target.value, updatePart, e)}
                         onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); setSuggestionAnchor(null); setHighlightIndex(-1); } }, 200)}
                         onKeyDown={(e) => handleSuggestionKeyDown(e, updatePart)}
                         className={`w-full ${partInputCls}`}
@@ -3464,7 +3492,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       <input
                         placeholder="Part #"
                         value={part.part_number || ''}
-                        onChange={(e) => handlePartNumberChange(pi, e.target.value, updatePart)}
+                        onChange={(e) => handlePartNumberChange(pi, e.target.value, updatePart, e)}
                         onBlur={() => setTimeout(() => { if (activeSuggestionPi === pi) { setActiveSuggestionPi(null); setPartSuggestions([]); setSuggestionAnchor(null); setHighlightIndex(-1); } }, 200)}
                         onKeyDown={(e) => handleSuggestionKeyDown(e, updatePart)}
                         className={`w-full ${partInputCls}`}
@@ -3633,7 +3661,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Reference</label>
-              <input value={data.zoho_ref || ''} onChange={(e) => handleChange('zoho_ref', e.target.value.toUpperCase())}
+              <input value={data.zoho_ref || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('zoho_ref', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 placeholder="Optional" className={inputCls} />
             </div>
             <div>
@@ -3659,7 +3687,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
               ) : (
                 <div className="flex rounded-lg border border-primary dark:border-primary/60 bg-white dark:bg-slate-800 overflow-hidden">
                   <input autoFocus placeholder="New technician name" value={newTechnicianName}
-                    onChange={(e) => setNewTechnicianName(e.target.value.toUpperCase())}
+                    onChange={(e) => { const pos = e.target.selectionStart; setNewTechnicianName(e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTechnician(); } if (e.key === 'Escape') { setAddingTechnician(false); setNewTechnicianName(''); } }}
                     className="flex-1 min-w-0 px-3 py-3 bg-transparent text-slate-900 dark:text-white text-base focus:outline-none border-none placeholder:text-slate-400 dark:placeholder:text-slate-500" />
                   <button type="button" onClick={handleAddTechnician} disabled={technicianSaving}

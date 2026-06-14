@@ -291,18 +291,17 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
     pdf.ln(3)
 
     for idx, tool in enumerate(tools, start=1):
-        brand = _safe(tool.get("brand"))
-        model_number = _safe(tool.get("model_number"))
-        tool_type = _safe(tool.get("tool_type"))
+        brand = _safe(tool.get("brand")).upper()
+        model_number = _safe(tool.get("model_number")).upper()
+        tool_type = _safe(tool.get("tool_type")).upper()
         quantity = tool.get("quantity") or 1
-        serial = _safe(tool.get("serial_number"))
+        serial = _safe(tool.get("serial_number")).upper()
         priority = tool.get("priority") or "standard"
         warranty = tool.get("warranty") or False
         date_received = tool.get("date_received")
         est_completion = tool.get("estimated_completion")
         technician = _safe(tool.get("assigned_technician"))
         zoho_ref = _safe(tool.get("zoho_ref"))
-        remarks = _safe(tool.get("remarks"))
         status = tool.get("status") or "received"
 
         # Tool card
@@ -404,18 +403,6 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
             pdf.cell(dcol_w, 4, val, ln=0)
 
         pdf.ln(4)
-
-        # Remarks
-        if remarks:
-            rem_y = pdf.get_y()
-            pdf.set_font("Helvetica", "B", 8.5)  # field-label: CSS 10px
-            pdf.set_text_color(85, 85, 85)  # #555
-            pdf.set_xy(lm, rem_y)
-            pdf.cell(page_w, 3.5, "REMARKS", ln=1)
-            pdf.set_font("Helvetica", "", 9)  # remarks: CSS 11px
-            pdf.set_text_color(0, 0, 0)  # #000
-            pdf.set_xy(lm, pdf.get_y())
-            pdf.multi_cell(page_w, 4.5, remarks)
 
         # Parts table (matches PrintWorkOrder.jsx — 11px body, 10px uppercase header)
         parts = [p for p in (tool.get("parts") or []) if (p.get("name") or "").strip()]

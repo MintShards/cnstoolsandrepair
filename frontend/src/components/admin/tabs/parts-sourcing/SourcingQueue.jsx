@@ -183,7 +183,7 @@ export default function SourcingQueue({ items, selected, onToggle, onSelectAll, 
                         type="text"
                         placeholder="Part name *"
                         value={part.name}
-                        onChange={(e) => updateManualRow(idx, 'name', e.target.value.toUpperCase())}
+                        onChange={(e) => { const pos = e.target.selectionStart; updateManualRow(idx, 'name', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                         onBlur={() => touch(idx, 'name')}
                         className={`w-full bg-white dark:bg-slate-800/80 border rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none uppercase ${isTouched(idx, 'name') && !part.name.trim() ? 'border-red-400 dark:border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
                       />
@@ -193,7 +193,7 @@ export default function SourcingQueue({ items, selected, onToggle, onSelectAll, 
                         type="text"
                         placeholder="Part # *"
                         value={part.part_number}
-                        onChange={(e) => updateManualRow(idx, 'part_number', e.target.value.toUpperCase())}
+                        onChange={(e) => { const pos = e.target.selectionStart; updateManualRow(idx, 'part_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                         onBlur={() => touch(idx, 'part_number')}
                         className={`w-full bg-white dark:bg-slate-800/80 border rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary focus:outline-none uppercase ${isTouched(idx, 'part_number') && !part.part_number?.trim() ? 'border-red-400 dark:border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
                       />

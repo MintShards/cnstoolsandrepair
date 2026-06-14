@@ -61,9 +61,9 @@ def _build_work_order_email_html(job: dict, template: dict, custom_message: Opti
     # Build tools summary table rows
     tool_rows = ""
     for idx, tool in enumerate(tools, start=1):
-        brand = tool.get("brand") or ""
-        model = tool.get("model_number") or ""
-        tool_type = tool.get("tool_type") or ""
+        brand = (tool.get("brand") or "").upper()
+        model = (tool.get("model_number") or "").upper()
+        tool_type = (tool.get("tool_type") or "").upper()
         qty = tool.get("quantity") or 1
         tool_rows += f"""
                         <tr>

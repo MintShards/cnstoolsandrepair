@@ -135,7 +135,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
         : '';
       return `
         <tr>
-          <td>${escHtml(p.name)}${p.part_number ? ' - ' + escHtml(p.part_number) : ''}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
+          <td>${escHtml((p.name || '').toUpperCase())}${p.part_number ? ' - ' + escHtml(p.part_number.toUpperCase()) : ''}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
           <td class="center">${p.quantity ?? 1}</td>
           <td class="right">${p.price != null && p.price !== '' ? '$' + parseFloat(p.price).toFixed(2) : '—'}</td>
           <td>${p.supplier ? escHtml(p.supplier) : '—'}</td>
@@ -157,7 +157,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
         <div class="tool-header">
           <div class="tool-num">#${idx + 1}</div>
           <div class="tool-title">
-            <strong>${escHtml(tool.brand)} ${escHtml(tool.model_number)}</strong> · <span class="muted">${escHtml(tool.tool_type)}${tool.quantity > 1 ? ' × ' + tool.quantity : ''}${tool.serial_number ? ' · S/N: ' + escHtml(tool.serial_number) : ''}</span>
+            <strong>${escHtml((tool.brand || '').toUpperCase())} ${escHtml((tool.model_number || '').toUpperCase())}</strong> · <span class="muted">${escHtml((tool.tool_type || '').toUpperCase())}${tool.quantity > 1 ? ' × ' + tool.quantity : ''}${tool.serial_number ? ' · S/N: ' + escHtml(tool.serial_number.toUpperCase()) : ''}</span>
           </div>
           <div class="tool-badges">
             ${tool.priority && tool.priority !== 'standard' ? `<span class="badge priority-${tool.priority}">${capitalize(tool.priority)}</span>` : ''}
@@ -180,12 +180,6 @@ function buildBody(job, businessInfo, serviceAgreement) {
           </div>
           <div class="field-group"><div class="field-label">Zoho Ref</div><div>${tool.zoho_ref ? escHtml(tool.zoho_ref) : '—'}</div></div>
         </div>
-
-        ${tool.remarks ? `
-          <div class="remarks">
-            <span class="field-label">Remarks: </span>${escHtml(tool.remarks)}
-          </div>
-        ` : ''}
 
         ${partsRows ? `
           <table class="parts-table">

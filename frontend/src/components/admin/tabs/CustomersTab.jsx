@@ -833,16 +833,16 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">First Name *</label>
-                    <input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <input value={editForm.first_name} onChange={(e) => { const pos = e.target.selectionStart; setEditForm({ ...editForm, first_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Last Name *</label>
-                    <input value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <input value={editForm.last_name} onChange={(e) => { const pos = e.target.selectionStart; setEditForm({ ...editForm, last_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Company</label>
-                  <input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <input value={editForm.company_name} onChange={(e) => { const pos = e.target.selectionStart; setEditForm({ ...editForm, company_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -851,18 +851,28 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Phone *</label>
-                    <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                    <input value={editForm.phone} onChange={(e) => {
+                      const input = e.target;
+                      const cursorPos = input.selectionStart;
+                      const prevLen = input.value.length;
+                      const formatted = formatPhone(input.value);
+                      setEditForm({ ...editForm, phone: formatted });
+                      requestAnimationFrame(() => {
+                        const adjusted = Math.max(0, cursorPos + (formatted.length - prevLen));
+                        input.setSelectionRange(adjusted, adjusted);
+                      });
+                    }} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Address</label>
-                  <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
+                  <input value={editForm.address} onChange={(e) => { const pos = e.target.selectionStart; setEditForm({ ...editForm, address: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Notes (Internal)</label>
                   <textarea
                     value={editForm.customer_notes}
-                    onChange={(e) => setEditForm({ ...editForm, customer_notes: e.target.value })}
+                    onChange={(e) => { const pos = e.target.selectionStart; setEditForm({ ...editForm, customer_notes: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                     rows={3}
                     className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none"
                   />
@@ -1538,7 +1548,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     type="text"
                     required
                     value={newForm.first_name}
-                    onChange={(e) => setNewForm({ ...newForm, first_name: e.target.value })}
+                    onChange={(e) => { const pos = e.target.selectionStart; setNewForm({ ...newForm, first_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -1548,7 +1558,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     type="text"
                     required
                     value={newForm.last_name}
-                    onChange={(e) => setNewForm({ ...newForm, last_name: e.target.value })}
+                    onChange={(e) => { const pos = e.target.selectionStart; setNewForm({ ...newForm, last_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -1558,7 +1568,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 <input
                   type="text"
                   value={newForm.company_name}
-                  onChange={(e) => setNewForm({ ...newForm, company_name: e.target.value })}
+                  onChange={(e) => { const pos = e.target.selectionStart; setNewForm({ ...newForm, company_name: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                   placeholder="Optional"
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -1580,7 +1590,17 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     type="text"
                     required
                     value={newForm.phone}
-                    onChange={(e) => setNewForm({ ...newForm, phone: formatPhone(e.target.value) })}
+                    onChange={(e) => {
+                      const input = e.target;
+                      const cursorPos = input.selectionStart;
+                      const prevLen = input.value.length;
+                      const formatted = formatPhone(input.value);
+                      setNewForm({ ...newForm, phone: formatted });
+                      requestAnimationFrame(() => {
+                        const adjusted = Math.max(0, cursorPos + (formatted.length - prevLen));
+                        input.setSelectionRange(adjusted, adjusted);
+                      });
+                    }}
                     placeholder="###-###-####"
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
@@ -1591,7 +1611,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 <input
                   type="text"
                   value={newForm.address}
-                  onChange={(e) => setNewForm({ ...newForm, address: e.target.value })}
+                  onChange={(e) => { const pos = e.target.selectionStart; setNewForm({ ...newForm, address: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                   placeholder="Optional"
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
@@ -1600,7 +1620,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Internal Notes</label>
                 <textarea
                   value={newForm.customer_notes}
-                  onChange={(e) => setNewForm({ ...newForm, customer_notes: e.target.value })}
+                  onChange={(e) => { const pos = e.target.selectionStart; setNewForm({ ...newForm, customer_notes: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                   rows={3}
                   placeholder="e.g., Net 30, VIP customer"
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"

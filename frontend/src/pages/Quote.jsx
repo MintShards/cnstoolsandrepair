@@ -197,7 +197,7 @@ export default function Quote() {
     }
   };
 
-  const updateTool = (index, field, value) => {
+  const updateTool = (index, field, value, e) => {
     const updatedTools = [...tools];
     // Apply capitalization based on field
     if (field === 'tool_type' || field === 'tool_brand') {
@@ -210,6 +210,11 @@ export default function Quote() {
       updatedTools[index][field] = value;
     }
     setTools(updatedTools);
+    // Restore cursor position after React re-render
+    if (e?.target) {
+      const pos = e.target.selectionStart;
+      requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
+    }
     // Clear the error for this field as user types
     if (toolErrors[index]?.[field]) {
       setToolErrors(prev => {
@@ -499,8 +504,9 @@ export default function Quote() {
                       minLength: { value: 2, message: 'Must be at least 2 characters' }
                     })}
                     onChange={(e) => {
-                      const capitalized = capitalizeFirstLetters(e.target.value);
-                      setValue('first_name', capitalized);
+                      const pos = e.target.selectionStart;
+                      setValue('first_name', capitalizeFirstLetters(e.target.value));
+                      requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                     }}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.first_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="First Name"
@@ -525,8 +531,9 @@ export default function Quote() {
                       minLength: { value: 2, message: 'Must be at least 2 characters' }
                     })}
                     onChange={(e) => {
-                      const capitalized = capitalizeFirstLetters(e.target.value);
-                      setValue('last_name', capitalized);
+                      const pos = e.target.selectionStart;
+                      setValue('last_name', capitalizeFirstLetters(e.target.value));
+                      requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                     }}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.last_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Last Name"
@@ -551,8 +558,9 @@ export default function Quote() {
                   id="company_name"
                   {...register('company_name')}
                   onChange={(e) => {
-                    const capitalized = capitalizeWords(e.target.value);
-                    setValue('company_name', capitalized);
+                    const pos = e.target.selectionStart;
+                    setValue('company_name', capitalizeWords(e.target.value));
+                    requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                   }}
                   className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter Company Name"
@@ -604,8 +612,16 @@ export default function Quote() {
                       pattern: { value: /^\d{3}-\d{3}-\d{4}$/, message: 'Please enter a complete phone number (###-###-####)' }
                     })}
                     onChange={(e) => {
-                      const formatted = formatPhoneNumber(e.target.value);
+                      const input = e.target;
+                      const cursorPos = input.selectionStart;
+                      const prevLen = input.value.length;
+                      const formatted = formatPhoneNumber(input.value);
                       setValue('phone', formatted, { shouldValidate: false });
+                      requestAnimationFrame(() => {
+                        const newLen = formatted.length;
+                        const adjusted = Math.max(0, cursorPos + (newLen - prevLen));
+                        input.setSelectionRange(adjusted, adjusted);
+                      });
                     }}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.phone ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Enter Phone"
@@ -687,7 +703,7 @@ export default function Quote() {
                         <input
                           type="text"
                           value={tool.tool_type}
-                          onChange={(e) => updateTool(index, 'tool_type', e.target.value)}
+                          onChange={(e) => updateTool(index, 'tool_type', e.target.value, e)}
                           onBlur={(e) => validateToolField(index, 'tool_type', e.target.value)}
                           className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_type ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Type"
@@ -705,7 +721,7 @@ export default function Quote() {
                         <input
                           type="text"
                           value={tool.tool_brand}
-                          onChange={(e) => updateTool(index, 'tool_brand', e.target.value)}
+                          onChange={(e) => updateTool(index, 'tool_brand', e.target.value, e)}
                           onBlur={(e) => validateToolField(index, 'tool_brand', e.target.value)}
                           className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_brand ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Brand"
@@ -725,7 +741,7 @@ export default function Quote() {
                         <input
                           type="text"
                           value={tool.tool_model}
-                          onChange={(e) => updateTool(index, 'tool_model', e.target.value)}
+                          onChange={(e) => updateTool(index, 'tool_model', e.target.value, e)}
                           onBlur={(e) => validateToolField(index, 'tool_model', e.target.value)}
                           className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_model ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Model"
@@ -762,7 +778,7 @@ export default function Quote() {
                       </label>
                       <textarea
                         value={tool.problem_description}
-                        onChange={(e) => updateTool(index, 'problem_description', e.target.value)}
+                        onChange={(e) => updateTool(index, 'problem_description', e.target.value, e)}
                         onBlur={(e) => validateToolField(index, 'problem_description', e.target.value)}
                         className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.problem_description ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                         rows={4}
