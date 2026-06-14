@@ -51,16 +51,18 @@ function getStyles(prefix) {
     ${p}.wo-meta { font-size: 11px; color: #333; margin-top: 2px; }
     ${p}.section { margin-bottom: 14px; }
     ${p}.section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #555; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px; }
-    ${p}.customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 16px; }
+    ${p}.customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 16px; overflow: hidden; }
+    ${p}.customer-grid .field-group { overflow: hidden; }
+    ${p}.customer-grid .field-group > *:not(.field-label) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     ${p}.field-group { display: flex; flex-direction: column; margin-bottom: 4px; }
     ${p}.field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #555; letter-spacing: 0.05em; }
     ${p}.muted { color: #333; font-style: normal; }
     ${p}.tool-card { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     ${p}.tool-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
     ${p}.tool-num { width: 24px; height: 24px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
-    ${p}.tool-title { flex: 1; }
-    ${p}.tool-title strong { font-size: 13px; }
-    ${p}.tool-title .muted { font-size: 13px; }
+    ${p}.tool-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    ${p}.tool-title strong { font-size: 12px; }
+    ${p}.tool-title .muted { font-size: 12px; }
     ${p}.tool-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
     ${p}.badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid #000; }
     ${p}.badge.priority-rush { background: #fff; color: #000; border-color: #000; }
@@ -69,7 +71,7 @@ function getStyles(prefix) {
     ${p}.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
     ${p}.remarks { margin-bottom: 8px; line-height: 1.5; font-size: 11px; }
     ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: auto; }
-    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: auto; }
+    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: auto; word-break: break-word; }
     ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { white-space: nowrap; }
     ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { white-space: nowrap; }
     ${p}.parts-table th:nth-child(4), ${p}.parts-table td:nth-child(4) { }

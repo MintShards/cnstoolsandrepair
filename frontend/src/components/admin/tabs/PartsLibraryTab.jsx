@@ -41,7 +41,7 @@ function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }
                   href={fullUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline max-w-[160px] truncate uppercase"
+                  className="text-blue-600 dark:text-blue-400 hover:underline max-w-[220px] truncate uppercase"
                   title={displayName}
                 >
                   {displayName}
@@ -270,7 +270,7 @@ function PartsAnalyticsSection() {
                                 <tr key={part.part_number || part.part_name || i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                                   <td className="px-2 py-2 text-slate-400 font-bold">{page * pageSize + i + 1}</td>
                                   <td className="px-2 py-2">
-                                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase block truncate max-w-[140px]">{part.part_name || '—'}</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase block truncate max-w-[200px]">{part.part_name || '—'}</span>
                                   </td>
                                   <td className="px-2 py-2 hidden sm:table-cell">
                                     <span className="text-slate-400 uppercase">{part.part_number || '—'}</span>
@@ -2378,7 +2378,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
               <span className="material-symbols-outlined text-slate-400 text-xs sm:text-sm flex-shrink-0">chevron_right</span>
               <button
                 onClick={() => { setSelectedModel(null); setSearchQuery(''); }}
-                className={`text-sm sm:text-lg font-bold transition-colors truncate max-w-[100px] sm:max-w-xs uppercase ${selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
+                className={`text-sm sm:text-lg font-bold transition-colors truncate max-w-[140px] sm:max-w-sm uppercase ${selectedModel ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300' : 'text-slate-800 dark:text-slate-100 cursor-default'}`}
                 title={selectedBrand.name}
               >
                 {selectedBrand.name}
@@ -2388,7 +2388,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
           {selectedModel && (
             <>
               <span className="material-symbols-outlined text-slate-400 text-xs sm:text-sm flex-shrink-0">chevron_right</span>
-              <span className="text-sm sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[100px] sm:max-w-xs uppercase" title={selectedModel.name}>{selectedModel.name}</span>
+              <span className="text-sm sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-[140px] sm:max-w-sm uppercase" title={selectedModel.name}>{selectedModel.name}</span>
               {selectedModel.category && (
                 <span className="text-xs sm:text-base text-slate-500 dark:text-slate-300 flex-shrink-0 uppercase">— {selectedModel.category}</span>
               )}

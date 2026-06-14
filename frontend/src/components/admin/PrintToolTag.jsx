@@ -172,10 +172,13 @@ function getTagStyles(prefix) {
       text-transform: uppercase;
     }
     ${p}.value {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       color: #000;
       line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     ${p}.top-grid {
       display: grid;
@@ -196,17 +199,17 @@ function getTagStyles(prefix) {
       text-align: right;
     }
     ${p}.status-badge {
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 2px 8px;
+      letter-spacing: 0.02em;
+      padding: 2px 6px;
       border: 1.5px solid #000;
       border-radius: 4px;
       text-transform: uppercase;
       white-space: nowrap;
     }
-    ${p}.customer { font-size: 13px; }
-    ${p}.contact { font-size: 11px; color: #333; font-weight: 500; }
+    ${p}.customer { font-size: 11px; }
+    ${p}.contact { font-size: 10px; color: #333; font-weight: 500; }
     ${p}.remarks-text {
       font-size: 10px;
       line-height: 1.4;

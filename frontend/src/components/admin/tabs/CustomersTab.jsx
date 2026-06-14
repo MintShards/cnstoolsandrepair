@@ -598,13 +598,13 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
                       <span className="text-xs text-slate-500">Company:</span>
-                      <span className="text-sm text-slate-900 dark:text-white font-bold">{selectedCustomer.company_name}</span>
+                      <span className="text-sm text-slate-900 dark:text-white font-bold uppercase">{selectedCustomer.company_name}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
                     <span className="text-xs text-slate-500">Contact:</span>
-                    <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.first_name} {selectedCustomer.last_name}</span>
+                    <span className="text-sm text-slate-900 dark:text-white uppercase">{selectedCustomer.first_name} {selectedCustomer.last_name}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
@@ -620,7 +620,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     <div className="flex items-center gap-1.5 sm:col-span-2">
                       <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
                       <span className="text-xs text-slate-500">Address:</span>
-                      <span className="text-sm text-slate-900 dark:text-white">{selectedCustomer.address}</span>
+                      <span className="text-sm text-slate-900 dark:text-white uppercase">{selectedCustomer.address}</span>
                     </div>
                   )}
                 </div>
@@ -628,7 +628,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                   <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/40">
                     <span className="material-symbols-outlined text-slate-500 mt-0.5" style={{ fontSize: '13px' }}>sticky_note_2</span>
                     <span className="text-xs text-slate-500">Notes:</span>
-                    <span className="text-xs text-slate-600 dark:text-slate-300">{selectedCustomer.customer_notes}</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-300 uppercase">{selectedCustomer.customer_notes}</span>
                   </div>
                 )}
               </div>
@@ -1000,8 +1000,8 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                                 {idx + 1}
                               </div>
                               <div>
-                                <div className="font-bold text-slate-900 dark:text-white text-base">{tool.brand} {tool.model_number}</div>
-                                <div className="text-sm text-slate-500 mt-0.5">
+                                <div className="font-bold text-slate-900 dark:text-white text-base uppercase">{tool.brand} {tool.model_number}</div>
+                                <div className="text-sm text-slate-500 mt-0.5 uppercase">
                                   {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                   {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
                                   {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDate(tool.estimated_completion)}</>}
@@ -1213,7 +1213,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Update Status</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{statusUpdateModal.brand} {statusUpdateModal.model_number}</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{statusUpdateModal.brand} {statusUpdateModal.model_number}</p>
                 </div>
                 <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                   <span className="material-symbols-outlined text-base">close</span>
@@ -1293,7 +1293,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
-                  {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{formData.brand} {formData.model_number}</p>}
+                  {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate uppercase">{formData.brand} {formData.model_number}</p>}
                 </div>
                 <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                   <span className="material-symbols-outlined text-base">close</span>
@@ -1490,13 +1490,13 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                       className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
                       onClick={() => openCustomer(customer)}
                     >
-                      <td className="py-3.5 px-4">
-                        <div className="text-slate-900 dark:text-white font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</div>
-                        {customer.company_name && <div className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">{customer.first_name} {customer.last_name}</div>}
+                      <td className="py-3.5 px-4 max-w-[200px] lg:max-w-[260px]">
+                        <div className="text-slate-900 dark:text-white font-bold truncate uppercase">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</div>
+                        {customer.company_name && <div className="text-slate-500 dark:text-slate-400 text-sm mt-0.5 truncate uppercase">{customer.first_name} {customer.last_name}</div>}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 hidden md:table-cell">{customer.email}</td>
+                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 hidden md:table-cell max-w-[180px] truncate">{customer.email}</td>
                       <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 hidden md:table-cell">{customer.phone}</td>
-                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell">{customer.address || <span className="text-slate-400 dark:text-slate-600">—</span>}</td>
+                      <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell max-w-[200px] truncate uppercase">{customer.address || <span className="text-slate-400 dark:text-slate-600">—</span>}</td>
                       <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell">{formatDate(customer.created_at)}</td>
                       <td className="py-3.5 px-4 text-right">
                         <button

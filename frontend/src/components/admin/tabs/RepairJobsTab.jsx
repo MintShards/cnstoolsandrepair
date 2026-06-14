@@ -1596,9 +1596,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 sm:px-4">
-                      <div className="text-slate-900 dark:text-white font-semibold text-sm">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
-                      {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs">{job.first_name} {job.last_name}</div>}
+                    <td className="py-3 px-3 sm:px-4 max-w-[180px] lg:max-w-[240px]">
+                      <div className="text-slate-900 dark:text-white font-semibold text-sm truncate uppercase">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
+                      {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{job.first_name} {job.last_name}</div>}
                     </td>
                     <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
@@ -1894,13 +1894,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <div className="flex items-center gap-1.5">
                               <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
                               <span className="text-xs text-slate-500">Company:</span>
-                              <span className="text-sm text-slate-900 dark:text-white font-bold">{cust.company_name}</span>
+                              <span className="text-sm text-slate-900 dark:text-white font-bold truncate uppercase">{cust.company_name}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
                             <span className="text-xs text-slate-500">Contact:</span>
-                            <span className="text-sm text-slate-900 dark:text-white">{cust.first_name} {cust.last_name}</span>
+                            <span className="text-sm text-slate-900 dark:text-white uppercase">{cust.first_name} {cust.last_name}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
@@ -1916,7 +1916,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <div className="flex items-center gap-1.5 sm:col-span-2">
                               <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
                               <span className="text-xs text-slate-500">Address:</span>
-                              <span className="text-sm text-slate-900 dark:text-white">{cust.address}</span>
+                              <span className="text-sm text-slate-900 dark:text-white truncate uppercase">{cust.address}</span>
                             </div>
                           )}
                         </div>
@@ -1924,7 +1924,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/40">
                             <span className="material-symbols-outlined text-slate-500 mt-0.5" style={{ fontSize: '13px' }}>sticky_note_2</span>
                             <span className="text-xs text-slate-500">Notes:</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-300">{cust.customer_notes}</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-300 uppercase">{cust.customer_notes}</span>
                           </div>
                         )}
                       </>
@@ -2369,7 +2369,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
-                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{formData.brand} {formData.model_number}</p>}
+                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate uppercase">{formData.brand} {formData.model_number}</p>}
               </div>
               <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                 <span className="material-symbols-outlined text-base">close</span>
@@ -2670,7 +2670,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700/60 px-6 py-2.5 flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary text-lg">person</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-slate-900 dark:text-white text-sm font-bold truncate">
+                  <p className="text-slate-900 dark:text-white text-sm font-bold truncate uppercase">
                     {selectedCustomerObj ? `${selectedCustomerObj.first_name} ${selectedCustomerObj.last_name}` : `${newJobForm.first_name} ${newJobForm.last_name}`}
                     {(selectedCustomerObj?.company_name || newJobForm.company_name) && (
                       <span className="text-slate-500 dark:text-slate-400 font-normal"> — {selectedCustomerObj?.company_name || newJobForm.company_name}</span>
@@ -2868,7 +2868,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Edit Customer</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{jobEditForm.first_name} {jobEditForm.last_name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 uppercase">{jobEditForm.first_name} {jobEditForm.last_name}</p>
                 </div>
               </div>
               <button onClick={() => setEditingJob(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
@@ -3415,7 +3415,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       ) : (
                         <span className="material-symbols-outlined" style={{fontSize:'13px'}}>add</span>
                       )}
-                      <span className="font-medium">{sp.name}{sp.part_number ? ` - ${sp.part_number}` : ''}</span>
+                      <span className="font-medium uppercase">{sp.name}{sp.part_number ? ` - ${sp.part_number}` : ''}</span>
                       {sp.suggested_price != null && <span className="text-green-600 dark:text-green-400">${sp.suggested_price.toFixed(2)}</span>}
                     </button>
                   );
@@ -3466,7 +3466,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                             >
                               <div className="min-w-0 flex-1 flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
-                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[120px]">{s.model_names.join(', ')}</span>}
+                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[180px]">{s.model_names.join(', ')}</span>}
                                 <span className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                                   {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${s.suggested_price.toFixed(2)}</span>}
                                   <span title={s.quantity_on_hand > 0 ? (s.low_stock ? `Low stock (${s.quantity_on_hand})` : `${s.quantity_on_hand} in stock`) : 'Out of stock'} className={
@@ -3516,7 +3516,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                             >
                               <div className="min-w-0 flex-1 flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
-                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[120px]">{s.model_names.join(', ')}</span>}
+                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[180px]">{s.model_names.join(', ')}</span>}
                                 <span className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                                   {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${s.suggested_price.toFixed(2)}</span>}
                                   <span title={s.quantity_on_hand > 0 ? (s.low_stock ? `Low stock (${s.quantity_on_hand})` : `${s.quantity_on_hand} in stock`) : 'Out of stock'} className={
