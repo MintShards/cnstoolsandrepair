@@ -1529,8 +1529,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     }`}
                   >
                     {/* Left: WO number */}
-                    <div className="flex-shrink-0 w-12 text-right">
-                      <div className="flex items-center justify-end gap-0.5">
+                    <div className="flex-shrink-0 w-12">
+                      <div className="flex items-center gap-0.5">
                         <span className="font-mono font-bold text-xs text-slate-500 dark:text-slate-400">
                           {job.request_number?.split('-').pop()}
                         </span>
