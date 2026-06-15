@@ -63,7 +63,8 @@ function buildTagHTML(job, toolItem, toolIndex) {
               ${toolItem.warranty ? '<div class="warranty-badge">WARRANTY</div>' : ''}
             </div>
             <div class="section">
-              <div class="value">${escHtml((toolItem.brand || '').toUpperCase())} ${escHtml((toolItem.model_number || '').toUpperCase())} · ${escHtml((toolItem.tool_type || '').toUpperCase())}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number.toUpperCase())}` : ''}</div>
+              <div class="value">${escHtml((toolItem.brand || '').toUpperCase())} ${escHtml((toolItem.model_number || '').toUpperCase())}</div>
+              <div class="value">${escHtml((toolItem.tool_type || '').toUpperCase())}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number.toUpperCase())}` : ''}</div>
             </div>
           </div>
           <div class="right-col">
@@ -176,9 +177,6 @@ function getTagStyles(prefix) {
       font-weight: 600;
       color: #000;
       line-height: 1.3;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
     ${p}.top-grid {
       display: grid;
