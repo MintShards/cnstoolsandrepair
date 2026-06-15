@@ -29,7 +29,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
   const toolLetter = TOOL_LETTERS[toolIndex] || String(toolIndex + 1);
   const tagId = `${job.request_number}-${toolLetter}`;
 
-  const contactName = escHtml(`${job.first_name} ${job.last_name}`);
+  const contactName = escHtml(`${job.first_name} ${job.last_name}`.toUpperCase());
 
   const statusLabel = STATUS_LABELS[toolItem.status] || escHtml(toolItem.status || 'Unknown');
 
@@ -49,7 +49,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
     : '<li class="none">No parts listed</li>';
 
   const remarksHTML = toolItem.remarks
-    ? `<div class="section"><div class="label">REMARKS</div><div class="remarks-text">${escHtml(toolItem.remarks)}</div></div>`
+    ? `<div class="section"><div class="label">REMARKS</div><div class="remarks-text">${escHtml(toolItem.remarks.toUpperCase())}</div></div>`
     : '';
 
   return `
@@ -81,7 +81,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
           ${job.company_name ? `
           <div class="section">
             <div class="label">COMPANY</div>
-            <div class="value customer">${escHtml(job.company_name)}</div>
+            <div class="value customer">${escHtml(job.company_name.toUpperCase())}</div>
           </div>` : ''}
           <div class="section">
             <div class="label">CUSTOMER</div>
