@@ -220,11 +220,11 @@ function buildBody(job, businessInfo, serviceAgreement) {
     <div class="section">
       <div class="section-title">Customer Information</div>
       <div class="customer-grid">
-        <div class="field-group"><div class="field-label">Company</div><div>${job.company_name ? escHtml(job.company_name) : '—'}</div></div>
-        <div class="field-group"><div class="field-label">Contact</div><div>${escHtml(job.first_name)} ${escHtml(job.last_name)}</div></div>
+        <div class="field-group"><div class="field-label">Company</div><div>${job.company_name ? escHtml(job.company_name.toUpperCase()) : '—'}</div></div>
+        <div class="field-group"><div class="field-label">Contact</div><div>${escHtml(job.first_name.toUpperCase())} ${escHtml(job.last_name.toUpperCase())}</div></div>
         <div class="field-group"><div class="field-label">Email</div><div>${escHtml(job.email)}</div></div>
         <div class="field-group"><div class="field-label">Phone</div><div>${escHtml(job.phone)}</div></div>
-        ${job.address ? `<div class="field-group" style="grid-column:span 2"><div class="field-label">Address</div><div>${escHtml(job.address)}</div></div>` : '<div class="field-group" style="grid-column:span 2"></div>'}
+        ${job.address ? `<div class="field-group" style="grid-column:span 2"><div class="field-label">Address</div><div>${escHtml(job.address.toUpperCase())}</div></div>` : '<div class="field-group" style="grid-column:span 2"></div>'}
       </div>
     </div>
 

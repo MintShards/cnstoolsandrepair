@@ -1544,11 +1544,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     </div>
                     {/* Middle: customer + status */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-slate-900 dark:text-white truncate uppercase leading-tight">
-                        {job.company_name || `${job.first_name} ${job.last_name}`}
+                      <div className="font-semibold text-sm text-slate-900 dark:text-white truncate leading-tight">
+                        {(job.company_name || `${job.first_name} ${job.last_name}`).toUpperCase()}
                       </div>
                       {job.company_name && (
-                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate uppercase">{job.first_name} {job.last_name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{`${job.first_name} ${job.last_name}`.toUpperCase()}</div>
                       )}
                       <div className="mt-1">
                         {job.tools?.length === 1 ? (
@@ -1666,8 +1666,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 max-w-[180px] lg:max-w-[240px]">
-                      <div className="text-slate-900 dark:text-white font-semibold text-sm truncate uppercase">{job.company_name || `${job.first_name} ${job.last_name}`}</div>
-                      {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{job.first_name} {job.last_name}</div>}
+                      <div className="text-slate-900 dark:text-white font-semibold text-sm truncate">{(job.company_name || `${job.first_name} ${job.last_name}`).toUpperCase()}</div>
+                      {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs truncate">{`${job.first_name} ${job.last_name}`.toUpperCase()}</div>}
                     </td>
                     <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
@@ -1792,7 +1792,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                   className="accent-primary w-3.5 h-3.5"
                                 />
                                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot || 'bg-slate-400'}`} />
-                                <span className="uppercase">{tool.brand} {tool.model_number}</span>
+                                <span>{`${tool.brand} ${tool.model_number}`.toUpperCase()}</span>
                                 <span className="opacity-60">— {cfg.label || tool.status}</span>
                               </label>
                             );
@@ -1964,13 +1964,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <div className="flex items-center gap-1.5">
                               <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
                               <span className="text-xs text-slate-500">Company:</span>
-                              <span className="text-sm text-slate-900 dark:text-white font-bold truncate uppercase">{cust.company_name}</span>
+                              <span className="text-sm text-slate-900 dark:text-white font-bold truncate">{(cust.company_name || '').toUpperCase()}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>person</span>
                             <span className="text-xs text-slate-500">Contact:</span>
-                            <span className="text-sm text-slate-900 dark:text-white uppercase">{cust.first_name} {cust.last_name}</span>
+                            <span className="text-sm text-slate-900 dark:text-white">{`${cust.first_name} ${cust.last_name}`.toUpperCase()}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>mail</span>
@@ -1986,7 +1986,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             <div className="flex items-center gap-1.5 sm:col-span-2">
                               <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
                               <span className="text-xs text-slate-500">Address:</span>
-                              <span className="text-sm text-slate-900 dark:text-white truncate uppercase">{cust.address}</span>
+                              <span className="text-sm text-slate-900 dark:text-white truncate">{(cust.address || '').toUpperCase()}</span>
                             </div>
                           )}
                         </div>
@@ -1994,7 +1994,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/40">
                             <span className="material-symbols-outlined text-slate-500 mt-0.5" style={{ fontSize: '13px' }}>sticky_note_2</span>
                             <span className="text-xs text-slate-500">Notes:</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-300 uppercase">{cust.customer_notes}</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-300">{(cust.customer_notes || '').toUpperCase()}</span>
                           </div>
                         )}
                       </>
@@ -2033,20 +2033,20 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               {onGoToPartsLibrary ? (
                                 <button
                                   onClick={() => onGoToPartsLibrary(tool.brand, tool.model_number)}
-                                  className="font-bold text-slate-900 dark:text-white text-base uppercase text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
+                                  className="font-bold text-slate-900 dark:text-white text-base text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
                                   title="View in Parts Library"
                                 >
-                                  {tool.brand} {tool.model_number}
+                                  {`${tool.brand} ${tool.model_number}`.toUpperCase()}
                                   <span className="material-symbols-outlined text-sm opacity-0 group-hover/pl:opacity-60 transition-opacity">inventory_2</span>
                                 </button>
                               ) : (
-                                <div className="font-bold text-slate-900 dark:text-white text-base uppercase">
-                                  {tool.brand} {tool.model_number}
+                                <div className="font-bold text-slate-900 dark:text-white text-base">
+                                  {`${tool.brand} ${tool.model_number}`.toUpperCase()}
                                 </div>
                               )}
-                              <div className="text-sm text-slate-500 mt-0.5 uppercase">
-                                {tool.tool_type}{tool.quantity > 1 && ` × ${tool.quantity}`}
-                                {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number}</>}
+                              <div className="text-sm text-slate-500 mt-0.5">
+                                {(tool.tool_type || '').toUpperCase()}{tool.quantity > 1 && ` × ${tool.quantity}`}
+                                {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number.toUpperCase()}</>}
                                 {retailPriceMap[tool.tool_id] != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Retail: ${parseFloat(retailPriceMap[tool.tool_id]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
@@ -2174,7 +2174,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 {tool.parts.map((p, realPi) => p.name?.trim() ? (
                                   <div key={realPi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1 uppercase">{p.name}{p.part_number ? ` - ${p.part_number}` : ''}</span>
+                                      <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{`${p.name}${p.part_number ? ` - ${p.part_number}` : ''}`.toUpperCase()}</span>
                                       <span className="text-slate-500 text-xs">×{p.quantity}</span>
                                       {(p.price != null && p.price !== '') && (
                                         <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">${(parseFloat(p.price) * (p.quantity || 1)).toFixed(2)}</span>
@@ -2355,7 +2355,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Update Status</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-xs truncate uppercase">{statusUpdateModal.brand} {statusUpdateModal.model_number}{statusUpdateModal.tool_type ? ` — ${statusUpdateModal.tool_type}` : ''}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{`${statusUpdateModal.brand} ${statusUpdateModal.model_number}${statusUpdateModal.tool_type ? ` — ${statusUpdateModal.tool_type}` : ''}`.toUpperCase()}</p>
               </div>
               <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                 <span className="material-symbols-outlined text-base">close</span>
@@ -2439,7 +2439,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
-                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate uppercase">{formData.brand} {formData.model_number}</p>}
+                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{`${formData.brand} ${formData.model_number}`.toUpperCase()}</p>}
               </div>
               <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                 <span className="material-symbols-outlined text-base">close</span>
@@ -2740,10 +2740,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
               <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700/60 px-6 py-2.5 flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary text-lg">person</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-slate-900 dark:text-white text-sm font-bold truncate uppercase">
-                    {selectedCustomerObj ? `${selectedCustomerObj.first_name} ${selectedCustomerObj.last_name}` : `${newJobForm.first_name} ${newJobForm.last_name}`}
+                  <p className="text-slate-900 dark:text-white text-sm font-bold truncate">
+                    {(selectedCustomerObj ? `${selectedCustomerObj.first_name} ${selectedCustomerObj.last_name}` : `${newJobForm.first_name} ${newJobForm.last_name}`).toUpperCase()}
                     {(selectedCustomerObj?.company_name || newJobForm.company_name) && (
-                      <span className="text-slate-500 dark:text-slate-400 font-normal"> — {selectedCustomerObj?.company_name || newJobForm.company_name}</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-normal"> — {(selectedCustomerObj?.company_name || newJobForm.company_name).toUpperCase()}</span>
                     )}
                   </p>
                   <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{selectedCustomerObj?.email || newJobForm.email}</p>
@@ -2938,7 +2938,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Edit Customer</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 uppercase">{jobEditForm.first_name} {jobEditForm.last_name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{`${jobEditForm.first_name} ${jobEditForm.last_name}`.toUpperCase()}</p>
                 </div>
               </div>
               <button onClick={() => setEditingJob(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
@@ -3485,7 +3485,7 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                       ) : (
                         <span className="material-symbols-outlined" style={{fontSize:'13px'}}>add</span>
                       )}
-                      <span className="font-medium uppercase">{sp.name}{sp.part_number ? ` - ${sp.part_number}` : ''}</span>
+                      <span className="font-medium">{`${sp.name}${sp.part_number ? ` - ${sp.part_number}` : ''}`.toUpperCase()}</span>
                       {sp.suggested_price != null && <span className="text-green-600 dark:text-green-400">${sp.suggested_price.toFixed(2)}</span>}
                     </button>
                   );
@@ -3535,8 +3535,8 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                               className={`w-full text-left px-3 py-2 sm:py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
                             >
                               <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
-                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[180px]">{s.model_names.join(', ')}</span>}
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{`${s.name}${s.part_number ? ` - ${s.part_number}` : ''}`.toUpperCase()}</span>
+                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 truncate hidden sm:inline max-w-[180px]">{s.model_names.join(', ').toUpperCase()}</span>}
                                 <span className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                                   {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${s.suggested_price.toFixed(2)}</span>}
                                   <span title={s.quantity_on_hand > 0 ? (s.low_stock ? `Low stock (${s.quantity_on_hand})` : `${s.quantity_on_hand} in stock`) : 'Out of stock'} className={
@@ -3585,8 +3585,8 @@ function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobFor
                               className={`w-full text-left px-3 py-2 sm:py-1.5 flex items-center gap-2 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60 transition-colors ${idx === highlightIndex ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
                             >
                               <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">{s.name}{s.part_number ? ` - ${s.part_number}` : ''}</span>
-                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase truncate hidden sm:inline max-w-[180px]">{s.model_names.join(', ')}</span>}
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{`${s.name}${s.part_number ? ` - ${s.part_number}` : ''}`.toUpperCase()}</span>
+                                {s.model_names?.length > 0 && <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 truncate hidden sm:inline max-w-[180px]">{s.model_names.join(', ').toUpperCase()}</span>}
                                 <span className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                                   {s.suggested_price != null && <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${s.suggested_price.toFixed(2)}</span>}
                                   <span title={s.quantity_on_hand > 0 ? (s.low_stock ? `Low stock (${s.quantity_on_hand})` : `${s.quantity_on_hand} in stock`) : 'Out of stock'} className={
