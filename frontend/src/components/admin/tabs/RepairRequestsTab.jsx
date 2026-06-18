@@ -382,6 +382,13 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                       <span className="text-xs text-slate-500">Phone:</span>
                       <a href={`tel:${selectedQuote.phone}`} className="text-sm text-primary hover:underline">{selectedQuote.phone}</a>
                     </div>
+                    {selectedQuote.address && (
+                      <div className="flex items-center gap-1.5 sm:col-span-2">
+                        <span className="material-symbols-outlined text-slate-500" style={{fontSize:'13px'}}>location_on</span>
+                        <span className="text-xs text-slate-500">Address:</span>
+                        <span className="text-sm text-slate-900 dark:text-white">{selectedQuote.address}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -59,6 +59,8 @@ async def send_quote_notification(quote: Quote, business_settings: dict = None) 
     customer_section += f"  Contact: {quote.first_name} {quote.last_name}\n"
     customer_section += f"  Phone: {quote.phone}\n"
     customer_section += f"  Email: {quote.email}"
+    if quote.address:
+        customer_section += f"\n  Address: {quote.address}"
 
     tools_section = ""
     for idx, tool in enumerate(quote.tools, start=1):

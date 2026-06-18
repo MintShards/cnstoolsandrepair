@@ -42,6 +42,7 @@ async def create_quote(
     last_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
+    address: str | None = Form(None),
     tools: str = Form(...),  # JSON string array of tools
     photos: List[UploadFile] = File(default=[]),
     idempotency_key: str | None = Form(default=None)
@@ -84,6 +85,7 @@ async def create_quote(
             last_name=last_name,
             email=email,
             phone=phone,
+            address=address if address and address.strip() else None,
             tools=tool_entries,
             photos=photo_filenames
         )

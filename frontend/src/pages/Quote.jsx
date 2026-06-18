@@ -341,6 +341,7 @@ export default function Quote() {
       formData.append('last_name', data.last_name);
       formData.append('email', data.email);
       formData.append('phone', data.phone);
+      formData.append('address', data.address || '');
 
       // Send tools as JSON array
       formData.append('tools', JSON.stringify(tools));
@@ -635,6 +636,25 @@ export default function Quote() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label htmlFor="address" className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                  Address
+                </label>
+                <input
+                  id="address"
+                  {...register('address')}
+                  onChange={(e) => {
+                    const pos = e.target.selectionStart;
+                    setValue('address', capitalizeWords(e.target.value));
+                    requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
+                  }}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Enter Address"
+                  aria-required="false"
+                />
               </div>
             </div>
           </div>

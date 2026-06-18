@@ -25,6 +25,7 @@ class QuoteCreate(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=50)
     email: EmailStr
     phone: str = Field(..., min_length=12, max_length=12, pattern=r'^\d{3}-\d{3}-\d{4}$')
+    address: Optional[str] = Field(None, max_length=300)
     tools: List[ToolEntry] = Field(..., min_length=1, max_length=5, description="List of tools (1-5)")
     photos: List[str] = Field(default_factory=list)
 
@@ -88,6 +89,7 @@ class QuoteResponse(BaseModel):
     last_name: str
     email: str
     phone: str
+    address: Optional[str] = None
     tools: List[ToolEntry] = []  # Default to empty list for legacy quotes
     photos: List[str] = []  # Default to empty list for legacy quotes
     status: str = "pending"  # Default status
