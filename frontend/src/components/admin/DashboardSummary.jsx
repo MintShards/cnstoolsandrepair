@@ -170,7 +170,7 @@ export default function DashboardSummary({
       detail: 'No technician assigned',
       count: unassignedCount,
       priority: 'Medium',
-      onClick: () => nav('__all__'),
+      onClick: () => nav('__unassigned__'),
     },
     {
       icon: 'storefront',
