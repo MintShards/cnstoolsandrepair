@@ -606,7 +606,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }));
     }
     if (specialFilter === 'unassigned') {
-      base = base.filter(job => job.tools.some(t => !t.assigned_technician || !t.assigned_technician.trim()));
+      base = base.filter(job => job.tools.some(t =>
+        !TERMINAL_STATUSES.has(t.status) && (!t.assigned_technician || !t.assigned_technician.trim())
+      ));
     }
     if (SERVER_SORT_FIELDS.has(sortField)) return base; // already sorted by server
     const sorted = [...base];
