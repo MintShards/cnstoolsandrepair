@@ -269,7 +269,7 @@ export default function DashboardSummary({
             <KPICard
               icon="local_shipping" label="Awaiting Parts" value={awaitingPartsCount}
               sub={
-                partsOrdered > 0 || partsReceived > 0
+                awaitingPartsCount > 0 && (partsOrdered > 0 || partsReceived > 0)
                   ? [partsOrdered > 0 ? `${partsOrdered} ordered` : null, partsReceived > 0 ? `${partsReceived} received` : null].filter(Boolean).join(' · ')
                   : 'None waiting'
               }
