@@ -179,7 +179,7 @@ export default function DashboardSummary({
       detail: 'Call customer to arrange collection',
       count: readyForPickup.length,
       priority: 'Low',
-      onClick: () => nav('ready'),
+      onClick: () => nav('__ready_for_pickup__'),
     },
     {
       icon: 'inventory_2',

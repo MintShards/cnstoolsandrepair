@@ -97,7 +97,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [searchQuery, setSearchQuery] = useState('');
   // Initialize filter from external prop if present (dashboard click-through)
   // Capture the initial prop in a ref so StrictMode double-mount doesn't lose it
-  const SPECIAL_FILTERS = new Set(['__all__', '__attention__', '__overdue__', '__stuck__', '__ready_for_repair__', '__unassigned__']);
+  const SPECIAL_FILTERS = new Set(['__all__', '__attention__', '__overdue__', '__stuck__', '__ready_for_repair__', '__unassigned__', '__ready_for_pickup__']);
   const initialExternalStatus = useRef(externalStatusFilter);
   const ext = initialExternalStatus.current;
   const initStatus = ext && ext !== '' && !SPECIAL_FILTERS.has(ext) ? ext : '';
@@ -119,7 +119,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [batchApplying, setBatchApplying] = useState(false);
   const [attentionFilter, setAttentionFilter] = useState(ext === '__attention__');
   // Specific dashboard filters: 'overdue' = past estimated_completion, 'stuck' = diagnosed/in_repair 24h+
-  const initSpecial = ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : ext === '__ready_for_repair__' ? 'ready_for_repair' : ext === '__unassigned__' ? 'unassigned' : '';
+  const initSpecial = ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : ext === '__ready_for_repair__' ? 'ready_for_repair' : ext === '__unassigned__' ? 'unassigned' : ext === '__ready_for_pickup__' ? 'ready_for_pickup' : '';
   const [specialFilter, setSpecialFilter] = useState(initSpecial);
 
   // Detail view state
@@ -193,12 +193,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const isStuck = externalStatusFilter === '__stuck__';
       const isReadyForRepair = externalStatusFilter === '__ready_for_repair__';
       const isUnassigned = externalStatusFilter === '__unassigned__';
-      const isSpecial = isAttention || isAll || isOverdue || isStuck || isReadyForRepair || isUnassigned;
+      const isReadyForPickup = externalStatusFilter === '__ready_for_pickup__';
+      const isSpecial = isAttention || isAll || isOverdue || isStuck || isReadyForRepair || isUnassigned || isReadyForPickup;
       const newStatus = isSpecial ? '' : externalStatusFilter;
 
       setStatusFilter(newStatus);
       setAttentionFilter(isAttention);
-      setSpecialFilter(isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : isUnassigned ? 'unassigned' : '');
+      setSpecialFilter(isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : isUnassigned ? 'unassigned' : isReadyForPickup ? 'ready_for_pickup' : '');
       setSearchQuery('');
       setPriorityFilter('');
       setCurrentPage(1);
@@ -609,6 +610,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       base = base.filter(job => job.tools.some(t =>
         !TERMINAL_STATUSES.has(t.status) && (!t.assigned_technician || !t.assigned_technician.trim())
       ));
+    }
+    if (specialFilter === 'ready_for_pickup') {
+      base = base.filter(job => job.tools.some(t => t.status === 'ready' || t.status === 'invoiced'));
     }
     if (SERVER_SORT_FIELDS.has(sortField)) return base; // already sorted by server
     const sorted = [...base];
@@ -1329,13 +1333,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
                 : specialFilter === 'unassigned'
                 ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                : specialFilter === 'ready_for_pickup'
+                ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                 : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
             }`}>
               <span className="material-symbols-outlined text-sm">
-                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'unassigned' ? 'person_off' : 'construction'}
+                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'unassigned' ? 'person_off' : specialFilter === 'ready_for_pickup' ? 'storefront' : 'construction'}
               </span>
-              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'unassigned' ? 'Unassigned' : 'Ready for Repair'}
-              <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : specialFilter === 'unassigned' ? 'hover:text-purple-900 dark:hover:text-purple-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
+              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'unassigned' ? 'Unassigned' : specialFilter === 'ready_for_pickup' ? 'Ready for Pickup' : 'Ready for Repair'}
+              <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : specialFilter === 'unassigned' ? 'hover:text-purple-900 dark:hover:text-purple-100' : specialFilter === 'ready_for_pickup' ? 'hover:text-emerald-900 dark:hover:text-emerald-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </span>
@@ -1426,13 +1432,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
                 : specialFilter === 'unassigned'
                 ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                : specialFilter === 'ready_for_pickup'
+                ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                 : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
             }`}>
               <span className="material-symbols-outlined text-sm">
-                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'unassigned' ? 'person_off' : 'construction'}
+                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'unassigned' ? 'person_off' : specialFilter === 'ready_for_pickup' ? 'storefront' : 'construction'}
               </span>
-              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'unassigned' ? 'Unassigned' : 'Ready for Repair'}
-              <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : specialFilter === 'unassigned' ? 'hover:text-purple-900 dark:hover:text-purple-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
+              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'unassigned' ? 'Unassigned' : specialFilter === 'ready_for_pickup' ? 'Ready for Pickup' : 'Ready for Repair'}
+              <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : specialFilter === 'unassigned' ? 'hover:text-purple-900 dark:hover:text-purple-100' : specialFilter === 'ready_for_pickup' ? 'hover:text-emerald-900 dark:hover:text-emerald-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
             </span>
