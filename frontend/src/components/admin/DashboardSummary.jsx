@@ -21,10 +21,12 @@ function relativeTime(isoString) {
 function KPICard({ icon, label, value, sub, color, onClick, urgent }) {
   const colorMap = {
     blue:    'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-400',
-    amber:   'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400',
-    red:     'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400',
     green:   'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400',
+    amber:   'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400',
+    teal:    'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800/40 text-teal-700 dark:text-teal-400',
+    purple:  'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/40 text-purple-700 dark:text-purple-400',
+    red:     'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400',
+    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400',
   };
   const base = `flex flex-col gap-0.5 sm:gap-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border h-full ${colorMap[color]} transition-all`;
   const interactive = onClick ? 'cursor-pointer hover:shadow-md active:scale-[0.98] sm:hover:scale-[1.02]' : '';
@@ -103,79 +105,89 @@ export default function DashboardSummary({
   // ── Derived data ──
   const sc = data?.status_counts ?? {};
   const totalActive = data?.total_active_jobs ?? 0;
-  const pendingApproval = sc.quoted ?? 0;
-  const readyCount = (sc.ready ?? 0) + (sc.invoiced ?? 0);
+  const newJobsToday = data?.today_activity?.new_jobs ?? 0;
+  const inProgressCount = sc.in_repair ?? 0;
+  const rushUrgentActive = data?.rush_urgent_active ?? 0;
+  const awaitingPartsCount = sc.parts_pending ?? 0;
+  const partsOrdered = data?.parts_summary?.ordered ?? 0;
+  const partsReceived = data?.parts_summary?.received ?? 0;
+  const unassignedCount = (data?.technician_summary ?? []).find(t => t.name === 'Unassigned')?.active ?? 0;
   const overdueCount = data?.overdue_count ?? 0;
-  const completedToday = data?.today_activity?.completions ?? 0;
+  const stuckCount = data?.stuck_count ?? 0;
   const pendingRequestsCount = data?.pending_requests_count ?? 0;
   const pendingApprovalStale = data?.pending_approval_stale_count ?? 0;
-  const stuckCount = data?.stuck_count ?? 0;
   const readyForPickup = data?.ready_for_pickup ?? [];
   const priorityJobs = data?.priority_jobs ?? [];
   const activeCustomers = data?.active_customers ?? [];
   const pendingApprovals = data?.pending_approvals ?? [];
   const lowStockCount = data?.low_stock_count ?? 0;
   const readyForRepairCount = data?.ready_for_repair_count ?? 0;
-  const hasAttention = overdueCount > 0 || (data?.stale_count ?? 0) > 0 || (data?.rush_urgent_active ?? 0) > 0;
+  const quotedCount = sc.quoted ?? 0;
+  const hasAttention = overdueCount > 0 || (data?.stale_count ?? 0) > 0 || rushUrgentActive > 0;
 
   const maxStatusCount = Math.max(1, ...MAIN_STAGES.map(s => sc[s] ?? 0));
 
-  // Action Required items — ordered by shop workflow priority
+  // Priority badge colors — consistent per level
+  const PRIORITY_COLORS = {
+    High: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30',
+    Medium: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
+    Low: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
+  };
+
+  // Action Required items — ordered by urgency
   const actionItems = [
     {
       icon: 'schedule',
+      iconColor: 'text-red-500 dark:text-red-400',
       label: `${overdueCount} overdue job${overdueCount !== 1 ? 's' : ''}`,
-      detail: 'Past target turnaround date',
+      detail: 'Past estimated completion date',
       count: overdueCount,
       priority: 'High',
-      priorityColor: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30',
       onClick: () => nav('__overdue__'),
     },
     {
-      icon: 'construction',
-      label: `${readyForRepairCount} ready for repair`,
-      detail: 'All parts in stock — can begin work',
-      count: readyForRepairCount,
-      priority: 'Medium',
-      priorityColor: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30',
-      onClick: () => nav('__ready_for_repair__'),
-    },
-    {
       icon: 'block',
-      label: `${stuckCount} stuck job${stuckCount !== 1 ? 's' : ''} (24h+)`,
-      detail: 'No status update in over 24 hours',
+      iconColor: 'text-orange-500 dark:text-orange-400',
+      label: `${stuckCount} stuck job${stuckCount !== 1 ? 's' : ''}`,
+      detail: 'No progress in 24+ hours',
       count: stuckCount,
-      priority: 'Medium',
-      priorityColor: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
+      priority: 'High',
       onClick: () => nav('__stuck__'),
     },
     {
-      icon: 'hourglass_top',
-      label: `${pendingApprovalStale} waiting approval 2+ days`,
-      detail: 'Customers have not responded',
+      icon: 'phone_in_talk',
+      iconColor: 'text-purple-500 dark:text-purple-400',
+      label: `${pendingApprovalStale} customer follow-up`,
+      detail: 'Quoted 2+ days — call customer',
       count: pendingApprovalStale,
       priority: 'Medium',
-      priorityColor: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
       onClick: () => nav('quoted'),
     },
     {
+      icon: 'person_off',
+      iconColor: 'text-blue-500 dark:text-blue-400',
+      label: `${unassignedCount} unassigned job${unassignedCount !== 1 ? 's' : ''}`,
+      detail: 'No technician assigned',
+      count: unassignedCount,
+      priority: 'Medium',
+      onClick: () => nav('__all__'),
+    },
+    {
       icon: 'storefront',
+      iconColor: 'text-teal-500 dark:text-teal-400',
       label: `${readyForPickup.length} ready for pickup`,
-      detail: 'Customer follow-up recommended',
+      detail: 'Call customer to arrange collection',
       count: readyForPickup.length,
       priority: 'Low',
-      priorityColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
       onClick: () => nav('ready'),
     },
     {
       icon: 'inventory_2',
+      iconColor: 'text-amber-500 dark:text-amber-400',
       label: `${lowStockCount} part${lowStockCount !== 1 ? 's' : ''} low on stock`,
-      detail: 'Below reorder point',
+      detail: 'Below reorder point — order now',
       count: lowStockCount,
       priority: lowStockCount > 3 ? 'High' : 'Medium',
-      priorityColor: lowStockCount > 3
-        ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30'
-        : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30',
       onClick: onGoToPartsLibrary,
     },
   ];
@@ -243,32 +255,39 @@ export default function DashboardSummary({
           {/* ── KPI Cards ────────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
             <KPICard
-              icon="build_circle" label="Active Jobs" value={totalActive}
-              sub="Currently in shop" color="blue"
+              icon="build_circle" label="Jobs In Shop" value={totalActive}
+              sub={newJobsToday > 0 ? `+${newJobsToday} new today` : 'Total active'}
+              color="blue"
               onClick={() => nav('__all__')}
             />
             <KPICard
-              icon="pending_actions" label="Pending Approval" value={pendingApproval}
-              sub="Waiting for customer" color="amber"
+              icon="engineering" label="In Progress" value={inProgressCount}
+              sub={rushUrgentActive > 0 ? `${rushUrgentActive} rush/urgent` : 'Being worked on'}
+              color="green"
+              onClick={() => nav('in_repair')}
+            />
+            <KPICard
+              icon="local_shipping" label="Awaiting Parts" value={awaitingPartsCount}
+              sub={
+                partsOrdered > 0 || partsReceived > 0
+                  ? [partsOrdered > 0 ? `${partsOrdered} ordered` : null, partsReceived > 0 ? `${partsReceived} received` : null].filter(Boolean).join(' · ')
+                  : 'None waiting'
+              }
+              color="amber"
+              onClick={() => nav('parts_pending')}
+            />
+            <KPICard
+              icon="construction" label="Ready To Repair" value={readyForRepairCount}
+              sub="Approved & parts ready"
+              color="teal"
+              onClick={() => nav('__ready_for_repair__')}
+            />
+            <KPICard
+              icon="pending_actions" label="Waiting Approval" value={quotedCount}
+              sub={pendingApprovalStale > 0 ? `${pendingApprovalStale} waiting 2+ days` : 'Quoted — pending response'}
+              color="purple"
               onClick={() => nav('quoted')}
             />
-            <KPICard
-              icon="storefront" label="Ready for Pickup" value={readyCount}
-              sub="Awaiting collection" color="emerald"
-              onClick={() => nav('ready')}
-            />
-            <KPICard
-              icon="schedule" label="Overdue" value={overdueCount}
-              sub="Need attention" color="red"
-              urgent={overdueCount > 0}
-              onClick={overdueCount > 0 ? () => nav('__overdue__') : undefined}
-            />
-            <div className="col-span-2 sm:col-span-1">
-              <KPICard
-                icon="check_circle" label="Completed Today" value={completedToday}
-                sub="Finished today" color="green"
-              />
-            </div>
           </div>
 
           {/* ── 2-column layout ──────────────────────────────────── */}
@@ -304,7 +323,7 @@ export default function DashboardSummary({
                       }`}
                     >
                       <span className={`material-symbols-outlined text-base flex-shrink-0 ${
-                        item.count > 0 ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'
+                        item.count > 0 ? (item.iconColor || 'text-slate-600 dark:text-slate-300') : 'text-slate-400'
                       }`}>{item.icon}</span>
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs sm:text-sm font-bold leading-tight ${item.count > 0 ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
@@ -312,7 +331,7 @@ export default function DashboardSummary({
                         </p>
                         <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 leading-tight hidden sm:block">{item.detail}</p>
                       </div>
-                      <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full flex-shrink-0 ${item.priorityColor}`}>
+                      <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full flex-shrink-0 ${PRIORITY_COLORS[item.priority]}`}>
                         {item.priority}
                       </span>
                     </button>
