@@ -925,6 +925,7 @@ async def list_repair_jobs(
     search: Optional[str] = None,
     customer_id: Optional[str] = None,
     assigned_technician: Optional[str] = None,
+    active_only: bool = Query(default=False),
     sort_by: Optional[str] = Query(default="smart", regex="^(created_at|updated_at|request_number|smart)$"),
     sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
     current_user: User = Depends(require_admin)
@@ -940,6 +941,9 @@ async def list_repair_jobs(
 
     if status:
         query["tools.status"] = status
+    elif active_only:
+        _TERMINAL = ["completed", "abandoned", "closed", "declined", "beyond_economical_repair"]
+        query["tools.status"] = {"$nin": _TERMINAL}
 
     if priority:
         query["tools.priority"] = priority

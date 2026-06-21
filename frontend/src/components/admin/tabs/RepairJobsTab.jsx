@@ -497,10 +497,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       const activePage = page ?? currentPage;
       const activeSize = size ?? pageSize;
       const isAttention = attention !== undefined ? attention : attentionFilter;
-      const isBulkFilter = isAttention || specialFilter !== '';
+      const isBulkFilter = isAttention || (specialFilter !== '' && specialFilter !== 'active_only');
       const params = isBulkFilter
         ? { skip: 0, limit: 200 }  // fetch all when client-side filter active
         : { skip: (activePage - 1) * activeSize, limit: activeSize };
+      if (specialFilter === 'active_only') params.active_only = true;
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
       if (technicianFilter) params.assigned_technician = technicianFilter;
@@ -512,7 +513,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
       const { jobs: data, total } = await repairsAPI.list(params);
       setJobs(data);
-      setTotalCount(isBulkFilter ? data.length : total);
+      setTotalCount(isBulkFilter ? data.length : total);  // active_only uses server total via !isBulkFilter
       // Only update the tab badge with the unfiltered server total.
       // When any filter is active the count would reflect filtered results,
       // so we skip the update and let the parent's independent fetch own the count.
@@ -576,9 +577,6 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         return job.tools.some(t => t.priority === 'rush' || t.priority === 'urgent');
       });
     }
-    if (specialFilter === 'active_only') {
-      base = base.filter(job => job.tools.some(t => !TERMINAL_STATUSES.has(t.status)));
-    }
     if (specialFilter === 'overdue') {
       base = base.filter(job => job.tools.some(t => isToolOverdue(t)));
     }
@@ -637,7 +635,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   })();
 
   // In client-filter mode: displayJobs is client-filtered (from all 200 fetched), so use its length
-  const isBulkFiltered = attentionFilter || specialFilter !== '';
+  const isBulkFiltered = attentionFilter || (specialFilter !== '' && specialFilter !== 'active_only');
   const totalResults = isBulkFiltered ? displayJobs.length : totalCount;
   const paginatedJobs = displayJobs; // server already applied skip/limit
 
