@@ -119,7 +119,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [batchApplying, setBatchApplying] = useState(false);
   const [attentionFilter, setAttentionFilter] = useState(ext === '__attention__');
   // Specific dashboard filters: 'overdue' = past estimated_completion, 'stuck' = diagnosed/in_repair 24h+
-  const initSpecial = ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : ext === '__ready_for_repair__' ? 'ready_for_repair' : ext === '__ready_for_pickup__' ? 'ready_for_pickup' : '';
+  const initSpecial = ext === '__all__' ? 'active_only' : ext === '__overdue__' ? 'overdue' : ext === '__stuck__' ? 'stuck' : ext === '__ready_for_repair__' ? 'ready_for_repair' : ext === '__ready_for_pickup__' ? 'ready_for_pickup' : '';
   const [specialFilter, setSpecialFilter] = useState(initSpecial);
 
   // Detail view state
@@ -198,7 +198,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
       setStatusFilter(newStatus);
       setAttentionFilter(isAttention);
-      setSpecialFilter(isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : isReadyForPickup ? 'ready_for_pickup' : '');
+      setSpecialFilter(isAll ? 'active_only' : isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : isReadyForPickup ? 'ready_for_pickup' : '');
       setSearchQuery('');
       setPriorityFilter('');
       setCurrentPage(1);
@@ -575,6 +575,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         if (alert === 'overdue' || alert === 'stale') return true;
         return job.tools.some(t => t.priority === 'rush' || t.priority === 'urgent');
       });
+    }
+    if (specialFilter === 'active_only') {
+      base = base.filter(job => job.tools.some(t => !TERMINAL_STATUSES.has(t.status)));
     }
     if (specialFilter === 'overdue') {
       base = base.filter(job => job.tools.some(t => isToolOverdue(t)));
@@ -1323,16 +1326,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           </button>
           {specialFilter && (
             <span className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold ${
-              specialFilter === 'ready_for_repair'
+              specialFilter === 'active_only'
+                ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : specialFilter === 'ready_for_repair'
                 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
                 : specialFilter === 'ready_for_pickup'
                 ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                 : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
             }`}>
               <span className="material-symbols-outlined text-sm">
-                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'ready_for_pickup' ? 'storefront' : 'construction'}
+                {specialFilter === 'active_only' ? 'build_circle' : specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'ready_for_pickup' ? 'storefront' : 'construction'}
               </span>
-              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'ready_for_pickup' ? 'Ready for Pickup' : 'Ready for Repair'}
+              {specialFilter === 'active_only' ? 'Active Jobs' : specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'ready_for_pickup' ? 'Ready for Pickup' : 'Ready for Repair'}
               <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : specialFilter === 'ready_for_pickup' ? 'hover:text-emerald-900 dark:hover:text-emerald-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -1420,16 +1425,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           </button>
           {specialFilter && (
             <span className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold ${
-              specialFilter === 'ready_for_repair'
+              specialFilter === 'active_only'
+                ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : specialFilter === 'ready_for_repair'
                 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
                 : specialFilter === 'ready_for_pickup'
                 ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                 : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
             }`}>
               <span className="material-symbols-outlined text-sm">
-                {specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'ready_for_pickup' ? 'storefront' : 'construction'}
+                {specialFilter === 'active_only' ? 'build_circle' : specialFilter === 'overdue' ? 'schedule' : specialFilter === 'stuck' ? 'block' : specialFilter === 'ready_for_pickup' ? 'storefront' : 'construction'}
               </span>
-              {specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'ready_for_pickup' ? 'Ready for Pickup' : 'Ready for Repair'}
+              {specialFilter === 'active_only' ? 'Active Jobs' : specialFilter === 'overdue' ? 'Overdue' : specialFilter === 'stuck' ? 'Stuck 24h+' : specialFilter === 'ready_for_pickup' ? 'Ready for Pickup' : 'Ready for Repair'}
               <button onClick={() => setSpecialFilter('')} className={`ml-0.5 ${specialFilter === 'ready_for_repair' ? 'hover:text-blue-900 dark:hover:text-blue-100' : specialFilter === 'ready_for_pickup' ? 'hover:text-emerald-900 dark:hover:text-emerald-100' : 'hover:text-amber-900 dark:hover:text-amber-100'}`}>
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
