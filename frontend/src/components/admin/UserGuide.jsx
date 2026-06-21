@@ -8,7 +8,7 @@ const STATUS_LIST = [
   { key: 'parts_pending', label: 'Parts Pending',    step: 5,    color: '#ea580c', bg: '#fff7ed', desc: 'We are waiting for parts to arrive before we can start.' },
   { key: 'in_repair',     label: 'In Repair',        step: 6,    color: '#2563eb', bg: '#eff6ff', desc: 'A technician is actively working on the tool right now.' },
   { key: 'ready',         label: 'Ready for Pickup', step: 7,    color: '#059669', bg: '#ecfdf5', desc: 'The tool is fixed and waiting for the customer to come pick it up.' },
-  { key: 'invoiced',      label: 'Invoiced',         step: 8,    color: '#6366f1', bg: '#eef2ff', desc: 'We have sent the customer a bill.' },
+  { key: 'invoiced',      label: 'Invoiced',         step: 8,    color: '#06b6d4', bg: '#ecfeff', desc: 'We have sent the customer a bill.' },
   { key: 'completed',     label: 'Completed',        step: null, color: '#15803d', bg: '#dcfce7', desc: 'The customer picked up their tool and paid. The job is done.' },
   { key: 'beyond_economical_repair', label: 'Beyond Economical Repair', step: null, color: '#b91c1c', bg: '#fef2f2', desc: 'The cost to repair the tool is more than the tool is worth. It does not make financial sense to fix it. Also shown as "BER".' },
   { key: 'declined',      label: 'Declined',         step: null, color: '#dc2626', bg: '#fef2f2', desc: 'The customer said no — they did not want us to do the repair.' },

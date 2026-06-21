@@ -106,12 +106,9 @@ export default function DashboardSummary({
   const sc = data?.status_counts ?? {};
   const totalActive = data?.total_active_jobs ?? 0;
   const newJobsToday = data?.today_activity?.new_jobs ?? 0;
-  const inProgressCount = sc.in_repair ?? 0;
-  const rushUrgentActive = data?.rush_urgent_active ?? 0;
   const awaitingPartsCount = sc.parts_pending ?? 0;
   const partsOrdered = data?.parts_summary?.ordered ?? 0;
   const partsReceived = data?.parts_summary?.received ?? 0;
-  const unassignedCount = (data?.technician_summary ?? []).find(t => t.name === 'Unassigned')?.active ?? 0;
   const overdueCount = data?.overdue_count ?? 0;
   const stuckCount = data?.stuck_count ?? 0;
   const pendingRequestsCount = data?.pending_requests_count ?? 0;
@@ -123,7 +120,7 @@ export default function DashboardSummary({
   const lowStockCount = data?.low_stock_count ?? 0;
   const readyForRepairCount = data?.ready_for_repair_count ?? 0;
   const quotedCount = sc.quoted ?? 0;
-  const hasAttention = overdueCount > 0 || (data?.stale_count ?? 0) > 0 || rushUrgentActive > 0;
+  const hasAttention = overdueCount > 0 || (data?.stale_count ?? 0) > 0 || (data?.rush_urgent_active ?? 0) > 0;
 
   const maxStatusCount = Math.max(1, ...MAIN_STAGES.map(s => sc[s] ?? 0));
 
@@ -135,12 +132,18 @@ export default function DashboardSummary({
   };
 
   // Action Required items — ordered by urgency
+  const followUpCount = pendingApprovalStale + readyForPickup.length;
+  const followUpDetail = [
+    pendingApprovalStale > 0 ? `${pendingApprovalStale} awaiting approval` : null,
+    readyForPickup.length > 0 ? `${readyForPickup.length} awaiting pickup` : null,
+  ].filter(Boolean).join(' · ') || 'No follow-ups needed';
+
   const actionItems = [
     {
       icon: 'schedule',
       iconColor: 'text-red-500 dark:text-red-400',
       label: `${overdueCount} overdue job${overdueCount !== 1 ? 's' : ''}`,
-      detail: 'Past estimated completion date',
+      detail: 'Past target turnaround date',
       count: overdueCount,
       priority: 'High',
       onClick: () => nav('__overdue__'),
@@ -149,43 +152,25 @@ export default function DashboardSummary({
       icon: 'block',
       iconColor: 'text-orange-500 dark:text-orange-400',
       label: `${stuckCount} stuck job${stuckCount !== 1 ? 's' : ''}`,
-      detail: 'No progress in 24+ hours',
+      detail: `No update/activity for ${data?.stale_days ?? 3}+ days`,
       count: stuckCount,
       priority: 'High',
       onClick: () => nav('__stuck__'),
     },
     {
       icon: 'phone_in_talk',
-      iconColor: 'text-purple-500 dark:text-purple-400',
-      label: `${pendingApprovalStale} customer follow-up`,
-      detail: 'Quoted 2+ days — call customer',
-      count: pendingApprovalStale,
+      iconColor: 'text-sky-500 dark:text-sky-400',
+      label: `${followUpCount} customer follow-up${followUpCount !== 1 ? 's' : ''}`,
+      detail: followUpDetail,
+      count: followUpCount,
       priority: 'Medium',
       onClick: () => nav('quoted'),
     },
     {
-      icon: 'person_off',
-      iconColor: 'text-blue-500 dark:text-blue-400',
-      label: `${unassignedCount} unassigned job${unassignedCount !== 1 ? 's' : ''}`,
-      detail: 'No technician assigned',
-      count: unassignedCount,
-      priority: 'Medium',
-      onClick: () => nav('__unassigned__'),
-    },
-    {
-      icon: 'storefront',
-      iconColor: 'text-teal-500 dark:text-teal-400',
-      label: `${readyForPickup.length} ready for pickup`,
-      detail: 'Call customer to arrange collection',
-      count: readyForPickup.length,
-      priority: 'Low',
-      onClick: () => nav('__ready_for_pickup__'),
-    },
-    {
       icon: 'inventory_2',
-      iconColor: 'text-amber-500 dark:text-amber-400',
+      iconColor: 'text-rose-500 dark:text-rose-400',
       label: `${lowStockCount} part${lowStockCount !== 1 ? 's' : ''} low on stock`,
-      detail: 'Below reorder point — order now',
+      detail: 'Inventory below reorder point',
       count: lowStockCount,
       priority: lowStockCount > 3 ? 'High' : 'Medium',
       onClick: onGoToPartsLibrary,
@@ -256,37 +241,37 @@ export default function DashboardSummary({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
             <KPICard
               icon="build_circle" label="Jobs In Shop" value={totalActive}
-              sub={newJobsToday > 0 ? `+${newJobsToday} new today` : 'Total active'}
+              sub={newJobsToday > 0 ? `+${newJobsToday} new today` : 'Total active repairs'}
               color="blue"
               onClick={() => nav('__all__')}
             />
             <KPICard
-              icon="engineering" label="In Progress" value={inProgressCount}
-              sub={rushUrgentActive > 0 ? `${rushUrgentActive} rush/urgent` : 'Being worked on'}
-              color="green"
-              onClick={() => nav('in_repair')}
+              icon="pending_actions" label="Waiting Approval" value={quotedCount}
+              sub={pendingApprovalStale > 0 ? `${pendingApprovalStale} waiting 2+ days` : 'Awaiting customer decision'}
+              color="purple"
+              onClick={() => nav('quoted')}
             />
             <KPICard
               icon="local_shipping" label="Awaiting Parts" value={awaitingPartsCount}
               sub={
                 awaitingPartsCount > 0 && (partsOrdered > 0 || partsReceived > 0)
                   ? [partsOrdered > 0 ? `${partsOrdered} ordered` : null, partsReceived > 0 ? `${partsReceived} received` : null].filter(Boolean).join(' · ')
-                  : 'None waiting'
+                  : 'Waiting for supplier parts'
               }
               color="amber"
               onClick={() => nav('parts_pending')}
             />
             <KPICard
-              icon="construction" label="Ready To Repair" value={readyForRepairCount}
-              sub="Approved & parts ready"
+              icon="construction" label="Ready For Repair" value={readyForRepairCount}
+              sub="Approved & parts available"
               color="teal"
               onClick={() => nav('__ready_for_repair__')}
             />
             <KPICard
-              icon="pending_actions" label="Waiting Approval" value={quotedCount}
-              sub={pendingApprovalStale > 0 ? `${pendingApprovalStale} waiting 2+ days` : 'Quoted — pending response'}
-              color="purple"
-              onClick={() => nav('quoted')}
+              icon="storefront" label="Ready For Pickup" value={readyForPickup.length}
+              sub="Repair completed — call customer"
+              color="emerald"
+              onClick={() => nav('__ready_for_pickup__')}
             />
           </div>
 
