@@ -1603,15 +1603,15 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   {[
                     { field: 'request_number', label: 'WO #', cls: '' },
                     { field: 'customer', label: 'Customer', cls: '' },
-                    { field: 'tools', label: 'Tools', cls: 'hidden md:table-cell' },
-                    { field: 'priority', label: 'Priority', cls: 'hidden md:table-cell' },
+                    { field: 'tools', label: 'Tools', cls: 'hidden lg:table-cell' },
+                    { field: 'priority', label: 'Priority', cls: 'hidden lg:table-cell' },
                     { field: 'status', label: 'Status', cls: '' },
-                    { field: 'created_at', label: 'Created / Due', cls: 'hidden lg:table-cell' },
-                    { field: 'updated_at', label: 'Updated', cls: 'hidden xl:table-cell' },
+                    { field: 'created_at', label: 'Created / Due', cls: 'hidden xl:table-cell' },
+                    { field: 'updated_at', label: 'Updated', cls: 'hidden 2xl:table-cell' },
                   ].map(({ field, label, cls }) => (
                     <th
                       key={field}
-                      className={`py-3 px-3 sm:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 transition-colors ${cls}`}
+                      className={`py-3 px-2 sm:px-3 lg:px-4 text-xs font-bold uppercase tracking-wide text-slate-500 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 transition-colors ${cls}`}
                       onClick={() => handleSort(field)}
                     >
                       <span className="inline-flex items-center gap-1">
@@ -1622,7 +1622,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </span>
                     </th>
                   ))}
-                  <th className="py-3 px-3 sm:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
+                  <th className="py-3 px-2 sm:px-3 lg:px-4 text-right text-xs font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
                     {batchMode ? (
                       <label className="inline-flex items-center gap-1.5 cursor-pointer" title={allPageSelected ? 'Deselect all on page' : 'Select all on page'}>
                         <input
@@ -1649,7 +1649,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     }`}
                     onClick={() => !batchMode && openJob(job)}
                   >
-                    <td className="py-3 px-3 sm:px-4">
+                    <td className="py-3 px-2 sm:px-3 lg:px-4">
                       <div className="flex items-center gap-1.5">
                         <span className="text-slate-900 dark:text-white font-mono font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap">{job.request_number}</span>
                         {alertLevel === 'overdue' && (
@@ -1678,20 +1678,27 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 max-w-[180px] lg:max-w-[240px]">
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 max-w-[220px] md:max-w-[300px] lg:max-w-[240px]">
                       <div className="text-slate-900 dark:text-white font-semibold text-sm truncate">{(job.company_name || `${job.first_name} ${job.last_name}`).toUpperCase()}</div>
                       {job.company_name && <div className="text-slate-500 dark:text-slate-400 text-xs truncate">{`${job.first_name} ${job.last_name}`.toUpperCase()}</div>}
+                      <div className="flex items-center gap-2 mt-0.5 lg:hidden">
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                          <span className="material-symbols-outlined" style={{fontSize:'12px'}}>build</span>
+                          {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
+                        </span>
+                        <PriorityBadge priority={getHighestPriority(job.tools)} />
+                      </div>
                     </td>
-                    <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 hidden lg:table-cell">
                       <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
                         <span className="material-symbols-outlined text-slate-500" style={{fontSize:'16px'}}>build</span>
                         {job.tools.length} tool{job.tools.length !== 1 ? 's' : ''}
                       </span>
                     </td>
-                    <td className="py-3 px-3 sm:px-4 hidden md:table-cell">
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 hidden lg:table-cell">
                       <PriorityBadge priority={getHighestPriority(job.tools)} />
                     </td>
-                    <td className="py-3 px-3 sm:px-4">
+                    <td className="py-3 px-2 sm:px-3 lg:px-4">
                       {job.tools?.length === 1 ? (
                         <StatusBadge status={job.tools[0].status} />
                       ) : (() => {
@@ -1712,7 +1719,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         );
                       })()}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 hidden lg:table-cell">
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 hidden xl:table-cell">
                       <div className="text-slate-500 text-sm">{formatDateShort(job.created_at)}</div>
                       {(() => {
                         const activeDates = job.tools
@@ -1730,8 +1737,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         );
                       })()}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 text-slate-500 text-sm hidden xl:table-cell">{formatDateShort(job.updated_at)}</td>
-                    <td className="py-3 px-3 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 text-slate-500 text-sm hidden 2xl:table-cell">{formatDateShort(job.updated_at)}</td>
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {!batchMode && (
                           <>
