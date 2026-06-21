@@ -224,7 +224,7 @@ export default function DashboardSummary({
             onClick={() => onGoToRequests && onGoToRequests()}
             className={`w-full flex items-center gap-2 px-3 py-2 border rounded-xl text-xs sm:text-sm font-bold transition-colors text-left active:scale-[0.99] ${
               pendingRequestsCount > 0
-                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/40 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 animate-pulse'
                 : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/40 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
