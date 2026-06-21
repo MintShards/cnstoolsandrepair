@@ -942,8 +942,8 @@ async def list_repair_jobs(
     if status:
         query["tools.status"] = status
     elif active_only:
-        _TERMINAL = ["completed", "abandoned", "closed", "declined", "beyond_economical_repair"]
-        query["tools.status"] = {"$nin": _TERMINAL}
+        _ACTIVE = ["received", "diagnosed", "quoted", "approved", "parts_pending", "in_repair", "ready", "invoiced"]
+        query["tools.status"] = {"$in": _ACTIVE}
 
     if priority:
         query["tools.priority"] = priority
