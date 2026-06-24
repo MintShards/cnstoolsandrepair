@@ -5,6 +5,41 @@ import { useSettings } from '../../../contexts/SettingsContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function openImageDiagram(fullUrl, displayName) {
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${displayName}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 960px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; gap: 12px; }
+    h1 { font-size: 14px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; user-select: text; }
+    .btn { background: #1152d4; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn:hover { background: #0e42b0; }
+    .image-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; max-width: 960px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    img { max-width: 100%; height: auto; display: block; }
+    .url-label { font-size: 11px; color: #64748b; word-break: break-all; user-select: text; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>${displayName}</h1>
+    <button class="btn" onclick="window.print()">Print</button>
+  </div>
+  <div class="image-wrap">
+    <img src="${fullUrl}" alt="${displayName}" />
+    <span class="url-label">${fullUrl}</span>
+  </div>
+</body>
+</html>`);
+  win.document.close();
+}
+
 function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }) {
   const [editingIdx, setEditingIdx] = useState(null);
   const [editName, setEditName] = useState('');
@@ -38,10 +73,11 @@ function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }
             ) : (
               <>
                 <a
-                  href={fullUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline max-w-[220px] truncate uppercase"
+                  href={isPdf ? fullUrl : undefined}
+                  target={isPdf ? '_blank' : undefined}
+                  rel={isPdf ? 'noopener noreferrer' : undefined}
+                  onClick={!isPdf ? (e) => { e.preventDefault(); openImageDiagram(fullUrl, displayName); } : undefined}
+                  className="text-blue-600 dark:text-blue-400 hover:underline max-w-[220px] truncate uppercase cursor-pointer"
                   title={displayName}
                 >
                   {displayName}
