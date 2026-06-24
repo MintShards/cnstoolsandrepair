@@ -141,6 +141,12 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [uploadingPhoto, setUploadingPhoto] = useState(null); // toolId
   const detailCloseRef = useRef(null);
 
+  // Update-all-tools state
+  const [updateAllOpen, setUpdateAllOpen] = useState(false);
+  const [updateAllForm, setUpdateAllForm] = useState({ status: '', notes: '' });
+  const [updateAllApplying, setUpdateAllApplying] = useState(false);
+  const [updateAllSelected, setUpdateAllSelected] = useState(new Set()); // tool_ids
+
   // Work order email modal state
   const [emailModalJob, setEmailModalJob] = useState(null); // job to email; null = closed
 
@@ -248,6 +254,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       try {
         const job = await repairsAPI.get(jobId);
         setSelectedJob(job);
+        setUpdateAllOpen(false);
+        setUpdateAllSelected(new Set());
       } catch (err) {
         showToast('error', 'Could not open work order');
       }
@@ -481,13 +489,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       if (statusUpdateModal && !updatingStatus) { setStatusUpdateModal(null); return; }
       if (editingToolId && !savingToolEdit) { handleCancelToolEdit(); return; }
       if (addToolForm && !addingTool) { setAddToolForm(null); return; }
+      if (updateAllOpen && !updateAllApplying) { setUpdateAllOpen(false); return; }
       if (editingJob) { setEditingJob(false); return; }
       if (deleteConfirmId) { setDeleteConfirmId(null); return; }
       if (selectedJob) { setSelectedJob(null); return; }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, editingJob, deleteConfirmId, selectedJob]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, deleteConfirmId, selectedJob]);
 
   const SERVER_SORT_FIELDS = new Set(['created_at', 'updated_at', 'request_number', 'smart']);
 
@@ -557,6 +566,13 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     if (TERMINAL_STATUSES.has(tool.status)) return false;
     const days = getDaysSinceLastUpdate(tool);
     return days !== null && days >= staleDays;
+  };
+
+  // Returns status keys valid as next status for ALL tools in the selected job
+  const getCommonValidTransitions = (tools) => {
+    if (!tools || tools.length === 0) return [];
+    const sets = tools.map(t => new Set(getValidNextStatuses(t.status)));
+    return [...sets[0]].filter(s => sets.every(set => set.has(s)));
   };
 
   const getJobAlertLevel = (job) => {
@@ -837,6 +853,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     try {
       const fresh = await repairsAPI.get(job.id);
       setSelectedJob(fresh);
+      setUpdateAllOpen(false);
+      setUpdateAllSelected(new Set());
       setEditingJob(false);
       // Fetch linked customer record (single source of truth)
       if (fresh.customer_id) {
@@ -948,6 +966,45 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
     setStatusUpdateModal(null);
     showToast('success', 'Tool status updated');
     setUpdatingStatus(false);
+  };
+
+  // ── UPDATE ALL/SELECTED TOOLS ─────────────────────────
+  const getSelectedTools = () => {
+    if (!selectedJob) return [];
+    if (updateAllSelected.size === 0) return selectedJob.tools; // none selected = all
+    return selectedJob.tools.filter(t => updateAllSelected.has(t.tool_id));
+  };
+
+  const handleUpdateAllTools = async () => {
+    if (!updateAllForm.status || !selectedJob) return;
+    const tools = getSelectedTools();
+    if (tools.length === 0) return;
+    setUpdateAllApplying(true);
+    try {
+      const items = tools.map(t => ({
+        job_id: selectedJob.id,
+        tool_id: t.tool_id,
+        new_status: updateAllForm.status,
+        notes: updateAllForm.notes || null,
+      }));
+      const result = await repairsAPI.batchUpdateStatus(items);
+      if (result.success_count > 0) {
+        showToast('success', `Updated ${result.success_count} tool${result.success_count !== 1 ? 's' : ''}`);
+        const fresh = await repairsAPI.get(selectedJob.id);
+        setSelectedJob(fresh);
+        setJobs(prev => prev.map(j => j.id === fresh.id ? fresh : j));
+        setUpdateAllOpen(false);
+        setUpdateAllForm({ status: '', notes: '' });
+        setUpdateAllSelected(new Set());
+      }
+      if (result.failure_count > 0) {
+        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed`);
+      }
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to update tools'));
+    } finally {
+      setUpdateAllApplying(false);
+    }
   };
 
   // ── QUICK-ADVANCE STATUS ────────────────────────────
@@ -2030,14 +2087,140 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     <span className="material-symbols-outlined text-slate-500 dark:text-slate-400 text-base">build</span>
                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Tools ({selectedJob.tools.length})</h4>
                   </div>
-                  <button
-                    onClick={() => setAddToolForm(getEmptyTool())}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-primary/20"
-                  >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Add Tool
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {selectedJob.tools.length >= 2 && (
+                      <button
+                        onClick={() => {
+                          if (updateAllOpen) {
+                            setUpdateAllOpen(false);
+                            setUpdateAllSelected(new Set());
+                          } else {
+                            setUpdateAllSelected(new Set()); // start with all selected (empty = all)
+                            const common = getCommonValidTransitions(selectedJob.tools);
+                            setUpdateAllForm({ status: common[0] || '', notes: '' });
+                            setUpdateAllOpen(true);
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          updateAllOpen
+                            ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                            : 'bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary dark:text-blue-400'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-sm">update</span>
+                        Update Statuses
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setAddToolForm(getEmptyTool())}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-primary/20"
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      Add Tool
+                    </button>
+                  </div>
                 </div>
+
+                {/* Update Tools inline panel (hybrid: all or selective) */}
+                {updateAllOpen && selectedJob.tools.length >= 2 && (() => {
+                  const targetTools = getSelectedTools();
+                  const common = getCommonValidTransitions(targetTools);
+                  const isAllSelected = updateAllSelected.size === 0;
+                  const toolCount = targetTools.length;
+                  return (
+                    <div className="mb-3 p-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 rounded-xl flex flex-col gap-2">
+                      {/* Row 1: tool selection chips */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => {
+                            setUpdateAllSelected(new Set());
+                            const allCommon = getCommonValidTransitions(selectedJob.tools);
+                            setUpdateAllForm(f => ({ ...f, status: allCommon[0] || '' }));
+                          }}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all ${
+                            isAllSelected
+                              ? 'bg-primary text-white'
+                              : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-primary/50'
+                          }`}
+                        >
+                          All
+                        </button>
+                        {selectedJob.tools.map(tool => {
+                          const cfg = REPAIR_STATUSES[tool.status] || {};
+                          const isChecked = !isAllSelected && updateAllSelected.has(tool.tool_id);
+                          return (
+                            <button
+                              key={tool.tool_id}
+                              onClick={() => {
+                                let next;
+                                if (isAllSelected) {
+                                  next = new Set([tool.tool_id]);
+                                } else {
+                                  next = new Set(updateAllSelected);
+                                  if (next.has(tool.tool_id)) next.delete(tool.tool_id); else next.add(tool.tool_id);
+                                  if (next.size === selectedJob.tools.length || next.size === 0) next = new Set();
+                                }
+                                setUpdateAllSelected(next);
+                                const tools = next.size === 0 ? selectedJob.tools : selectedJob.tools.filter(t => next.has(t.tool_id));
+                                const newCommon = getCommonValidTransitions(tools);
+                                setUpdateAllForm(f => ({ ...f, status: newCommon[0] || '' }));
+                              }}
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
+                                isChecked
+                                  ? 'bg-primary text-white'
+                                  : isAllSelected
+                                    ? 'bg-primary/10 border border-primary/30 text-primary dark:text-blue-400'
+                                    : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-primary/50'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot || 'bg-slate-400'}`} />
+                              {`${tool.brand} ${tool.model_number}`.toUpperCase()}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {/* Row 2: status + notes + actions */}
+                      {common.length === 0 ? (
+                        <p className="text-xs text-slate-500 dark:text-slate-400">No common next status — adjust selection or update individually.</p>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={updateAllForm.status}
+                            onChange={e => setUpdateAllForm(f => ({ ...f, status: e.target.value }))}
+                            className="w-full sm:w-auto min-w-[10rem] text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          >
+                            {common.map(s => (
+                              <option key={s} value={s}>{REPAIR_STATUSES[s]?.label || s}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Notes (optional)"
+                            value={updateAllForm.notes}
+                            onChange={e => setUpdateAllForm(f => ({ ...f, notes: e.target.value }))}
+                            className="w-full sm:flex-1 sm:min-w-0 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-slate-400"
+                          />
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={handleUpdateAllTools}
+                              disabled={updateAllApplying || !updateAllForm.status}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-primary hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+                            >
+                              <span className="material-symbols-outlined text-sm">{updateAllApplying ? 'refresh' : 'done_all'}</span>
+                              {updateAllApplying ? 'Updating…' : `Update ${isAllSelected ? 'All' : toolCount}`}
+                            </button>
+                            <button
+                              onClick={() => { setUpdateAllOpen(false); setUpdateAllSelected(new Set()); }}
+                              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-semibold transition-colors whitespace-nowrap"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-3">
                   {selectedJob.tools.map((tool, idx) => (
