@@ -89,6 +89,8 @@ export default function Header() {
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="flex items-center justify-center size-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMenuOpen}
           >
             <span className="material-symbols-outlined">menu</span>
           </button>

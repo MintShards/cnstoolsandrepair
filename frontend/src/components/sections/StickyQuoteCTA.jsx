@@ -45,7 +45,7 @@ export default function StickyQuoteCTA() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-primary p-3 sm:p-4 shadow-2xl shadow-primary/50 border-t-2 border-primary-dark md:hidden"
+      className="fixed bottom-[92px] left-0 right-0 z-40 bg-primary p-3 sm:p-4 shadow-2xl shadow-primary/50 border-t-2 border-primary-dark md:hidden"
       role="complementary"
       aria-label="Quick repair request"
       style={{

@@ -1,7 +1,15 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Set theme before first paint to avoid dark/light flash (matches ThemeContext logic) -->
+    <script>
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -9,7 +17,16 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Title and meta tags managed by react-helmet-async per page -->
+    <!-- Fallback title/meta for non-JS clients (Bing, link previews, AI crawlers).
+         data-rh="true" lets react-helmet-async take these over per page at runtime. -->
+    <title data-rh="true">CNS Tool Repair | Industrial Pneumatic Tool Repair Surrey BC</title>
+    <meta data-rh="true" name="description" content="Industrial pneumatic tool repair in Surrey, BC. Professional diagnostics, OEM-compatible parts, and in-shop repairs for automotive, fleet, manufacturing, and construction. Call (604) 581-8930." />
+    <meta data-rh="true" property="og:type" content="website" />
+    <meta data-rh="true" property="og:url" content="https://cnstoolrepair.com/" />
+    <meta data-rh="true" property="og:title" content="CNS Tool Repair | Industrial Pneumatic Tool Repair Surrey BC" />
+    <meta data-rh="true" property="og:description" content="Industrial pneumatic tool repair in Surrey, BC. Professional diagnostics, OEM-compatible parts, and fast in-shop service. Call (604) 581-8930." />
+    <meta data-rh="true" property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
+    <meta data-rh="true" name="twitter:card" content="summary_large_image" />
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&family=Russo+One&display=swap" rel="stylesheet"/>
@@ -20,7 +37,12 @@
     {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
+      "@id": "https://cnstoolrepair.com/#business",
       "name": "CNS Tool Repair",
+      "url": "https://cnstoolrepair.com",
+      "telephone": "+1-604-581-8930",
+      "email": "contact@cnstoolrepair.com",
+      "priceRange": "$$",
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "Unit 65, 13335 115 Ave",
@@ -29,6 +51,20 @@
         "postalCode": "V3R 2X1",
         "addressCountry": "CA"
       },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 49.2085,
+        "longitude": -122.8541
+      },
+      "hasMap": "https://www.google.com/maps/dir/?api=1&destination=CNS+Tools+And+Repair,13335+115+Ave,Surrey,BC+V3R+2X1",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          "opens": "09:00",
+          "closes": "16:00"
+        }
+      ],
       "areaServed": "Metro Vancouver",
       "serviceType": "Industrial Pneumatic Tool Repair",
       "logo": "https://cnstoolrepair.com/logo.png",

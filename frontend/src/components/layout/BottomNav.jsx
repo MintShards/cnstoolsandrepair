@@ -1,7 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useSettings } from '../../contexts/SettingsContext';
 
 export default function BottomNav() {
   const location = useLocation();
+  const { settings } = useSettings();
+  const phoneLink = settings?.contact?.phoneLink || '6045818930';
 
   const isActive = (path) => location.pathname === path;
 
@@ -67,9 +70,20 @@ export default function BottomNav() {
           </span>
         </div>
 
+        {/* Phone only - tap-to-call (Gallery moves to tablet-only; still in header menu) */}
+        <a
+          href={`tel:${phoneLink}`}
+          className="flex sm:hidden flex-col items-center gap-1 text-slate-400"
+          aria-label="Call CNS Tool Repair"
+        >
+          <span className="material-symbols-outlined">call</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Call</span>
+        </a>
+
+        {/* Tablet only - Gallery */}
         <Link
           to="/gallery"
-          className={`flex flex-col items-center gap-1 ${
+          className={`hidden sm:flex flex-col items-center gap-1 ${
             isActive('/gallery') ? 'text-primary' : 'text-slate-400'
           }`}
         >

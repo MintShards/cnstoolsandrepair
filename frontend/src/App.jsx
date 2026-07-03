@@ -16,10 +16,21 @@ import Contact from './pages/Contact';
 import Gallery from './pages/Gallery';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminSettings from './pages/admin/AdminSettings';
-import RepairTracker from './pages/admin/RepairTracker';
+import { lazy, Suspense } from 'react';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
+
+// Admin pages are lazy-loaded so the CMS bundle never ships to public visitors
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
+const RepairTracker = lazy(() => import('./pages/admin/RepairTracker'));
+
+function AdminFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="size-10 rounded-full border-4 border-slate-700 border-t-primary animate-spin" aria-label="Loading" />
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -42,13 +53,22 @@ function App() {
           >
             <ScrollToTop />
             <Routes>
-              {/* Admin Routes - No header/footer */}
-              <Route path="/admin/login" element={<AdminLogin />} />
+              {/* Admin Routes - No header/footer, lazy-loaded */}
+              <Route
+                path="/admin/login"
+                element={
+                  <Suspense fallback={<AdminFallback />}>
+                    <AdminLogin />
+                  </Suspense>
+                }
+              />
               <Route
                 path="/admin/settings"
                 element={
                   <ProtectedAdminRoute>
-                    <AdminSettings />
+                    <Suspense fallback={<AdminFallback />}>
+                      <AdminSettings />
+                    </Suspense>
                   </ProtectedAdminRoute>
                 }
               />
@@ -56,7 +76,9 @@ function App() {
                 path="/admin/repair-tracker"
                 element={
                   <ProtectedAdminRoute>
-                    <RepairTracker />
+                    <Suspense fallback={<AdminFallback />}>
+                      <RepairTracker />
+                    </Suspense>
                   </ProtectedAdminRoute>
                 }
               />
