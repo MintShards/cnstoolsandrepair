@@ -1,14 +1,25 @@
-import { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { repairsAPI, customersAPI, quotesAPI, authAPI } from '../../services/api';
-import CustomersTab from '../../components/admin/tabs/CustomersTab';
-import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
-import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
 import DashboardSummary from '../../components/admin/DashboardSummary';
-import PartsLibraryTab from '../../components/admin/tabs/PartsLibraryTab';
-import PartsSourcingTab from '../../components/admin/tabs/PartsSourcingTab';
 import ThemeToggle from '../../components/layout/ThemeToggle';
-import UserGuide from '../../components/admin/UserGuide';
+
+// Dashboard (the landing tab) stays in this chunk; every other tab loads on
+// first visit so opening the tracker doesn't download the whole admin suite
+const CustomersTab = lazy(() => import('../../components/admin/tabs/CustomersTab'));
+const RepairRequestsTab = lazy(() => import('../../components/admin/tabs/RepairRequestsTab'));
+const RepairJobsTab = lazy(() => import('../../components/admin/tabs/RepairJobsTab'));
+const PartsLibraryTab = lazy(() => import('../../components/admin/tabs/PartsLibraryTab'));
+const PartsSourcingTab = lazy(() => import('../../components/admin/tabs/PartsSourcingTab'));
+const UserGuide = lazy(() => import('../../components/admin/UserGuide'));
+
+function TabLoading() {
+  return (
+    <div className="flex items-center justify-center py-20 text-slate-400 dark:text-slate-500">
+      <span className="material-symbols-outlined animate-spin text-3xl">progress_activity</span>
+    </div>
+  );
+}
 
 // ── TOAST SYSTEM ─────────────────────────────────────────────
 export const ToastContext = createContext(null);
@@ -88,6 +99,13 @@ function ToastContainer({ toasts, onDismiss }) {
 
 export default function RepairTracker() {
   const navigate = useNavigate();
+
+  // Public pages set their titles via Helmet; the tracker must not keep
+  // whatever SEO title the visitor arrived with
+  useEffect(() => {
+    document.title = 'Repair Tracker | CNS Tool Repair';
+  }, []);
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [partsLibraryFilter, setPartsLibraryFilter] = useState(null);
   const [preselectedCustomer, setPreselectedCustomer] = useState(null);
@@ -320,6 +338,7 @@ export default function RepairTracker() {
 
           {/* Tab Content */}
           <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-xl shadow-black/5 dark:shadow-black/20 animate-fadeInScale">
+            <Suspense fallback={<TabLoading />}>
             {activeTab === 'dashboard' && (
               <DashboardSummary
                 onStatusFilter={handleDashboardStatusFilter}
@@ -373,6 +392,7 @@ export default function RepairTracker() {
                 onExternalOpenJobHandled={() => setDashboardOpenJobId(null)}
               />
             )}
+            </Suspense>
           </div>
         </main>
 
@@ -399,7 +419,11 @@ export default function RepairTracker() {
           </div>
         </footer>
       </div>
-      {showGuide && <UserGuide onClose={() => setShowGuide(false)} />}
+      {showGuide && (
+        <Suspense fallback={null}>
+          <UserGuide onClose={() => setShowGuide(false)} />
+        </Suspense>
+      )}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </ToastContext.Provider>
   );

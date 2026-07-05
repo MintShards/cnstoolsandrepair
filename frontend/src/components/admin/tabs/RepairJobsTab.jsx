@@ -1772,6 +1772,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${REPAIR_STATUSES[status]?.dot || 'bg-slate-400'}`}
                               />
                             ))}
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
+                              {summary.map(s => `${s.count} ${REPAIR_STATUSES[s.status]?.label || s.status}`).join(' · ')}
+                            </span>
                           </div>
                         );
                       })()}
