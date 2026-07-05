@@ -2020,7 +2020,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* Customer Info */}
               <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
-                <div className="flex items-center gap-2 flex-wrap px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
+                <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
                   <span className="material-symbols-outlined text-slate-500 dark:text-slate-400" style={{ fontSize: '14px' }}>person</span>
                   <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Customer</h4>
                   <div className="ml-auto">
@@ -2039,10 +2039,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   </div>
                 </div>
                 {(
-                  <div className="px-4 py-2.5">
+                  <div className="px-4 py-4">
                     {(() => { const cust = jobCustomer || selectedJob; return (
                       <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5">
                           {cust.company_name && (
                             <div className="flex items-center gap-1.5">
                               <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>business</span>
@@ -2228,7 +2228,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   );
                 })()}
 
-                <div className="space-y-3">
+                <div className="space-y-5">
                   {selectedJob.tools.map((tool, idx) => (
                     <div key={tool.tool_id} className="bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden shadow-sm">
                       {/* Tool Header — colored left border by status */}
@@ -2315,7 +2315,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </div>
 
                       {/* Current Status bar (always visible) */}
-                      <div className="px-4 pt-3 pb-2 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700/60">
+                      <div className="px-4 pt-4 pb-3 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700/60">
                         {isToolOverdue(tool) && (
                           <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-lg text-xs text-red-700 dark:text-red-400 font-bold">
                             <span className="material-symbols-outlined" style={{fontSize:'14px'}}>schedule</span>
@@ -2328,7 +2328,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             No status update in {getDaysSinceLastUpdate(tool)} days
                           </div>
                         )}
-                        <div className="flex items-center gap-3 flex-wrap mb-1">
+                        <div className="flex items-center gap-3 flex-wrap mb-2">
                           <StatusBadge status={tool.status} />
                           <div className="text-sm text-slate-500">
                             Received: {formatDateShort(tool.date_received)}
@@ -2340,17 +2340,17 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </div>
 
                       {/* Tool Details — 2-column grid: left (Remarks + Labour/Tech/Zoho), right (Parts wider) */}
-                      <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60">
-                        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-3 text-sm">
+                      <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-700/60">
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 text-sm">
                           {/* Left column — Remarks stacked above Labour/Tech/Zoho */}
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {/* Remarks */}
-                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
+                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
                               <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
                               <p className={`mt-1 leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
                             </div>
                             {/* Labour / Technician / Zoho */}
-                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40 space-y-1.5">
+                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40 space-y-2.5">
                               <div>
                                 <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Labour</span>
                                 <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
@@ -2376,12 +2376,12 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             </div>
                           </div>
                           {/* Right column — Parts (wider) */}
-                          <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-slate-700/40">
+                          <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
                             <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
                             {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
-                              <div className="mt-1 space-y-1">
+                              <div className="mt-2 space-y-2">
                                 {tool.parts.map((p, realPi) => p.name?.trim() ? (
-                                  <div key={realPi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2 py-1.5 border border-slate-200/30 dark:border-slate-700/30 space-y-0.5">
+                                  <div key={realPi} className="bg-slate-50 dark:bg-slate-900/60 rounded-md px-2.5 py-2 border border-slate-200/30 dark:border-slate-700/30 space-y-1">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{`${p.name}${p.part_number ? ` - ${p.part_number}` : ''}`.toUpperCase()}</span>
                                       <span className="text-slate-500 text-xs">×{p.quantity}</span>
@@ -2464,8 +2464,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </div>
 
                       {/* Photos */}
-                      <div className="px-4 pb-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
-                        <div className="flex items-center justify-between mb-2">
+                      <div className="px-4 pb-4 pt-4 border-t border-slate-200 dark:border-slate-700/60">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-slate-500 text-base">photo_library</span>
                             <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Photos</span>
