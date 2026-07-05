@@ -82,6 +82,7 @@ export default function ContactForm() {
                 })}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
                 placeholder="John Smith"
+                autoComplete="name"
               />
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
             </div>
@@ -101,6 +102,7 @@ export default function ContactForm() {
                 })}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
                 placeholder="john@company.com"
+                autoComplete="email"
               />
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
             </div>
@@ -120,6 +122,7 @@ export default function ContactForm() {
                 })}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
                 placeholder="604-555-0123"
+                autoComplete="tel"
               />
               {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>}
             </div>

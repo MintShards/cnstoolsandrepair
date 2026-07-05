@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
+import { telHref } from '../../utils/links';
 
 export default function BottomNav() {
   const location = useLocation();
@@ -13,7 +14,7 @@ export default function BottomNav() {
       <div className="flex items-center justify-between w-full mx-auto">
         <Link
           to="/"
-          className={`flex flex-col items-center gap-1 ${
+          className={`flex flex-col items-center gap-1 min-w-[44px] py-1 ${
             isActive('/') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -28,7 +29,7 @@ export default function BottomNav() {
 
         <Link
           to="/services"
-          className={`flex flex-col items-center gap-1 ${
+          className={`flex flex-col items-center gap-1 min-w-[44px] py-1 ${
             isActive('/services') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -44,7 +45,7 @@ export default function BottomNav() {
         {/* Tablet only - Industries */}
         <Link
           to="/industries"
-          className={`hidden sm:flex flex-col items-center gap-1 ${
+          className={`hidden sm:flex flex-col items-center gap-1 min-w-[44px] py-1 ${
             isActive('/industries') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -58,12 +59,14 @@ export default function BottomNav() {
         </Link>
 
         <div className="relative -mt-12">
-          <Link to="/repair-request">
-            <button className="bg-primary size-14 rounded-full shadow-xl shadow-primary/40 flex items-center justify-center text-white ring-4 ring-white dark:ring-slate-950">
-              <span className="material-symbols-outlined" style={{ fontSize: '30px' }}>
-                add_task
-              </span>
-            </button>
+          <Link
+            to="/repair-request"
+            aria-label="Submit repair request"
+            className="bg-primary size-14 rounded-full shadow-xl shadow-primary/40 flex items-center justify-center text-white ring-4 ring-white dark:ring-slate-950"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '30px' }}>
+              add_task
+            </span>
           </Link>
           <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-black text-primary uppercase whitespace-nowrap">
             Repair
@@ -72,8 +75,8 @@ export default function BottomNav() {
 
         {/* Phone only - tap-to-call (Gallery moves to tablet-only; still in header menu) */}
         <a
-          href={`tel:${phoneLink}`}
-          className="flex sm:hidden flex-col items-center gap-1 text-slate-400"
+          href={telHref(phoneLink)}
+          className="flex sm:hidden flex-col items-center gap-1 min-w-[44px] py-1 text-slate-400"
           aria-label="Call CNS Tool Repair"
         >
           <span className="material-symbols-outlined">call</span>
@@ -83,7 +86,7 @@ export default function BottomNav() {
         {/* Tablet only - Gallery */}
         <Link
           to="/gallery"
-          className={`hidden sm:flex flex-col items-center gap-1 ${
+          className={`hidden sm:flex flex-col items-center gap-1 min-w-[44px] py-1 ${
             isActive('/gallery') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -99,7 +102,7 @@ export default function BottomNav() {
         {/* Tablet only - About */}
         <Link
           to="/about"
-          className={`hidden sm:flex flex-col items-center gap-1 ${
+          className={`hidden sm:flex flex-col items-center gap-1 min-w-[44px] py-1 ${
             isActive('/about') ? 'text-primary' : 'text-slate-400'
           }`}
         >
@@ -114,7 +117,7 @@ export default function BottomNav() {
 
         <Link
           to="/contact"
-          className={`flex flex-col items-center gap-1 ${
+          className={`flex flex-col items-center gap-1 min-w-[44px] py-1 ${
             isActive('/contact') ? 'text-primary' : 'text-slate-400'
           }`}
         >

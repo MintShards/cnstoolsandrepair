@@ -9,7 +9,6 @@ import ToolsPreview from '../components/sections/ToolsPreview';
 import IndustriesServed from '../components/sections/IndustriesServed';
 import Testimonials from '../components/sections/Testimonials';
 import MapLocation from '../components/sections/MapLocation';
-import StickyQuoteCTA from '../components/sections/StickyQuoteCTA';
 import RepairProcessIntro from '../components/sections/RepairProcessIntro';
 import WhyChooseUs from '../components/sections/WhyChooseUs';
 import IndustrialUseCases from '../components/sections/IndustrialUseCases';
@@ -67,8 +66,6 @@ export default function Home() {
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
       <main className="relative">
-      {/* Sticky Mobile CTA - Shows after Hero scrolls out */}
-      <StickyQuoteCTA />
       {/* 1. Hero - Value proposition + immediate CTA */}
       <Hero
         data={homeContent?.hero}

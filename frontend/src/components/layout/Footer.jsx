@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
+import { telHref, isRealSocialUrl } from '../../utils/links';
 
 export default function Footer() {
   const { settings, loading } = useSettings();
@@ -177,10 +178,10 @@ export default function Footer() {
             </p>
 
             {/* Social Media Icons */}
-            {settings?.socialMedia && settings.socialMedia.filter(s => s.url).length > 0 && (
+            {settings?.socialMedia && settings.socialMedia.filter(s => isRealSocialUrl(s.url)).length > 0 && (
               <div className="flex gap-3">
                 {settings.socialMedia
-                  .filter(s => s.url)
+                  .filter(s => isRealSocialUrl(s.url))
                   .map((social, index) => (
                     <SocialIcon
                       key={index}
@@ -296,7 +297,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href={`tel:${settings?.contact?.phoneLink || '6045818930'}`}
+                  href={telHref(settings?.contact?.phoneLink || '6045818930')}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
                   <span className="material-symbols-outlined text-base text-primary">call</span>

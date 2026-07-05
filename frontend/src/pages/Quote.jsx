@@ -511,6 +511,7 @@ export default function Quote() {
                     }}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.first_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="First Name"
+                    autoComplete="given-name"
                     aria-required="true"
                     aria-invalid={errors.first_name ? 'true' : 'false'}
                     aria-describedby={errors.first_name ? 'first_name-error' : undefined}
@@ -538,6 +539,7 @@ export default function Quote() {
                     }}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.last_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Last Name"
+                    autoComplete="family-name"
                     aria-required="true"
                     aria-invalid={errors.last_name ? 'true' : 'false'}
                     aria-describedby={errors.last_name ? 'last_name-error' : undefined}
@@ -565,6 +567,7 @@ export default function Quote() {
                   }}
                   className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter Company Name"
+                  autoComplete="organization"
                   aria-required="false"
                   aria-invalid={errors.company_name ? 'true' : 'false'}
                   aria-describedby={errors.company_name ? 'company_name-error' : undefined}
@@ -590,6 +593,7 @@ export default function Quote() {
                     })}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.email ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Enter Email"
+                    autoComplete="email"
                     aria-required="true"
                     aria-invalid={errors.email ? 'true' : 'false'}
                     aria-describedby={errors.email ? 'email-error' : undefined}
@@ -617,7 +621,9 @@ export default function Quote() {
                       const cursorPos = input.selectionStart;
                       const prevLen = input.value.length;
                       const formatted = formatPhoneNumber(input.value);
-                      setValue('phone', formatted, { shouldValidate: false });
+                      // Re-validate only once an error is showing, so fixing the
+                      // field clears the message without nagging while typing
+                      setValue('phone', formatted, { shouldValidate: !!errors.phone });
                       requestAnimationFrame(() => {
                         const newLen = formatted.length;
                         const adjusted = Math.max(0, cursorPos + (newLen - prevLen));
@@ -625,7 +631,8 @@ export default function Quote() {
                       });
                     }}
                     className={`w-full px-4 py-3 rounded-lg border ${errors.phone ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
-                    placeholder="Enter Phone"
+                    placeholder="604-555-0123"
+                    autoComplete="tel"
                     aria-required="true"
                     aria-invalid={errors.phone ? 'true' : 'false'}
                     aria-describedby={errors.phone ? 'phone-error' : undefined}
@@ -653,6 +660,7 @@ export default function Quote() {
                   }}
                   className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter Address"
+                  autoComplete="street-address"
                   aria-required="false"
                 />
               </div>

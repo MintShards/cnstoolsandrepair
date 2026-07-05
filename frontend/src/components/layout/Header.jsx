@@ -13,7 +13,9 @@ export default function Header() {
       <div className="flex items-center justify-between p-4 max-w-screen-xl mx-auto">
         <div className="flex items-center">
           <Link to="/">
-            <h2 className="font-logo text-xl md:text-2xl font-bold leading-none tracking-wide uppercase">
+            {/* One line from 360px up (smaller type until 420px); below 360px
+                let it wrap rather than collide with the Repair button */}
+            <h2 className="font-logo text-lg min-[420px]:text-xl md:text-2xl font-bold leading-none tracking-normal min-[420px]:tracking-wide uppercase min-[360px]:whitespace-nowrap">
               <span className="text-accent-orange">CNS</span>{' '}
               <span className="text-slate-900 dark:text-white">Tool Repair</span>
             </h2>
@@ -71,19 +73,15 @@ export default function Header() {
             Contact
           </Link>
           <ThemeToggle />
-          <Link to="/repair-request">
-            <button className="bg-primary text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
-              Get Repair
-            </button>
+          <Link to="/repair-request" className="inline-block bg-primary text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
+            Get Repair
           </Link>
         </nav>
 
         {/* Mobile Navigation Toggle - Hidden on desktop */}
         <div className="flex lg:hidden items-center gap-2">
-          <Link to="/repair-request">
-            <button className="bg-primary text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
-              Repair
-            </button>
+          <Link to="/repair-request" className="inline-block bg-primary text-white text-xs font-bold px-2.5 min-[400px]:px-3 py-2.5 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
+            Repair
           </Link>
           <ThemeToggle />
           <button

@@ -11,6 +11,9 @@ import './BrandsCarousel.css';
 export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg-slate-900' }) {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Fetch brands from API
   useEffect(() => {
@@ -87,7 +90,7 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
           spaceBetween={32}
           slidesPerView="auto"
           loop={true}
-          autoplay={{
+          autoplay={prefersReducedMotion ? false : {
             delay: 0,
             disableOnInteraction: false,
           }}
@@ -103,6 +106,8 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
                     src={brand.logo_url}
                     alt={brand.name}
                     className="brands-logo"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
 

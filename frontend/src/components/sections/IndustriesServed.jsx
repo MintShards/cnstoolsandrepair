@@ -126,10 +126,8 @@ export default function IndustriesServed() {
         </div>
 
         <div className="mt-8 sm:mt-10 lg:mt-16 text-center">
-          <Link to="/industries" className="inline-block w-full sm:w-auto">
-            <button className="w-full sm:w-auto bg-primary text-white font-black px-6 sm:px-8 h-12 sm:h-14 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-95 transition-all uppercase text-sm touch-manipulation">
-              View All Industries
-            </button>
+          <Link to="/industries" className="inline-flex items-center justify-center w-full sm:w-auto bg-primary text-white font-black px-6 sm:px-8 h-12 sm:h-14 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 active:scale-95 transition-all uppercase text-sm touch-manipulation">
+            View All Industries
           </Link>
         </div>
       </div>

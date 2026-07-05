@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
+import { telHref } from '../../utils/links';
 
 export default function FinalCTA({
   data = null,
@@ -64,17 +66,13 @@ export default function FinalCTA({
           </p>
           {/* Mobile-First CTA Buttons */}
           <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 lg:gap-4 mt-2 sm:mt-4 px-4 sm:px-0">
-            <a href="/repair-request" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto sm:px-8 h-14 sm:h-16 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 sm:gap-3 shadow-2xl shadow-primary/40 border-2 border-primary/50 uppercase text-sm sm:text-base hover:bg-primary/90 transition-all active:scale-95 touch-manipulation">
-                <span className="material-symbols-outlined text-xl sm:text-2xl">fact_check</span>
-                <span>{content.primaryButtonText}</span>
-              </button>
-            </a>
-            <a href={`tel:${settings?.contact?.phoneLink || '6045818930'}`} className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
-                <span className="material-symbols-outlined text-lg sm:text-xl">call</span>
-                <span>{content.secondaryButtonText}</span>
-              </button>
+            <Link to="/repair-request" className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-16 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 sm:gap-3 shadow-2xl shadow-primary/40 border-2 border-primary/50 uppercase text-sm sm:text-base hover:bg-primary/90 transition-all active:scale-95 touch-manipulation">
+              <span className="material-symbols-outlined text-xl sm:text-2xl">fact_check</span>
+              <span>{content.primaryButtonText}</span>
+            </Link>
+            <a href={telHref(settings?.contact?.phoneLink || '6045818930')} className="w-full sm:w-auto px-6 sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
+              <span className="material-symbols-outlined text-lg sm:text-xl">call</span>
+              <span>{content.secondaryButtonText}</span>
             </a>
           </div>
         </div>

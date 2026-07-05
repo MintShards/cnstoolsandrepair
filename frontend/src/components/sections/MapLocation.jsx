@@ -1,4 +1,5 @@
 import { useSettings } from '../../contexts/SettingsContext';
+import { telHref } from '../../utils/links';
 
 export default function MapLocation() {
   const { settings, loading } = useSettings();
@@ -96,7 +97,7 @@ export default function MapLocation() {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <span className="material-symbols-outlined text-primary text-lg sm:text-xl">call</span>
                   <a
-                    href={`tel:${contact.phoneLink}`}
+                    href={telHref(contact.phoneLink)}
                     className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors"
                   >
                     {contact.phone}
@@ -110,12 +111,10 @@ export default function MapLocation() {
               href={map.directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full"
+              className="w-full h-12 sm:h-14 lg:h-16 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 sm:gap-3 shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-95 transition-all border border-primary/50 uppercase text-sm sm:text-base touch-manipulation"
             >
-              <button className="w-full h-12 sm:h-14 lg:h-16 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 sm:gap-3 shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-95 transition-all border border-primary/50 uppercase text-sm sm:text-base touch-manipulation">
-                <span className="material-symbols-outlined text-xl sm:text-2xl">directions</span>
-                <span>Get Directions</span>
-              </button>
+              <span className="material-symbols-outlined text-xl sm:text-2xl">directions</span>
+              <span>Get Directions</span>
             </a>
 
             {/* Service Note */}
