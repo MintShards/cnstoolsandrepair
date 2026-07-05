@@ -1247,6 +1247,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
 
   // ── PHOTO DELETE ─────────────────────────────────────
   const handleDeletePhoto = async (toolId, filename) => {
+    if (!window.confirm('Delete this photo? This cannot be undone.')) return;
     try {
       const updated = await repairsAPI.deleteToolPhoto(selectedJob.id, toolId, filename);
       setSelectedJob(updated);
@@ -2011,7 +2012,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 >
                   <span className="material-symbols-outlined" style={{fontSize:'18px'}}>print</span>
                 </button>
-                <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} aria-label="Close work order" className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
               </div>
@@ -2107,7 +2108,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             setUpdateAllOpen(true);
                           }
                         }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-bold transition-all ${
                           updateAllOpen
                             ? 'bg-primary text-white shadow-sm shadow-primary/20'
                             : 'bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary dark:text-blue-400'
@@ -2119,7 +2120,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     )}
                     <button
                       onClick={() => setAddToolForm(getEmptyTool())}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-primary/20"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-primary/90 hover:bg-primary text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-primary/20"
                     >
                       <span className="material-symbols-outlined text-sm">add</span>
                       Add Tool
@@ -2275,7 +2276,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           )}
                           <button
                             onClick={() => openStatusUpdate(tool)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-sm font-bold transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-sm font-bold transition-all"
                           >
                             <span className="material-symbols-outlined text-base">update</span>
                             Update Status
@@ -2283,7 +2284,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           {editingToolId !== tool.tool_id && (
                             <button
                               onClick={() => handleStartToolEdit(tool)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                             >
                               <span className="material-symbols-outlined text-base">edit</span>
                               Edit
@@ -2291,7 +2292,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           )}
                           <button
                             onClick={() => openPrintToolTag(selectedJob, tool, idx)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                             title="Print tool tag"
                           >
                             <span className="material-symbols-outlined text-base">label</span>
@@ -2302,7 +2303,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               onClick={() => handleRemoveTool(tool.tool_id)}
                               title="Remove tool from work order"
                               aria-label="Remove tool from work order"
-                              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all border ${
+                              className={`px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-bold transition-all border ${
                                 removeConfirmId === tool.tool_id
                                   ? 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700/60'
                                   : 'bg-slate-200/40 dark:bg-slate-700/40 hover:bg-red-50 dark:hover:bg-red-900/30 border-slate-200 dark:border-slate-600/40 hover:border-red-300 dark:hover:border-red-700/40 text-slate-500 hover:text-red-600 dark:hover:text-red-400'
@@ -2475,7 +2476,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               <span className="text-sm font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-full">{tool.photos.length}</span>
                             )}
                           </div>
-                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold cursor-pointer transition-all">
+                          <label className="inline-flex items-center gap-1.5 px-2.5 py-1 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 hover:border-slate-400 dark:hover:border-slate-500 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold cursor-pointer transition-all">
                             <span className="material-symbols-outlined text-base">upload</span>
                             {uploadingPhoto === tool.tool_id ? 'Uploading...' : 'Add Photo'}
                             <input type="file" accept="image/*" className="hidden"
@@ -2497,8 +2498,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 </div>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleDeletePhoto(tool.tool_id, photo); }}
-                                  className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                  className="absolute top-1 right-1 w-7 h-7 sm:w-6 sm:h-6 bg-red-600/90 hover:bg-red-500 rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
                                   title="Delete photo"
+                                  aria-label="Delete photo"
                                 >
                                   <span className="material-symbols-outlined text-slate-900 dark:text-white" style={{ fontSize: '14px' }}>close</span>
                                 </button>
