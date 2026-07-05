@@ -27,6 +27,8 @@ frontend/.env.local
 # IDEs
 .vscode/
 .idea/
+# Claude Code local tooling (machine-specific dev-server launcher)
+.claude/
 *.swp
 *.swo
 *~
