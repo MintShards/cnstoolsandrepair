@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.database import get_database
 from app.models.page_content import (
     IndustriesPageContentUpdate,
     IndustriesPageContentResponse,
 )
 from app.utils import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 from datetime import datetime
 
 router = APIRouter(
@@ -111,7 +112,7 @@ async def get_industries_content():
     return IndustriesPageContentResponse(**content)
 
 
-@router.put("/", response_model=IndustriesPageContentResponse)
+@router.put("/", response_model=IndustriesPageContentResponse, dependencies=[Depends(require_admin)])
 async def update_industries_content(content: IndustriesPageContentUpdate):
     """Update industries page content (singleton document)"""
     db = get_database()

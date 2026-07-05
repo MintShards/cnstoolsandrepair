@@ -1,3 +1,4 @@
+import html
 import logging
 from typing import List, Optional
 
@@ -9,6 +10,11 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _esc(value) -> str:
+    """HTML-escape any value (incl. quotes) for safe interpolation into email HTML."""
+    return html.escape(str(value if value is not None else ""), quote=True)
+
+
 def _build_sourcing_email_html(
     parts: List[dict],
     message: Optional[str],
@@ -17,22 +23,22 @@ def _build_sourcing_email_html(
 ) -> str:
     """Build the HTML body for a parts sourcing email."""
     t = template or {}
-    greeting_word = t.get("greeting") or "Hi"
-    body_text = t.get("body_text") or "We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance."
-    closing_text = t.get("closing_text") or "Thank you for your time. We look forward to hearing from you."
-    footer_tagline = t.get("footer_tagline") or "Industrial Pneumatic Tool Repair & Maintenance"
-    footer_email = t.get("footer_email") or "purchasing@cnstoolrepair.com"
-    footer_phone = t.get("footer_phone") or "778-488-0777"
-    footer_website = t.get("footer_website") or "cnstoolrepair.com"
-    footer_label = t.get("footer_label") or "Supplier & Parts Inquiries"
+    greeting_word = _esc(t.get("greeting") or "Hi")
+    body_text = _esc(t.get("body_text") or "We would like to request pricing and availability for the parts listed below. When you have a moment, please reply with your best price and estimated lead time for any items you are able to supply. We truly appreciate your time and assistance.")
+    closing_text = _esc(t.get("closing_text") or "Thank you for your time. We look forward to hearing from you.")
+    footer_tagline = _esc(t.get("footer_tagline") or "Industrial Pneumatic Tool Repair & Maintenance")
+    footer_email = _esc(t.get("footer_email") or "purchasing@cnstoolrepair.com")
+    footer_phone = _esc(t.get("footer_phone") or "778-488-0777")
+    footer_website = _esc(t.get("footer_website") or "cnstoolrepair.com")
+    footer_label = _esc(t.get("footer_label") or "Supplier & Parts Inquiries")
 
     greeting = f"{greeting_word},"
 
     rows = ""
     for part in parts:
-        name = part.get("name", "")
-        part_number = part.get("part_number") or "—"
-        quantity = part.get("quantity", 1)
+        name = _esc(part.get("name", ""))
+        part_number = _esc(part.get("part_number") or "—")
+        quantity = _esc(part.get("quantity", 1))
         rows += f"""
         <tr>
           <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">{name}</td>
@@ -44,17 +50,16 @@ def _build_sourcing_email_html(
     if message and message.strip():
         custom_message_block = f"""
         <div style="margin:24px 0;padding:16px;background:#f3f4f6;border-radius:8px;border-left:4px solid #1152d4;">
-          <p style="margin:0;color:#374151;line-height:1.6;">{message.strip()}</p>
+          <p style="margin:0;color:#374151;line-height:1.6;">{_esc(message.strip())}</p>
         </div>"""
 
     if settings.email_logo_url:
-        logo_block = f'<img src="{settings.email_logo_url}" alt="CNS Tool Repair" style="height:42px;width:auto;display:block;margin-bottom:8px;" />'
+        logo_block = f'<img src="{_esc(settings.email_logo_url)}" alt="CNS Tool Repair" style="height:42px;width:auto;display:block;margin-bottom:8px;" />'
     else:
         logo_block = ''
 
-    # Escape ampersands for HTML
-    footer_tagline_html = footer_tagline.replace("&", "&amp;")
-    footer_label_html = footer_label.replace("&", "&amp;")
+    footer_tagline_html = footer_tagline
+    footer_label_html = footer_label
 
     return f"""<!DOCTYPE html>
 <html>
@@ -131,6 +136,8 @@ async def send_sourcing_email(
 
     from_email = (t.get("from_email") or "").strip() or settings.sourcing_from_email
     from_name = (t.get("from_name") or "").strip() or settings.sourcing_from_name
+    # Strip characters that could break/spoof the From display-name header
+    from_name = from_name.translate({ord(c): None for c in '\r\n<>"'})
 
     # Add CC/BCC from template settings
     cc_raw = (t.get("cc") or "").strip()

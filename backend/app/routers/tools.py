@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict
 from bson import ObjectId
 from app.database import get_database
 from app.models.tool import ToolCreate, ToolUpdate, ToolResponse, ToolCategory
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
 
 
-@router.post("/", response_model=ToolResponse, status_code=201)
+@router.post("/", response_model=ToolResponse, status_code=201, dependencies=[Depends(require_admin)])
 async def create_tool(tool: ToolCreate):
     """Create a new tool in catalog"""
 
@@ -98,7 +99,7 @@ async def get_tool(tool_id: str):
     return ToolResponse(**tool)
 
 
-@router.put("/{tool_id}", response_model=ToolResponse)
+@router.put("/{tool_id}", response_model=ToolResponse, dependencies=[Depends(require_admin)])
 async def update_tool(tool_id: str, tool: ToolUpdate):
     """Update a tool"""
 
@@ -129,7 +130,7 @@ async def update_tool(tool_id: str, tool: ToolUpdate):
     return ToolResponse(**updated_tool)
 
 
-@router.delete("/{tool_id}", status_code=204)
+@router.delete("/{tool_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_tool(tool_id: str):
     """Delete a tool (soft delete by setting active=False)"""
 

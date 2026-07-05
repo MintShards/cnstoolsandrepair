@@ -1,6 +1,6 @@
 import logging
 import traceback
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from typing import List
 from bson import ObjectId
 from datetime import datetime
@@ -8,6 +8,7 @@ from app.database import get_database
 from app.models.gallery import GalleryPhotoCreate, GalleryPhotoResponse, GalleryPhotoUpdate
 from app.services.file_service import save_upload_file, delete_file
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ async def list_gallery_photos(active_only: bool = True):
     return photos
 
 
-@router.post("/", response_model=GalleryPhotoResponse, status_code=201)
+@router.post("/", response_model=GalleryPhotoResponse, status_code=201, dependencies=[Depends(require_admin)])
 async def upload_gallery_photo(
     photo: UploadFile = File(...),
     display_order: int = 0
@@ -72,7 +73,7 @@ async def upload_gallery_photo(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.patch("/{photo_id}", response_model=GalleryPhotoResponse)
+@router.patch("/{photo_id}", response_model=GalleryPhotoResponse, dependencies=[Depends(require_admin)])
 async def update_gallery_photo(photo_id: str, photo_update: GalleryPhotoUpdate):
     """Update gallery photo metadata (admin endpoint)"""
     db = get_database()
@@ -102,7 +103,7 @@ async def update_gallery_photo(photo_id: str, photo_update: GalleryPhotoUpdate):
     return GalleryPhotoResponse(**updated_photo)
 
 
-@router.delete("/{photo_id}", status_code=204)
+@router.delete("/{photo_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_gallery_photo(photo_id: str):
     """Delete gallery photo (admin endpoint) - hard delete (removes file and DB entry)"""
     db = get_database()

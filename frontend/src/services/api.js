@@ -7,30 +7,18 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Send the httpOnly auth cookie with every request (admin auth).
+  withCredentials: true,
 });
 
-// Request interceptor to add Authorization header
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor to handle 401 errors
+// Response interceptor to handle 401 errors.
+// The JWT lives in an httpOnly cookie (not readable/removable from JS), so on an
+// expired/invalid session we simply bounce to the login page; the server-side
+// cookie expiry and logout endpoint handle the rest.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid, clear storage
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_login_time');
-
-      // Redirect to login if not already there
       if (!window.location.pathname.includes('/admin/login')) {
         window.location.href = '/admin/login';
       }
@@ -187,6 +175,10 @@ export const settingsAPI = {
 export const authAPI = {
   login: async ({ email, password }) => {
     const response = await api.post('/api/auth/login', { email, password });
+    return response.data;
+  },
+  logout: async () => {
+    const response = await api.post('/api/auth/logout');
     return response.data;
   },
   getMe: async () => {

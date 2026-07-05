@@ -1,31 +1,47 @@
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.security import decode_access_token
 from app.models.auth import User
 from app.database import get_database
 from app.utils import convert_objectid_to_str
 
-# HTTP Bearer token security scheme
-security = HTTPBearer()
+# Name of the httpOnly cookie that carries the JWT (primary auth mechanism).
+ACCESS_TOKEN_COOKIE = "access_token"
+
+# HTTP Bearer scheme kept as an OPTIONAL fallback (e.g. API testing / Swagger).
+# auto_error=False so a missing header doesn't 401 before we check the cookie.
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> User:
     """
-    Dependency to get the current authenticated user from JWT token.
+    Dependency to get the current authenticated user from the JWT.
 
-    Args:
-        credentials: HTTP Bearer token from Authorization header
+    The token is read from the httpOnly ``access_token`` cookie first, falling
+    back to an ``Authorization: Bearer`` header if present.
 
     Returns:
         User object if authentication succeeds
 
     Raises:
-        HTTPException: 401 if token is invalid or user not found
+        HTTPException: 401 if token is missing/invalid or user not found
     """
-    # Extract token from credentials
-    token = credentials.credentials
+    # Prefer the httpOnly cookie; fall back to a bearer header.
+    token = request.cookies.get(ACCESS_TOKEN_COOKIE)
+    if not token and credentials is not None:
+        token = credentials.credentials
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     # Decode JWT token
     payload = decode_access_token(token)

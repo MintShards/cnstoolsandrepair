@@ -11,9 +11,14 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    """Admin login response"""
-    access_token: str
-    token_type: str = "bearer"
+    """Admin login response.
+
+    The JWT is delivered as an httpOnly cookie, not in the body, so it is never
+    exposed to JavaScript. The body only confirms success and the user's role.
+    """
+    success: bool = True
+    role: Optional[str] = None
+    token_type: str = "cookie"
 
 
 class User(BaseModel):

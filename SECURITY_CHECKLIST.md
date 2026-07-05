@@ -31,7 +31,7 @@ backend/.env.production
 ```bash
 grep -r "mongodb+srv://.*:.*@" *.md
 grep -r "SG\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*" *.md
-grep -r "Mayo22pogiako" *.md
+grep -r "<OLD_MONGODB_PASSWORD_1>" *.md
 ```
 
 **Expected output**: Empty (no matches)
@@ -45,16 +45,16 @@ grep -r "Mayo22pogiako" *.md
 **Scan for common secret patterns**:
 ```bash
 # MongoDB passwords
-grep -r "Mayo22pogiako\|20Jessie02mi" .
+grep -r "<OLD_MONGODB_PASSWORD_1>\|<OLD_MONGODB_PASSWORD_2>" .
 
 # Resend API keys
-grep -r "SG\.znwx3LNHTrG3QhlljpvW-A" .
+grep -r "SG\.<OLD_RESEND_KEY>" .
 
 # JWT secrets (example pattern)
-grep -r "AcI1XUbYc0NF2W9xCc5mF" .
+grep -r "<OLD_JWT_SECRET>" .
 
 # Digital Ocean Spaces
-grep -r "DO00UKK9CXADLC6MAKNC\|3L9aC8Yi" .
+grep -r "<OLD_DO_SPACES_KEY_ID>\|<OLD_DO_SPACES_SECRET>" .
 ```
 
 **Expected output**: Only matches in `backend/.env.production` (gitignored)
@@ -134,7 +134,7 @@ git diff --cached
 ### Resend
 - [ ] Login to https://app.resend.com
 - [ ] Go to Settings → API Keys
-- [ ] Delete old key (if exists): `znwx3LNHTrG3QhlljpvW-A`
+- [ ] Delete old key (if exists): `<OLD_RESEND_KEY>`
 - [ ] Create new API key
 - [ ] Name: `cnstoolsandrepair-production-[date]`
 - [ ] Copy new key
@@ -213,7 +213,7 @@ fi
 
 # Check for real MongoDB passwords
 echo -e "\n2. Scanning for MongoDB passwords..."
-if git ls-files | xargs grep -l "Mayo22pogiako\|20Jessie02mi" 2>/dev/null; then
+if git ls-files | xargs grep -l "<OLD_MONGODB_PASSWORD_1>\|<OLD_MONGODB_PASSWORD_2>" 2>/dev/null; then
     echo "❌ CRITICAL: MongoDB password found in tracked files"
     exit 1
 else
@@ -222,7 +222,7 @@ fi
 
 # Check for Resend API keys
 echo -e "\n3. Scanning for Resend API keys..."
-if git ls-files | xargs grep -l "SG\.znwx3LNHTrG3QhlljpvW-A" 2>/dev/null; then
+if git ls-files | xargs grep -l "SG\.<OLD_RESEND_KEY>" 2>/dev/null; then
     echo "❌ CRITICAL: Resend API key found in tracked files"
     exit 1
 else
@@ -231,7 +231,7 @@ fi
 
 # Check for JWT secrets
 echo -e "\n4. Scanning for JWT secrets..."
-if git ls-files | xargs grep -l "AcI1XUbYc0NF2W9xCc5mF" 2>/dev/null; then
+if git ls-files | xargs grep -l "<OLD_JWT_SECRET>" 2>/dev/null; then
     echo "❌ CRITICAL: JWT secret found in tracked files"
     exit 1
 else

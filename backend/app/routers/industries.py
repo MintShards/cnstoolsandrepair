@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from bson import ObjectId
 from app.database import get_database
 from app.models.industry import IndustryCreate, IndustryUpdate, IndustryResponse
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 
 router = APIRouter(prefix="/api/industries", tags=["industries"])
 
 
-@router.post("/", response_model=IndustryResponse, status_code=201)
+@router.post("/", response_model=IndustryResponse, status_code=201, dependencies=[Depends(require_admin)])
 async def create_industry(industry: IndustryCreate):
     """Create a new industry"""
 
@@ -61,7 +62,7 @@ async def get_industry(industry_id: str):
     return IndustryResponse(**industry)
 
 
-@router.put("/{industry_id}", response_model=IndustryResponse)
+@router.put("/{industry_id}", response_model=IndustryResponse, dependencies=[Depends(require_admin)])
 async def update_industry(industry_id: str, industry: IndustryUpdate):
     """Update an industry"""
 
@@ -89,7 +90,7 @@ async def update_industry(industry_id: str, industry: IndustryUpdate):
     return IndustryResponse(**updated_industry)
 
 
-@router.delete("/{industry_id}", status_code=204)
+@router.delete("/{industry_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_industry(industry_id: str):
     """Delete an industry (soft delete)"""
 

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.database import get_database
 from app.models.page_content import (
     HomePageContentUpdate,
     HomePageContentResponse,
 )
 from app.utils import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 from datetime import datetime
 
 router = APIRouter(
@@ -189,7 +190,7 @@ async def get_home_content():
     return HomePageContentResponse(**home_content)
 
 
-@router.put("/", response_model=HomePageContentResponse)
+@router.put("/", response_model=HomePageContentResponse, dependencies=[Depends(require_admin)])
 async def update_home_content(content_data: HomePageContentUpdate):
     """
     Admin endpoint to update home page content (upsert pattern).

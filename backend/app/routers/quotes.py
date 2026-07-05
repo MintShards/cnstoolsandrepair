@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Request
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Request, Depends
 from typing import List
 from bson import ObjectId
 from datetime import datetime, timedelta
@@ -10,6 +10,7 @@ from app.models.quote import QuoteCreate, QuoteResponse, Quote, ToolEntry
 from app.services.file_service import save_upload_file, delete_file
 from app.services.email_service import send_quote_notification
 from app.utils.helpers import convert_objectid_to_str
+from app.dependencies.auth import require_admin
 from app.logging_config import log_quote_created, log_quote_deleted, log_email_notification
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -71,11 +72,20 @@ async def create_quote(
         raise HTTPException(status_code=400, detail=f"Invalid tools data: {str(e)}")
 
     # Save uploaded photos (to 'quotes' folder in Spaces or local)
+    # Cap the number of photos server-side to prevent memory/disk exhaustion
+    # (each file is read fully into memory by the file service before validation).
+    MAX_PHOTOS = 5
+    valid_photos = [p for p in photos if p.filename]
+    if len(valid_photos) > MAX_PHOTOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many photos: {len(valid_photos)} provided, maximum is {MAX_PHOTOS}",
+        )
+
     photo_filenames = []
-    for photo in photos:
-        if photo.filename:
-            filename = await save_upload_file(photo, folder="quotes")
-            photo_filenames.append(filename)
+    for photo in valid_photos:
+        filename = await save_upload_file(photo, folder="quotes")
+        photo_filenames.append(filename)
 
     # Create quote document (handle empty company_name as None)
     try:
@@ -150,7 +160,7 @@ async def create_quote(
     return response
 
 
-@router.get("/{quote_id}", response_model=QuoteResponse)
+@router.get("/{quote_id}", response_model=QuoteResponse, dependencies=[Depends(require_admin)])
 async def get_quote(quote_id: str):
     """Get a quote by ID"""
 
@@ -169,7 +179,7 @@ async def get_quote(quote_id: str):
     return QuoteResponse(**quote)
 
 
-@router.get("/", response_model=List[QuoteResponse])
+@router.get("/", response_model=List[QuoteResponse], dependencies=[Depends(require_admin)])
 async def list_quotes(
     skip: int = 0,
     limit: int = 50,
@@ -193,7 +203,7 @@ async def list_quotes(
 
 
 
-@router.delete("/{quote_id}", status_code=204)
+@router.delete("/{quote_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_quote(quote_id: str):
     """Delete a quote request and all associated photos from storage"""
 

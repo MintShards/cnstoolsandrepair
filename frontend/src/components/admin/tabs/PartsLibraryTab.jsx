@@ -5,15 +5,28 @@ import { useSettings } from '../../../contexts/SettingsContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Escape values before interpolating them into the diagram viewer HTML.
+// Escapes &, <, >, ", ' so neither element content nor quoted attributes can break out.
+function escHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function openImageDiagram(fullUrl, displayName) {
   const win = window.open('', '_blank');
   if (!win) return;
+  const safeName = escHtml(displayName);
+  const safeUrl = escHtml(fullUrl);
   win.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${displayName}</title>
+  <title>${safeName}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
@@ -28,12 +41,12 @@ function openImageDiagram(fullUrl, displayName) {
 </head>
 <body>
   <div class="toolbar">
-    <h1>${displayName}</h1>
+    <h1>${safeName}</h1>
     <button class="btn" onclick="window.print()">Print</button>
   </div>
   <div class="image-wrap">
-    <img src="${fullUrl}" alt="${displayName}" />
-    <span class="url-label">${fullUrl}</span>
+    <img src="${safeUrl}" alt="${safeName}" />
+    <span class="url-label">${safeUrl}</span>
   </div>
 </body>
 </html>`);

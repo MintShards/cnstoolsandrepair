@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 from passlib.context import CryptContext
 
 from app.config import settings
@@ -56,7 +57,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiration_hours)
 
-    to_encode.update({"exp": expire})
+    # Include issued-at for auditing / future revocation strategies
+    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
 
     # Encode JWT token
     encoded_jwt = jwt.encode(
@@ -85,5 +87,5 @@ def decode_access_token(token: str) -> Optional[dict]:
             algorithms=[settings.jwt_algorithm]
         )
         return payload
-    except JWTError:
+    except PyJWTError:
         return None

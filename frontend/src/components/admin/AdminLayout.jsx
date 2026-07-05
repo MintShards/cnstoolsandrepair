@@ -1,11 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 
 export default function AdminLayout({ children, title = 'Admin Settings' }) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_login_time');
+  const handleLogout = async () => {
+    // Clear the httpOnly auth cookie server-side, then redirect.
+    try {
+      await authAPI.logout();
+    } catch (e) {
+      // Ignore network/logout errors — redirect regardless.
+    }
     navigate('/admin/login');
   };
 

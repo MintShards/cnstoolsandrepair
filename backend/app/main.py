@@ -1,7 +1,8 @@
 import logging
 import traceback
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -54,21 +55,39 @@ def get_csrf_config():
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
+# Disable interactive API docs / schema in production to avoid exposing the
+# full endpoint surface to anonymous users.
+_is_production = settings.environment == "production"
+
 app = FastAPI(
     title="CNS Tool Repair API",
     description="Backend API for CNS Tool Repair website",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
 )
 
 # Add rate limiter to app state
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Add CSRF exception handler
+# Add CSRF exception handler — fail closed with the proper status code
 @app.exception_handler(CsrfProtectError)
 async def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError):
-    return {"detail": "CSRF token validation failed"}
+    return JSONResponse(
+        status_code=getattr(exc, "status_code", 403),
+        content={"detail": "CSRF token validation failed"},
+    )
+
+# Add security headers to every response (defense in depth alongside nginx)
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
 
 # Add request logging middleware
 @app.middleware("http")
@@ -130,8 +149,9 @@ async def get_csrf_token(request: Request):
         csrf_protect.set_csrf_cookie(signed_token, response)
         return response
     except Exception as e:
-        logger.warning(f"CSRF token generation failed: {str(e)}")
-        return {"csrf_token": "dev-token"}
+        # Fail closed — never hand out a predictable static token
+        logger.error(f"CSRF token generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not generate CSRF token")
 
 
 @app.get("/")

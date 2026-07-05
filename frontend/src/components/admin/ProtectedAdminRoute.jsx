@@ -7,35 +7,12 @@ export default function ProtectedAdminRoute({ children }) {
   const location = useLocation();
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('admin_token');
-    const loginTime = localStorage.getItem('admin_login_time');
-
-    if (!token || !loginTime) {
-      setIsAuthorized(false);
-      return;
-    }
-
-    // Check if session is expired (8 hours = 28800000 ms)
-    const SESSION_DURATION = 8 * 60 * 60 * 1000;
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - parseInt(loginTime, 10);
-
-    if (elapsedTime > SESSION_DURATION) {
-      // Session expired, clear storage
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_login_time');
-      setIsAuthorized(false);
-      return;
-    }
-
-    // Verify token with backend
+    // Auth is server-authoritative: the JWT is in an httpOnly cookie that JS can't
+    // read, so we ask the backend. Success means a valid, unexpired session.
     try {
       await authAPI.getMe();
       setIsAuthorized(true);
     } catch (error) {
-      // Token is invalid or expired
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_login_time');
       setIsAuthorized(false);
     }
   };

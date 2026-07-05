@@ -18,11 +18,8 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await authAPI.login({ email, password });
-
-      // Store JWT token and timestamp
-      localStorage.setItem('admin_token', response.access_token);
-      localStorage.setItem('admin_login_time', Date.now().toString());
+      // On success the server sets an httpOnly auth cookie; nothing to store client-side.
+      await authAPI.login({ email, password });
 
       // Redirect to intended page or settings
       const from = location.state?.from?.pathname || '/admin/settings';

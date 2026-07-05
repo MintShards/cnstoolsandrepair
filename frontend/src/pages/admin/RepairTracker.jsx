@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { repairsAPI, customersAPI, quotesAPI } from '../../services/api';
+import { repairsAPI, customersAPI, quotesAPI, authAPI } from '../../services/api';
 import CustomersTab from '../../components/admin/tabs/CustomersTab';
 import RepairRequestsTab from '../../components/admin/tabs/RepairRequestsTab';
 import RepairJobsTab from '../../components/admin/tabs/RepairJobsTab';
@@ -102,9 +102,13 @@ export default function RepairTracker() {
   const [partsLibraryNav, setPartsLibraryNav] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_login_time');
+  const handleLogout = async () => {
+    // Clear the httpOnly auth cookie server-side, then redirect.
+    try {
+      await authAPI.logout();
+    } catch (e) {
+      // Ignore network/logout errors — redirect regardless.
+    }
     navigate('/admin/login');
   };
 

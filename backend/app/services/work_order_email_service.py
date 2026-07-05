@@ -1,4 +1,5 @@
 import base64
+import html
 import logging
 import traceback
 from collections import defaultdict
@@ -14,6 +15,11 @@ from app.services.work_order_pdf_service import generate_work_order_pdf
 logger = logging.getLogger(__name__)
 
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # 20 MB total
+
+
+def _esc(value) -> str:
+    """HTML-escape any value (incl. quotes) for safe interpolation into email HTML."""
+    return html.escape(str(value if value is not None else ""), quote=True)
 
 
 def _resolve_template_variables(text: str, job: dict) -> str:
@@ -39,32 +45,32 @@ def _build_work_order_email_html(job: dict, template: dict, custom_message: Opti
     t = template or {}
 
     greeting_raw = t.get("greeting") or "Hi {customer_name},"
-    greeting = _resolve_template_variables(greeting_raw, job)
+    greeting = _esc(_resolve_template_variables(greeting_raw, job))
 
-    body_text = t.get("body_text") or t.get("bodyText") or (
+    body_text = _esc(t.get("body_text") or t.get("bodyText") or (
         "Thank you for bringing your tool(s) in for service. "
         "Please find your work order attached. We will be in touch once our technician "
         "has had a chance to assess your equipment."
-    )
-    closing_text = t.get("closing_text") or t.get("closingText") or (
+    ))
+    closing_text = _esc(t.get("closing_text") or t.get("closingText") or (
         "If you have any questions, feel free to reply to this email or give us a call."
-    )
-    footer_phone = t.get("footer_phone") or t.get("footerPhone") or "(236) 885-9782"
-    footer_website = t.get("footer_website") or t.get("footerWebsite") or "cnstoolrepair.com"
+    ))
+    footer_phone = _esc(t.get("footer_phone") or t.get("footerPhone") or "(236) 885-9782")
+    footer_website = _esc(t.get("footer_website") or t.get("footerWebsite") or "cnstoolrepair.com")
 
     logo_url = "https://cnstoolsandrepair-photos.sfo3.digitaloceanspaces.com/email-templates/cns-logo.png"
 
-    wo_number = job.get("request_number") or ""
+    wo_number = _esc(job.get("request_number") or "")
     tools = job.get("tools") or []
     tool_count = len(tools)
 
     # Build tools summary table rows
     tool_rows = ""
     for idx, tool in enumerate(tools, start=1):
-        brand = (tool.get("brand") or "").upper()
-        model = (tool.get("model_number") or "").upper()
-        tool_type = (tool.get("tool_type") or "").upper()
-        qty = tool.get("quantity") or 1
+        brand = _esc((tool.get("brand") or "").upper())
+        model = _esc((tool.get("model_number") or "").upper())
+        tool_type = _esc((tool.get("tool_type") or "").upper())
+        qty = _esc(tool.get("quantity") or 1)
         tool_rows += f"""
                         <tr>
                             <td style="padding:12px 12px;border-bottom:1px solid #e2e8f0;color:#334155;text-align:center;">{idx}</td>
@@ -78,7 +84,7 @@ def _build_work_order_email_html(job: dict, template: dict, custom_message: Opti
     if custom_message and custom_message.strip():
         custom_message_block = f"""
             <div style="border-left:3px solid #FF2400;padding:4px 0 4px 16px;margin:0 0 24px;">
-                <p style="margin:0;color:#1e293b;line-height:1.6;font-size:15px;">{custom_message.strip()}</p>
+                <p style="margin:0;color:#1e293b;line-height:1.6;font-size:15px;">{_esc(custom_message.strip())}</p>
             </div>"""
 
     tool_label = f"{tool_count} Tool{'s' if tool_count != 1 else ''} Received"
@@ -264,6 +270,8 @@ async def send_work_order_email(
     # Sender
     from_email = (t.get("from_email") or t.get("fromEmail") or "").strip() or "service@cnstoolrepair.com"
     from_name = (t.get("from_name") or t.get("fromName") or "").strip() or "CNS Tool Repair"
+    # Strip characters that could break/spoof the From display-name header
+    from_name = from_name.translate({ord(c): None for c in '\r\n<>"'})
 
     # CC / BCC
     cc_raw = (t.get("cc") or "").strip()

@@ -25,6 +25,11 @@ COPY ./scripts ./scripts
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Run as a non-root user (least privilege). Ensure app + uploads are writable.
+RUN adduser --system --group --no-create-home appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 # Expose port
 EXPOSE 8000
 
