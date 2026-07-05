@@ -1764,11 +1764,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         <StatusBadge status={job.tools[0].status} />
                       ) : (() => {
                         const summary = (getToolStatusSummary(job.tools) || []).sort(byStatusPriority);
-                        const tooltip = summary.map(s => `${REPAIR_STATUSES[s.status]?.label || s.status}: ${s.count}`).join(', ');
+                        // Full breakdown lives in the tooltip; the pill itself stays
+                        // compact so long status names don't clutter the list
+                        const tooltip = summary.map(s => `${s.count} ${REPAIR_STATUSES[s.status]?.label || s.status}`).join(' · ');
                         return (
                           <div
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 cursor-default"
                             title={tooltip}
+                            aria-label={tooltip}
                           >
                             {summary.map(({ status }) => (
                               <span
@@ -1776,8 +1779,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                 className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${REPAIR_STATUSES[status]?.dot || 'bg-slate-400'}`}
                               />
                             ))}
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
-                              {summary.map(s => `${s.count} ${REPAIR_STATUSES[s.status]?.label || s.status}`).join(' · ')}
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                              {job.tools.length} tools
                             </span>
                           </div>
                         );
