@@ -46,21 +46,23 @@ export default function PaginationBar({
     }
   };
 
-  const prevBtn = (extraClass = '') => (
+  const prevBtn = (sizeClass = 'w-8 h-8') => (
     <button
       onClick={() => goToPage(Math.max(1, currentPage - 1))}
       disabled={currentPage === 1}
-      className={`w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all ${extraClass}`}
+      aria-label="Previous page"
+      className={`${sizeClass} flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all`}
     >
       <span className="material-symbols-outlined text-sm">chevron_left</span>
     </button>
   );
 
-  const nextBtn = (extraClass = '') => (
+  const nextBtn = (sizeClass = 'w-8 h-8') => (
     <button
       onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
       disabled={currentPage === totalPages}
-      className={`w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all ${extraClass}`}
+      aria-label="Next page"
+      className={`${sizeClass} flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all`}
     >
       <span className="material-symbols-outlined text-sm">chevron_right</span>
     </button>
@@ -75,7 +77,7 @@ export default function PaginationBar({
           onPageSizeChange(parseInt(e.target.value));
           onPageChange(1);
         }}
-        className="px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-lg text-slate-700 dark:text-white text-xs focus:outline-none focus:border-primary transition-all"
+        className="px-2 py-2.5 md:py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-lg text-slate-700 dark:text-white text-xs focus:outline-none focus:border-primary transition-all"
       >
         {pageSizeOptions.map((n) => (
           <option key={n} value={n}>{n}</option>
@@ -86,15 +88,15 @@ export default function PaginationBar({
 
   return (
     <div ref={rootRef} className="border-t border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/30">
-      {/* ── Phone layout (< md): single compact row ── */}
+      {/* ── Phone layout (< md): single compact row (44px touch targets) ── */}
       <div className="flex md:hidden items-center justify-between gap-2 px-3 py-2.5">
-        {prevBtn()}
+        {prevBtn('w-11 h-11')}
         <div className="flex items-center gap-2 flex-1 justify-center">
           <span className="text-xs text-slate-500 whitespace-nowrap">
             Page <span className="font-bold text-slate-700 dark:text-slate-300">{currentPage}</span> of <span className="font-bold text-slate-700 dark:text-slate-300">{totalPages}</span>
           </span>
         </div>
-        {nextBtn()}
+        {nextBtn('w-11 h-11')}
         {perPageSelect}
       </div>
 

@@ -1643,8 +1643,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openJob(job)}
-                        className="p-2 bg-primary/90 hover:bg-primary text-white rounded-lg transition-all shadow-sm"
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-primary/90 hover:bg-primary text-white rounded-lg transition-all shadow-sm"
                         title="Open"
+                        aria-label={`Open ${job.work_order_number}`}
                       >
                         <span className="material-symbols-outlined text-base">open_in_new</span>
                       </button>

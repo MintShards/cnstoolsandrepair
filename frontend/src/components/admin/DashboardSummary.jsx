@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { repairsAPI } from '../../services/api';
 import { REPAIR_STATUSES, MAIN_STAGES } from '../../constants/repairStatuses';
 
-const REFRESH_INTERVAL_MS = 60_000;
+const REFRESH_INTERVAL_MS = 60000;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -204,8 +204,9 @@ export default function DashboardSummary({
           </div>
           <button
             onClick={fetchSummary}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors rounded-lg flex-shrink-0"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors rounded-lg flex-shrink-0"
             title="Refresh now"
+            aria-label="Refresh dashboard"
           >
             <span className="material-symbols-outlined text-base">refresh</span>
           </button>
@@ -363,7 +364,7 @@ export default function DashboardSummary({
                 action={
                   <button
                     onClick={() => nav('__all__')}
-                    className="text-xs font-bold text-primary dark:text-blue-400 hover:underline flex-shrink-0"
+                    className="text-xs font-bold text-primary dark:text-blue-400 hover:underline flex-shrink-0 py-2.5 px-2 -my-2"
                   >
                     Go to Repair Jobs
                   </button>
@@ -580,8 +581,9 @@ export default function DashboardSummary({
           {!collapsed && (
             <button
               onClick={(e) => { e.stopPropagation(); fetchSummary(); }}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors rounded"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors rounded"
               title="Refresh now"
+              aria-label="Refresh dashboard"
             >
               <span className="material-symbols-outlined text-base">refresh</span>
             </button>
