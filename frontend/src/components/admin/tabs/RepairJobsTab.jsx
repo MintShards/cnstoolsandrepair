@@ -2033,7 +2033,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       phone: src.phone,
                       address: src.address || '',
                       customer_notes: src.customer_notes || '',
-                    }); }} className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all">
+                    }); }} className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all">
                       <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>edit</span>
                       Edit
                     </button>
