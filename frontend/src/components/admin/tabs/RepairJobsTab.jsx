@@ -2253,7 +2253,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                   {`${tool.brand} ${tool.model_number}`.toUpperCase()}
                                 </div>
                               )}
-                              <div className="text-sm text-slate-500 mt-0.5">
+                              <div className="text-sm text-slate-500 mt-1">
                                 {(tool.tool_type || '').toUpperCase()}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                 {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number.toUpperCase()}</>}
                                 {retailPriceMap[tool.tool_id] != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Retail: ${parseFloat(retailPriceMap[tool.tool_id]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
@@ -2269,7 +2269,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                        <div className="flex items-center gap-2.5 mt-4 flex-wrap">
                           {tool.warranty && (
                             <span className="sm:hidden px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
                           )}
@@ -2300,6 +2300,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           {selectedJob.tools.length > 1 && (
                             <button
                               onClick={() => handleRemoveTool(tool.tool_id)}
+                              title="Remove tool from work order"
+                              aria-label="Remove tool from work order"
                               className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all border ${
                                 removeConfirmId === tool.tool_id
                                   ? 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700/60'
