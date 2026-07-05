@@ -11,6 +11,7 @@ import { openPrintToolTag } from '../PrintToolTag';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
+import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { useSettings } from '../../../contexts/SettingsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -91,6 +92,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
+  useBodyScrollLock(!!selectedJob);
   const [retailPriceMap, setRetailPriceMap] = useState({}); // { tool_id: price | null }
   const libraryBrandsCache = useRef(null);
   const [showNewJobForm, setShowNewJobForm] = useState(false);

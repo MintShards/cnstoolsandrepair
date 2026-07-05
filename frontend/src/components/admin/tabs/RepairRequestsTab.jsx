@@ -3,6 +3,7 @@ import { quotesAPI, repairsAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific } from '../../../utils/dateFormat';
+import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -19,6 +20,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuote, setSelectedQuote] = useState(null);
+  useBodyScrollLock(!!selectedQuote);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

@@ -8,6 +8,7 @@ import {
 import { StatusBadge, StepBadge, ProgressStepper } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific, formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
+import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { useSettings } from '../../../contexts/SettingsContext';
@@ -107,6 +108,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
 
   // Profile view
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  useBodyScrollLock(!!selectedCustomer);
   const [customerJobs, setCustomerJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobsPage, setJobsPage] = useState(1);

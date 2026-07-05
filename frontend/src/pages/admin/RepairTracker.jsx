@@ -295,7 +295,7 @@ export default function RepairTracker() {
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
-                    className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold transition-all duration-200 ${
+                    className={`flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1 sm:px-3 lg:px-5 py-2 sm:py-2.5 rounded-xl font-bold transition-all duration-200 ${
                       activeTab === tab.id
                         ? 'bg-primary text-white shadow-md shadow-primary/25'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -317,7 +317,7 @@ export default function RepairTracker() {
                       )}
                     </div>
                     <span className="sm:hidden text-[10px] leading-tight truncate max-w-full">{tab.shortLabel}</span>
-                    <span className="hidden sm:inline text-sm leading-tight">{tab.label}</span>
+                    <span className="hidden sm:block min-w-0 truncate text-sm leading-tight">{tab.label}</span>
                     {count !== null && count > 0 && (
                       <span className={`hidden sm:inline text-xs font-black px-2 py-0.5 rounded-full min-w-[22px] text-center leading-none ${
                         activeTab === tab.id

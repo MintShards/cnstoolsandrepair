@@ -4,6 +4,7 @@
  * On phone: compact prev/next + "Page X of Y" + per-page select in a single row.
  * On md+: full page-number buttons layout.
  */
+import { useRef } from 'react';
 
 const getPageNumbers = (current, total) => {
   const pages = [];
@@ -27,14 +28,27 @@ export default function PaginationBar({
   onPageSizeChange,
   pageSizeOptions = [5, 10, 25, 50, 100],
 }) {
+  const rootRef = useRef(null);
+
   if (totalItems === 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
 
+  // Bring the top of the list (the bar's parent card) back into view when
+  // the page changes — otherwise the user lands mid-list and has to scroll up
+  const goToPage = (page) => {
+    onPageChange(page);
+    const container = rootRef.current?.parentElement;
+    if (container && container.getBoundingClientRect().top < 0) {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      container.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    }
+  };
+
   const prevBtn = (extraClass = '') => (
     <button
-      onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+      onClick={() => goToPage(Math.max(1, currentPage - 1))}
       disabled={currentPage === 1}
       className={`w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all ${extraClass}`}
     >
@@ -44,7 +58,7 @@ export default function PaginationBar({
 
   const nextBtn = (extraClass = '') => (
     <button
-      onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+      onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
       disabled={currentPage === totalPages}
       className={`w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all ${extraClass}`}
     >
@@ -71,7 +85,7 @@ export default function PaginationBar({
   );
 
   return (
-    <div className="border-t border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/30">
+    <div ref={rootRef} className="border-t border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/30">
       {/* ── Phone layout (< md): single compact row ── */}
       <div className="flex md:hidden items-center justify-between gap-2 px-3 py-2.5">
         {prevBtn()}
@@ -101,7 +115,7 @@ export default function PaginationBar({
             ) : (
               <button
                 key={page}
-                onClick={() => onPageChange(page)}
+                onClick={() => goToPage(page)}
                 className={`w-8 h-8 rounded-lg font-bold text-xs transition-all ${
                   currentPage === page
                     ? 'bg-primary text-white shadow-sm shadow-primary/20'
