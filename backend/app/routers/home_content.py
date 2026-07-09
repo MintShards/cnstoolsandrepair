@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from app.database import get_database
+from app.services.file_service import save_upload_file, delete_file
 from app.models.page_content import (
     HomePageContentUpdate,
     HomePageContentResponse,
@@ -218,3 +219,42 @@ async def update_home_content(content_data: HomePageContentUpdate):
     # Convert ObjectId to string
     result = convert_objectid_to_str(result)
     return HomePageContentResponse(**result)
+
+
+@router.post("/hero-image", dependencies=[Depends(require_admin)])
+async def upload_hero_image(image: UploadFile = File(...)):
+    """
+    Admin endpoint to upload/replace the hero background image.
+    Saves via file_service, stores URL in home_content singleton doc,
+    and deletes the previous image if one existed.
+    """
+    db = get_database()
+
+    if not image.filename:
+        raise HTTPException(status_code=400, detail="No image file provided")
+
+    # Save the uploaded image to the "hero" folder
+    filename_or_url = await save_upload_file(image, folder="hero")
+
+    # Check for an existing hero image to delete after successful upload
+    existing = await db.home_content.find_one({"active": True})
+    old_image_url = None
+    if existing and existing.get("hero", {}).get("heroImageUrl"):
+        old_image_url = existing["hero"]["heroImageUrl"]
+
+    # Update only the heroImageUrl field in the singleton document
+    result = await db.home_content.find_one_and_update(
+        {"active": True},
+        {"$set": {"hero.heroImageUrl": filename_or_url, "updated_at": datetime.utcnow()}},
+        upsert=True,
+        return_document=True,
+    )
+
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to update hero image")
+
+    # Delete old image after successful DB update
+    if old_image_url:
+        await delete_file(old_image_url)
+
+    return {"heroImageUrl": filename_or_url, "message": "Hero image uploaded successfully"}

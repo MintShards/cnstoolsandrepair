@@ -8,21 +8,26 @@ export default function Hero({
   const { settings, loading: settingsLoading } = useSettings();
   const loading = settingsLoading || contentLoading;
 
-  // Progressive image loading: WebP with JPG fallback
-  const heroImageWebP = '/images/hero/workshop-tools-pegboard-optimized.webp';
-  const heroImageJPG = '/images/hero/workshop-tools-pegboard-optimized.jpg';
+  // Static fallback images (WebP + JPG)
+  const staticWebP = '/images/hero/workshop-tools-pegboard-optimized.webp';
+  const staticJPG = '/images/hero/workshop-tools-pegboard-optimized.jpg';
 
-  // Check WebP support and build background image URL
+  // Admin-uploaded custom image (from home content API)
+  const customImage = data?.heroImageUrl;
+
   const getBackgroundImage = () => {
-    // Modern browsers support WebP, use optimized WebP version
-    // Fallback to optimized JPG for older browsers (handled by CSS)
-
-    // Strong gradient overlay for both themes to ensure text contrast
-    // Same gradient strength for both light and dark mode
     const gradient = 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 40%, rgba(15, 23, 42, 0.75) 70%, rgba(15, 23, 42, 0.65) 100%)';
 
-    // Use image-set for automatic WebP/JPG selection based on browser support
-    return `${gradient}, image-set(url("${heroImageWebP}") 1x, url("${heroImageJPG}") 1x)`;
+    if (customImage) {
+      // Spaces URL → use directly; local filename → prefix with API base
+      const imageUrl = customImage.startsWith('http')
+        ? customImage
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/${customImage}`;
+      return `${gradient}, url("${imageUrl}")`;
+    }
+
+    // Fallback: static images with automatic WebP/JPG selection
+    return `${gradient}, image-set(url("${staticWebP}") 1x, url("${staticJPG}") 1x)`;
   };
 
   // Show loading skeleton or use fallback data

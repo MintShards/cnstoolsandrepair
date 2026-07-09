@@ -235,6 +235,14 @@ export const homeContentAPI = {
     const response = await api.put('/api/home-content/', data);
     return response.data;
   },
+  uploadHeroImage: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.post('/api/home-content/hero-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };
 
 // Industries Content API

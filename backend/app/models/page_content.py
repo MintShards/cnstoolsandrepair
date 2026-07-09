@@ -57,6 +57,7 @@ class HeroSectionModel(BaseModel):
     subheadline: str = Field(..., min_length=1, max_length=500)
     primary_button_text: str = Field(..., min_length=1, max_length=100, alias="primaryButtonText")
     secondary_button_text: str = Field(..., min_length=1, max_length=100, alias="secondaryButtonText")
+    hero_image_url: Optional[str] = Field(None, max_length=500, alias="heroImageUrl")
 
     class Config:
         populate_by_name = True

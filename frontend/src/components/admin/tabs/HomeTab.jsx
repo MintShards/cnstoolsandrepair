@@ -12,6 +12,7 @@ export default function HomeTab() {
   const [expandedTrustBadges, setExpandedTrustBadges] = useState(new Set());
   const [expandedFeatures, setExpandedFeatures] = useState(new Set());
   const [expandedSteps, setExpandedSteps] = useState(new Set());
+  const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
 
   // Load current home content
   useEffect(() => {
@@ -48,6 +49,24 @@ export default function HomeTab() {
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleHeroImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingHeroImage(true);
+    try {
+      const result = await homeContentAPI.uploadHeroImage(file);
+      updateField('hero.heroImageUrl', result.heroImageUrl);
+      showNotification('Hero background image uploaded successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to upload hero image:', error);
+      showNotification('Failed to upload hero image: ' + (error.response?.data?.detail || error.message), 'error');
+    } finally {
+      setUploadingHeroImage(false);
+      e.target.value = '';
+    }
   };
 
   const updateField = (path, value) => {
@@ -421,6 +440,41 @@ export default function HomeTab() {
           maxLength={100}
           placeholder="View Pneumatic Tool Repair Services"
         />
+      </div>
+
+      {/* Hero Background Image */}
+      <div className="mb-8 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+        <label className="block text-sm font-bold text-slate-300 mb-1">
+          Background Image
+        </label>
+        <p className="text-xs text-slate-400 mb-3">
+          Upload a custom hero background image. Recommended: 1920×1080 or larger, WebP or JPG. Max 10MB.
+        </p>
+        {formData.hero?.heroImageUrl && (
+          <div className="mb-3">
+            <img
+              src={formData.hero.heroImageUrl.startsWith('http')
+                ? formData.hero.heroImageUrl
+                : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/${formData.hero.heroImageUrl}`
+              }
+              alt="Current hero background"
+              className="w-full max-w-md h-32 object-cover rounded-lg border border-slate-600"
+            />
+            <p className="text-xs text-slate-500 mt-1">Current hero background</p>
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <input
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleHeroImageUpload}
+            disabled={uploadingHeroImage}
+            className="text-sm text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-white file:font-bold file:cursor-pointer hover:file:bg-primary/90 disabled:opacity-50"
+          />
+          {uploadingHeroImage && (
+            <span className="text-sm text-slate-400 animate-pulse">Uploading...</span>
+          )}
+        </div>
       </div>
 
       {/* QuickFacts - Trust Badges */}
