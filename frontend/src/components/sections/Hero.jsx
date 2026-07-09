@@ -1,5 +1,16 @@
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
+
+const HERO_IMAGE_CACHE_KEY = 'cns_hero_image_url';
+
+// Resolve hero image URL (Spaces URL or local filename)
+function resolveImageUrl(url) {
+  if (!url) return null;
+  return url.startsWith('http')
+    ? url
+    : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/${url}`;
+}
 
 export default function Hero({
   data = null,
@@ -15,31 +26,35 @@ export default function Hero({
   // Admin-uploaded custom image (from home content API)
   const customImage = data?.heroImageUrl;
 
-  const getBackgroundImage = () => {
-    const gradient = 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 40%, rgba(15, 23, 42, 0.75) 70%, rgba(15, 23, 42, 0.65) 100%)';
-
+  // Cache the hero image URL in localStorage so the skeleton can use it on next visit
+  useEffect(() => {
     if (customImage) {
-      // Spaces URL → use directly; local filename → prefix with API base
-      const imageUrl = customImage.startsWith('http')
-        ? customImage
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/${customImage}`;
+      localStorage.setItem(HERO_IMAGE_CACHE_KEY, customImage);
+    }
+  }, [customImage]);
+
+  const gradient = 'linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 40%, rgba(15, 23, 42, 0.75) 70%, rgba(15, 23, 42, 0.65) 100%)';
+
+  const getBackgroundImage = (imageUrl) => {
+    if (imageUrl) {
       return `${gradient}, url("${imageUrl}")`;
     }
-
     // Fallback: static images with automatic WebP/JPG selection
     return `${gradient}, image-set(url("${staticWebP}") 1x, url("${staticJPG}") 1x)`;
   };
 
   // Show loading skeleton or use fallback data
   if (loading || !settings) {
+    // Use cached hero image URL so skeleton matches the real hero
+    const cachedUrl = localStorage.getItem(HERO_IMAGE_CACHE_KEY);
+    const skeletonImage = resolveImageUrl(cachedUrl);
+
     return (
       <section className="@container">
         <div className="relative overflow-hidden">
           <div
-            className="flex min-h-[480px] lg:min-h-[560px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-12 sm:pb-16 lg:pb-20 pt-24"
-            style={{
-              backgroundImage: getBackgroundImage(),
-            }}
+            className={`flex min-h-[480px] lg:min-h-[560px] flex-col gap-6 lg:gap-8 items-start justify-end px-6 sm:px-8 lg:px-12 pb-12 sm:pb-16 lg:pb-20 pt-24 ${skeletonImage ? 'bg-cover bg-center bg-no-repeat' : 'bg-slate-900'}`}
+            style={skeletonImage ? { backgroundImage: getBackgroundImage(skeletonImage) } : undefined}
           >
             <div className="max-w-screen-xl mx-auto w-full">
               <div className="flex flex-col gap-4 lg:gap-6 max-w-lg lg:max-w-2xl">
@@ -88,7 +103,7 @@ export default function Hero({
         <div
           className="flex min-h-[480px] lg:min-h-[560px] flex-col gap-6 lg:gap-8 bg-cover bg-center bg-no-repeat items-start justify-end px-6 sm:px-8 lg:px-12 pb-12 sm:pb-16 lg:pb-20 pt-24"
           style={{
-            backgroundImage: getBackgroundImage(),
+            backgroundImage: getBackgroundImage(resolveImageUrl(customImage)),
           }}
         >
           <div className="max-w-screen-xl mx-auto w-full">
