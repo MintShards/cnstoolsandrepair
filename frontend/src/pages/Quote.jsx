@@ -234,7 +234,11 @@ export default function Quote() {
   // Phone number formatting
   const formatPhoneNumber = (value) => {
     if (!value) return value;
-    const phoneNumber = value.replace(/[^\d]/g, '');
+    const stripped = value.replace(/[^\d]/g, '');
+    // Strip leading country code (1 for North America) so +1 or 1 prefix doesn't shift digits
+    const phoneNumber = (stripped.length === 11 && stripped.startsWith('1'))
+      ? stripped.slice(1)
+      : stripped;
     const phoneNumberLength = phoneNumber.length;
 
     if (phoneNumberLength < 4) return phoneNumber;
