@@ -104,9 +104,9 @@ function getTagStyles(prefix) {
   const p = prefix ? `${prefix} ` : '';
   const s = prefix || 'body';
   return `
-    @page { size: 4in 3in landscape; margin: 0; }
+    @page { size: 4in 2in landscape; margin: 0; }
     @media print {
-      html, ${s} { width: 4in; height: 3in; overflow: hidden; }
+      html, ${s} { width: 4in; height: 2in; overflow: hidden; }
       ${p}.tag { page-break-inside: avoid; }
     }
     ${p}* { box-sizing: border-box; margin: 0; padding: 0; }
@@ -114,11 +114,11 @@ function getTagStyles(prefix) {
 
     ${p}.tag {
       width: 4in;
-      height: 3in;
-      padding: 10px 14px 10px 8px;
+      height: 2in;
+      padding: 6px 10px 6px 6px;
       display: flex;
       flex-direction: row;
-      gap: 10px;
+      gap: 6px;
       border: 1px solid #ccc;
       overflow: hidden;
     }
@@ -127,29 +127,29 @@ function getTagStyles(prefix) {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 3px;
       overflow: hidden;
     }
 
     ${p}.wo-header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     ${p}.wo-id {
       font-family: monospace;
-      font-size: 17px;
+      font-size: 14px;
       font-weight: 900;
       letter-spacing: 0.04em;
       color: #000;
     }
     ${p}.warranty-badge {
-      font-size: 9px;
+      font-size: 7px;
       font-weight: 500;
       letter-spacing: 0.08em;
-      padding: 2px 7px;
+      padding: 1px 5px;
       border: 1px solid #555;
-      border-radius: 4px;
+      border-radius: 3px;
       background: #fff;
       color: #555;
       flex-shrink: 0;
@@ -166,51 +166,51 @@ function getTagStyles(prefix) {
       gap: 1px;
     }
     ${p}.label {
-      font-size: 7px;
+      font-size: 6px;
       font-weight: 700;
       letter-spacing: 0.1em;
       color: #555;
       text-transform: uppercase;
     }
     ${p}.value {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 600;
       color: #000;
-      line-height: 1.3;
+      line-height: 1.2;
     }
     ${p}.top-grid {
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 4px 12px;
+      gap: 3px 10px;
       align-items: start;
     }
     ${p}.info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px 10px;
+      gap: 3px 8px;
     }
     ${p}.right-col {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
       align-items: flex-end;
       text-align: right;
     }
     ${p}.status-badge {
-      font-size: 8px;
+      font-size: 7px;
       font-weight: 700;
       letter-spacing: 0.02em;
-      padding: 2px 6px;
+      padding: 1px 5px;
       border: 1.5px solid #000;
-      border-radius: 4px;
+      border-radius: 3px;
       text-transform: uppercase;
       white-space: nowrap;
     }
-    ${p}.customer { font-size: 11px; }
-    ${p}.contact { font-size: 10px; color: #333; font-weight: 500; }
+    ${p}.customer { font-size: 9px; }
+    ${p}.contact { font-size: 8px; color: #333; font-weight: 500; }
     ${p}.remarks-text {
-      font-size: 10px;
-      line-height: 1.4;
+      font-size: 8px;
+      line-height: 1.3;
       color: #111;
     }
 
@@ -221,27 +221,27 @@ function getTagStyles(prefix) {
       margin: 0;
     }
     ${p}.parts-list li {
-      font-size: 10px;
-      padding: 1.5px 0;
+      font-size: 8px;
+      padding: 1px 0;
       border-bottom: 1px dotted #ddd;
       color: #111;
       display: flex;
       align-items: baseline;
-      gap: 4px;
+      gap: 3px;
     }
     ${p}.parts-list li.none {
       color: #888;
       font-style: italic;
     }
     ${p}.part-qty {
-      font-size: 9px;
+      font-size: 7px;
       font-weight: 700;
       color: #555;
       flex-shrink: 0;
     }
     ${p}.part-name { flex: 1; }
     ${p}.part-num {
-      font-size: 9px;
+      font-size: 7px;
       color: #777;
       font-family: monospace;
       flex-shrink: 0;
