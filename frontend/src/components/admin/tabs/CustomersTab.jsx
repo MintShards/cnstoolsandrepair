@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { customersAPI, repairsAPI, serviceAgreementAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
@@ -201,6 +202,15 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
   }, []);
 
   // Escape key: close topmost open modal
+  // Customer profile deep-linking: the open profile lives in the URL
+  // (?tab=customers&customer=<id>) so it works in new browser tabs
+  const [searchParams, setSearchParams] = useSearchParams();
+  const closeCustomer = useCallback(() => {
+    setSelectedCustomer(null);
+    setEditing(false);
+    setSearchParams({ tab: 'customers' }, { replace: true });
+  }, [setSearchParams]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key !== 'Escape') return;
@@ -211,11 +221,11 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       if (statusUpdateModal && !updatingStatus) { setStatusUpdateModal(null); return; }
       if (removeConfirmId) { setRemoveConfirmId(null); return; }
       if (woDialogJob) { setWoDialogJob(null); return; }
-      if (selectedCustomer) { setSelectedCustomer(null); return; }
+      if (selectedCustomer) { closeCustomer(); return; }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, editingToolId, savingToolEdit, addToolForm, deleteJobConfirm, statusUpdateModal, updatingStatus, removeConfirmId, woDialogJob, selectedCustomer]);
+  }, [selectedPhoto, editingToolId, savingToolEdit, addToolForm, deleteJobConfirm, statusUpdateModal, updatingStatus, removeConfirmId, woDialogJob, selectedCustomer, closeCustomer]);
 
   const openCustomer = async (customer) => {
     setSelectedCustomer(customer);
@@ -234,6 +244,25 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       setLoadingJobs(false);
     }
   };
+
+  // Open the profile named by the URL param (new-tab loads, back/forward)
+  const customerParam = searchParams.get('customer');
+  useEffect(() => {
+    if (!customerParam) { setSelectedCustomer(null); return; }
+    if (selectedCustomer?.id === customerParam) return;
+    const cached = customers.find(c => c.id === customerParam);
+    if (cached) { openCustomer(cached); return; }
+    (async () => {
+      try {
+        const customer = await customersAPI.get(customerParam);
+        openCustomer(customer);
+      } catch {
+        showToast('error', 'Failed to load customer');
+        setSearchParams({ tab: 'customers' }, { replace: true });
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerParam]);
 
   const handleStartEdit = () => {
     setEditForm({
@@ -288,6 +317,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
     showToast('success', `Customer ${created.first_name} ${created.last_name} created successfully`);
     setCreating(false);
     openCustomer(created);
+    setSearchParams({ tab: 'customers', customer: created.id });
   };
 
   const handleDeleteCustomer = async () => {
@@ -297,7 +327,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       const remaining = customers.filter(c => c.id !== deleteConfirm.id);
       setCustomers(remaining);
       if (onCountUpdate) onCountUpdate(remaining.length);
-      if (selectedCustomer?.id === deleteConfirm.id) setSelectedCustomer(null);
+      if (selectedCustomer?.id === deleteConfirm.id) closeCustomer();
       setDeleteConfirm(null);
       showToast('success', 'Customer deleted successfully');
     } catch (err) {
@@ -533,7 +563,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
         {/* Back + Header */}
         <div className="flex flex-wrap items-center gap-2 mb-6">
           <button
-            onClick={() => { setSelectedCustomer(null); setEditing(false); }}
+            onClick={closeCustomer}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold flex-shrink-0"
           >
             <span className="material-symbols-outlined text-base">arrow_back</span>
@@ -747,13 +777,20 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                           <td className="py-3.5 px-4 text-slate-500 text-sm hidden md:table-cell">{formatDate(job.created_at)}</td>
                           <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => openWoDialog(job)}
+                              <Link
+                                to={`/admin/repair-tracker?tab=jobs&job=${job.id}`}
+                                onClick={(e) => {
+                                  // Plain left-click opens the inline dialog; modified clicks and
+                                  // right-click use the href to the full Repair Jobs view
+                                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                                  e.preventDefault();
+                                  openWoDialog(job);
+                                }}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm"
                               >
                                 <span className="material-symbols-outlined text-base">open_in_new</span>
                                 Open
-                              </button>
+                              </Link>
                               <button
                                 onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement)}
                                 className="hidden sm:flex p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 border border-slate-200 hover:border-slate-300 dark:border-slate-600/50 dark:hover:border-slate-500 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-all items-center justify-center"
@@ -1490,7 +1527,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     <tr
                       key={customer.id}
                       className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
-                      onClick={() => openCustomer(customer)}
+                      onClick={() => setSearchParams({ tab: 'customers', customer: customer.id })}
                     >
                       <td className="py-3.5 px-4 max-w-[200px] lg:max-w-[260px]">
                         <div className="text-slate-900 dark:text-white font-bold truncate">{customer.company_name ? customer.company_name.toUpperCase() : `${(customer.first_name || '').toUpperCase()} ${(customer.last_name || '').toUpperCase()}`}</div>
@@ -1501,13 +1538,14 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                       <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell max-w-[200px] truncate">{customer.address ? customer.address.toUpperCase() : <span className="text-slate-400 dark:text-slate-600">—</span>}</td>
                       <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden lg:table-cell">{formatDate(customer.created_at)}</td>
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openCustomer(customer); }}
+                        <Link
+                          to={`/admin/repair-tracker?tab=customers&customer=${customer.id}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 group-hover:bg-primary/20 group-hover:border-primary/30 hover:text-primary border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold transition-all"
                         >
                           <span className="material-symbols-outlined text-base">open_in_new</span>
                           Open
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   ))}

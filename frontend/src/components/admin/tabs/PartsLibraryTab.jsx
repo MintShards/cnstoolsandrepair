@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { partsLibraryAPI, repairsAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import { useSettings } from '../../../contexts/SettingsContext';
@@ -1805,10 +1806,16 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredModels.map(model => (
-            <div
+            <Link
               key={model.id}
-              className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
-              onClick={() => onSelectModel(model)}
+              to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(brand.name)}&model=${encodeURIComponent(model.name)}`}
+              className="block border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
+              onClick={(e) => {
+                // Plain left-click drills in place; modified clicks and right-click use the real href
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                onSelectModel(model);
+              }}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="min-w-0">
@@ -1849,7 +1856,7 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                 </div>
                 <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors text-sm">arrow_forward</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -2744,10 +2751,16 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {brands.map(brand => (
-                <div
+                <Link
                   key={brand.id}
-                  className="border border-slate-200 dark:border-slate-700 rounded-2xl p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer group bg-white dark:bg-slate-800/50"
-                  onClick={() => setSelectedBrand(brand)}
+                  to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(brand.name)}`}
+                  className="block border border-slate-200 dark:border-slate-700 rounded-2xl p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer group bg-white dark:bg-slate-800/50"
+                  onClick={(e) => {
+                    // Plain left-click drills in place; modified clicks and right-click use the real href
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    setSelectedBrand(brand);
+                  }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5">
@@ -2797,7 +2810,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                   {brand.notes && (
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 line-clamp-2">{brand.notes}</p>
                   )}
-                </div>
+                </Link>
               ))}
             </div>
           )}

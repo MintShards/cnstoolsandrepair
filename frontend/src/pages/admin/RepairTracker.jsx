@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, createContext, useContext, lazy, Suspense } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo, createContext, useContext, lazy, Suspense } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { repairsAPI, customersAPI, quotesAPI, authAPI } from '../../services/api';
 import DashboardSummary from '../../components/admin/DashboardSummary';
 import ThemeToggle from '../../components/layout/ThemeToggle';
@@ -12,6 +12,9 @@ const RepairJobsTab = lazy(() => import('../../components/admin/tabs/RepairJobsT
 const PartsLibraryTab = lazy(() => import('../../components/admin/tabs/PartsLibraryTab'));
 const PartsSourcingTab = lazy(() => import('../../components/admin/tabs/PartsSourcingTab'));
 const UserGuide = lazy(() => import('../../components/admin/UserGuide'));
+
+// Section ids that may appear in the URL as /admin/repair-tracker?tab=<id>
+const TAB_IDS = ['dashboard', 'jobs', 'customers', 'requests', 'parts-library', 'parts-sourcing'];
 
 function TabLoading() {
   return (
@@ -106,18 +109,27 @@ export default function RepairTracker() {
     document.title = 'Repair Tracker | CNS Tool Repair';
   }, []);
 
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [partsLibraryFilter, setPartsLibraryFilter] = useState(null);
+  // Active tab lives in the URL (?tab=jobs) so each section is a real link:
+  // right-click → open in new tab works, and back/forward moves between tabs
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab = TAB_IDS.includes(tabParam) ? tabParam : 'dashboard';
+
+  // Parts Library handoffs (low-stock filter, brand/model drill-down) are URL
+  // params too, so tool links on work orders can open the library in a new tab
+  const partsLibraryFilter = activeTab === 'parts-library' ? searchParams.get('filter') : null;
+  const plBrand = activeTab === 'parts-library' ? searchParams.get('brand') : null;
+  const plModel = activeTab === 'parts-library' ? searchParams.get('model') : null;
+  const partsLibraryNav = useMemo(
+    () => (plBrand ? { brandName: plBrand, modelName: plModel } : null),
+    [plBrand, plModel]
+  );
   const [preselectedCustomer, setPreselectedCustomer] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [tabCounts, setTabCounts] = useState({ customers: null, requests: null, jobs: null });
-  const [dashboardStatusFilter, setDashboardStatusFilter] = useState('');
-  const [dashboardTechFilter, setDashboardTechFilter] = useState('');
   const [dashboardOpenNewJob, setDashboardOpenNewJob] = useState(false);
   const [dashboardOpenNewCustomer, setDashboardOpenNewCustomer] = useState(false);
   const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
-  const [dashboardOpenJobId, setDashboardOpenJobId] = useState(null);
-  const [partsLibraryNav, setPartsLibraryNav] = useState(null);
   const [showGuide, setShowGuide] = useState(false);
 
   const handleLogout = async () => {
@@ -183,59 +195,37 @@ export default function RepairTracker() {
     return () => clearInterval(interval);
   }, [fetchTabCounts]);
 
-  const handleNewJobFromCustomer = (customer) => {
-    setPreselectedCustomer(customer);
-    setActiveTab('jobs');
-  };
+  const goToTab = useCallback((tabId) => {
+    setSearchParams(tabId === 'dashboard' ? {} : { tab: tabId });
+  }, [setSearchParams]);
 
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    if (tabId !== 'jobs') {
+  // Clear cross-tab handoff state when leaving the tab it targets. Runs on
+  // every tab change, including browser back/forward and direct URL entry.
+  // (Parts Library handoffs need no clearing — switching tabs drops their
+  // URL params since tab links and goToTab only carry ?tab=.)
+  useEffect(() => {
+    if (activeTab !== 'jobs') {
       setPreselectedCustomer(null);
     }
-    if (tabId !== 'parts-library') {
-      setPartsLibraryFilter(null);
-      setPartsLibraryNav(null);
-    }
+  }, [activeTab]);
+
+  const handleNewJobFromCustomer = (customer) => {
+    setPreselectedCustomer(customer);
+    goToTab('jobs');
   };
-
-  const handleDashboardStatusFilter = useCallback((status) => {
-    setDashboardStatusFilter(status);
-    setActiveTab('jobs');
-  }, []);
-
-  const handleDashboardTechFilter = useCallback((tech) => {
-    setDashboardTechFilter(tech);
-    setActiveTab('jobs');
-  }, []);
 
   const handleDashboardNewJob = useCallback(() => {
     setDashboardOpenNewJob(true);
-    setActiveTab('jobs');
-  }, []);
+    goToTab('jobs');
+  }, [goToTab]);
 
   const handleDashboardNewCustomer = useCallback(() => {
     setDashboardOpenNewCustomer(true);
-    setActiveTab('customers');
-  }, []);
-
-  const handleGoToRequests = useCallback(() => {
-    setActiveTab('requests');
-  }, []);
-
-  const handleDashboardOpenJob = useCallback((jobId) => {
-    setDashboardOpenJobId(jobId);
-    setActiveTab('jobs');
-  }, []);
+    goToTab('customers');
+  }, [goToTab]);
 
   const handleAttentionUpdate = useCallback((hasAttention) => {
     setJobsNeedAttention(hasAttention);
-  }, []);
-
-  const handleGoToPartsLibraryForTool = useCallback((brandName, modelName) => {
-    setPartsLibraryNav({ brandName, modelName });
-    setPartsLibraryFilter(null);
-    setActiveTab('parts-library');
   }, []);
 
   return (
@@ -292,9 +282,9 @@ export default function RepairTracker() {
               {tabs.map((tab) => {
                 const count = tabCounts[tab.id];
                 return (
-                  <button
+                  <Link
                     key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
+                    to={tab.id === 'dashboard' ? '/admin/repair-tracker' : `/admin/repair-tracker?tab=${tab.id}`}
                     className={`flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1 sm:px-3 lg:px-5 py-2 sm:py-2.5 rounded-xl font-bold transition-all duration-200 ${
                       activeTab === tab.id
                         ? 'bg-primary text-white shadow-md shadow-primary/25'
@@ -330,7 +320,7 @@ export default function RepairTracker() {
                     {tab.id === 'jobs' && jobsNeedAttention && activeTab !== 'jobs' && (
                       <span className="hidden sm:flex w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" title="Jobs need attention" />
                     )}
-                  </button>
+                  </Link>
                 );
               })}
             </nav>
@@ -341,14 +331,9 @@ export default function RepairTracker() {
             <Suspense fallback={<TabLoading />}>
             {activeTab === 'dashboard' && (
               <DashboardSummary
-                onStatusFilter={handleDashboardStatusFilter}
-                onTechFilter={handleDashboardTechFilter}
                 onNewJob={handleDashboardNewJob}
                 onNewCustomer={handleDashboardNewCustomer}
-                onGoToRequests={handleGoToRequests}
                 onAttentionUpdate={handleAttentionUpdate}
-                onOpenJob={handleDashboardOpenJob}
-                onGoToPartsLibrary={() => { setPartsLibraryFilter('low-stock'); setActiveTab('parts-library'); }}
                 asTab
               />
             )}
@@ -362,7 +347,7 @@ export default function RepairTracker() {
             )}
             {activeTab === 'requests' && (
               <RepairRequestsTab
-                onConvertSuccess={() => handleTabChange('jobs')}
+                onConvertSuccess={() => goToTab('jobs')}
                 onCountUpdate={handleRequestsCountUpdate}
               />
             )}
@@ -381,15 +366,8 @@ export default function RepairTracker() {
                 preselectedCustomer={preselectedCustomer}
                 onPreselectedCustomerUsed={() => setPreselectedCustomer(null)}
                 onCountUpdate={handleJobsCountUpdate}
-                onGoToPartsLibrary={handleGoToPartsLibraryForTool}
-                externalStatusFilter={dashboardStatusFilter}
-                onExternalStatusFilterApplied={() => setDashboardStatusFilter('')}
-                externalTechFilter={dashboardTechFilter}
-                onExternalTechFilterApplied={() => setDashboardTechFilter('')}
                 externalOpenNewJob={dashboardOpenNewJob}
                 onExternalOpenNewJobHandled={() => setDashboardOpenNewJob(false)}
-                externalOpenJobId={dashboardOpenJobId}
-                onExternalOpenJobHandled={() => setDashboardOpenJobId(null)}
               />
             )}
             </Suspense>

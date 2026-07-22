@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { quotesAPI, repairsAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import PaginationBar from '../shared/PaginationBar';
@@ -58,6 +59,32 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
     setConvertConfirm(quote);
   };
 
+  // The open request lives in the URL (?tab=requests&request=<id>) so
+  // requests can be opened in new browser tabs, and back/forward works
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestParam = searchParams.get('request');
+  useEffect(() => {
+    if (!requestParam) { setSelectedQuote(null); return; }
+    if (selectedQuote?.id === requestParam) return;
+    const cached = quotes.find(q => q.id === requestParam);
+    if (cached) { setSelectedQuote(cached); return; }
+    (async () => {
+      try {
+        const quote = await quotesAPI.get(requestParam);
+        setSelectedQuote(quote);
+      } catch {
+        showToast('error', 'Failed to load repair request');
+        setSearchParams({ tab: 'requests' }, { replace: true });
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestParam]);
+
+  const closeQuote = useCallback(() => {
+    setSelectedQuote(null);
+    setSearchParams({ tab: 'requests' }, { replace: true });
+  }, [setSearchParams]);
+
   const handleConvertConfirm = async () => {
     if (!convertConfirm) return;
     setConvertingId(convertConfirm.id);
@@ -70,7 +97,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
       });
       showToast('success', `Request ${convertConfirm.request_number} converted to Work Order. Find it in the Repair Jobs tab.`);
       setConvertConfirm(null);
-      setSelectedQuote(null);
+      closeQuote();
       if (onConvertSuccess) onConvertSuccess();
     } catch (error) {
       const detail = error.response?.data?.detail;
@@ -109,7 +136,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
       return updated;
     });
     setDeleteConfirmId(null);
-    if (selectedQuote?.id === deletedId) setSelectedQuote(null);
+    if (selectedQuote?.id === deletedId) closeQuote();
   };
 
   const formatDate = formatDatePacific;
@@ -267,14 +294,14 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                     <td className="py-3 px-3 sm:px-4 hidden sm:table-cell">{getStatusBadge(quote.status)}</td>
                     <td className="py-3 px-3 sm:px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setSelectedQuote(quote)}
+                        <Link
+                          to={`/admin/repair-tracker?tab=requests&request=${quote.id}`}
                           className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                           title="View"
                         >
                           <span className="material-symbols-outlined text-base">visibility</span>
                           <span className="hidden sm:inline">View</span>
-                        </button>
+                        </Link>
                         {quote.status !== 'converted' && (
                           <button
                             onClick={() => handleConvertClick(quote)}
@@ -336,7 +363,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
               <div className="flex items-center gap-2 ml-auto">
                 {selectedQuote.status !== 'converted' && (
                   <button
-                    onClick={() => { setSelectedQuote(null); handleConvertClick(selectedQuote); }}
+                    onClick={() => { closeQuote(); handleConvertClick(selectedQuote); }}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/40 dark:hover:bg-orange-900/60 border border-orange-200 dark:border-orange-700/50 text-orange-700 dark:text-orange-300 hover:text-orange-800 dark:hover:text-orange-200 rounded-xl text-sm font-bold transition-all"
                   >
                     <span className="material-symbols-outlined text-sm">build_circle</span>
@@ -345,7 +372,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                   </button>
                 )}
                 <button
-                  onClick={() => setSelectedQuote(null)}
+                  onClick={closeQuote}
                   className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                 >
                   <span className="material-symbols-outlined text-xl">close</span>

@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { repairsAPI } from '../../services/api';
 import { REPAIR_STATUSES, MAIN_STAGES } from '../../constants/repairStatuses';
 
 const REFRESH_INTERVAL_MS = 60000;
+
+// Dashboard click-throughs are real links (?tab=jobs&status=… / &view=… /
+// &job=…) so every card can be opened in a new browser tab
+const JOBS_BASE = '/admin/repair-tracker?tab=jobs';
+const VIEW_SLUGS = {
+  __all__: 'all', __attention__: 'attention', __overdue__: 'overdue', __stuck__: 'stuck',
+  __ready_for_repair__: 'ready_for_repair', __ready_for_pickup__: 'ready_for_pickup',
+};
+const navUrl = (status) => VIEW_SLUGS[status] ? `${JOBS_BASE}&view=${VIEW_SLUGS[status]}` : `${JOBS_BASE}&status=${status}`;
+const jobUrl = (jobId, fallbackStatus) => jobId ? `${JOBS_BASE}&job=${jobId}` : navUrl(fallbackStatus);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -18,7 +29,7 @@ function relativeTime(isoString) {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function KPICard({ icon, label, value, sub, color, onClick, urgent }) {
+function KPICard({ icon, label, value, sub, color, to, urgent }) {
   const colorMap = {
     blue:    'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-400',
     green:   'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400',
@@ -29,17 +40,21 @@ function KPICard({ icon, label, value, sub, color, onClick, urgent }) {
     emerald: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400',
   };
   const base = `flex flex-col gap-0.5 sm:gap-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border h-full ${colorMap[color]} transition-all`;
-  const interactive = onClick ? 'cursor-pointer hover:shadow-md active:scale-[0.98] sm:hover:scale-[1.02]' : '';
-  return (
-    <div className={`${base} ${interactive} ${urgent ? 'animate-pulse' : ''}`} onClick={onClick}>
+  const interactive = to ? 'cursor-pointer hover:shadow-md active:scale-[0.98] sm:hover:scale-[1.02]' : '';
+  const className = `${base} ${interactive} ${urgent ? 'animate-pulse' : ''}`;
+  const inner = (
+    <>
       <div className="flex items-center justify-between">
         <span className="material-symbols-outlined text-lg sm:text-xl opacity-70">{icon}</span>
       </div>
       <div className="text-2xl sm:text-3xl font-black leading-none">{value}</div>
       <div className="text-[11px] sm:text-xs font-bold opacity-80 leading-tight">{label}</div>
       {sub && <div className="text-[10px] sm:text-xs opacity-50 leading-tight hidden sm:block">{sub}</div>}
-    </div>
+    </>
   );
+  return to
+    ? <Link to={to} className={className}>{inner}</Link>
+    : <div className={className}>{inner}</div>;
 }
 
 function SectionCard({ title, subtitle, action, children }) {
@@ -71,8 +86,7 @@ function StatusBadge({ status }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function DashboardSummary({
-  onStatusFilter, onTechFilter, onNewJob, onNewCustomer, onGoToRequests,
-  onAttentionUpdate, onOpenJob, onGoToPartsLibrary,
+  onNewJob, onNewCustomer, onAttentionUpdate,
   collapsed: initialCollapsed = false,
   asTab = false,
 }) {
@@ -100,7 +114,7 @@ export default function DashboardSummary({
     return () => clearInterval(timer);
   }, [fetchSummary]);
 
-  const nav = (status) => { if (onStatusFilter) onStatusFilter(status); };
+  const navigate = useNavigate();
 
   // ── Derived data ──
   const sc = data?.status_counts ?? {};
@@ -146,7 +160,7 @@ export default function DashboardSummary({
       detail: 'Past target turnaround date',
       count: overdueCount,
       priority: 'High',
-      onClick: () => nav('__overdue__'),
+      to: navUrl('__overdue__'),
     },
     {
       icon: 'block',
@@ -155,7 +169,7 @@ export default function DashboardSummary({
       detail: `No update/activity for ${data?.stale_days ?? 3}+ days`,
       count: stuckCount,
       priority: 'High',
-      onClick: () => nav('__stuck__'),
+      to: navUrl('__stuck__'),
     },
     {
       icon: 'phone_in_talk',
@@ -164,7 +178,7 @@ export default function DashboardSummary({
       detail: followUpDetail,
       count: followUpCount,
       priority: 'Medium',
-      onClick: () => nav('quoted'),
+      to: navUrl('quoted'),
     },
     {
       icon: 'inventory_2',
@@ -173,7 +187,7 @@ export default function DashboardSummary({
       detail: 'Inventory below reorder point',
       count: lowStockCount,
       priority: lowStockCount > 3 ? 'High' : 'Medium',
-      onClick: onGoToPartsLibrary,
+      to: '/admin/repair-tracker?tab=parts-library&filter=low-stock',
     },
   ];
 
@@ -221,8 +235,8 @@ export default function DashboardSummary({
       ) : (
         <>
           {/* ── Pending Requests banner ──────────────────────────── */}
-          <button
-            onClick={() => onGoToRequests && onGoToRequests()}
+          <Link
+            to="/admin/repair-tracker?tab=requests"
             className={`w-full flex items-center gap-2 px-3 py-2 border rounded-xl text-xs sm:text-sm font-bold transition-colors text-left active:scale-[0.99] ${
               pendingRequestsCount > 0
                 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 animate-pulse'
@@ -236,7 +250,7 @@ export default function DashboardSummary({
                 : 'No pending repair requests'}
             </span>
             <span className="material-symbols-outlined text-sm opacity-50">chevron_right</span>
-          </button>
+          </Link>
 
           {/* ── KPI Cards ────────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
@@ -244,13 +258,13 @@ export default function DashboardSummary({
               icon="build_circle" label="Jobs In Shop" value={totalActive}
               sub={newJobsToday > 0 ? `+${newJobsToday} new today` : 'Total active repairs'}
               color="blue"
-              onClick={() => nav('__all__')}
+              to={navUrl('__all__')}
             />
             <KPICard
               icon="pending_actions" label="Waiting Approval" value={quotedCount}
               sub={pendingApprovalStale > 0 ? `${pendingApprovalStale} waiting 2+ days` : 'Awaiting customer decision'}
               color="purple"
-              onClick={() => nav('quoted')}
+              to={navUrl('quoted')}
             />
             <KPICard
               icon="local_shipping" label="Awaiting Parts" value={awaitingPartsCount}
@@ -260,19 +274,19 @@ export default function DashboardSummary({
                   : 'Waiting for supplier parts'
               }
               color="amber"
-              onClick={() => nav('parts_pending')}
+              to={navUrl('parts_pending')}
             />
             <KPICard
               icon="construction" label="Ready For Repair" value={readyForRepairCount}
               sub="Approved & parts available"
               color="teal"
-              onClick={() => nav('__ready_for_repair__')}
+              to={navUrl('__ready_for_repair__')}
             />
             <KPICard
               icon="storefront" label="Ready For Pickup" value={readyForPickup.length}
               sub="Repair completed — call customer"
               color="emerald"
-              onClick={() => nav('__ready_for_pickup__')}
+              to={navUrl('__ready_for_pickup__')}
             />
           </div>
 
@@ -298,14 +312,15 @@ export default function DashboardSummary({
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                   {actionItems.map((item) => (
-                    <button
+                    <Link
                       key={item.label}
-                      onClick={item.count > 0 ? item.onClick : undefined}
-                      disabled={item.count === 0}
+                      to={item.to}
+                      aria-disabled={item.count === 0}
+                      tabIndex={item.count === 0 ? -1 : undefined}
                       className={`flex items-center sm:items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border text-left transition-all ${
                         item.count > 0
                           ? 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm cursor-pointer active:scale-[0.98]'
-                          : 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800/40 opacity-50 cursor-default'
+                          : 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800/40 opacity-50 cursor-default pointer-events-none'
                       }`}
                     >
                       <span className={`material-symbols-outlined text-base flex-shrink-0 ${
@@ -320,7 +335,7 @@ export default function DashboardSummary({
                       <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full flex-shrink-0 ${PRIORITY_COLORS[item.priority]}`}>
                         {item.priority}
                       </span>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </SectionCard>
@@ -333,11 +348,12 @@ export default function DashboardSummary({
                     const count = sc[status] ?? 0;
                     const pct = Math.round((count / maxStatusCount) * 100);
                     return (
-                      <button
+                      <Link
                         key={status}
-                        onClick={() => nav(status)}
-                        disabled={count === 0}
-                        className={`w-full text-left group py-0.5 ${count === 0 ? 'opacity-40 cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
+                        to={navUrl(status)}
+                        aria-disabled={count === 0}
+                        tabIndex={count === 0 ? -1 : undefined}
+                        className={`block w-full text-left group py-0.5 ${count === 0 ? 'opacity-40 cursor-default pointer-events-none' : 'cursor-pointer active:scale-[0.99]'}`}
                       >
                         <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                           <span className="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors">
@@ -351,7 +367,7 @@ export default function DashboardSummary({
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                      </button>
+                      </Link>
                     );
                   })}
                 </div>
@@ -362,12 +378,12 @@ export default function DashboardSummary({
                 title="Work Queue"
                 subtitle="Overdue, stale, rush/urgent, and stuck jobs"
                 action={
-                  <button
-                    onClick={() => nav('__all__')}
+                  <Link
+                    to={navUrl('__all__')}
                     className="text-xs font-bold text-primary dark:text-blue-400 hover:underline flex-shrink-0 py-2.5 px-2 -my-2"
                   >
                     Go to Repair Jobs
-                  </button>
+                  </Link>
                 }
               >
                 {priorityJobs.length === 0 ? (
@@ -381,10 +397,10 @@ export default function DashboardSummary({
                     {/* Mobile: card layout */}
                     <div className="space-y-2 sm:hidden">
                       {priorityJobs.map((job, i) => (
-                        <button
+                        <Link
                           key={`${job.request_number}-${i}`}
-                          onClick={() => onOpenJob ? onOpenJob(job.job_id) : nav(job.status)}
-                          className="w-full text-left px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:border-blue-200 dark:hover:border-blue-800/40 transition-colors"
+                          to={jobUrl(job.job_id, job.status)}
+                          className="block w-full text-left px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10 hover:border-blue-200 dark:hover:border-blue-800/40 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
@@ -418,7 +434,7 @@ export default function DashboardSummary({
                               );
                             })}
                           </div>
-                        </button>
+                        </Link>
                       ))}
                     </div>
                     {/* Desktop/tablet: table layout */}
@@ -439,10 +455,17 @@ export default function DashboardSummary({
                             <tr
                               key={`${job.request_number}-${i}`}
                               className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
-                              onClick={() => onOpenJob ? onOpenJob(job.job_id) : nav(job.status)}
+                              onClick={() => navigate(jobUrl(job.job_id, job.status))}
                             >
                               <td className="px-2 py-2.5">
-                                <span className="font-black text-slate-500 dark:text-slate-400">{job.request_number}</span>
+                                {/* Real link on the WO# so right-click → open in new tab works on table rows */}
+                                <Link
+                                  to={jobUrl(job.job_id, job.status)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="font-black text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400"
+                                >
+                                  {job.request_number}
+                                </Link>
                               </td>
                               <td className="px-2 py-2.5">
                                 <span className="font-bold text-slate-700 dark:text-slate-200 block truncate max-w-[120px]">
@@ -525,8 +548,8 @@ export default function DashboardSummary({
                   <ul className="space-y-1.5 sm:space-y-2">
                     {pendingApprovals.map((item) => (
                       <li key={item.request_number}>
-                        <button
-                          onClick={() => onOpenJob ? onOpenJob(item.job_id) : nav('quoted')}
+                        <Link
+                          to={jobUrl(item.job_id, 'quoted')}
                           className="w-full flex items-center justify-between gap-2 px-2.5 sm:px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:bg-amber-50 dark:hover:bg-amber-900/10 hover:border-amber-200 dark:hover:border-amber-800/40 transition-colors text-left group active:scale-[0.98]"
                         >
                           <div className="min-w-0">
@@ -545,7 +568,7 @@ export default function DashboardSummary({
                               {item.days_waiting === 0 ? 'Today' : `${item.days_waiting}d`}
                             </span>
                           </div>
-                        </button>
+                        </Link>
                       </li>
                     ))}
                   </ul>

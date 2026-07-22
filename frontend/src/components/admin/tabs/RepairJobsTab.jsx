@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { repairsAPI, customersAPI, suppliersAPI, techniciansAPI, partsLibraryAPI, serviceAgreementAPI, sourcingAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
@@ -77,7 +78,7 @@ const getEmptyJob = () => ({
   address: '', customer_notes: '', source: 'drop_off', tools: [getEmptyTool()]
 });
 
-export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, onGoToPartsLibrary, externalStatusFilter, onExternalStatusFilterApplied, externalTechFilter, onExternalTechFilterApplied, externalOpenNewJob, onExternalOpenNewJobHandled, externalOpenJobId, onExternalOpenJobHandled }) {
+export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalOpenNewJob, onExternalOpenNewJobHandled }) {
   const showToast = useToast();
   const { settings } = useSettings();
   const staleDays = settings?.staleDays ?? 3;
@@ -97,12 +98,16 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const libraryBrandsCache = useRef(null);
   const [showNewJobForm, setShowNewJobForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  // Initialize filter from external prop if present (dashboard click-through)
-  // Capture the initial prop in a ref so StrictMode double-mount doesn't lose it
+  // Dashboard click-throughs arrive as URL params so they work in new browser
+  // tabs: ?status=<repair status> or ?view=overdue|stuck|attention|all|...
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VIEW_TO_EXT = {
+    all: '__all__', attention: '__attention__', overdue: '__overdue__', stuck: '__stuck__',
+    ready_for_repair: '__ready_for_repair__', ready_for_pickup: '__ready_for_pickup__',
+  };
   const SPECIAL_FILTERS = new Set(['__all__', '__attention__', '__overdue__', '__stuck__', '__ready_for_repair__', '__ready_for_pickup__']);
-  const initialExternalStatus = useRef(externalStatusFilter);
-  const ext = initialExternalStatus.current;
-  const initStatus = ext && ext !== '' && !SPECIAL_FILTERS.has(ext) ? ext : '';
+  const ext = searchParams.get('status') || VIEW_TO_EXT[searchParams.get('view')] || '';
+  const initStatus = ext && !SPECIAL_FILTERS.has(ext) ? ext : '';
   const [statusFilter, setStatusFilter] = useState(initStatus);
   const [priorityFilter, setPriorityFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -179,59 +184,30 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectedCustomer]);
 
-  // Apply status filter pushed from the dashboard.
-  // Initial value is handled by useState initializer above — this effect only
-  // responds to prop changes AFTER mount (e.g. clicking another dashboard card
-  // while already on the Jobs tab — which can't happen with current conditional
-  // rendering, but is future-proof).
-  const prevExternalStatus = useRef(externalStatusFilter);
+  // Apply status/view URL params that change AFTER mount (e.g. back/forward
+  // between filtered views, or a dashboard link clicked while already here).
+  // Initial value is handled by the useState initializers above.
+  const prevExt = useRef(ext);
   useEffect(() => {
-    // On mount: clear the prop after a tick so StrictMode remount can still read it
-    if (prevExternalStatus.current === externalStatusFilter) {
-      if (externalStatusFilter && externalStatusFilter !== '') {
-        setTimeout(() => { if (onExternalStatusFilterApplied) onExternalStatusFilterApplied(); }, 0);
-      }
-      return;
-    }
-    prevExternalStatus.current = externalStatusFilter;
-    if (externalStatusFilter !== undefined && externalStatusFilter !== '') {
-      const isAttention = externalStatusFilter === '__attention__';
-      const isAll = externalStatusFilter === '__all__';
-      const isOverdue = externalStatusFilter === '__overdue__';
-      const isStuck = externalStatusFilter === '__stuck__';
-      const isReadyForRepair = externalStatusFilter === '__ready_for_repair__';
-      const isReadyForPickup = externalStatusFilter === '__ready_for_pickup__';
-      const isSpecial = isAttention || isAll || isOverdue || isStuck || isReadyForRepair || isReadyForPickup;
-      const newStatus = isSpecial ? '' : externalStatusFilter;
+    if (prevExt.current === ext) return;
+    prevExt.current = ext;
+    if (ext === '') return; // param removed — leave the user's current filters alone
+    const isAttention = ext === '__attention__';
+    const isAll = ext === '__all__';
+    const isOverdue = ext === '__overdue__';
+    const isStuck = ext === '__stuck__';
+    const isReadyForRepair = ext === '__ready_for_repair__';
+    const isReadyForPickup = ext === '__ready_for_pickup__';
+    const isSpecial = isAttention || isAll || isOverdue || isStuck || isReadyForRepair || isReadyForPickup;
 
-      setStatusFilter(newStatus);
-      setAttentionFilter(isAttention);
-      setSpecialFilter(isAll ? 'active_only' : isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : isReadyForPickup ? 'ready_for_pickup' : '');
-      setSearchQuery('');
-      setPriorityFilter('');
-      setCurrentPage(1);
-      if (onExternalStatusFilterApplied) onExternalStatusFilterApplied();
-    }
+    setStatusFilter(isSpecial ? '' : ext);
+    setAttentionFilter(isAttention);
+    setSpecialFilter(isAll ? 'active_only' : isOverdue ? 'overdue' : isStuck ? 'stuck' : isReadyForRepair ? 'ready_for_repair' : isReadyForPickup ? 'ready_for_pickup' : '');
+    setSearchQuery('');
+    setPriorityFilter('');
+    setCurrentPage(1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [externalStatusFilter]);
-
-  // Apply technician filter pushed from the dashboard
-  const prevExternalTech = useRef(externalTechFilter);
-  useEffect(() => {
-    if (prevExternalTech.current === externalTechFilter) {
-      if (externalTechFilter && externalTechFilter !== '') {
-        setTimeout(() => { if (onExternalTechFilterApplied) onExternalTechFilterApplied(); }, 0);
-      }
-      return;
-    }
-    prevExternalTech.current = externalTechFilter;
-    if (externalTechFilter !== undefined && externalTechFilter !== '') {
-      setTechnicianFilter(externalTechFilter);
-      setCurrentPage(1);
-      if (onExternalTechFilterApplied) onExternalTechFilterApplied();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [externalTechFilter]);
+  }, [ext]);
 
   // Open new job form triggered from the dashboard
   useEffect(() => {
@@ -246,25 +222,20 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalOpenNewJob]);
 
-  // Open a specific job triggered from the dashboard (e.g. clicking a work order in Pending Approvals)
-  const initialOpenJobId = useRef(externalOpenJobId);
+  // The open work order lives in the URL (?tab=jobs&job=<id>) so jobs can be
+  // opened in new browser tabs, and back/forward closes/reopens the detail view
+  const jobParam = searchParams.get('job');
   useEffect(() => {
-    const jobId = initialOpenJobId.current || externalOpenJobId;
-    if (!jobId) return;
-    initialOpenJobId.current = null;
-    (async () => {
-      try {
-        const job = await repairsAPI.get(jobId);
-        setSelectedJob(job);
-        setUpdateAllOpen(false);
-        setUpdateAllSelected(new Set());
-      } catch (err) {
-        showToast('error', 'Could not open work order');
-      }
-      if (onExternalOpenJobHandled) onExternalOpenJobHandled();
-    })();
+    if (!jobParam) { setSelectedJob(null); return; }
+    if (selectedJob?.id === jobParam) return;
+    openJob({ id: jobParam });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [externalOpenJobId]);
+  }, [jobParam]);
+
+  const closeJob = useCallback(() => {
+    setSelectedJob(null);
+    setSearchParams({ tab: 'jobs' }, { replace: true });
+  }, [setSearchParams]);
 
   // Enrich parts with library stock data when a job is loaded or refreshed
   // Build a key from all library_part_ids missing stock data to detect when enrichment is needed
@@ -494,11 +465,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       if (updateAllOpen && !updateAllApplying) { setUpdateAllOpen(false); return; }
       if (editingJob) { setEditingJob(false); return; }
       if (deleteConfirmId) { setDeleteConfirmId(null); return; }
-      if (selectedJob) { setSelectedJob(null); return; }
+      if (selectedJob) { closeJob(); return; }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, deleteConfirmId, selectedJob]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, deleteConfirmId, selectedJob, closeJob]);
 
   const SERVER_SORT_FIELDS = new Set(['created_at', 'updated_at', 'request_number', 'smart']);
 
@@ -871,6 +842,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
     } catch {
       showToast('error', 'Failed to load repair job');
+      // Drop a dead ?job= param so the same link can be clicked again
+      setSearchParams({ tab: 'jobs' }, { replace: true });
     }
   };
 
@@ -1265,7 +1238,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       await repairsAPI.delete(deleteConfirmId.id);
       setJobs(jobs.filter(j => j.id !== deleteConfirmId.id));
       setDeleteConfirmId(null);
-      if (selectedJob?.id === deleteConfirmId.id) setSelectedJob(null);
+      if (selectedJob?.id === deleteConfirmId.id) closeJob();
       showToast('success', 'Repair job deleted');
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Failed to delete repair job';
@@ -1595,7 +1568,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 return (
                   <div
                     key={job.id}
-                    onClick={() => !batchMode && openJob(job)}
+                    onClick={() => !batchMode && setSearchParams({ tab: 'jobs', job: job.id })}
                     className={`flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-slate-100 dark:active:bg-slate-700/40 transition-colors ${
                       alertLevel === 'overdue' ? 'bg-red-50/50 dark:bg-red-900/10' :
                       alertLevel === 'stale' ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''
@@ -1642,14 +1615,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                     </div>
                     {/* Right: open button */}
                     <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openJob(job)}
+                      <Link
+                        to={`/admin/repair-tracker?tab=jobs&job=${job.id}`}
                         className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-primary/90 hover:bg-primary text-white rounded-lg transition-all shadow-sm"
                         title="Open"
                         aria-label={`Open ${job.work_order_number}`}
                       >
                         <span className="material-symbols-outlined text-base">open_in_new</span>
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 );
@@ -1708,7 +1681,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       alertLevel === 'overdue' ? 'bg-red-50/50 dark:bg-red-900/10' :
                       alertLevel === 'stale' ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''
                     }`}
-                    onClick={() => !batchMode && openJob(job)}
+                    onClick={() => !batchMode && setSearchParams({ tab: 'jobs', job: job.id })}
                   >
                     <td className="py-3 px-2 sm:px-3 lg:px-4">
                       <div className="flex items-center gap-1.5">
@@ -1806,14 +1779,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       <div className="flex items-center justify-end gap-1">
                         {!batchMode && (
                           <>
-                            <button
-                              onClick={() => openJob(job)}
+                            <Link
+                              to={`/admin/repair-tracker?tab=jobs&job=${job.id}`}
                               className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-primary/90 hover:bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm"
                               title="Open"
                             >
                               <span className="material-symbols-outlined text-base">open_in_new</span>
                               <span className="hidden sm:inline">Open</span>
-                            </button>
+                            </Link>
                             <button
                               onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement)}
                               className="hidden sm:flex p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 border border-slate-200 hover:border-slate-300 dark:border-slate-600/50 dark:hover:border-slate-500 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-all items-center justify-center"
@@ -2012,7 +1985,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 >
                   <span className="material-symbols-outlined" style={{fontSize:'18px'}}>print</span>
                 </button>
-                <button ref={detailCloseRef} onClick={() => setSelectedJob(null)} aria-label="Close work order" className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                <button ref={detailCloseRef} onClick={closeJob} aria-label="Close work order" className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
                   <span className="material-symbols-outlined text-xl">close</span>
                 </button>
               </div>
@@ -2024,7 +1997,17 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                 <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
                   <span className="material-symbols-outlined text-slate-500 dark:text-slate-400" style={{ fontSize: '14px' }}>person</span>
                   <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Customer</h4>
-                  <div className="ml-auto">
+                  <div className="ml-auto flex items-center gap-1.5">
+                    {selectedJob.customer_id && (
+                      <Link
+                        to={`/admin/repair-tracker?tab=customers&customer=${selectedJob.customer_id}`}
+                        title="Open customer profile"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>open_in_new</span>
+                        Profile
+                      </Link>
+                    )}
                     <button onClick={() => { const src = jobCustomer || selectedJob; setEditingJob(true); setJobEditForm({
                       company_name: src.company_name || '',
                       first_name: src.first_name || '',
@@ -2240,20 +2223,14 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               {idx + 1}
                             </div>
                             <div>
-                              {onGoToPartsLibrary ? (
-                                <button
-                                  onClick={() => onGoToPartsLibrary(tool.brand, tool.model_number)}
-                                  className="font-bold text-slate-900 dark:text-white text-base text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
-                                  title="View in Parts Library"
-                                >
-                                  {`${tool.brand} ${tool.model_number}`.toUpperCase()}
-                                  <span className="material-symbols-outlined text-sm opacity-0 group-hover/pl:opacity-60 transition-opacity">inventory_2</span>
-                                </button>
-                              ) : (
-                                <div className="font-bold text-slate-900 dark:text-white text-base">
-                                  {`${tool.brand} ${tool.model_number}`.toUpperCase()}
-                                </div>
-                              )}
+                              <Link
+                                to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(tool.brand || '')}&model=${encodeURIComponent(tool.model_number || '')}`}
+                                className="font-bold text-slate-900 dark:text-white text-base text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
+                                title="View in Parts Library"
+                              >
+                                {`${tool.brand} ${tool.model_number}`.toUpperCase()}
+                                <span className="material-symbols-outlined text-sm opacity-0 group-hover/pl:opacity-60 transition-opacity">inventory_2</span>
+                              </Link>
                               <div className="text-sm text-slate-500 mt-1">
                                 {(tool.tool_type || '').toUpperCase()}{tool.quantity > 1 && ` × ${tool.quantity}`}
                                 {tool.serial_number && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>S/N: {tool.serial_number.toUpperCase()}</>}

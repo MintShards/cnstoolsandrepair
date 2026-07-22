@@ -21,8 +21,11 @@ export default function AdminLogin() {
       // On success the server sets an httpOnly auth cookie; nothing to store client-side.
       await authAPI.login({ email, password });
 
-      // Redirect to intended page or settings
-      const from = location.state?.from?.pathname || '/admin/settings';
+      // Redirect to intended page or settings, keeping the query string so
+      // deep links like /admin/repair-tracker?tab=jobs land on the right tab
+      const from = location.state?.from
+        ? `${location.state.from.pathname}${location.state.from.search || ''}`
+        : '/admin/settings';
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password');
