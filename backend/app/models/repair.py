@@ -94,6 +94,17 @@ class PartItem(BaseModel):
             return None
         return v
 
+    @field_validator('name', 'supplier', 'part_number', 'library_part_id',
+                     'tracking', 'order_link', 'notes', mode='before')
+    @classmethod
+    def strip_optional_strings(cls, v):
+        # Part forms historically sent '' for unset fields; store None so
+        # analytics/sourcing don't group on phantom empty values.
+        if isinstance(v, str):
+            v = v.strip()
+            return v if v else None
+        return v
+
     @field_validator('eta', 'order_date', 'date_received', mode='before')
     @classmethod
     def parse_date_string(cls, v):

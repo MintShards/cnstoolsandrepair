@@ -693,54 +693,105 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
     """Aggregated parts usage analytics for stocking and supplier decisions."""
     db = get_database()
 
-    pipeline_most_used = [
+    # Shared prefix: one document per part row with trimmed identity fields.
+    # Legacy rows hold empty strings (old part forms sent '' for unset fields),
+    # so every filter/group below works on the trimmed values, never the raw ones.
+    part_row_stages = [
         {"$unwind": "$tools"},
         {"$unwind": "$tools.parts"},
-        {"$match": {"tools.parts.name": {"$exists": True, "$ne": "", "$ne": None}}},
+        {"$addFields": {
+            "_name": {"$trim": {"input": {"$ifNull": ["$tools.parts.name", ""]}}},
+            "_pn": {"$trim": {"input": {"$ifNull": ["$tools.parts.part_number", ""]}}},
+            "_lid": {"$trim": {"input": {"$ifNull": ["$tools.parts.library_part_id", ""]}}},
+            "_supplier": {"$trim": {"input": {"$ifNull": ["$tools.parts.supplier", ""]}}},
+            "_qty": {"$convert": {"input": "$tools.parts.quantity", "to": "double", "onError": 1, "onNull": 1}},
+            "_price": {"$convert": {"input": "$tools.parts.price", "to": "double", "onError": None, "onNull": None}},
+        }},
+    ]
+
+    # Resolve the Parts Library record per row: by library_part_id when linked,
+    # else by part number (case-insensitive) so manually typed parts still sync
+    # with library cost, canonical naming, and compat groups.
+    lib_resolve_stages = [
+        {"$lookup": {
+            "from": "parts_library_parts",
+            "let": {"pid": "$_lid"},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$ne": ["$$pid", ""]},
+                    {"$eq": [{"$toString": "$_id"}, "$$pid"]},
+                ]}}},
+                {"$project": {"name": 1, "part_number": 1, "compatibility_group_ids": 1, "cost": 1}},
+            ],
+            "as": "_lib_by_id",
+        }},
+        {"$lookup": {
+            "from": "parts_library_parts",
+            "let": {"pn": {"$toLower": "$_pn"}},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$ne": ["$$pn", ""]},
+                    {"$eq": [{"$toLower": {"$trim": {"input": {"$ifNull": ["$part_number", ""]}}}}, "$$pn"]},
+                ]}}},
+                {"$limit": 1},
+                {"$project": {"name": 1, "part_number": 1, "compatibility_group_ids": 1, "cost": 1}},
+            ],
+            "as": "_lib_by_pn",
+        }},
+        {"$addFields": {
+            "_lib": {"$ifNull": [
+                {"$arrayElemAt": ["$_lib_by_id", 0]},
+                {"$arrayElemAt": ["$_lib_by_pn", 0]},
+            ]},
+        }},
+        {"$addFields": {
+            "_unit_cost": {"$ifNull": [
+                "$_price",
+                {"$ifNull": [
+                    {"$convert": {"input": "$_lib.cost", "to": "double", "onError": None, "onNull": None}},
+                    0,
+                ]},
+            ]},
+        }},
+    ]
+
+    pipeline_most_used = part_row_stages + [
+        {"$match": {"_name": {"$ne": ""}}},
+    ] + lib_resolve_stages + [
+        # Same physical part groups together whether the row was library-linked
+        # or manually typed: library id first, then part number, then name.
+        {"$addFields": {
+            "_group_key": {"$cond": [
+                {"$ne": ["$_lib", None]},
+                {"$toString": "$_lib._id"},
+                {"$cond": [{"$ne": ["$_pn", ""]}, {"$toLower": "$_pn"}, {"$toLower": "$_name"}]},
+            ]},
+        }},
         {"$group": {
-            "_id": {
-                "$ifNull": [
-                    {"$cond": [{"$gt": ["$tools.parts.library_part_id", None]}, "$tools.parts.library_part_id", None]},
-                    {"$cond": [{"$gt": ["$tools.parts.part_number", None]},
-                        {"$toLower": "$tools.parts.part_number"}, {"$toLower": "$tools.parts.name"}]}
-                ]
-            },
-            "part_name": {"$first": "$tools.parts.name"},
-            "part_number": {"$first": "$tools.parts.part_number"},
-            "total_quantity": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
+            "_id": "$_group_key",
+            "part_name": {"$first": {"$ifNull": ["$_lib.name", "$_name"]}},
+            # $max skips nulls, so rows missing a part number don't win
+            "part_number": {"$max": {"$ifNull": [
+                "$_lib.part_number",
+                {"$cond": [{"$ne": ["$_pn", ""]}, "$_pn", None]},
+            ]}},
+            "total_quantity": {"$sum": "$_qty"},
             "job_ids": {"$addToSet": "$_id"},
-            "total_spend": {"$sum": {
-                "$multiply": [
-                    {"$ifNull": ["$tools.parts.price", 0]},
-                    {"$ifNull": ["$tools.parts.quantity", 1]}
-                ]
-            }},
+            "total_spend": {"$sum": {"$multiply": ["$_unit_cost", "$_qty"]}},
+            "compat_ids": {"$max": "$_lib.compatibility_group_ids"},
         }},
         {"$addFields": {
             "job_count": {"$size": "$job_ids"},
         }},
-        {"$sort": {"total_quantity": -1}},
+        {"$sort": {"total_quantity": -1, "job_count": -1}},
         {"$limit": 25},
-        # Resolve canonical name/part_number and compat group IDs from parts library
-        {"$lookup": {
-            "from": "parts_library_parts",
-            "let": {"pid": "$_id"},
-            "pipeline": [
-                {"$match": {"$expr": {"$eq": [{"$toString": "$_id"}, "$$pid"]}}},
-                {"$project": {"name": 1, "part_number": 1, "compatibility_group_ids": 1, "cost": 1}},
-            ],
-            "as": "library_part",
-        }},
-        {"$addFields": {
-            "library_part": {"$arrayElemAt": ["$library_part", 0]},
-        }},
-        # Look up compat group names via parts library (relationship stored on parts, not groups)
+        # Look up compat group names (relationship stored on parts, not groups)
         {"$lookup": {
             "from": "parts_library_compat_groups",
             "let": {"group_ids": {"$map": {
-                "input": {"$ifNull": ["$library_part.compatibility_group_ids", []]},
+                "input": {"$ifNull": ["$compat_ids", []]},
                 "as": "gid",
-                "in": {"$toObjectId": "$$gid"},
+                "in": {"$convert": {"input": "$$gid", "to": "objectId", "onError": None, "onNull": None}},
             }}},
             "pipeline": [
                 {"$match": {"$expr": {"$and": [
@@ -753,89 +804,57 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         }},
         {"$project": {
             "_id": 0,
-            "part_name": {"$ifNull": ["$library_part.name", "$part_name"]},
-            "part_number": {"$ifNull": ["$library_part.part_number", "$part_number"]},
+            "part_name": 1,
+            "part_number": 1,
             "total_quantity": 1,
             "job_count": 1,
-            "total_spend": {"$round": [
-                {"$cond": [
-                    {"$and": [
-                        {"$eq": ["$total_spend", 0]},
-                        {"$gt": ["$library_part.cost", None]},
-                    ]},
-                    {"$multiply": ["$library_part.cost", "$total_quantity"]},
-                    "$total_spend",
-                ]},
-                2,
-            ]},
+            "total_spend": {"$round": ["$total_spend", 2]},
             "compat_groups": {"$map": {"input": "$compat_groups", "as": "g", "in": "$$g.name"}},
         }},
     ]
 
-    pipeline_suppliers = [
-        {"$unwind": "$tools"},
-        {"$unwind": "$tools.parts"},
-        {"$match": {"tools.parts.supplier": {"$exists": True, "$ne": "", "$ne": None}}},
-        # Resolve library cost for parts without a price
-        {"$lookup": {
-            "from": "parts_library_parts",
-            "let": {"pid": {"$ifNull": ["$tools.parts.library_part_id", ""]}},
-            "pipeline": [
-                {"$match": {"$expr": {"$and": [
-                    {"$ne": ["$$pid", ""]},
-                    {"$eq": [{"$toString": "$_id"}, "$$pid"]},
-                ]}}},
-                {"$project": {"cost": 1}},
-            ],
-            "as": "_lib",
-        }},
-        {"$addFields": {
-            "_lib_cost": {"$ifNull": [{"$arrayElemAt": ["$_lib.cost", 0]}, None]},
-            "_effective_price": {"$ifNull": ["$tools.parts.price", {"$ifNull": [{"$arrayElemAt": ["$_lib.cost", 0]}, 0]}]},
-        }},
+    pipeline_suppliers = part_row_stages + [
+        # Trimmed match drops the legacy ''/whitespace suppliers that used to
+        # surface as a nameless top supplier.
+        {"$match": {"_supplier": {"$ne": ""}}},
+    ] + lib_resolve_stages + [
+        # Case-insensitive grouping so "Ebay"/"eBay" don't split the same supplier
         {"$group": {
-            "_id": "$tools.parts.supplier",
-            "part_count": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
-            "total_spend": {"$sum": {
-                "$multiply": [
-                    "$_effective_price",
-                    {"$ifNull": ["$tools.parts.quantity", 1]}
-                ]
-            }},
-            "unique_parts": {"$addToSet": {
-                "$ifNull": ["$tools.parts.part_number", "$tools.parts.name"]
-            }},
+            "_id": {"$toLower": "$_supplier"},
+            "supplier": {"$first": "$_supplier"},
+            "part_count": {"$sum": "$_qty"},
+            "total_spend": {"$sum": {"$multiply": ["$_unit_cost", "$_qty"]}},
+            "unique_parts": {"$addToSet": {"$toLower": {
+                "$cond": [{"$ne": ["$_pn", ""]}, "$_pn", "$_name"]
+            }}},
         }},
         {"$addFields": {"unique_part_count": {"$size": "$unique_parts"}}},
         {"$sort": {"part_count": -1}},
         {"$limit": 10},
         {"$project": {
             "_id": 0,
-            "supplier": "$_id",
+            "supplier": 1,
             "part_count": 1,
             "total_spend": {"$round": ["$total_spend", 2]},
             "unique_part_count": 1,
         }},
     ]
 
-    pipeline_lead_times = [
-        {"$unwind": "$tools"},
-        {"$unwind": "$tools.parts"},
-        {"$match": {
-            "tools.parts.order_date": {"$type": "date"},
-            "tools.parts.date_received": {"$type": "date"},
-            "tools.parts.supplier": {"$exists": True, "$ne": "", "$ne": None},
-        }},
+    pipeline_lead_times = part_row_stages + [
+        # $convert tolerates legacy rows where dates were stored as ISO strings
         {"$addFields": {
-            "lead_days": {
-                "$divide": [
-                    {"$subtract": ["$tools.parts.date_received", "$tools.parts.order_date"]},
-                    86400000
-                ]
-            }
+            "_od": {"$convert": {"input": "$tools.parts.order_date", "to": "date", "onError": None, "onNull": None}},
+            "_dr": {"$convert": {"input": "$tools.parts.date_received", "to": "date", "onError": None, "onNull": None}},
         }},
+        {"$match": {"_supplier": {"$ne": ""}, "_od": {"$ne": None}, "_dr": {"$ne": None}}},
+        {"$addFields": {
+            "lead_days": {"$divide": [{"$subtract": ["$_dr", "$_od"]}, 86400000]}
+        }},
+        # Received-before-ordered is a data entry error, not a real lead time
+        {"$match": {"lead_days": {"$gte": 0}}},
         {"$group": {
-            "_id": "$tools.parts.supplier",
+            "_id": {"$toLower": "$_supplier"},
+            "supplier": {"$first": "$_supplier"},
             "avg_lead_days": {"$avg": "$lead_days"},
             "min_lead_days": {"$min": "$lead_days"},
             "max_lead_days": {"$max": "$lead_days"},
@@ -844,47 +863,37 @@ async def get_parts_analytics(current_user: User = Depends(require_admin)):
         {"$sort": {"avg_lead_days": 1}},
         {"$project": {
             "_id": 0,
-            "supplier": "$_id",
+            "supplier": 1,
             "avg_lead_days": {"$round": ["$avg_lead_days", 1]},
-            "min_lead_days": {"$round": ["$min_lead_days", 0]},
-            "max_lead_days": {"$round": ["$max_lead_days", 0]},
+            "min_lead_days": {"$round": ["$min_lead_days", 1]},
+            "max_lead_days": {"$round": ["$max_lead_days", 1]},
             "sample_count": 1,
         }},
     ]
 
-    pipeline_monthly_spend = [
-        {"$unwind": "$tools"},
-        {"$unwind": "$tools.parts"},
-        {"$match": {"tools.parts.status": "installed"}},
-        # Resolve library cost for parts without a price
-        {"$lookup": {
-            "from": "parts_library_parts",
-            "let": {"pid": {"$ifNull": ["$tools.parts.library_part_id", ""]}},
-            "pipeline": [
-                {"$match": {"$expr": {"$and": [
-                    {"$ne": ["$$pid", ""]},
-                    {"$eq": [{"$toString": "$_id"}, "$$pid"]},
-                ]}}},
-                {"$project": {"cost": 1}},
-            ],
-            "as": "_lib",
+    pipeline_monthly_spend = part_row_stages + [
+        # Money actually committed: ordered/received/installed. Pending parts
+        # aren't purchases yet; in_stock pulls come from previously bought stock.
+        {"$match": {"tools.parts.status": {"$in": ["ordered", "received", "installed"]}}},
+    ] + lib_resolve_stages + [
+        {"$addFields": {
+            "_od": {"$convert": {"input": "$tools.parts.order_date", "to": "date", "onError": None, "onNull": None}},
+            "_dr": {"$convert": {"input": "$tools.parts.date_received", "to": "date", "onError": None, "onNull": None}},
+            "_created": {"$convert": {"input": "$created_at", "to": "date", "onError": None, "onNull": None}},
         }},
+        # Bucket by when the money was spent: order date, else received, else job creation
         {"$addFields": {
             "month_key": {"$dateToString": {
                 "format": "%Y-%m",
-                "date": {"$ifNull": ["$tools.parts.date_received", "$created_at"]}
+                "date": {"$ifNull": ["$_od", {"$ifNull": ["$_dr", "$_created"]}]},
+                "onNull": None,
             }},
-            "line_cost": {
-                "$multiply": [
-                    {"$ifNull": ["$tools.parts.price", {"$ifNull": [{"$arrayElemAt": ["$_lib.cost", 0]}, 0]}]},
-                    {"$ifNull": ["$tools.parts.quantity", 1]}
-                ]
-            }
         }},
+        {"$match": {"month_key": {"$ne": None}}},
         {"$group": {
             "_id": "$month_key",
-            "total_cost": {"$sum": "$line_cost"},
-            "part_count": {"$sum": {"$ifNull": ["$tools.parts.quantity", 1]}},
+            "total_cost": {"$sum": {"$multiply": ["$_unit_cost", "$_qty"]}},
+            "part_count": {"$sum": "$_qty"},
         }},
         {"$sort": {"_id": -1}},
         {"$limit": 6},

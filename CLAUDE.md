@@ -186,7 +186,7 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 
 # RepairSource enum: online_request | drop_off | phone_in | email
 # Priority enum: standard | rush | urgent
-# PartStatus enum: pending | ordered | received | installed
+# PartStatus enum: pending | ordered | in_stock | received | installed
 
 # PartItem includes order tracking:
 # { name, part_number, quantity, price, supplier,

@@ -276,29 +276,34 @@ function PartsAnalyticsSection() {
 
           {!loading && loaded && hasAnyData && (
             <>
-              {/* Parts Status KPI row */}
+              {/* Parts Status KPI row — parts on active jobs only (tables below cover all history) */}
               {ps && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { label: 'Pending', value: ps.pending ?? 0, color: 'amber', icon: 'pending' },
-                    { label: 'Ordered', value: ps.ordered ?? 0, color: 'blue', icon: 'shopping_cart' },
-                    { label: 'Received', value: ps.received ?? 0, color: 'cyan', icon: 'inventory' },
-                    { label: 'Installed', value: ps.installed ?? 0, color: 'green', icon: 'check_circle' },
-                  ].map(({ label, value, color, icon }) => {
-                    const colorMap = {
-                      amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400',
-                      blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-400',
-                      cyan: 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-400',
-                      green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400',
-                    };
-                    return (
-                      <div key={label} className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border ${colorMap[color]}`}>
-                        <span className="material-symbols-outlined text-lg opacity-70">{icon}</span>
-                        <div className="text-2xl font-black leading-none">{value}</div>
-                        <div className="text-[11px] font-bold opacity-80">{label}</div>
-                      </div>
-                    );
-                  })}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Parts on active jobs</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {[
+                      { label: 'Pending', value: ps.pending ?? 0, color: 'amber', icon: 'pending' },
+                      { label: 'Ordered', value: ps.ordered ?? 0, color: 'blue', icon: 'shopping_cart' },
+                      { label: 'In Stock', value: ps.in_stock ?? 0, color: 'purple', icon: 'warehouse' },
+                      { label: 'Received', value: ps.received ?? 0, color: 'cyan', icon: 'inventory' },
+                      { label: 'Installed', value: ps.installed ?? 0, color: 'green', icon: 'check_circle' },
+                    ].map(({ label, value, color, icon }) => {
+                      const colorMap = {
+                        amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400',
+                        blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-400',
+                        purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/40 text-purple-700 dark:text-purple-400',
+                        cyan: 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-400',
+                        green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400',
+                      };
+                      return (
+                        <div key={label} className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border ${colorMap[color]}`}>
+                          <span className="material-symbols-outlined text-lg opacity-70">{icon}</span>
+                          <div className="text-2xl font-black leading-none">{value}</div>
+                          <div className="text-[11px] font-bold opacity-80">{label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -414,7 +419,7 @@ function PartsAnalyticsSection() {
                               <span className="text-[10px] font-black text-slate-400 flex-shrink-0 mt-0.5">{i + 1}</span>
                               <div className="min-w-0">
                                 <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{s.supplier}</p>
-                                <p className="text-[10px] text-slate-400">{s.part_count} parts · {s.unique_part_count} unique</p>
+                                <p className="text-[10px] text-slate-400">{s.part_count} part{s.part_count !== 1 ? 's' : ''} · {s.unique_part_count} unique</p>
                               </div>
                             </div>
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex-shrink-0">{fmt$(s.total_spend)}</span>
@@ -435,7 +440,9 @@ function PartsAnalyticsSection() {
                               <span className="text-[10px] text-slate-400">{s.sample_count} order{s.sample_count !== 1 ? 's' : ''}</span>
                               <span className="text-xs font-black text-slate-600 dark:text-slate-300">
                                 {s.avg_lead_days.toFixed(1)}d
-                                <span className="text-[10px] font-normal text-slate-400 ml-1">({s.min_lead_days}–{s.max_lead_days})</span>
+                                {s.sample_count > 1 && (
+                                  <span className="text-[10px] font-normal text-slate-400 ml-1">({s.min_lead_days}–{s.max_lead_days}d)</span>
+                                )}
                               </span>
                             </div>
                           </li>
