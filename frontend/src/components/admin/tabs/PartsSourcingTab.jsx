@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { sourcingAPI, suppliersAPI, repairsAPI } from '../../../services/api';
+import { SOURCING_MANUAL_PARTS_KEY, readSourcingList } from '../../../utils/sourcingList';
 import { useSettings } from '../../../contexts/SettingsContext';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import SourcingQueue from './parts-sourcing/SourcingQueue';
@@ -19,13 +20,20 @@ export default function PartsSourcingTab() {
   const [selected, setSelected] = useState(new Set()); // Set of "repairId-toolIdx-partIdx" keys
   const [selectedItems, setSelectedItems] = useState({}); // key -> item map
 
-  // Manual parts — persisted to localStorage so they survive page refreshes
-  const [manualParts, setManualParts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('sourcingManualParts') || '[]'); } catch { return []; }
-  });
+  // Manual parts — persisted to localStorage so they survive page refreshes.
+  // The Parts Library tab appends to the same list (see utils/sourcingList.js).
+  const [manualParts, setManualParts] = useState(readSourcingList);
   useEffect(() => {
-    localStorage.setItem('sourcingManualParts', JSON.stringify(manualParts));
+    localStorage.setItem(SOURCING_MANUAL_PARTS_KEY, JSON.stringify(manualParts));
   }, [manualParts]);
+  // Pick up parts added from the Parts Library in another browser tab/window
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === SOURCING_MANUAL_PARTS_KEY) setManualParts(readSourcingList());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // Recipients
   const [recipients, setRecipients] = useState([]);
@@ -146,13 +154,17 @@ export default function PartsSourcingTab() {
     }
   };
 
+  // Backend rejects quantity <= 0 (Pydantic gt=0) — clamp whatever the inputs
+  // hold at send time (empty string, NaN, 0, negatives) to a valid integer.
+  const cleanQuantity = (q) => Math.max(1, parseInt(q, 10) || 1);
+
   const buildPartsPayload = () => {
     const fromQueue = Object.values(selectedItems)
       .filter((item) => !item.manual)
       .map((item) => ({
         name: item.part.name,
         part_number: item.part.part_number || null,
-        quantity: item.part.quantity,
+        quantity: cleanQuantity(item.part.quantity),
         repair_id: item.repair_id,
         request_number: item.request_number,
         tool_index: item.tool_index,
@@ -163,7 +175,7 @@ export default function PartsSourcingTab() {
       .map((item) => ({
         name: item.part.name.trim(),
         part_number: item.part.part_number.trim(),
-        quantity: item.part.quantity || 1,
+        quantity: cleanQuantity(item.part.quantity),
       }));
     return [...fromQueue, ...fromManual];
   };

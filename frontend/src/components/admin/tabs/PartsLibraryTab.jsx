@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { partsLibraryAPI, repairsAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import { useSettings } from '../../../contexts/SettingsContext';
+import { addToSourcingList } from '../../../utils/sourcingList';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,15 @@ function escHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Push a library part onto the Parts Sourcing tab's manual list and toast the outcome.
+function addPartToSourcing(part, toast) {
+  const res = addToSourcingList(part);
+  const label = `${part.name}${part.part_number ? ` - ${part.part_number}` : ''}`.toUpperCase();
+  toast('success', res.added
+    ? `${label} added to the sourcing list.`
+    : `${label} is already in the sourcing list — quantity is now ${res.quantity}.`);
 }
 
 function openImageDiagram(fullUrl, displayName) {
@@ -1268,6 +1278,13 @@ function PartsView({ model, compatGroups, onBack }) {
                       <span className="material-symbols-outlined text-sm">swap_horiz</span>
                     </button>
                   )}
+                  <button
+                    onClick={e => { e.stopPropagation(); addPartToSourcing(part, toast); }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                    title="Add to sourcing list"
+                  >
+                    <span className="material-symbols-outlined text-sm">local_shipping</span>
+                  </button>
                   <button
                     onClick={e => { e.stopPropagation(); setEditingPart(part); setShowPartForm(true); }}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
@@ -2562,6 +2579,13 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                       <span className="block text-[10px] text-slate-400 uppercase tracking-wide">Reorder At</span>
                       <span className="text-lg font-black text-slate-600 dark:text-slate-300">{part.reorder_point}</span>
                     </div>
+                    <button
+                      onClick={() => addPartToSourcing(part, toast)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                      title="Add to sourcing list"
+                    >
+                      <span className="material-symbols-outlined text-sm">local_shipping</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -2692,6 +2716,13 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                           <span className="material-symbols-outlined text-sm">swap_horiz</span>
                         </button>
                       )}
+                      <button
+                        onClick={() => addPartToSourcing(part, toast)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                        title="Add to sourcing list"
+                      >
+                        <span className="material-symbols-outlined text-sm">local_shipping</span>
+                      </button>
                     </div>
                   </div>
                 ))}
