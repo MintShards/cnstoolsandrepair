@@ -1226,32 +1226,40 @@ function PartsView({ model, compatGroups, onBack }) {
                 className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 onClick={() => setExpandedPart(expandedPart === part.id ? null : part.id)}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                    <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
-                    {part.cost != null && (
-                      <span className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
-                    )}
-                    {part.suggested_price != null && (
-                      <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sell: ${part.suggested_price.toFixed(2)}</span>
-                    )}
-                    {part.market_price != null && (
-                      <span className="text-xs sm:text-sm text-violet-600 dark:text-violet-400">MSRP: ${part.market_price.toFixed(2)}</span>
-                    )}
-                    <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium ${
-                      part.low_stock
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                        : part.quantity_on_hand > 0
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
-                    }`}>
-                      {part.quantity_on_hand} in stock
-                    </span>
+                {/* Wraps freely on small screens; from lg up, fixed column tracks so
+                    cost / sell / MSRP / stock line up across all rows */}
+                <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-4 flex-wrap lg:grid lg:grid-cols-[minmax(0,2fr)_7rem_7rem_7.5rem_6.5rem_minmax(0,1.2fr)] lg:gap-x-3 lg:gap-y-0">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase min-w-0 lg:truncate" title={`${part.name}${part.part_number ? ` - ${part.part_number}` : ''}`}>{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                  {part.cost != null ? (
+                    <span className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 whitespace-nowrap">Cost: ${part.cost.toFixed(2)}</span>
+                  ) : (
+                    <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
+                  )}
+                  {part.suggested_price != null ? (
+                    <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Sell: ${part.suggested_price.toFixed(2)}</span>
+                  ) : (
+                    <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
+                  )}
+                  {part.market_price != null ? (
+                    <span className="text-xs sm:text-sm text-violet-600 dark:text-violet-400 whitespace-nowrap">MSRP: ${part.market_price.toFixed(2)}</span>
+                  ) : (
+                    <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
+                  )}
+                  <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap lg:justify-self-start ${
+                    part.low_stock
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                      : part.quantity_on_hand > 0
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                  }`}>
+                    {part.quantity_on_hand} in stock
+                  </span>
+                  <span className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
                     {part.location && (
-                      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300">Note: {part.location}</span>
+                      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 truncate" title={part.location}>Note: {part.location}</span>
                     )}
                     {part.suggested_suppliers?.length > 0 && (
-                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                         {part.suggested_suppliers.length} supplier{part.suggested_suppliers.length > 1 ? 's' : ''}
                       </span>
                     )}
@@ -1262,14 +1270,16 @@ function PartsView({ model, compatGroups, onBack }) {
                       </span>
                     )}
                     {part.compatibility_group_ids?.length > 0 && (
-                      <span className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full">
+                      <span className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                         {part.compatibility_group_ids.length} compat
                       </span>
                     )}
-                  </div>
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {part.compatibility_group_ids?.length > 0 && (
+                  {/* Placeholder keeps the action cluster the same width on every row,
+                      so the grid columns to its left stay vertically aligned */}
+                  {part.compatibility_group_ids?.length > 0 ? (
                     <button
                       onClick={e => { e.stopPropagation(); handleShowCompat(part); }}
                       className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
@@ -1277,6 +1287,10 @@ function PartsView({ model, compatGroups, onBack }) {
                     >
                       <span className="material-symbols-outlined text-sm">swap_horiz</span>
                     </button>
+                  ) : (
+                    <span className="p-1.5 invisible hidden lg:block" aria-hidden="true">
+                      <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                    </span>
                   )}
                   <button
                     onClick={e => { e.stopPropagation(); addPartToSourcing(part, toast); }}
