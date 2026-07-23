@@ -22,10 +22,12 @@ export function writeSourcingList(parts) {
 
 /**
  * Add a library part to the sourcing list, or bump its quantity when the same
- * part is already there. Returns { added, quantity } so callers can word their
- * toast accordingly.
+ * part is already there. `quantity` sets the initial quantity for new entries
+ * (e.g. the part's reorder quantity from the low-stock view); repeat adds bump
+ * by 1 regardless. Returns { added, quantity } so callers can word their toast
+ * accordingly.
  */
-export function addToSourcingList(libPart) {
+export function addToSourcingList(libPart, { quantity } = {}) {
   const list = readSourcingList();
   const name = (libPart.name || '').trim().toUpperCase();
   const partNumber = (libPart.part_number || '').trim().toUpperCase();
@@ -45,7 +47,13 @@ export function addToSourcingList(libPart) {
     return { added: false, quantity: existing.quantity };
   }
 
-  list.push({ name, part_number: partNumber, quantity: 1, library_part_id: libPart.id });
+  const initialQty = Math.max(1, parseInt(quantity, 10) || 1);
+  list.push({ name, part_number: partNumber, quantity: initialQty, library_part_id: libPart.id });
   writeSourcingList(list);
-  return { added: true, quantity: 1 };
+  return { added: true, quantity: initialQty };
+}
+
+/** Set of library_part_ids currently on the sourcing list (for queued indicators). */
+export function sourcingListPartIds() {
+  return new Set(readSourcingList().map((p) => p.library_part_id).filter(Boolean));
 }

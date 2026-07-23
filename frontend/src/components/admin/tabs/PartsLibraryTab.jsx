@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { partsLibraryAPI, repairsAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import { useSettings } from '../../../contexts/SettingsContext';
-import { addToSourcingList } from '../../../utils/sourcingList';
+import { addToSourcingList, sourcingListPartIds } from '../../../utils/sourcingList';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -19,11 +19,11 @@ function escHtml(value) {
 }
 
 // Push a library part onto the Parts Sourcing tab's manual list and toast the outcome.
-function addPartToSourcing(part, toast) {
-  const res = addToSourcingList(part);
+function addPartToSourcing(part, toast, opts = {}) {
+  const res = addToSourcingList(part, opts);
   const label = `${part.name}${part.part_number ? ` - ${part.part_number}` : ''}`.toUpperCase();
   toast('success', res.added
-    ? `${label} added to the sourcing list.`
+    ? `${label} added to the sourcing list${res.quantity > 1 ? ` (qty ${res.quantity})` : ''}.`
     : `${label} is already in the sourcing list — quantity is now ${res.quantity}.`);
 }
 
@@ -2339,6 +2339,8 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
   const [showLowStockOnly, setShowLowStockOnly] = useState(initialFilter === 'low-stock');
   const [lowStockParts, setLowStockParts] = useState([]);
   const [loadingLowStock, setLoadingLowStock] = useState(false);
+  // library_part_ids already on the sourcing list (drives the queued indicator)
+  const [sourcingQueuedIds, setSourcingQueuedIds] = useState(sourcingListPartIds);
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -2398,12 +2400,16 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Runs on mount so the header badge shows the count without opening the
+  // filter, and again on every toggle so the list/badge stay fresh.
   useEffect(() => {
-    if (!showLowStockOnly) { setLowStockParts([]); return; }
-    setLoadingLowStock(true);
+    if (showLowStockOnly) {
+      setLoadingLowStock(true);
+      setSourcingQueuedIds(sourcingListPartIds());
+    }
     partsLibraryAPI.getLowStock(200)
       .then(parts => setLowStockParts(parts))
-      .catch(() => toast('error', 'Failed to load low-stock parts'))
+      .catch(() => { if (showLowStockOnly) toast('error', 'Failed to load low-stock parts'); })
       .finally(() => setLoadingLowStock(false));
   }, [showLowStockOnly]);
 
@@ -2503,7 +2509,9 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
           >
             <span className="material-symbols-outlined text-sm">warning</span>
             <span className="hidden sm:inline">Low Stock</span>
-            {!showLowStockOnly && lowStockParts.length === 0 && brands.length > 0 && null}
+            {lowStockParts.length > 0 && (
+              <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">{lowStockParts.length}</span>
+            )}
           </button>
           <button
             onClick={() => setShowCompatGroups(true)}
@@ -2546,7 +2554,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
 
       {/* Low-stock filter view */}
       {showLowStockOnly && (
-        <div>
+        <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="material-symbols-outlined text-red-500 dark:text-red-400">warning</span>
             <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Parts Below Reorder Point</span>
@@ -2575,41 +2583,74 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
           )}
           {!loadingLowStock && lowStockParts.length > 0 && (
             <div className="space-y-2">
-              {lowStockParts.map(part => (
-                <div key={part.id} className="flex items-center gap-3 p-3 border border-red-200 dark:border-red-800/40 rounded-xl bg-red-50/40 dark:bg-red-900/10">
-                  <span className="material-symbols-outlined text-red-400 flex-shrink-0">inventory_2</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase">{part.name}</span>
-                      {part.part_number && (
-                        <span className="text-xs font-mono text-primary bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded">{part.part_number}</span>
+              {lowStockParts.map(part => {
+                const out = (part.quantity_on_hand ?? 0) <= 0;
+                const queued = sourcingQueuedIds.has(part.id);
+                const orderQty = part.reorder_quantity || 0;
+                const estCost = orderQty > 0 && part.cost != null ? orderQty * part.cost : null;
+                return (
+                <div key={part.id} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    {/* Wraps freely on small screens; from lg up, fixed column tracks so
+                        on-hand / reorder-at / order-qty / status line up across all rows
+                        (same idiom as the model parts list) */}
+                    <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-4 flex-wrap lg:grid lg:grid-cols-[minmax(0,2fr)_7rem_7.5rem_7rem_6.5rem_minmax(0,1.2fr)] lg:gap-x-3 lg:gap-y-0">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase min-w-0 lg:truncate" title={`${part.name}${part.part_number ? ` - ${part.part_number}` : ''}`}>{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                      <span className={`text-xs sm:text-sm whitespace-nowrap ${out ? 'font-semibold text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>On hand: {part.quantity_on_hand}</span>
+                      <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">Reorder at: {part.reorder_point}</span>
+                      {orderQty > 0 ? (
+                        <span className="text-xs sm:text-sm font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">Order: {orderQty}</span>
+                      ) : (
+                        <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
                       )}
+                      <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap lg:justify-self-start ${
+                        out
+                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                          : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {out ? 'Out of stock' : 'Low stock'}
+                      </span>
+                      <span className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+                        {(part.brand_name || part.model_names?.length > 0) && (
+                          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 truncate" title={[part.brand_name, part.model_names?.join(', ')].filter(Boolean).join(' · ')}>
+                            {[part.brand_name, part.model_names?.slice(0, 2).join(', ')].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                        {part.location && (
+                          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 truncate" title={part.location}>Note: {part.location}</span>
+                        )}
+                        {part.suggested_suppliers?.length > 0 && (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                            {part.suggested_suppliers[0]}{part.suggested_suppliers.length > 1 ? ` +${part.suggested_suppliers.length - 1}` : ''}
+                          </span>
+                        )}
+                        {estCost != null && (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">~${estCost.toFixed(2)}</span>
+                        )}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {part.brand_name && <span>{part.brand_name}</span>}
-                      {part.model_names?.length > 0 && <span>{part.model_names.slice(0,2).join(', ')}</span>}
-                      {part.location && <span className="flex items-center gap-0.5"><span className="material-symbols-outlined" style={{fontSize:'12px'}}>location_on</span>{part.location}</span>}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          addPartToSourcing(part, toast, { quantity: orderQty });
+                          setSourcingQueuedIds(sourcingListPartIds());
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          queued
+                            ? 'text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                            : 'text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                        }`}
+                        title={queued
+                          ? 'In sourcing list — click to add one more'
+                          : `Add to sourcing list${orderQty ? ` (qty ${orderQty})` : ''}`}
+                      >
+                        <span className="material-symbols-outlined text-sm">{queued ? 'playlist_add_check' : 'local_shipping'}</span>
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0 text-right">
-                    <div>
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-wide">On Hand</span>
-                      <span className="text-lg font-black text-red-600 dark:text-red-400">{part.quantity_on_hand}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-wide">Reorder At</span>
-                      <span className="text-lg font-black text-slate-600 dark:text-slate-300">{part.reorder_point}</span>
-                    </div>
-                    <button
-                      onClick={() => addPartToSourcing(part, toast)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                      title="Add to sourcing list"
-                    >
-                      <span className="material-symbols-outlined text-sm">local_shipping</span>
-                    </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -2777,18 +2818,6 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
         <>
           {/* Parts Analytics (lazy-loaded, collapsible) */}
           <PartsAnalyticsSection />
-
-          {/* How it works hint */}
-          <div className="mb-5 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30 text-sm text-blue-700 dark:text-blue-300">
-            <p className="font-medium mb-1 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">info</span>
-              How it works
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              Add brands → add models per brand → add parts per model with part numbers and diagrams.
-              Use <strong>Compat Groups</strong> to mark parts from different brands as interchangeable — then you can instantly find alternatives when a part is out of stock.
-            </p>
-          </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
