@@ -11,9 +11,9 @@ export const BUSINESS_INFO = {
   tagline: 'Expert Pneumatic Tool Repair & Maintenance',
 
   // Contact Information (fallback values)
-  phone: '(604) 581-8930',
-  phoneLink: '6045818930',
-  email: 'contact@cnstoolrepair.com',
+  phone: '(778) 488-0777',
+  phoneLink: '7784880777',
+  email: 'service@cnstoolrepair.com',
 
   // Location (fallback values)
   address: {

@@ -5,7 +5,7 @@ import { telHref } from '../../utils/links';
 export default function BottomNav() {
   const location = useLocation();
   const { settings } = useSettings();
-  const phoneLink = settings?.contact?.phoneLink || '6045818930';
+  const phoneLink = settings?.contact?.phoneLink || '7784880777';
 
   const isActive = (path) => location.pathname === path;
 

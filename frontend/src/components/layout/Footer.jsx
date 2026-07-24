@@ -297,11 +297,11 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href={telHref(settings?.contact?.phoneLink || '6045818930')}
+                  href={telHref(settings?.contact?.phoneLink || '7784880777')}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
                   <span className="material-symbols-outlined text-base text-primary">call</span>
-                  {settings?.contact?.phone || '(604) 581-8930'}
+                  {settings?.contact?.phone || '(778) 488-0777'}
                 </a>
               </li>
               <li className="flex items-start gap-2 text-slate-700 dark:text-slate-300">

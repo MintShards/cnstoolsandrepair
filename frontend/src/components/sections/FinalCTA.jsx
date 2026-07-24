@@ -70,7 +70,7 @@ export default function FinalCTA({
               <span className="material-symbols-outlined text-xl sm:text-2xl">fact_check</span>
               <span>{content.primaryButtonText}</span>
             </Link>
-            <a href={telHref(settings?.contact?.phoneLink || '6045818930')} className="w-full sm:w-auto px-6 sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
+            <a href={telHref(settings?.contact?.phoneLink || '7784880777')} className="w-full sm:w-auto px-6 sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
               <span className="material-symbols-outlined text-lg sm:text-xl">call</span>
               <span>{content.secondaryButtonText}</span>
             </a>
