@@ -530,6 +530,10 @@ export const partsLibraryAPI = {
     const response = await api.get('/api/parts-library/search', { params: { q, limit } });
     return response.data;
   },
+  searchModels: async (q, limit = 20) => {
+    const response = await api.get('/api/parts-library/search/models', { params: { q, limit } });
+    return response.data;
+  },
 
   // Inventory
   getLowStock: async (limit = 50) => {

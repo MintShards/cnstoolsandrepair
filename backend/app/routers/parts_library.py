@@ -962,3 +962,38 @@ async def search_parts(
     cursor = db.parts_library_parts.find(query).sort("part_number", 1).limit(limit)
     docs = await cursor.to_list(length=limit)
     return await _enrich_parts_batch(db, docs)
+
+
+@router.get("/search/models", response_model=List[LibraryModelResponse])
+async def search_models(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=50),
+    current_user: User = Depends(require_admin),
+):
+    """Search models by name or category directly, so a tool is findable by its
+    model number even before any parts are entered for it."""
+    db = get_database()
+    term = re.escape(q.strip())
+    query = {
+        "active": True,
+        "$or": [
+            {"name": {"$regex": term, "$options": "i"}},
+            {"category": {"$regex": term, "$options": "i"}},
+        ],
+    }
+    docs = await db.parts_library_models.find(query).sort("name", 1).limit(limit).to_list(length=limit)
+
+    brand_ids = {d.get("brand_id") for d in docs if d.get("brand_id")}
+    brand_names = {}
+    if brand_ids:
+        async for b in db.parts_library_brands.find(
+            {"_id": {"$in": [_to_object_id(bid) for bid in brand_ids]}}, {"name": 1}
+        ):
+            brand_names[str(b["_id"])] = b.get("name", "")
+
+    results = []
+    for doc in docs:
+        model_id = str(doc["_id"])
+        part_count = await db.parts_library_parts.count_documents({"model_ids": model_id, "active": True})
+        results.append(_doc_to_model(doc, brand_name=brand_names.get(doc.get("brand_id"), ""), part_count=part_count))
+    return results

@@ -1792,12 +1792,14 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
       setPartSearchLoading(true);
       try {
         const data = await partsLibraryAPI.search(modelSearch.trim());
-        setPartResults(data);
+        // Scope to the brand being viewed — the global endpoint returns
+        // every brand's parts, and foreign rows here were dead on click
+        setPartResults(data.filter(p => p.brand_id === brand.id));
       } catch { /* silent */ }
       finally { setPartSearchLoading(false); }
     }, 300);
     return () => clearTimeout(timer);
-  }, [modelSearch]);
+  }, [modelSearch, brand.id]);
 
   const handleDelete = async () => {
     try {
@@ -2373,6 +2375,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [modelResults, setModelResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchCompatibleFor, setSearchCompatibleFor] = useState(null);
   const [searchCompatData, setSearchCompatData] = useState(null);
@@ -2416,12 +2419,18 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
   }, [initialNav, brands]);
 
   useEffect(() => {
-    if (!searchQuery.trim() || searchQuery.trim().length < 2) { setSearchResults([]); return; }
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) { setSearchResults([]); setModelResults([]); return; }
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const data = await partsLibraryAPI.search(searchQuery.trim());
-        setSearchResults(data);
+        // Parts and models searched together: models are findable by model
+        // number even when no part matching the query exists yet
+        const [parts, models] = await Promise.all([
+          partsLibraryAPI.search(searchQuery.trim()),
+          partsLibraryAPI.searchModels(searchQuery.trim()),
+        ]);
+        setSearchResults(parts);
+        setModelResults(models);
       } catch { toast('error', 'Search failed'); }
       finally { setSearchLoading(false); }
     }, 300);
@@ -2467,24 +2476,9 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
     ? brands.filter(b => b.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
     : [];
 
-  // Extract unique models from parts search results
-  const matchedModels = isSearchActive && searchResults.length > 0
-    ? (() => {
-        const seen = new Set();
-        const models = [];
-        searchResults.forEach(part => {
-          if (part.model_ids && part.model_names) {
-            part.model_ids.forEach((mid, i) => {
-              if (!seen.has(mid) && part.model_names[i]?.toLowerCase().includes(searchQuery.trim().toLowerCase())) {
-                seen.add(mid);
-                models.push({ id: mid, name: part.model_names[i], brand_name: part.brand_name, brand_id: part.brand_id });
-              }
-            });
-          }
-        });
-        return models;
-      })()
-    : [];
+  // Models come straight from the model-search endpoint (full objects, so a
+  // click can drill directly into the model's parts view)
+  const matchedModels = isSearchActive ? modelResults : [];
 
   return (
     <div>
@@ -2733,23 +2727,42 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                 <span className="material-symbols-outlined text-sm">build_circle</span>
                 Models ({matchedModels.length})
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {matchedModels.map(model => (
                   <div
                     key={model.id}
-                    className="flex items-center gap-2.5 p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
+                    className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/70 dark:bg-slate-800/20 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
                     onClick={() => {
                       const brand = brands.find(b => b.id === model.brand_id);
-                      if (brand) { setSelectedBrand(brand); }
+                      if (brand) { setSelectedBrand(brand); setSelectedModel(model); }
                       setSearchQuery('');
                     }}
                   >
-                    <span className="material-symbols-outlined text-slate-400 text-sm">build_circle</span>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{model.name}</span>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">{model.brand_name}</p>
+                    {/* Same card language as the models view so results are recognizable */}
+                    <div className="mb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase line-clamp-2 break-words min-w-0" title={model.name}>{model.name}</p>
+                        {model.retail_price != null && (
+                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap flex-shrink-0">${parseFloat(model.retail_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        )}
+                      </div>
+                      {(model.brand_name || model.category || model.discontinued) && (
+                        <div className="flex items-center gap-2 flex-wrap mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="uppercase">
+                            {model.brand_name}
+                            {model.category ? ` · ${model.category}` : ''}
+                          </span>
+                          {model.discontinued && <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">Discontinued</span>}
+                        </div>
+                      )}
                     </div>
-                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-sm">arrow_forward</span>
+                    <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-200/70 dark:border-slate-700/60">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">settings</span>
+                        {model.part_count ?? 0} part{(model.part_count ?? 0) !== 1 ? 's' : ''}
+                      </div>
+                      <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors text-sm">arrow_forward</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2761,7 +2774,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
           <div>
             <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm">settings</span>
-              Parts
+              Parts{!searchLoading && ` (${searchResults.length}${searchResults.length >= 30 ? '+' : ''})`}
             </h4>
             {searchLoading && (
               <div className="flex items-center justify-center py-8">
@@ -2771,52 +2784,80 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
             {!searchLoading && searchResults.length > 0 && (
               <div className="space-y-2">
                 {searchResults.map(part => (
-                  <div
-                    key={part.id}
-                    className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
-                    onClick={() => {
-                      const brand = brands.find(b => b.id === part.brand_id);
-                      if (brand) { setSelectedBrand(brand); setSelectedModel(null); }
-                      setSearchQuery('');
-                    }}
-                  >
-                    <span className="material-symbols-outlined text-slate-400 mt-0.5">settings</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                  <div key={part.id} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                    <div
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        // Drill all the way into the part's model when it has one
+                        const brandObj = brands.find(b => b.id === part.brand_id);
+                        if (!brandObj) return;
+                        setSelectedBrand(brandObj);
+                        setSelectedModel(null);
+                        setSearchQuery('');
+                        const firstModelId = part.model_ids?.[0];
+                        if (firstModelId) {
+                          partsLibraryAPI.listModels(brandObj.id).then(models => {
+                            const m = models.find(x => x.id === firstModelId);
+                            if (m) setSelectedModel(m);
+                          }).catch(() => {});
+                        }
+                      }}
+                    >
+                      {/* Same columned idiom as the model parts list so search results
+                          read the same way: name | cost | sell | MSRP | stock | context */}
+                      <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-4 flex-wrap lg:grid lg:grid-cols-[minmax(0,2fr)_7rem_7rem_7.5rem_6.5rem_minmax(0,1.2fr)] lg:gap-x-3 lg:gap-y-0">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase min-w-0 lg:truncate" title={`${part.name}${part.part_number ? ` - ${part.part_number}` : ''}`}>{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
+                        {part.cost != null ? (
+                          <span className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 whitespace-nowrap">Cost: ${part.cost.toFixed(2)}</span>
+                        ) : (
+                          <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
+                        )}
+                        {part.suggested_price != null ? (
+                          <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Sell: ${part.suggested_price.toFixed(2)}</span>
+                        ) : (
+                          <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
+                        )}
+                        {part.market_price != null ? (
+                          <span className="text-xs sm:text-sm text-violet-600 dark:text-violet-400 whitespace-nowrap">MSRP: ${part.market_price.toFixed(2)}</span>
+                        ) : (
+                          <span className="hidden lg:block text-xs text-slate-300 dark:text-slate-600">—</span>
+                        )}
+                        <span className={`text-xs sm:text-sm px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap lg:justify-self-start ${
+                          part.low_stock
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                            : part.quantity_on_hand > 0
+                              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                        }`}>
+                          {part.quantity_on_hand ?? 0} in stock
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 uppercase truncate min-w-0" title={`${part.brand_name}${part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}`}>
+                          {part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}
+                        </span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        <span className="uppercase">{part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}</span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                      <div className="flex flex-col items-end gap-0.5">
-                        {part.cost != null && (
-                          <span className="text-xs text-amber-600 dark:text-amber-400">Cost: ${part.cost.toFixed(2)}</span>
+                      <div className="flex items-center gap-1 flex-shrink-0" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+                        {/* Placeholder keeps the action cluster the same width on every row */}
+                        {part.compatibility_group_ids?.length > 0 ? (
+                          <button
+                            onClick={() => handleSearchCompat(part)}
+                            className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                            title="View cross-compatible parts"
+                          >
+                            <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                          </button>
+                        ) : (
+                          <span className="p-1.5 invisible hidden lg:block" aria-hidden="true">
+                            <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                          </span>
                         )}
-                        {part.suggested_price != null && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400">Sell: ${part.suggested_price.toFixed(2)}</span>
-                        )}
-                        {part.market_price != null && (
-                          <span className="text-xs text-violet-600 dark:text-violet-400">MSRP: ${part.market_price.toFixed(2)}</span>
-                        )}
-                      </div>
-                      {part.compatibility_group_ids?.length > 0 && (
                         <button
-                          onClick={() => handleSearchCompat(part)}
-                          className="p-1.5 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                          title="View cross-compatible parts"
+                          onClick={() => addPartToSourcing(part, toast)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                          title="Add to sourcing list"
                         >
-                          <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                          <span className="material-symbols-outlined text-sm">local_shipping</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => addPartToSourcing(part, toast)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                        title="Add to sourcing list"
-                      >
-                        <span className="material-symbols-outlined text-sm">local_shipping</span>
-                      </button>
+                      </div>
                     </div>
                   </div>
                 ))}
