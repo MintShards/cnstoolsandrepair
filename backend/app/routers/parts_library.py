@@ -326,6 +326,22 @@ async def delete_library_brand(
     doc = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
     if not doc:
         raise HTTPException(status_code=404, detail="Brand not found")
+
+    # Refuse to delete while models/parts still hang off the brand — deactivating
+    # only the brand would silently orphan them.
+    model_count = await db.parts_library_models.count_documents({"brand_id": brand_id, "active": True})
+    part_count = await db.parts_library_parts.count_documents({"brand_id": brand_id, "active": True})
+    if model_count or part_count:
+        pieces = []
+        if model_count:
+            pieces.append(f"{model_count} model{'s' if model_count != 1 else ''}")
+        if part_count:
+            pieces.append(f"{part_count} part{'s' if part_count != 1 else ''}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Can't remove this brand — it still has {' and '.join(pieces)}. Remove those first.",
+        )
+
     await db.parts_library_brands.update_one(
         {"_id": _to_object_id(brand_id)},
         {"$set": {"active": False, "updated_at": datetime.utcnow()}}
@@ -446,6 +462,15 @@ async def delete_library_model(
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
     if not doc:
         raise HTTPException(status_code=404, detail="Model not found")
+
+    # Refuse to delete while parts are still assigned to this model
+    part_count = await db.parts_library_parts.count_documents({"model_ids": model_id, "active": True})
+    if part_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Can't remove this model — it still has {part_count} part{'s' if part_count != 1 else ''}. Remove those first.",
+        )
+
     await db.parts_library_models.update_one(
         {"_id": _to_object_id(model_id)},
         {"$set": {"active": False, "updated_at": datetime.utcnow()}}
