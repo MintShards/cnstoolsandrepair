@@ -69,7 +69,7 @@ function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }
   const [editName, setEditName] = useState('');
   if (!urls || urls.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-wrap gap-2">
       {urls.map((url, i) => {
         const isPdf = url.toLowerCase().endsWith('.pdf');
         const ext = url.split('.').pop()?.toLowerCase() || '';
@@ -78,7 +78,7 @@ function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }
         const fullUrl = url.startsWith('http') ? url : `/uploads/${url}`;
         const isEditing = editingIdx === i;
         return (
-          <div key={i} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1 text-xs">
+          <div key={i} className="flex items-center gap-2 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-600/60 rounded-lg pl-2.5 pr-1.5 py-1.5 text-xs">
             <span className="material-symbols-outlined text-sm text-slate-500">
               {isPdf ? 'picture_as_pdf' : 'image'}
             </span>
@@ -109,7 +109,7 @@ function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }
                 {!readonly && onRename && (
                   <button
                     onClick={() => { setEditingIdx(i); setEditName(customName || ''); }}
-                    className="text-slate-400 hover:text-blue-500 transition-colors"
+                    className="p-0.5 rounded text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors ml-1"
                     title="Rename diagram"
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
@@ -120,7 +120,7 @@ function DiagramList({ urls, labels = {}, onDelete, onRename, readonly = false }
             {!readonly && onDelete && !isEditing && (
               <button
                 onClick={() => onDelete(url)}
-                className="text-slate-400 hover:text-red-500 transition-colors ml-0.5"
+                className="p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 title="Remove diagram"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
@@ -575,7 +575,9 @@ function BrandFormModal({ brand, onClose, onSaved }) {
             <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files[0] || null)} />
             <div className="flex items-center gap-2">
               {brand?.logo_url && !logoFile && (
-                <img src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`} alt="logo" className="h-8 rounded" />
+                <div className="h-10 w-16 flex-shrink-0 rounded-lg bg-white ring-1 ring-slate-200 dark:ring-slate-600/50 flex items-center justify-center overflow-hidden p-1">
+                  <img src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`} alt="logo" className="max-h-full max-w-full object-contain" />
+                </div>
               )}
               {logoFile && <span className="text-xs text-slate-500 truncate max-w-[120px]">{logoFile.name}</span>}
               <button type="button" onClick={() => logoRef.current?.click()} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
@@ -1064,6 +1066,8 @@ function PartsView({ model, compatGroups, onBack }) {
   const [compatibleFor, setCompatibleFor] = useState(null);
   const [compatData, setCompatData] = useState(null);
   const [uploadingModelDiagram, setUploadingModelDiagram] = useState(false);
+  // Diagram deletion is permanent (file removed from storage) — always confirm first
+  const [confirmDeleteDiagram, setConfirmDeleteDiagram] = useState(null);
   const [currentModel, setCurrentModel] = useState(model);
 
   const load = useCallback(async () => {
@@ -1180,15 +1184,20 @@ function PartsView({ model, compatGroups, onBack }) {
     <div>
       {/* Model diagrams */}
       <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Model Breakdown Diagrams</span>
           <UploadDiagramButton onUpload={handleUploadModelDiagram} loading={uploadingModelDiagram} />
         </div>
-        {currentModel.diagram_urls?.length > 0 && (
-          <DiagramList urls={currentModel.diagram_urls} labels={currentModel.diagram_labels} onDelete={handleDeleteModelDiagram} onRename={handleRenameModelDiagram} />
+        {currentModel.diagram_urls?.length > 0 ? (
+          <DiagramList urls={currentModel.diagram_urls} labels={currentModel.diagram_labels} onDelete={setConfirmDeleteDiagram} onRename={handleRenameModelDiagram} />
+        ) : (
+          <p className="text-xs text-slate-400 dark:text-slate-500">No diagrams yet — upload exploded views or parts-list PDFs.</p>
         )}
         {model.specifications && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{model.specifications}</p>
+          <div className="mt-3 pt-3 border-t border-slate-200/70 dark:border-slate-700/60">
+            <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Specifications</span>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{model.specifications}</p>
+          </div>
         )}
       </div>
 
@@ -1646,6 +1655,14 @@ function PartsView({ model, compatGroups, onBack }) {
         />
       )}
 
+      {confirmDeleteDiagram && (
+        <ConfirmModal
+          message={`Permanently delete diagram "${currentModel.diagram_labels?.[confirmDeleteDiagram] || `Diagram ${(currentModel.diagram_urls?.indexOf(confirmDeleteDiagram) ?? 0) + 1}`}"? The file can't be recovered.`}
+          onConfirm={() => { handleDeleteModelDiagram(confirmDeleteDiagram); setConfirmDeleteDiagram(null); }}
+          onCancel={() => setConfirmDeleteDiagram(null)}
+        />
+      )}
+
       {compatibleFor && compatData && (
         <CompatiblePartsModal
           part={compatibleFor}
@@ -1787,8 +1804,8 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
       await partsLibraryAPI.deleteModel(confirmDelete.id);
       setModels(m => m.filter(x => x.id !== confirmDelete.id));
       toast('success', 'Model removed');
-    } catch {
-      toast('error', 'Failed to remove model');
+    } catch (err) {
+      toast('error', err.response?.data?.detail || 'Failed to remove model');
     }
     setConfirmDelete(null);
   };
@@ -1842,12 +1859,12 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
           No models match &ldquo;{modelSearch}&rdquo;.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {filteredModels.map(model => (
             <Link
               key={model.id}
               to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(brand.name)}&model=${encodeURIComponent(model.name)}`}
-              className="block border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
+              className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/70 dark:bg-slate-800/20 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
               onClick={(e) => {
                 // Plain left-click drills in place; modified clicks and right-click use the real href
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -1855,35 +1872,28 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                 onSelectModel(model);
               }}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase whitespace-nowrap overflow-hidden text-ellipsis">
-                    {model.name}
-                    {model.category && <span className="font-normal text-slate-500 dark:text-slate-400"><span className="mx-1.5">·</span>{model.category}</span>}
-                    {model.retail_price != null && <span className="font-normal text-slate-500 dark:text-slate-400 normal-case"><span className="mx-1.5">·</span>${parseFloat(model.retail_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
-                    {model.discontinued && <span className="ml-2 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full normal-case font-medium">Discontinued</span>}
-                  </p>
+              {/* Distinct from brand cards: no logo tile — minimal flat card with the
+                  price top-right and actions moved into the footer row */}
+              <div className="mb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase line-clamp-2 break-words min-w-0" title={model.name}>{model.name}</p>
+                  {model.retail_price != null && (
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap flex-shrink-0">${parseFloat(model.retail_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  )}
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                  <button
-                    onClick={() => { setEditingModel(model); setShowModelForm(true); }}
-                    className="p-1 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">edit</span>
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(model)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">delete</span>
-                  </button>
-                </div>
+                {(model.category || model.discontinued) && (
+                  <div className="flex items-center gap-2 flex-wrap mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {model.category && <span className="uppercase">{model.category}</span>}
+                    {model.discontinued && <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">Discontinued</span>}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center justify-between mt-3">
+              {/* Footer pinned to the card bottom: contents left, actions + arrow right */}
+              <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-200/70 dark:border-slate-700/60">
                 <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                   <span className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">settings</span>
-                    {model.part_count ?? 0} parts
+                    {model.part_count ?? 0} part{(model.part_count ?? 0) !== 1 ? 's' : ''}
                   </span>
                   {model.diagram_urls?.length > 0 && (
                     <span className="flex items-center gap-1">
@@ -1892,7 +1902,25 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                     </span>
                   )}
                 </div>
-                <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors text-sm">arrow_forward</span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* preventDefault too: stopPropagation alone skips the Link's handler but
+                      still lets the browser follow the anchor href, killing the dialog */}
+                  <span className="flex items-center gap-1" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+                    <button
+                      onClick={() => { setEditingModel(model); setShowModelForm(true); }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(model)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </span>
+                  <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors text-sm">arrow_forward</span>
+                </div>
               </div>
             </Link>
           ))}
@@ -1967,7 +1995,7 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
 
       {confirmDelete && (
         <ConfirmModal
-          message={`Remove model "${confirmDelete.name}"? All associated parts will also be hidden.`}
+          message={`Remove model "${confirmDelete.name}"? Models that still have parts can't be removed.`}
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
         />
@@ -2426,8 +2454,8 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
       await partsLibraryAPI.deleteBrand(confirmDelete.id);
       setBrands(b => b.filter(x => x.id !== confirmDelete.id));
       toast('success', 'Brand removed');
-    } catch {
-      toast('error', 'Failed to remove brand');
+    } catch (err) {
+      toast('error', err.response?.data?.detail || 'Failed to remove brand');
     }
     setConfirmDelete(null);
   };
@@ -2674,14 +2702,18 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                     onClick={() => { setSelectedBrand(brand); setSearchQuery(''); }}
                   >
                     {brand.logo_url ? (
-                      <img
-                        src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`}
-                        alt={brand.name}
-                        className="h-6 w-auto object-contain rounded"
-                        onError={e => { e.target.style.display = 'none'; }}
-                      />
+                      <div className="h-8 w-12 flex-shrink-0 rounded-md bg-white ring-1 ring-slate-200 dark:ring-slate-600/50 flex items-center justify-center overflow-hidden p-0.5">
+                        <img
+                          src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`}
+                          alt={brand.name}
+                          className="max-h-full max-w-full object-contain"
+                          onError={e => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
                     ) : (
-                      <span className="material-symbols-outlined text-slate-400 text-sm">build</span>
+                      <div className="h-8 w-12 flex-shrink-0 rounded-md bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-slate-400 text-sm">build</span>
+                      </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{brand.name}</span>
@@ -2835,7 +2867,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                 <Link
                   key={brand.id}
                   to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(brand.name)}`}
-                  className="block border border-slate-200 dark:border-slate-700 rounded-2xl p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer group bg-white dark:bg-slate-800/50"
+                  className="flex flex-col border border-slate-200 dark:border-slate-700 rounded-2xl p-4 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer group bg-white dark:bg-slate-800/50"
                   onClick={(e) => {
                     // Plain left-click drills in place; modified clicks and right-click use the real href
                     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -2843,28 +2875,36 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                     setSelectedBrand(brand);
                   }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
+                  {/* Header: logo tile + name, action icons pinned top-right */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Uniform logo tile: white backing keeps uploaded logos legible in
+                          dark mode and gives every card the same visual weight regardless
+                          of the logo's shape or size */}
                       {brand.logo_url ? (
-                        <img
-                          src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`}
-                          alt={brand.name}
-                          className="h-8 w-auto object-contain rounded"
-                          onError={e => { e.target.style.display = 'none'; }}
-                        />
+                        <div className="h-10 w-16 flex-shrink-0 rounded-lg bg-white ring-1 ring-slate-200 dark:ring-slate-600/50 flex items-center justify-center overflow-hidden p-1">
+                          <img
+                            src={brand.logo_url.startsWith('http') ? brand.logo_url : `/uploads/${brand.logo_url}`}
+                            alt={brand.name}
+                            className="max-h-full max-w-full object-contain"
+                            onError={e => { e.target.style.display = 'none'; }}
+                          />
+                        </div>
                       ) : (
-                        <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-slate-400 text-sm">build</span>
+                        <div className="h-10 w-16 flex-shrink-0 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-slate-400 text-base">build</span>
                         </div>
                       )}
-                      <div>
-                        <p className="font-semibold text-slate-800 dark:text-slate-100 leading-tight uppercase">{brand.name}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100 leading-tight uppercase line-clamp-2 break-words" title={brand.name}>{brand.name}</p>
                         {brand.short_code && (
-                          <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">{brand.short_code}</span>
+                          <span className="inline-block mt-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">{brand.short_code}</span>
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    {/* preventDefault too: stopPropagation alone skips the Link's handler but
+                        still lets the browser follow the anchor href, killing the dialog */}
+                    <div className="flex gap-1 flex-shrink-0" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
                       <button
                         onClick={() => { setEditingBrand(brand); setShowBrandForm(true); }}
                         className="p-1 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
@@ -2880,17 +2920,19 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">build_circle</span>
-                      {brand.model_count ?? 0} model{(brand.model_count ?? 0) !== 1 ? 's' : ''}
+                  {/* Bottom block pinned to the card base: full-width notes just above the footer */}
+                  <div className="mt-auto">
+                    {brand.notes && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-2 line-clamp-2">{brand.notes}</p>
+                    )}
+                    <div className="pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">build_circle</span>
+                        {brand.model_count ?? 0} model{(brand.model_count ?? 0) !== 1 ? 's' : ''}
+                      </div>
+                      <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors text-sm">arrow_forward</span>
                     </div>
-                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors text-sm">arrow_forward</span>
                   </div>
-
-                  {brand.notes && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 line-clamp-2">{brand.notes}</p>
-                  )}
                 </Link>
               ))}
             </div>
@@ -2911,7 +2953,7 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
 
       {confirmDelete && (
         <ConfirmModal
-          message={`Remove brand "${confirmDelete.name}"? All models and parts will be hidden.`}
+          message={`Remove brand "${confirmDelete.name}"? Brands that still have models or parts can't be removed.`}
           onConfirm={handleDeleteBrand}
           onCancel={() => setConfirmDelete(null)}
         />
