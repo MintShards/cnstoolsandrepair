@@ -218,6 +218,60 @@ async def create_repairs_indexes():
     print("  ✅ Repair indexes created!")
 
 
+async def create_route_management_indexes():
+    """Indexes for zones / businesses / routes"""
+    print("\n🗺️  Creating ROUTE MANAGEMENT indexes...")
+    db = get_database()
+
+    # Deliberately NOT sparse: zones created before the hierarchy have no
+    # parent_id field at all, and a sparse index would exclude them from the
+    # {"parent_id": None} query that finds top-level zones.
+    print("  Creating index: zones.parent_id...")
+    await db.zones.create_index("parent_id", name="zones_parent_id_idx")
+    print("  ✓ Created zones_parent_id_idx")
+
+    # Multikey — drives the zone filter, the $unwind rollup and the $in scope.
+    print("  Creating index: businesses.zone_ids...")
+    await db.businesses.create_index("zone_ids", name="businesses_zone_ids_idx")
+    print("  ✓ Created businesses_zone_ids_idx")
+
+    print("  Creating index: businesses.last_visited_at...")
+    await db.businesses.create_index("last_visited_at", name="businesses_last_visited_idx")
+    print("  ✓ Created businesses_last_visited_idx")
+
+    print("  Creating index: routes.zone_id...")
+    await db.routes.create_index("zone_id", name="routes_zone_id_idx")
+    print("  ✓ Created routes_zone_id_idx")
+
+    # The hottest query in the app: /api/routes/today filters date + assignee.
+    print("  Creating index: routes (date, assigned_to)...")
+    await db.routes.create_index(
+        [("date", 1), ("assigned_to", 1)],
+        name="routes_date_assigned_idx"
+    )
+    print("  ✓ Created routes_date_assigned_idx")
+
+    print("  Creating index: visits (business_id, visited_at desc)...")
+    await db.visits.create_index(
+        [("business_id", 1), ("visited_at", -1)],
+        name="visits_business_recent_idx"
+    )
+    print("  ✓ Created visits_business_recent_idx")
+
+    print("  Creating index: visits (rep_id, follow_up_date)...")
+    await db.visits.create_index(
+        [("rep_id", 1), ("follow_up_date", 1)],
+        name="visits_rep_follow_up_idx"
+    )
+    print("  ✓ Created visits_rep_follow_up_idx")
+
+    print("  Creating index: saved_routes.zone_id...")
+    await db.saved_routes.create_index("zone_id", name="saved_routes_zone_id_idx")
+    print("  ✓ Created saved_routes_zone_id_idx")
+
+    print("  ✅ Route management indexes created!")
+
+
 async def create_all_indexes():
     """Create all production indexes"""
     print("\n" + "=" * 60)
@@ -231,6 +285,7 @@ async def create_all_indexes():
         await create_contact_indexes()
         await create_repairs_indexes()
         await create_customers_indexes()
+        await create_route_management_indexes()
 
         print("\n" + "=" * 60)
         print("✅ ALL PRODUCTION INDEXES CREATED SUCCESSFULLY!")
@@ -254,7 +309,12 @@ async def verify_indexes():
         ("users", "👤"),
         ("customers", "👥"),
         ("contact_messages", "📧"),
-        ("repairs", "🔧")
+        ("repairs", "🔧"),
+        ("zones", "🗺️"),
+        ("businesses", "🏭"),
+        ("routes", "🚚"),
+        ("visits", "📝"),
+        ("saved_routes", "🔖")
     ]
 
     total_indexes = 0

@@ -27,6 +27,10 @@ export default function PaginationBar({
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [5, 10, 25, 50, 100],
+  // Names the unit being paged, for lists where a "row" isn't the unit. The
+  // zones list pages whole families — parent plus its children — so without
+  // this it reads "Showing 1–2 of 2" beneath eight visible rows.
+  itemLabel = '',
 }) {
   const rootRef = useRef(null);
 
@@ -107,6 +111,7 @@ export default function PaginationBar({
           <span className="text-slate-700 dark:text-slate-300 font-bold">{startIndex + 1}</span>–
           <span className="text-slate-700 dark:text-slate-300 font-bold">{Math.min(startIndex + pageSize, totalItems)}</span>{' '}
           of <span className="text-slate-700 dark:text-slate-300 font-bold">{totalItems}</span>
+          {itemLabel ? ` ${itemLabel}` : ''}
         </div>
 
         <div className="flex items-center gap-1">

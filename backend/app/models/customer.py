@@ -61,8 +61,11 @@ class CustomerResponse(BaseModel):
     company_name: Optional[str] = None
     first_name: str
     last_name: str
-    email: str
-    phone: str
+    # Optional: customers converted from route-management prospects may not
+    # have contact details yet — the tracker's own create form still requires
+    # them, but reads must tolerate the converted ones.
+    email: Optional[str] = None
+    phone: Optional[str] = None
     address: Optional[str] = None
     customer_notes: Optional[str] = None
     created_at: datetime

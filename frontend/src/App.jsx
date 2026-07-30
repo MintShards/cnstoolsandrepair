@@ -3,6 +3,7 @@ import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
 import AnnouncementBanner from './components/layout/AnnouncementBanner';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -18,11 +19,16 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import { lazy, Suspense } from 'react';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
+import ProtectedSalesRoute from './components/sales/ProtectedSalesRoute';
 
 // Admin pages are lazy-loaded so the CMS bundle never ships to public visitors
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const RepairTracker = lazy(() => import('./pages/admin/RepairTracker'));
+
+// Sales pages are lazy-loaded — never ships to public visitors
+const SalesLogin = lazy(() => import('./pages/sales/SalesLogin'));
+const SalesDashboard = lazy(() => import('./pages/sales/SalesDashboard'));
 
 function AdminFallback() {
   return (
@@ -52,63 +58,87 @@ function App() {
             }}
           >
             <ScrollToTop />
-            <Routes>
-              {/* Admin Routes - No header/footer, lazy-loaded */}
-              <Route
-                path="/admin/login"
-                element={
-                  <Suspense fallback={<AdminFallback />}>
-                    <AdminLogin />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/admin/settings"
-                element={
-                  <ProtectedAdminRoute>
+            <ErrorBoundary>
+              <Routes>
+                {/* Admin Routes - No header/footer, lazy-loaded */}
+                <Route
+                  path="/admin/login"
+                  element={
                     <Suspense fallback={<AdminFallback />}>
-                      <AdminSettings />
+                      <AdminLogin />
                     </Suspense>
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/repair-tracker"
-                element={
-                  <ProtectedAdminRoute>
-                    <Suspense fallback={<AdminFallback />}>
-                      <RepairTracker />
-                    </Suspense>
-                  </ProtectedAdminRoute>
-                }
-              />
+                  }
+                />
+                <Route
+                  path="/admin/settings"
+                  element={
+                    <ProtectedAdminRoute>
+                      <Suspense fallback={<AdminFallback />}>
+                        <AdminSettings />
+                      </Suspense>
+                    </ProtectedAdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/repair-tracker"
+                  element={
+                    <ProtectedAdminRoute>
+                      <Suspense fallback={<AdminFallback />}>
+                        <RepairTracker />
+                      </Suspense>
+                    </ProtectedAdminRoute>
+                  }
+                />
 
-              {/* Public Routes - With header/footer */}
-              <Route
-                path="*"
-                element={
-                  <div className="min-h-screen flex flex-col">
-                    <AnnouncementBanner />
-                    <Header />
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/services" element={<Services />} />
-                      <Route path="/tools" element={<Navigate to="/services" replace />} />
-                      <Route path="/industries" element={<Industries />} />
-                      <Route path="/repair-request" element={<Quote />} />
-                      <Route path="/quote" element={<Navigate to="/repair-request" replace />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/gallery" element={<Gallery />} />
-                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                      <Route path="/terms-of-service" element={<TermsOfService />} />
-                    </Routes>
-                    <Footer />
-                    <BottomNav />
-                  </div>
-                }
-              />
-            </Routes>
+                {/* Sales Routes - No header/footer, lazy-loaded */}
+                <Route
+                  path="/sales/login"
+                  element={
+                    <Suspense fallback={<AdminFallback />}>
+                      <SalesLogin />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/sales/dashboard"
+                  element={
+                    <ProtectedSalesRoute>
+                      <Suspense fallback={<AdminFallback />}>
+                        <SalesDashboard />
+                      </Suspense>
+                    </ProtectedSalesRoute>
+                  }
+                />
+                <Route path="/sales" element={<Navigate to="/sales/dashboard" replace />} />
+                <Route path="/sales/*" element={<Navigate to="/sales/dashboard" replace />} />
+
+                {/* Public Routes - With header/footer */}
+                <Route
+                  path="*"
+                  element={
+                    <div className="min-h-screen flex flex-col">
+                      <AnnouncementBanner />
+                      <Header />
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/services" element={<Services />} />
+                        <Route path="/tools" element={<Navigate to="/services" replace />} />
+                        <Route path="/industries" element={<Industries />} />
+                        <Route path="/repair-request" element={<Quote />} />
+                        <Route path="/quote" element={<Navigate to="/repair-request" replace />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/gallery" element={<Gallery />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        <Route path="/terms-of-service" element={<TermsOfService />} />
+                      </Routes>
+                      <Footer />
+                      <BottomNav />
+                    </div>
+                  }
+                />
+              </Routes>
+            </ErrorBoundary>
           </Router>
         </SettingsProvider>
       </ThemeProvider>

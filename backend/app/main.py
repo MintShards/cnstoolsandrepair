@@ -1,6 +1,7 @@
 import logging
 import traceback
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,11 @@ from app.routers import repairs, customers as customers_router, suppliers as sup
 from app.routers import parts_library as parts_library_router
 from app.routers import service_agreement as service_agreement_router
 from app.routers import sourcing as sourcing_router
+from app.routers import zones as zones_router
+from app.routers import businesses as businesses_router
+from app.routers import routes as routes_router
+from app.routers import saved_routes as saved_routes_router
+from app.routers import visits as visits_router
 from app.logging_config import setup_logging
 
 setup_logging()
@@ -72,6 +78,22 @@ app = FastAPI(
 # Add rate limiter to app state
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Log all 422 validation errors to server console for debugging.
+# `input` and `ctx` are deliberately dropped: they echo the rejected value, which
+# would put submitted passwords into the logs and the response body in plaintext.
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = [
+        {
+            "loc": [str(part) for part in e.get("loc", ())],
+            "msg": str(e.get("msg", "Invalid value")),
+            "type": str(e.get("type", "value_error")),
+        }
+        for e in exc.errors()
+    ]
+    logger.error(f"422 on {request.method} {request.url.path}: {errors}")
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 # Add CSRF exception handler — fail closed with the proper status code
 @app.exception_handler(CsrfProtectError)
@@ -136,6 +158,11 @@ app.include_router(technicians_router.router)
 app.include_router(parts_library_router.router)
 app.include_router(service_agreement_router.router)
 app.include_router(sourcing_router.router)
+app.include_router(zones_router.router)
+app.include_router(businesses_router.router)
+app.include_router(routes_router.router)
+app.include_router(saved_routes_router.router)
+app.include_router(visits_router.router)
 
 
 @app.get("/api/csrf-token")

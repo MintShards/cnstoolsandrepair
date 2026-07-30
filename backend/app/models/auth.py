@@ -27,6 +27,8 @@ class User(BaseModel):
     email: EmailStr
     role: str
     is_active: bool
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -37,3 +39,33 @@ class TokenData(BaseModel):
     """JWT token payload data"""
     email: Optional[str] = None
     role: Optional[str] = None
+
+
+# --- Sales Rep CRUD models ---
+
+class SalesRepCreate(BaseModel):
+    """Create a new sales rep account"""
+    first_name: str = Field(..., min_length=1, max_length=50)
+    last_name: str = Field(..., min_length=1, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8, description="Minimum 8 characters")
+
+
+class SalesRepUpdate(BaseModel):
+    """Update a sales rep account (all fields optional)"""
+    first_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=8, description="Leave blank to keep current password")
+
+
+class SalesRepResponse(BaseModel):
+    """Sales rep public data returned by the API"""
+    id: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: str
+    is_active: bool
+    created_at: datetime
+    total_visits: int = 0
+    total_routes: int = 0

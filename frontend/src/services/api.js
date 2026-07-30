@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Default to RELATIVE URLs: dev is served through the Vite proxy and
+// production sits same-origin behind nginx, so an unconfigured build works in
+// both. VITE_API_URL still overrides for any split-origin setup.
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -13,14 +16,21 @@ const api = axios.create({
 
 // Response interceptor to handle 401 errors.
 // The JWT lives in an httpOnly cookie (not readable/removable from JS), so on an
-// expired/invalid session we simply bounce to the login page; the server-side
-// cookie expiry and logout endpoint handle the rest.
+// expired/invalid session we simply bounce to the correct login page based on
+// which part of the app the user is in.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      if (!window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
+      const path = window.location.pathname;
+      if (path.startsWith('/sales')) {
+        if (!path.includes('/sales/login')) {
+          window.location.href = '/sales/login';
+        }
+      } else {
+        if (!path.includes('/admin/login')) {
+          window.location.href = '/admin/login';
+        }
       }
     }
     return Promise.reject(error);
@@ -577,6 +587,160 @@ export const serviceAgreementAPI = {
   },
   update: async (data) => {
     const response = await api.put('/api/service-agreement/', data);
+    return response.data;
+  },
+};
+
+// Sales Reps API (admin only)
+export const salesRepsAPI = {
+  list: async () => {
+    const response = await api.get('/api/auth/sales-reps');
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/auth/sales-reps', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/auth/sales-reps/${id}`, data);
+    return response.data;
+  },
+  deactivate: async (id) => {
+    const response = await api.patch(`/api/auth/sales-reps/${id}/deactivate`);
+    return response.data;
+  },
+  activate: async (id) => {
+    const response = await api.patch(`/api/auth/sales-reps/${id}/activate`);
+    return response.data;
+  },
+};
+
+// Zones API (sales or admin)
+export const zonesAPI = {
+  // Returns every zone, flat and unpaginated — callers build the parent/child
+  // grouping client-side from `parent_id`.
+  list: async () => {
+    const response = await api.get('/api/zones/');
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/zones/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/zones/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/zones/${id}`);
+  },
+};
+
+// Businesses API (admin write, sales read)
+export const businessesAPI = {
+  list: async (params = {}) => {
+    const response = await api.get('/api/businesses/', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { data: response.data, total };
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/businesses/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/businesses/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/businesses/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/businesses/${id}`);
+  },
+  getVisits: async (id, params = {}) => {
+    const response = await api.get(`/api/businesses/${id}/visits`, { params });
+    return response.data;
+  },
+  convertToCustomer: async (id, data) => {
+    const response = await api.post(`/api/businesses/${id}/convert-to-customer`, data);
+    return response.data;
+  },
+};
+
+// Routes API (sales or admin)
+export const routesAPI = {
+  getToday: async () => {
+    const response = await api.get('/api/routes/today');
+    return response.data;
+  },
+  list: async (params = {}) => {
+    const response = await api.get('/api/routes/', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { data: response.data, total };
+  },
+  create: async (data) => {
+    const response = await api.post('/api/routes/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/routes/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/routes/${id}`);
+  },
+  completeStop: async (routeId, stopIndex) => {
+    const response = await api.patch(`/api/routes/${routeId}/stops/${stopIndex}/complete`);
+    return response.data;
+  },
+  // Clears a run from today's view; it stays in run history.
+  dismiss: async (routeId) => {
+    const response = await api.patch(`/api/routes/${routeId}/dismiss`);
+    return response.data;
+  },
+};
+
+// Saved Routes API (sales or admin) — standing, reusable business lists
+export const savedRoutesAPI = {
+  list: async (params = {}) => {
+    const response = await api.get('/api/saved-routes/', { params });
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/saved-routes/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/saved-routes/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/saved-routes/${id}`);
+  },
+  addBusiness: async (id, businessId) => {
+    const response = await api.post(`/api/saved-routes/${id}/businesses/${businessId}`);
+    return response.data;
+  },
+  removeBusiness: async (id, businessId) => {
+    const response = await api.delete(`/api/saved-routes/${id}/businesses/${businessId}`);
+    return response.data;
+  },
+};
+
+// Visits API (sales or admin)
+export const visitsAPI = {
+  getFollowUps: async (params = {}) => {
+    const response = await api.get('/api/visits/follow-ups', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { data: response.data, total };
+  },
+  create: async (data) => {
+    const response = await api.post('/api/visits/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/visits/${id}`, data);
     return response.data;
   },
 };
