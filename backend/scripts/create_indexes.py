@@ -251,6 +251,11 @@ async def create_route_management_indexes():
     )
     print("  ✓ Created routes_date_assigned_idx")
 
+    # Sweep counts group completed runs by the saved route that spawned them.
+    print("  Creating index: routes.saved_route_id...")
+    await db.routes.create_index("saved_route_id", name="routes_saved_route_idx")
+    print("  ✓ Created routes_saved_route_idx")
+
     print("  Creating index: visits (business_id, visited_at desc)...")
     await db.visits.create_index(
         [("business_id", 1), ("visited_at", -1)],

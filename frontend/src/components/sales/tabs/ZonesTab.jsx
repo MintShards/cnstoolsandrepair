@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, Fragment } from 'react';
 import { zonesAPI } from '../../../services/api';
 import { useToast } from '../../../pages/sales/SalesDashboard';
 import SavedRoutesSection from '../SavedRoutesSection';
+import RoutesTab from './RoutesTab';
 import ConfirmModal from '../ConfirmModal';
 import SortableTh from '../SortableTh';
 import CoverageBar from '../CoverageBar';
@@ -234,8 +235,11 @@ function ZoneForm({ zone, allZones = [], onSuccess, onClose }) {
  * children table only appears when the zone has zones inside it. Nothing here
  * mutates zone stats — business CRUD lives on the Businesses tab.
  */
-function ZoneScreen({ zone, allZones, parentZone, onBack, onOpenChild, onCrumb }) {
+function ZoneScreen({ zone, allZones, parentZone, currentUser, onBack, onOpenChild, onCrumb }) {
   const children = allZones.filter(z => z.parent_id === zone.id);
+  // Starting a saved route stamps a run — the history table below must hear
+  // about it or it shows a stale list until the user navigates away.
+  const [runsVersion, setRunsVersion] = useState(0);
   return (
     <div>
       {/* Header. One breadcrumb trail of ANCESTORS (each clickable), then the
@@ -334,8 +338,27 @@ function ZoneScreen({ zone, allZones, parentZone, onBack, onOpenChild, onCrumb }
       {/* Saved routes live INSIDE subzones — a parent screen just points at
           its children, each of which owns its own routes. */}
       {children.length === 0 && (
-        <SavedRoutesSection zoneId={zone.id} zones={allZones} />
+        <SavedRoutesSection
+          zoneId={zone.id}
+          zones={allZones}
+          onChanged={() => setRunsVersion((v) => v + 1)}
+        />
       )}
+
+      {/* Run history lives with the zone its routes belong to. A parent
+          screen rolls up its children's runs — the zone filter is
+          descendant-aware on the backend. Keyed by zone so page/filter state
+          never leaks between zones (a stale page 2 would render a child zone
+          as falsely empty, with no pager to escape). */}
+      <div className="mt-6">
+        <RoutesTab
+          key={zone.id}
+          hideHeader
+          zoneId={zone.id}
+          currentUser={currentUser}
+          refreshSignal={runsVersion}
+        />
+      </div>
     </div>
   );
 }
@@ -414,6 +437,7 @@ export default function ZonesTab({ currentUser }) {
         zone={selectedZone}
         allZones={zones}
         parentZone={selectedParent}
+        currentUser={currentUser}
         onBack={() => {
           if (selectedParent) { setSelectedZone(selectedParent); setSelectedParent(null); }
           else setSelectedZone(null);
@@ -540,6 +564,13 @@ export default function ZonesTab({ currentUser }) {
             />
           </div>
         )}
+      </div>
+
+      {/* The one unfiltered Run History: every run lands here, including
+          legacy runs with no zone — without this surface those would be
+          unreachable (zone screens all filter by zone). */}
+      <div className="mt-6">
+        <RoutesTab hideHeader currentUser={currentUser} />
       </div>
 
       {showForm && (

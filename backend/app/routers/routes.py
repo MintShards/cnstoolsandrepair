@@ -273,8 +273,24 @@ async def create_route(data: RouteCreate, current_user: User = Depends(require_s
 
     await _validate_route_zone(db, data.zone_id)
 
+    # A run's saved_route_id feeds the team-visible sweep counter, so it must
+    # point at a real saved route — not an arbitrary client-supplied string.
+    if data.saved_route_id:
+        try:
+            saved = await db.saved_routes.find_one({"_id": ObjectId(data.saved_route_id)})
+        except Exception:
+            saved = None
+        if not saved:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid saved_route_id")
+
     now = datetime.utcnow()
+    # Runs always start with clean stops — completion happens in the field
+    # (complete_stop, visit logging, or an owner's edit), never at creation.
+    # Otherwise one crafted POST could mint a fully-completed "sweep".
     stops_data = [s.model_dump() for s in data.stops]
+    for stop in stops_data:
+        stop["completed"] = False
+        stop["completed_at"] = None
 
     doc = {
         "name": data.name,
@@ -282,6 +298,7 @@ async def create_route(data: RouteCreate, current_user: User = Depends(require_s
         "zone_id": data.zone_id,
         "stops": stops_data,
         "assigned_to": assigned_to,
+        "saved_route_id": data.saved_route_id,
         "created_by": current_user.id,
         "created_at": now,
         "updated_at": now,

@@ -3,14 +3,17 @@ import { savedRoutesAPI, businessesAPI } from '../../services/api';
 import { useToast } from '../../pages/sales/SalesDashboard';
 import ZoneOptions from './ZoneOptions';
 import InterestDot from './InterestDot';
+import ConfirmModal from './ConfirmModal';
 import { apiErrorMessage } from '../../utils/apiError';
 import useEscapeClose from '../../utils/useEscapeClose';
 
 /**
  * Create/edit a saved route: a standing, ORDERED list of businesses under a
  * zone. No date, no rep — those belong to the run you start from it.
+ * Deleting lives here too (edit mode only), behind a confirm — the list rows
+ * keep only Start and Edit.
  */
-export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = '', onSuccess, onClose }) {
+export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = '', onSuccess, onDeleted, onClose }) {
   const showToast = useToast();
   const [name, setName] = useState(savedRoute?.name || '');
   // One zone control: tags the saved route and filters the picker; the search
@@ -24,7 +27,11 @@ export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = ''
   const [businesses, setBusinesses] = useState([]);
   const [loadingBiz, setLoadingBiz] = useState(false);
   const [saving, setSaving] = useState(false);
-  useEscapeClose(onClose);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // While the delete confirm is up, Escape belongs to IT — without the guard
+  // one keypress would close both and silently discard unsaved edits.
+  useEscapeClose(() => { if (!confirmingDelete) onClose(); });
 
   useEffect(() => {
     setLoadingBiz(true);
@@ -67,6 +74,12 @@ export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = ''
       showToast('error', 'Give the route a name.');
       return;
     }
+    // A saved route lives inside its zone — zone-less routes would stamp
+    // zone-less runs, which no zone screen's history could ever show.
+    if (!zoneId) {
+      showToast('error', 'Pick the zone this route belongs to.');
+      return;
+    }
     if (members.length === 0) {
       showToast('error', 'Add at least one business.');
       return;
@@ -91,7 +104,20 @@ export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = ''
     }
   };
 
+  const handleDelete = async () => {
+    setConfirmingDelete(false);
+    setDeleting(true);
+    try {
+      await savedRoutesAPI.delete(savedRoute.id);
+      onDeleted();
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Failed to delete the saved route.'));
+      setDeleting(false);
+    }
+  };
+
   return (
+    <>
     <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
       <div
         className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden"
@@ -139,13 +165,14 @@ export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = ''
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Zone</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Zone *</label>
                 <select
                   value={zoneId}
                   onChange={(e) => setZoneId(e.target.value)}
+                  required
                   className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                 >
-                  <option value="">No zone</option>
+                  <option value="">Select zone...</option>
                   <ZoneOptions zones={zones} leafOnly />
                 </select>
               </div>
@@ -264,17 +291,31 @@ export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = ''
 
           {/* Footer */}
           <div className="flex gap-3 px-6 pb-6">
+            {savedRoute && onDeleted && (
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                disabled={saving || deleting}
+                title="Delete saved route"
+                aria-label={`Delete ${savedRoute.name}`}
+                className="px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-red-50 dark:hover:bg-red-900/20 border border-slate-300 dark:border-slate-600/50 hover:border-red-200 dark:hover:border-red-800/50 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-xl font-bold transition-all disabled:opacity-50"
+              >
+                <span className={`material-symbols-outlined text-base align-middle ${deleting ? 'animate-spin' : ''}`}>
+                  {deleting ? 'progress_activity' : 'delete'}
+                </span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
-              disabled={saving}
+              disabled={saving || deleting}
               className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || deleting}
               className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50"
             >
               {saving ? 'Saving...' : savedRoute ? 'Save Changes' : 'Create Saved Route'}
@@ -283,5 +324,17 @@ export default function SavedRouteEditor({ savedRoute, zones, defaultZoneId = ''
         </form>
       </div>
     </div>
+
+    {/* Sibling of the overlay, NOT a descendant: backdrop-blur makes the
+        overlay a containing block for fixed children, which would pin the
+        confirm to the scrolled content instead of the viewport on phones. */}
+    {confirmingDelete && (
+      <ConfirmModal
+        message={`Delete saved route "${savedRoute.name}"? Past runs made from it are untouched.`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
+    )}
+    </>
   );
 }

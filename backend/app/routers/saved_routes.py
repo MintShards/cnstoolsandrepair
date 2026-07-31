@@ -14,6 +14,7 @@ from app.models.route_management import (
     SavedRouteResponse,
     SavedRouteBusiness,
 )
+from app.services.zone_tree import coverage_cutoff
 from app.utils import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/saved-routes", tags=["saved-routes"])
@@ -35,7 +36,8 @@ async def _fetch_by_ids(collection, ids) -> dict:
 
 
 async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
-    """Populate zone names and member businesses for a page in two queries."""
+    """Populate zone names, member businesses, coverage and sweep counts for a
+    page — three queries total, none per row."""
     zone_ids, business_ids = set(), set()
     for doc in docs:
         if doc.get("zone_id"):
@@ -45,11 +47,29 @@ async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
     zones = await _fetch_by_ids(db.zones, zone_ids)
     businesses = await _fetch_by_ids(db.businesses, business_ids)
 
+    # A sweep is a fully-completed run stamped from this saved route. Dismissed
+    # runs still count — dismiss only clears Today, the work happened. Runs
+    # created before saved_route_id existed simply never match.
+    sweeps: dict = {}
+    ids = [doc["id"] for doc in docs]
+    if ids:
+        pipeline = [
+            {"$match": {
+                "saved_route_id": {"$in": ids},
+                "stops.0": {"$exists": True},
+                "stops": {"$not": {"$elemMatch": {"completed": {"$ne": True}}}},
+            }},
+            {"$group": {"_id": "$saved_route_id", "count": {"$sum": 1}}},
+        ]
+        async for row in db.routes.aggregate(pipeline):
+            sweeps[row["_id"]] = row["count"]
+
+    cutoff = coverage_cutoff()
     responses = []
     for doc in docs:
         # A deleted business silently drops out of the list rather than
         # rendering a ghost stop — saved routes stay startable.
-        members = []
+        members, covered = [], 0
         for bid in doc.get("business_ids", []):
             biz = businesses.get(bid)
             if biz:
@@ -58,7 +78,11 @@ async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
                     company_name=biz.get("company_name"),
                     interest_level=biz.get("interest_level", "cold"),
                 ))
+                last_visited = biz.get("last_visited_at")
+                if isinstance(last_visited, datetime) and last_visited >= cutoff:
+                    covered += 1
         zone = zones.get(doc.get("zone_id"))
+        total = len(members)
         responses.append(SavedRouteResponse(
             id=doc["id"],
             name=doc["name"],
@@ -66,7 +90,10 @@ async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
             zone_name=zone["name"] if zone else None,
             business_ids=[m.id for m in members],
             businesses=members,
-            business_count=len(members),
+            business_count=total,
+            covered_count=covered,
+            coverage_pct=round(covered / total * 100) if total else None,
+            times_swept=sweeps.get(doc["id"], 0),
             created_by=doc["created_by"],
             created_at=doc["created_at"],
             updated_at=doc["updated_at"],

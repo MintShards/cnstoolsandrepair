@@ -14,7 +14,7 @@ import PaginationBar from '../../admin/shared/PaginationBar';
 // Newest routes and least-finished routes are the useful first click.
 const FIRST_DIRS = { date: 'desc', progress: 'asc' };
 
-export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hideHeader = false }) {
+export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hideHeader = false, zoneId = '' }) {
   const showToast = useToast();
   const isAdmin = currentUser?.role === 'admin';
   const [routes, setRoutes] = useState([]);
@@ -39,6 +39,9 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
       const params = { skip: (page - 1) * size, limit: size, sort_by: sortBy, sort_dir: sortDir };
       if (filterRep) params.assigned_to = filterRep;
       if (filterDate) params.date = filterDate;
+      // Embedded in a zone screen: only that zone's runs (children included —
+      // the backend zone filter is descendant-aware).
+      if (zoneId) params.zone_id = zoneId;
       const { data, total: t } = await routesAPI.list(params);
       setRoutes(data);
       setTotal(t);
@@ -47,7 +50,7 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
     } finally {
       setLoading(false);
     }
-  }, [filterRep, filterDate, sortBy, sortDir, showToast]);
+  }, [filterRep, filterDate, sortBy, sortDir, zoneId, showToast]);
 
   useEffect(() => {
     // The reps endpoint is admin-only; a rep's list is already scoped to self.
@@ -137,7 +140,7 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
       {/* Table */}
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Routes</span>
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Run History</span>
           <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">{total}</span>
         </div>
 
@@ -149,7 +152,7 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
         ) : routes.length === 0 ? (
           <div className="text-center py-16">
             <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600 block mb-3">directions</span>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">No routes found — create one to get started</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">No runs yet — start a saved route and it lands here</p>
           </div>
         ) : (
           <>

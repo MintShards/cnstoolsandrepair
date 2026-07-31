@@ -200,8 +200,9 @@ class RouteCreate(BaseModel):
     zone_id: Optional[str] = None
     stops: List[RouteStop] = []
     assigned_to: Optional[str] = None    # user_id; None = assign to self
+    saved_route_id: Optional[str] = None  # set when Start stamps a run from a saved route
 
-    @field_validator('name', mode='before')
+    @field_validator('name', 'saved_route_id', mode='before')
     @classmethod
     def empty_str_to_none(cls, v):
         if isinstance(v, str) and not v.strip():
@@ -330,6 +331,14 @@ class SavedRouteResponse(BaseModel):
     business_ids: List[str] = []
     businesses: List[SavedRouteBusiness] = []  # populated, in list order
     business_count: int = 0
+    # Derived, never stored: coverage mirrors zone coverage (members visited
+    # within the window), sweeps count fully-completed runs started from this
+    # route. coverage_pct is None when the route has no members — undefined,
+    # not 0%.
+    covered_count: int = 0
+    coverage_pct: Optional[int] = None
+    coverage_window_days: int = COVERAGE_WINDOW_DAYS
+    times_swept: int = 0
     created_by: str
     created_at: datetime
     updated_at: datetime

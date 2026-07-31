@@ -7,7 +7,6 @@ const TodayRouteTab = lazy(() => import('../../components/sales/tabs/TodayRouteT
 const BusinessesTab = lazy(() => import('../../components/sales/tabs/BusinessesTab'));
 const FollowUpsTab = lazy(() => import('../../components/sales/tabs/FollowUpsTab'));
 const ZonesTab = lazy(() => import('../../components/sales/tabs/ZonesTab'));
-const RoutesTab = lazy(() => import('../../components/sales/tabs/RoutesTab'));
 const SalesRepsTab = lazy(() => import('../../components/sales/tabs/SalesRepsTab'));
 // Static, not lazy: this page is already lazy at the router, and ZonesTab
 // imports it statically — a second lazy copy just double-chunks it.
@@ -39,19 +38,12 @@ function SectionBar({ icon, label, open, onToggle }) {
   );
 }
 
-// The merged Routes tab: today's runner front and centre; Saved Routes and
-// Run History live behind collapsed bars. Saved Routes opens itself when
-// there's no run today — starting one is then the thing you need.
+// The merged Routes tab: today's runner front and centre; the Saved Routes
+// library lives behind a collapsed bar and stays closed until tapped. Run
+// History lives with the zones, where the routes themselves do.
 function RoutesHub({ currentUser, onTabSwitch }) {
   const [todaySignal, setTodaySignal] = useState(0);
-  const [listSignal, setListSignal] = useState(0);
   const [savedOpen, setSavedOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-
-  // Stable identity so the runner's load callback doesn't churn.
-  const handleTodayCount = useCallback((n) => {
-    if (n === 0) setSavedOpen(true);
-  }, []);
 
   return (
     <>
@@ -59,46 +51,24 @@ function RoutesHub({ currentUser, onTabSwitch }) {
         currentUser={currentUser}
         onTabSwitch={onTabSwitch}
         refreshSignal={todaySignal}
-        onMutate={() => setListSignal((v) => v + 1)}
-        onTodayCount={handleTodayCount}
       />
 
-      <div className="mt-8 space-y-3">
-        <div>
-          <SectionBar
-            icon="route"
-            label="Saved Routes"
-            open={savedOpen}
-            onToggle={() => setSavedOpen((v) => !v)}
-          />
-          {savedOpen && (
-            <div className="mt-3">
-              {/* Starting a saved route creates a run — both the runner above
-                  and the history below need to hear about it. */}
-              <SavedRoutesSection
-                onChanged={() => { setTodaySignal((v) => v + 1); setListSignal((v) => v + 1); }}
-              />
-            </div>
-          )}
-        </div>
-        <div>
-          <SectionBar
-            icon="history"
-            label="Run History"
-            open={historyOpen}
-            onToggle={() => setHistoryOpen((v) => !v)}
-          />
-          {historyOpen && (
-            <div className="mt-3">
-              <RoutesTab
-                hideHeader
-                currentUser={currentUser}
-                refreshSignal={listSignal}
-                onMutate={() => setTodaySignal((v) => v + 1)}
-              />
-            </div>
-          )}
-        </div>
+      <div className="mt-8">
+        <SectionBar
+          icon="route"
+          label="Saved Routes"
+          open={savedOpen}
+          onToggle={() => setSavedOpen((v) => !v)}
+        />
+        {savedOpen && (
+          <div className="mt-3">
+            {/* Starting a saved route creates a run — the runner above needs
+                to hear about it. */}
+            <SavedRoutesSection
+              onChanged={() => setTodaySignal((v) => v + 1)}
+            />
+          </div>
+        )}
       </div>
     </>
   );

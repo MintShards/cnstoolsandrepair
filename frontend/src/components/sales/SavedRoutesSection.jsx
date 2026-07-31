@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { savedRoutesAPI, routesAPI, zonesAPI } from '../../services/api';
 import { useToast } from '../../pages/sales/SalesDashboard';
 import SavedRouteEditor from './SavedRouteEditor';
-import ConfirmModal from './ConfirmModal';
+import CoverageBar from './CoverageBar';
 import { ICON_BTN } from './ui';
 import { apiErrorMessage } from '../../utils/apiError';
 import { getTodayPacific } from '../../utils/dateFormat';
@@ -22,7 +22,6 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [confirmTarget, setConfirmTarget] = useState(null);
   const [startingId, setStartingId] = useState(null);
 
   const load = useCallback(async () => {
@@ -47,11 +46,13 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
     setStartingId(sr.id);
     try {
       // A saved route starts as a normal dated run; assigned_to is omitted so
-      // the backend assigns whoever pressed Start.
+      // the backend assigns whoever pressed Start. saved_route_id is what
+      // lets the completed run count as a sweep of this route.
       await routesAPI.create({
         name: sr.name,
         date: getTodayPacific(),
         zone_id: sr.zone_id || null,
+        saved_route_id: sr.id,
         stops: sr.business_ids.map((id, i) => ({
           business_id: id, order: i, completed: false, completed_at: null,
         })),
@@ -62,18 +63,6 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
       showToast('error', apiErrorMessage(err, 'Failed to start the route.'));
     } finally {
       setStartingId(null);
-    }
-  };
-
-  const confirmDelete = async () => {
-    const sr = confirmTarget;
-    setConfirmTarget(null);
-    try {
-      await savedRoutesAPI.delete(sr.id);
-      showToast('success', 'Saved route deleted.');
-      load();
-    } catch (err) {
-      showToast('error', apiErrorMessage(err, 'Failed to delete the saved route.'));
     }
   };
 
@@ -120,8 +109,20 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
                     {sr.name}
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                    {sr.zone_name ? `${sr.zone_name} · ` : ''}{sr.business_count} business{sr.business_count !== 1 ? 'es' : ''}
+                    {sr.zone_name ? `${sr.zone_name} · ` : ''}
+                    {sr.business_count} business{sr.business_count !== 1 ? 'es' : ''}
+                    {' · '}
+                    {sr.times_swept > 0 ? `swept ${sr.times_swept}×` : 'never swept'}
                   </p>
+                  {/* Same coverage read as zones: members visited in the window. */}
+                  <div className="mt-1 max-w-[160px]">
+                    <CoverageBar
+                      pct={sr.coverage_pct}
+                      covered={sr.covered_count}
+                      total={sr.business_count}
+                      windowDays={sr.coverage_window_days}
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
@@ -135,6 +136,8 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
                     </span>
                     <span className="hidden sm:inline">Start</span>
                   </button>
+                  {/* Deleting lives inside the editor, behind a confirm —
+                      not one misclick away from Start. */}
                   <button
                     onClick={() => { setEditTarget(sr); setShowEditor(true); }}
                     title="Edit saved route"
@@ -142,14 +145,6 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
                     className={`${ICON_BTN} hover:text-slate-700 dark:hover:text-white`}
                   >
                     <span className="material-symbols-outlined text-base">edit</span>
-                  </button>
-                  <button
-                    onClick={() => setConfirmTarget(sr)}
-                    title="Delete saved route"
-                    aria-label={`Delete ${sr.name}`}
-                    className={`${ICON_BTN} hover:text-red-500 dark:hover:text-red-400`}
-                  >
-                    <span className="material-symbols-outlined text-base">delete</span>
                   </button>
                 </div>
               </div>
@@ -168,15 +163,12 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
             showToast('success', editTarget ? 'Saved route updated.' : 'Saved route created.');
             load();
           }}
+          onDeleted={() => {
+            setShowEditor(false);
+            showToast('success', 'Saved route deleted.');
+            load();
+          }}
           onClose={() => setShowEditor(false)}
-        />
-      )}
-
-      {confirmTarget && (
-        <ConfirmModal
-          message={`Delete saved route "${confirmTarget.name}"? Past runs made from it are untouched.`}
-          onConfirm={confirmDelete}
-          onCancel={() => setConfirmTarget(null)}
         />
       )}
     </div>
