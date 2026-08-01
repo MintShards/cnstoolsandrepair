@@ -44,6 +44,35 @@ export default function BusinessForm({ business, zones, defaultZoneIds, onSucces
   });
   const [saving, setSaving] = useState(false);
 
+  // Live duplicate check: as the name settles, look for an existing business
+  // with the same name (case/spacing-insensitive). The server hard-rejects
+  // duplicates anyway — this just says so before the user fills the rest in.
+  const [dupMatch, setDupMatch] = useState(null);
+  useEffect(() => {
+    const name = form.company_name.trim();
+    if (!name) { setDupMatch(null); return undefined; }
+    // Search with the collapsed form — a stray double space in the input
+    // would otherwise miss the single-spaced stored name entirely.
+    const norm = name.replace(/\s+/g, ' ').toLowerCase();
+    // The in-flight request outlives the name it was asked about: clear the
+    // field while one is pending and its answer would otherwise land as a
+    // duplicate warning under an empty box.
+    let cancelled = false;
+    const t = setTimeout(() => {
+      businessesAPI.list({ search: norm, limit: 10 })
+        .then(({ data }) => {
+          if (cancelled) return;
+          const hit = data.find(
+            (b) => b.company_name.replace(/\s+/g, ' ').toLowerCase() === norm
+              && b.id !== business?.id
+          );
+          setDupMatch(hit || null);
+        })
+        .catch(() => { if (!cancelled) setDupMatch(null); });
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [form.company_name, business?.id]);
+
   // Standing-route membership: designate this business to one or more saved
   // routes right here, instead of editing every route it belongs to.
   const [savedRoutes, setSavedRoutes] = useState([]);
@@ -187,6 +216,16 @@ export default function BusinessForm({ business, zones, defaultZoneIds, onSucces
               placeholder="ACME Industrial Supply"
               className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary transition-colors"
             />
+            {dupMatch && (
+              <p className="mt-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-start gap-1">
+                <span className="material-symbols-outlined text-sm leading-4">warning</span>
+                <span>
+                  &quot;{dupMatch.company_name}&quot; is already in the list
+                  {dupMatch.zone_names?.length ? ` (${dupMatch.zone_names.join(', ')})` : ''}
+                  {' '}&mdash; edit that one instead of adding a duplicate.
+                </span>
+              </p>
+            )}
           </div>
 
           {/* Google Maps link */}

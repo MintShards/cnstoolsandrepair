@@ -21,6 +21,32 @@ router = APIRouter(prefix="/api/businesses", tags=["businesses"])
 logger = logging.getLogger(__name__)
 
 
+def _same_name_query(name: str) -> dict:
+    """Match company_name ignoring case and whitespace runs, so
+    "m&s  truck repair" collides with "M&S Truck Repair"."""
+    parts = " ".join(name.split()).split(" ")
+    pattern = r"^\s*" + r"\s+".join(re.escape(p) for p in parts) + r"\s*$"
+    return {"company_name": {"$regex": pattern, "$options": "i"}}
+
+
+async def _reject_duplicate_name(db, name: str, exclude_oid=None) -> None:
+    """409 when another business already carries this name. One business, one
+    row — a second location should get a distinguishing name instead."""
+    query = _same_name_query(name)
+    if exclude_oid is not None:
+        query["_id"] = {"$ne": exclude_oid}
+    dup = await db.businesses.find_one(query)
+    if dup:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f'"{dup["company_name"]}" is already in the businesses list. '
+                'Edit that one, or add a location to the name (e.g. "— Newton") '
+                'if this is genuinely a second branch.'
+            ),
+        )
+
+
 async def _fetch_by_ids(collection, ids) -> dict:
     """Fetch many documents in one round trip, keyed by their string id."""
     oids = []
@@ -209,6 +235,7 @@ async def create_business(data: BusinessCreate, current_user: User = Depends(req
     db = get_database()
 
     await _validate_zone_ids(db, data.zone_ids)
+    await _reject_duplicate_name(db, data.company_name)
 
     now = datetime.utcnow()
     doc = {
@@ -282,6 +309,8 @@ async def update_business(business_id: str, data: BusinessUpdate, current_user: 
         update_data["email"] = update_data["email"].lower().strip()
     if "company_name" in update_data and update_data["company_name"]:
         update_data["company_name"] = update_data["company_name"].strip()
+        # Renaming into an existing business is the same duplicate, later.
+        await _reject_duplicate_name(db, update_data["company_name"], exclude_oid=oid)
 
     updates.update(update_data)
     mutation: dict = {"$set": updates}
