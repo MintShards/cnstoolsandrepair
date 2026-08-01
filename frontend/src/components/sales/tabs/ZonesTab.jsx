@@ -6,13 +6,14 @@ import RoutesTab from './RoutesTab';
 import ConfirmModal from '../ConfirmModal';
 import SortableTh from '../SortableTh';
 import CoverageBar from '../CoverageBar';
+import TabHeader from '../TabHeader';
 import useSort, { sortRows } from '../useSort';
 import { groupZones, eligibleParents } from '../zoneTree';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../pageSize';
 import PaginationBar from '../../admin/shared/PaginationBar';
 import { apiErrorMessage } from '../../../utils/apiError';
 import useEscapeClose from '../../../utils/useEscapeClose';
-import { ICON_BTN } from '../ui';
+import { ICON_BTN, BTN_PRIMARY, FILTER_CLEAR } from '../ui';
 
 // Direction each column uses on first click — the useful one, not always asc.
 const ZONE_FIRST_DIRS = {
@@ -47,18 +48,25 @@ function ZoneRow({ zone, nested = false, isAdmin = false, onOpen, onEdit, onDele
             </span>
           )}
         </div>
-        {/* Coverage is the point of this table — keep a compact bar on phones
-            where its column is hidden. */}
-        <div className={`sm:hidden mt-1.5 ${nested ? 'pl-5' : ''}`}>
-          <CoverageBar
-            pct={zone.coverage_pct}
-            covered={zone.covered_count}
-            total={total}
-            windowDays={zone.coverage_window_days}
-          />
+        {/* Phones get the count and coverage folded in here — as their own
+            columns they pushed the Actions column off the right edge. */}
+        <div className={`sm:hidden mt-1.5 flex items-center gap-2 ${nested ? 'pl-5' : ''}`}>
+          <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            {total} business{total !== 1 ? 'es' : ''}
+          </span>
+          {/* CoverageBar's track is flex-1, so it needs a parent with width of
+              its own — dropped straight into this row it collapses to nothing. */}
+          <div className="flex-1 min-w-0">
+            <CoverageBar
+              pct={zone.coverage_pct}
+              covered={zone.covered_count}
+              total={total}
+              windowDays={zone.coverage_window_days}
+            />
+          </div>
         </div>
       </td>
-      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-sm whitespace-nowrap">
+      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-sm whitespace-nowrap hidden sm:table-cell">
         {total} business{total !== 1 ? 'es' : ''}
         {/* Without this, a parent's total looks unrelated to its children's */}
         {zone.child_count > 0 && zone.direct_business_count > 0 && (
@@ -455,25 +463,20 @@ export default function ZonesTab({ currentUser }) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Zones</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Geographic groupings for route planning</p>
-        </div>
-        {isAdmin && (
+      <TabHeader
+        title="Zones"
+        subtitle="Geographic groupings for route planning"
+        action={isAdmin && (
           <button
             onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl text-sm font-bold transition-all"
+            className={`${BTN_PRIMARY} w-full sm:w-auto flex-shrink-0`}
           >
             <span className="material-symbols-outlined text-sm">add_location_alt</span>
-            <span className="hidden sm:inline">Add Zone</span>
+            Add Zone
           </button>
         )}
-      </div>
-
-      {/* Search */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-sm">
+      >
+        <div className="relative w-full sm:flex-1 sm:min-w-[12rem] sm:max-w-sm">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-lg">search</span>
           <input
             type="text"
@@ -484,15 +487,12 @@ export default function ZonesTab({ currentUser }) {
           />
         </div>
         {search && (
-          <button
-            onClick={() => setSearch('')}
-            className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
-          >
+          <button onClick={() => setSearch('')} className={FILTER_CLEAR}>
             <span className="material-symbols-outlined text-sm">close</span>
             Clear
           </button>
         )}
-      </div>
+      </TabHeader>
 
       {/* Table */}
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
@@ -520,12 +520,16 @@ export default function ZonesTab({ currentUser }) {
                 <tr>
                   <SortableTh field="name" label="Zone" cls="px-3 sm:px-4"
                     sortBy={zoneSort.sortBy} sortDir={zoneSort.sortDir} onSort={zoneSort.handleSort} />
-                  <SortableTh field="business_count" label="Businesses" cls="px-4"
+                  <SortableTh field="business_count" label="Businesses" cls="px-4 hidden sm:table-cell"
                     sortBy={zoneSort.sortBy} sortDir={zoneSort.sortDir} onSort={zoneSort.handleSort} />
                   <SortableTh field="coverage_pct" label="Coverage" cls="px-4 hidden sm:table-cell"
                     sortBy={zoneSort.sortBy} sortDir={zoneSort.sortDir} onSort={zoneSort.handleSort} />
                   <th className="py-3 px-4 font-bold hidden xl:table-cell">Description</th>
-                  {isAdmin && <th className="py-3 px-4 text-right font-bold">Actions</th>}
+                  {isAdmin && (
+                    <th className="py-3 px-2 sm:px-4 text-right font-bold">
+                      <span className="sr-only sm:not-sr-only">Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">

@@ -4,6 +4,7 @@ import { useToast } from '../../../pages/sales/SalesDashboard';
 import VisitLogger from '../VisitLogger';
 import SortableTh from '../SortableTh';
 import InterestDot from '../InterestDot';
+import TabHeader from '../TabHeader';
 import useSort from '../useSort';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../pageSize';
 import PaginationBar from '../../admin/shared/PaginationBar';
@@ -76,12 +77,10 @@ export default function FollowUpsTab() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Follow-ups</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Promised call-backs and return visits</p>
-        </div>
-      </div>
+      <TabHeader
+        title="Follow-ups"
+        subtitle="Promised call-backs and return visits"
+      />
 
       {/* Table */}
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
@@ -108,7 +107,9 @@ export default function FollowUpsTab() {
                   {/* Overdue used to be its own section; sorting and grouping don't
                       compose, so the red row tint and badge carry that signal now. */}
                   {[
-                    { field: 'follow_up_date', label: 'Due',      cls: 'px-3 sm:px-4' },
+                    // Due folds into the business cell on phones; as its own
+                    // nowrap column it pushed Actions off the right edge.
+                    { field: 'follow_up_date', label: 'Due',      cls: 'px-3 sm:px-4 hidden sm:table-cell' },
                     { field: 'business_name',  label: 'Business', cls: 'px-3 sm:px-4' },
                     { field: 'interest_level', label: 'Interest', cls: 'px-4 hidden sm:table-cell' },
                     { field: 'visited_at',     label: 'Logged',   cls: 'px-4 hidden xl:table-cell' },
@@ -116,7 +117,9 @@ export default function FollowUpsTab() {
                     <SortableTh key={col.field} {...col} sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   ))}
                   <th className="py-3 px-4 font-bold hidden lg:table-cell">Note</th>
-                  <th className="py-3 px-4 text-right font-bold">Actions</th>
+                  <th className="py-3 px-2 sm:px-4 text-right font-bold">
+                    <span className="sr-only sm:not-sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -131,7 +134,7 @@ export default function FollowUpsTab() {
                           : 'hover:bg-slate-100 dark:hover:bg-slate-700/30'
                       }`}
                     >
-                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap hidden sm:table-cell">
                         <div className={`font-bold ${overdueFU ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
                           {formatYmd(v.follow_up_date)}
                         </div>
@@ -142,7 +145,13 @@ export default function FollowUpsTab() {
                         )}
                       </td>
                       {/* Narrower on mobile so the Actions column stays on screen */}
-                      <td className="py-3.5 px-3 sm:px-4 max-w-[130px] sm:max-w-[200px]">
+                      <td className="py-3.5 px-3 sm:px-4 max-w-[120px] sm:max-w-[200px]">
+                        {/* The date leads on phones, where its column is hidden —
+                            a follow-up list is worthless without the due date. */}
+                        <div className={`sm:hidden text-xs font-bold whitespace-nowrap ${overdueFU ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {formatYmd(v.follow_up_date)}
+                          {overdueFU && <span className="uppercase tracking-wide"> · Overdue</span>}
+                        </div>
                         <div className="text-slate-900 dark:text-white font-bold uppercase truncate">
                           {v.business_name || 'Unknown business'}
                         </div>
@@ -159,8 +168,8 @@ export default function FollowUpsTab() {
                       <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-sm hidden lg:table-cell max-w-[240px] truncate">
                         {v.follow_up_note || <span className="text-slate-400 dark:text-slate-600">—</span>}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
+                      <td className="py-3.5 px-2 sm:px-4 text-right">
+                        <div className="inline-flex items-center gap-1 sm:gap-1.5">
                           {/* Working a follow-up IS calling or driving over — those
                               actions live on the row, not a detour away. */}
                           {v.business_phone && (
@@ -192,7 +201,7 @@ export default function FollowUpsTab() {
                           <button
                             onClick={() => setVisitTarget({ businessId: v.business_id, businessName: v.business_name, initialInterest: v.interest_level })}
                             title="Log a visit to this business"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-primary rounded-lg text-sm font-bold transition-all"
+                            className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-primary rounded-lg text-sm font-bold transition-all"
                           >
                             <span className="material-symbols-outlined text-base">edit_note</span>
                             <span className="hidden xl:inline">Log Visit</span>
@@ -201,7 +210,7 @@ export default function FollowUpsTab() {
                             onClick={() => handleDismiss(v.id)}
                             disabled={dismissingId === v.id}
                             title="Clear this follow-up"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                            className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                           >
                             <span className={`material-symbols-outlined text-base ${dismissingId === v.id ? 'animate-spin' : ''}`}>
                               {dismissingId === v.id ? 'progress_activity' : 'check'}

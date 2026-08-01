@@ -225,9 +225,11 @@ export default function SalesDashboard() {
             <div className="flex items-center justify-between gap-2">
               {/* Left: brand + title */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {/* Full brand only at desktop — below that the page title is
+                    the thing that must never crush into "ROUTE M…". */}
                 <Link to="/" className="font-logo text-base sm:text-xl font-bold leading-none tracking-wide uppercase flex-shrink-0">
                   <span className="text-accent-orange">CNS</span>{' '}
-                  <span className="text-slate-900 dark:text-white hidden sm:inline">Tool Repair</span>
+                  <span className="text-slate-900 dark:text-white hidden lg:inline">Tool Repair</span>
                 </Link>
                 <div className="h-7 sm:h-8 w-px bg-slate-300 dark:bg-slate-700/80 flex-shrink-0"></div>
                 <div className="min-w-0">
@@ -247,7 +249,7 @@ export default function SalesDashboard() {
                   className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/30 hover:border-red-300 dark:hover:border-red-700/50 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">logout</span>
-                  <span className="hidden sm:inline">Logout</span>
+                  <span className="hidden lg:inline">Logout</span>
                 </button>
                 {isAdmin && (
                   <Link
@@ -255,7 +257,7 @@ export default function SalesDashboard() {
                     className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
                   >
                     <span className="material-symbols-outlined text-base">build_circle</span>
-                    <span className="hidden sm:inline">Repair Tracker</span>
+                    <span className="hidden lg:inline">Repair Tracker</span>
                   </Link>
                 )}
               </div>
@@ -274,15 +276,17 @@ export default function SalesDashboard() {
                 <Link
                   key={tab.id}
                   to={tab.id === 'route' ? '/sales/dashboard' : `/sales/dashboard?tab=${tab.id}`}
-                  className={`flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1 sm:px-3 lg:px-5 py-2 sm:py-2.5 rounded-xl font-bold transition-all duration-200 ${
+                  className={`flex-1 min-w-0 flex flex-col lg:flex-row items-center justify-center gap-0.5 lg:gap-2 px-1 lg:px-5 py-2 lg:py-2.5 rounded-xl font-bold transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'bg-primary text-white shadow-md shadow-primary/25'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <span className="material-symbols-outlined text-xl">{tab.icon}</span>
-                  <span className="sm:hidden text-[10px] leading-tight truncate max-w-full">{tab.shortLabel}</span>
-                  <span className="hidden sm:block min-w-0 truncate text-sm leading-tight">{tab.label}</span>
+                  {/* Stacked icon-over-label through tablet — five row-layout
+                      tabs under ~1024px shear labels into "Busines…". */}
+                  <span className="lg:hidden text-[10px] sm:text-xs leading-tight truncate max-w-full">{tab.shortLabel}</span>
+                  <span className="hidden lg:block min-w-0 truncate text-sm leading-tight">{tab.label}</span>
                 </Link>
               ))}
             </nav>

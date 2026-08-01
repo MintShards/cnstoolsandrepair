@@ -10,7 +10,8 @@ import ConfirmModal from '../ConfirmModal';
 import SortableTh from '../SortableTh';
 import ZoneOptions from '../ZoneOptions';
 import InterestDot from '../InterestDot';
-import { ICON_BTN } from '../ui';
+import TabHeader from '../TabHeader';
+import { ICON_BTN, BTN_PRIMARY, FILTER_INPUT, FILTER_CLEAR } from '../ui';
 import useSort from '../useSort';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../pageSize';
 import PaginationBar from '../../admin/shared/PaginationBar';
@@ -126,26 +127,20 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Businesses</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Prospects and their visit history</p>
-        </div>
-        {isAdmin && (
+      <TabHeader
+        title="Businesses"
+        subtitle="Prospects and their visit history"
+        action={isAdmin && (
           <button
             onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl text-sm font-bold transition-all"
+            className={`${BTN_PRIMARY} w-full sm:w-auto flex-shrink-0`}
           >
             <span className="material-symbols-outlined text-sm">add_business</span>
-            <span className="hidden sm:inline">Add Business</span>
+            Add Business
           </button>
         )}
-      </div>
-
-      {/* Search + Filter bar */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-sm">
+      >
+        <div className="relative w-full sm:flex-1 sm:min-w-[12rem] sm:max-w-sm">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-lg">search</span>
           <input
             type="text"
@@ -158,7 +153,7 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
         <select
           value={filterZone}
           onChange={(e) => setFilterZone(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/40 transition-all"
+          className={FILTER_INPUT}
         >
           <option value="">All Zones</option>
           <ZoneOptions zones={zones} />
@@ -166,7 +161,7 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
         <select
           value={filterInterest}
           onChange={(e) => setFilterInterest(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/40 transition-all"
+          className={FILTER_INPUT}
         >
           <option value="">All Interest</option>
           <option value="hot">Hot</option>
@@ -176,13 +171,13 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
         {(search || filterZone || filterInterest) && (
           <button
             onClick={() => { setSearch(''); setFilterZone(''); setFilterInterest(''); }}
-            className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+            className={FILTER_CLEAR}
           >
             <span className="material-symbols-outlined text-sm">close</span>
             Clear
           </button>
         )}
-      </div>
+      </TabHeader>
 
       {/* Table */}
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
@@ -227,7 +222,9 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
                       field="zone_name" label="Zone" cls="px-4 hidden xl:table-cell"
                       sortBy={sortBy} sortDir={sortDir} onSort={handleSort}
                     />
-                    <th className="py-3 px-4 text-right font-bold">Actions</th>
+                    <th className="py-3 px-2 sm:px-4 text-right font-bold">
+                      <span className="sr-only sm:not-sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -246,7 +243,7 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
                         onClick={() => setProfileTarget(biz)}
                         className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
                       >
-                        <td className="py-3.5 px-3 sm:px-4 max-w-[200px] lg:max-w-[260px]">
+                        <td className="py-3.5 px-3 sm:px-4 max-w-[150px] sm:max-w-[200px] lg:max-w-[260px]">
                           <div className="flex items-center gap-2 min-w-0">
                             {/* Interest has no column on mobile, so carry it as a dot */}
                             <InterestDot level={biz.interest_level} withLabel={false} className="sm:hidden flex-shrink-0" />
@@ -302,7 +299,7 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
                             </>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-3.5 px-2 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex items-center gap-1.5">
                             {biz.google_maps_link && (
                               <a

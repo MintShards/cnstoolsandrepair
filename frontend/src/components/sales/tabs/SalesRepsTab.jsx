@@ -6,9 +6,10 @@ import useSort, { sortRows } from '../useSort';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../pageSize';
 import PaginationBar from '../../admin/shared/PaginationBar';
 import ConfirmModal from '../ConfirmModal';
+import TabHeader from '../TabHeader';
 import { apiErrorMessage } from '../../../utils/apiError';
 import useEscapeClose from '../../../utils/useEscapeClose';
-import { ICON_BTN } from '../ui';
+import { ICON_BTN, BTN_PRIMARY } from '../ui';
 import { formatDateShortPacific } from '../../../utils/dateFormat';
 
 // Busiest reps first when those columns are clicked.
@@ -191,19 +192,19 @@ export default function SalesRepsTab() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Sales Reps</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Accounts that can log visits and run routes</p>
-        </div>
-        <button
-          onClick={() => { setEditTarget(null); setShowForm(true); }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl text-sm font-bold transition-all"
-        >
-          <span className="material-symbols-outlined text-sm">person_add</span>
-          <span className="hidden sm:inline">Add Rep</span>
-        </button>
-      </div>
+      <TabHeader
+        title="Sales Reps"
+        subtitle="Accounts that can log visits and run routes"
+        action={(
+          <button
+            onClick={() => { setEditTarget(null); setShowForm(true); }}
+            className={`${BTN_PRIMARY} w-full sm:w-auto flex-shrink-0`}
+          >
+            <span className="material-symbols-outlined text-sm">person_add</span>
+            Add Rep
+          </button>
+        )}
+      />
 
       {/* Table */}
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
@@ -229,14 +230,18 @@ export default function SalesRepsTab() {
                 <tr>
                   {[
                     { field: 'name',         label: 'Rep',    cls: 'px-3 sm:px-4' },
-                    { field: 'is_active',    label: 'Status', cls: 'px-4' },
+                    // Status folds into the rep cell on phones — its own column
+                    // pushed Actions off the right edge.
+                    { field: 'is_active',    label: 'Status', cls: 'px-4 hidden sm:table-cell' },
                     { field: 'total_visits', label: 'Visits', cls: 'px-4 hidden sm:table-cell' },
                     { field: 'total_routes', label: 'Routes', cls: 'px-4 hidden md:table-cell' },
                     { field: 'created_at',   label: 'Since',  cls: 'px-4 hidden xl:table-cell' },
                   ].map(col => (
                     <SortableTh key={col.field} {...col} sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   ))}
-                  <th className="py-3 px-4 text-right font-bold">Actions</th>
+                  <th className="py-3 px-2 sm:px-4 text-right font-bold">
+                    <span className="sr-only sm:not-sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -258,10 +263,18 @@ export default function SalesRepsTab() {
                           <div className="min-w-0">
                             <div className="text-slate-900 dark:text-white font-bold uppercase truncate">{name}</div>
                             <div className="text-slate-500 dark:text-slate-400 text-sm truncate">{rep.email}</div>
+                            <div className="sm:hidden mt-1 text-xs font-bold">
+                              <span className={rep.is_active
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-slate-400 dark:text-slate-500'}>
+                                {rep.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                              <span className="text-slate-400 dark:text-slate-500"> · {rep.total_visits} visit{rep.total_visits !== 1 ? 's' : ''}</span>
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 hidden sm:table-cell">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${
                           rep.is_active
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700/50'
@@ -279,8 +292,8 @@ export default function SalesRepsTab() {
                       <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 text-sm hidden xl:table-cell whitespace-nowrap">
                         {formatDateShortPacific(rep.created_at)}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
+                      <td className="py-3.5 px-2 sm:px-4 text-right">
+                        <div className="inline-flex items-center gap-1 sm:gap-1.5">
                           <button
                             onClick={() => { setEditTarget(rep); setShowForm(true); }}
                             title="Edit rep"

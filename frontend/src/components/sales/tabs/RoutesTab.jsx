@@ -6,7 +6,8 @@ import { formatYmd } from '../../../utils/dateFormat';
 import RoutePlanner from '../RoutePlanner';
 import ConfirmModal from '../ConfirmModal';
 import SortableTh from '../SortableTh';
-import { ICON_BTN } from '../ui';
+import TabHeader from '../TabHeader';
+import { ICON_BTN, FILTER_INPUT, FILTER_CLEAR } from '../ui';
 import useSort from '../useSort';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../pageSize';
 import PaginationBar from '../../admin/shared/PaginationBar';
@@ -95,22 +96,15 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
     <div>
       {/* Header — a record, not a workbench: runs are born from saved routes
           and zones, so there's no create button here. */}
-      {!hideHeader && (
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-          <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Run History</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Past runs and their progress</p>
-          </div>
-        </div>
-      )}
-
-      {/* Filter bar */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <TabHeader
+        title={hideHeader ? undefined : 'Run History'}
+        subtitle={hideHeader ? undefined : 'Past runs and their progress'}
+      >
         {isAdmin && (
           <select
             value={filterRep}
             onChange={(e) => { setFilterRep(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/40 transition-all"
+            className={FILTER_INPUT}
           >
             <option value="">All Reps</option>
             {reps.map(r => (
@@ -124,18 +118,18 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
           type="date"
           value={filterDate}
           onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
-          className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/40 transition-all"
+          className={FILTER_INPUT}
         />
         {(filterRep || filterDate) && (
           <button
             onClick={() => { setFilterRep(''); setFilterDate(''); setCurrentPage(1); }}
-            className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+            className={FILTER_CLEAR}
           >
             <span className="material-symbols-outlined text-sm">close</span>
             Clear
           </button>
         )}
-      </div>
+      </TabHeader>
 
       {/* Table */}
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
@@ -165,13 +159,17 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                       { field: 'name',             label: 'Route',    cls: 'px-4 hidden sm:table-cell' },
                       // A rep only ever sees their own routes — the column is noise.
                       ...(isAdmin ? [{ field: 'assigned_to_name', label: 'Rep', cls: 'px-4 hidden md:table-cell' }] : []),
-                      { field: 'progress',         label: 'Progress', cls: 'px-4' },
+                      { field: 'progress',         label: 'Progress', cls: 'px-2 sm:px-4' },
                     ].map(col => (
                       <SortableTh key={col.field} {...col} sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                     ))}
                     {/* Zone comes from a join, and the rep filter covers the same need */}
                     <th className="py-3 px-4 font-bold hidden xl:table-cell">Zone</th>
-                    <th className="py-3 px-4 text-right font-bold">Actions</th>
+                    {/* The word "Actions" is wider than the buttons under it —
+                        on a phone that stole ~60px and pushed them off screen. */}
+                    <th className="py-3 px-2 sm:px-4 text-right font-bold">
+                      <span className="sr-only sm:not-sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -202,9 +200,9 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                             {route.assigned_to_name || repName(route.assigned_to)}
                           </td>
                         )}
-                        <td className="py-3.5 px-4 min-w-[140px]">
+                        <td className="py-3.5 px-2 sm:px-4 sm:min-w-[140px]">
                           <div className="flex items-center gap-2">
-                            <div className="h-1.5 flex-1 max-w-[90px] bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div className="h-1.5 flex-1 min-w-[36px] max-w-[60px] sm:max-w-[90px] bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all duration-300 ${complete ? 'bg-green-500' : 'bg-primary'}`}
                                 style={{ width: `${progress}%` }}
@@ -218,7 +216,7 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                         <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-sm hidden xl:table-cell">
                           {route.zone_name || zoneName(route.zone_id) || <span className="text-slate-400 dark:text-slate-600">—</span>}
                         </td>
-                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-3.5 px-2 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex items-center gap-1.5">
                             <button
                               onClick={() => handleDelete(route)}
