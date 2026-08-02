@@ -449,10 +449,10 @@ export default function Quote() {
   return (
     <>
       <Helmet>
-        <title>Submit Pneumatic Tool Repair Request | CNS Tool Repair Surrey BC</title>
+        <title>Submit a Tool Repair Request | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We'll inspect your tool, provide a detailed quote, and complete professional repairs. Serving automotive, fleet, manufacturing, and construction industries."
+          content="Submit a repair request for industrial pneumatic tools in Surrey, BC. We inspect your tool, provide a detailed quote, and complete the repair."
         />
         <meta
           name="keywords"

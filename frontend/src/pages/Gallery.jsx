@@ -65,10 +65,10 @@ export default function Gallery() {
   return (
     <>
       <Helmet>
-        <title>Professional Workshop Gallery | CNS Tool Repair Surrey BC</title>
+        <title>Workshop Gallery | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Browse photos of our Surrey BC pneumatic tool repair facility. See our specialized equipment, diagnostic stations, and industrial tools we service for automotive, manufacturing, construction, and aerospace companies."
+          content="Photos of our Surrey, BC pneumatic tool repair facility - diagnostic equipment, testing stations, and the industrial tools we service."
         />
         <meta
           name="keywords"

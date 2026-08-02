@@ -17,6 +17,7 @@ import Contact from './pages/Contact';
 import Gallery from './pages/Gallery';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import NotFound from './pages/NotFound';
 import { lazy, Suspense } from 'react';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
 import ProtectedSalesRoute from './components/sales/ProtectedSalesRoute';
@@ -43,10 +44,10 @@ function App() {
     <HelmetProvider>
       {/* Default meta tags (overridden by page-specific Helmet components) */}
       <Helmet>
-        <title>CNS Tool Repair | Industrial Pneumatic Tool Repair Surrey BC</title>
+        <title>Pneumatic Tool Repair in Surrey, BC | CNS Tool Repair</title>
         <meta
           name="description"
-          content="Industrial pneumatic tool repair services in Surrey, BC. Professional diagnostics, OEM parts, and expert service for automotive, fleet, manufacturing, and construction industries."
+          content="Industrial pneumatic tool repair in Surrey, BC. Professional diagnostics, OEM-compatible parts, and in-shop service for automotive, fleet, and manufacturing."
         />
       </Helmet>
       <ThemeProvider>
@@ -131,6 +132,7 @@ function App() {
                         <Route path="/gallery" element={<Gallery />} />
                         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                         <Route path="/terms-of-service" element={<TermsOfService />} />
+                        <Route path="*" element={<NotFound />} />
                       </Routes>
                       <Footer />
                       <BottomNav />

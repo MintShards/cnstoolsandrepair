@@ -288,11 +288,11 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href={`mailto:${settings?.contact?.email || 'contact@cnstoolrepair.com'}`}
+                  href={`mailto:${settings?.contact?.email || 'service@cnstoolrepair.com'}`}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
                   <span className="material-symbols-outlined text-base text-primary">mail</span>
-                  {settings?.contact?.email || 'contact@cnstoolrepair.com'}
+                  {settings?.contact?.email || 'service@cnstoolrepair.com'}
                 </a>
               </li>
               <li>

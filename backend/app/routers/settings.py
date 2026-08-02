@@ -18,19 +18,19 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 DEFAULT_SETTINGS = {
     "contact": {
-        "phone": "(604) 555-0123",
-        "phoneLink": "6045550123",
-        "email": "contact@cnstoolrepair.com",
+        "phone": "(778) 488-0777",
+        "phoneLink": "7784880777",
+        "email": "service@cnstoolrepair.com",
         "address": {
-            "street": "Surrey, BC, Canada",
+            "street": "Unit 65 13335 115 Ave",
             "city": "Surrey",
             "province": "BC",
-            "postalCode": "",
+            "postalCode": "V3R 0R8",
             "country": "Canada"
         }
     },
     "hours": {
-        "weekdays": "Monday - Friday: 8:00 AM - 5:00 PM",
+        "weekdays": "Monday - Friday: 9:00 AM - 4:00 PM",
         "weekend": "Saturday - Sunday: Closed",
         "timezone": "PST"
     },

@@ -33,10 +33,10 @@ export default function Industries() {
   return (
     <>
       <Helmet>
-        <title>Industries We Serve | Automotive, Fleet, Manufacturing, Construction | CNS Tool Repair Surrey BC</title>
+        <title>Industries We Serve | Pneumatic Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Pneumatic tool repair for 10 major industrial sectors: Automotive, Fleet Maintenance, Manufacturing, Metal Fabrication, Construction, Oil & Gas, Aerospace, Marine, Mining, and MRO. Serving Surrey and Lower Mainland businesses."
+          content="Pneumatic tool repair for automotive, fleet, manufacturing, construction, marine, mining, and MRO operations across Surrey and the Lower Mainland."
         />
         <meta
           name="keywords"

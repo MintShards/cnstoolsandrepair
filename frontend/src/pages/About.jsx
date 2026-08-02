@@ -62,10 +62,10 @@ export default function About() {
   return (
     <>
       <Helmet>
-        <title>About Us | Industrial Pneumatic Tool Repair & Maintenance | CNS Tool Repair Surrey BC</title>
+        <title>About CNS Tool Repair | Pneumatic Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Industrial pneumatic tool repair services based in Surrey, British Columbia. Certified technicians with years of hands-on experience servicing pneumatic tools for automotive, fleet, manufacturing, construction, oil & gas, aerospace, marine, mining, and MRO sectors."
+          content="Industrial pneumatic tool repair based in Surrey, BC. Experienced technicians servicing air tools for automotive, fleet, manufacturing, and MRO sectors."
         />
         <meta
           name="keywords"

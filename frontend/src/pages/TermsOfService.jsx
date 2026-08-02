@@ -249,8 +249,8 @@ export default function TermsOfService() {
                 <p>Surrey, British Columbia, Canada</p>
                 <p>
                   Email:{' '}
-                  <a href="mailto:contact@cnstoolrepair.com" className="text-primary hover:underline font-bold">
-                    contact@cnstoolrepair.com
+                  <a href="mailto:service@cnstoolrepair.com" className="text-primary hover:underline font-bold">
+                    service@cnstoolrepair.com
                   </a>
                 </p>
               </address>

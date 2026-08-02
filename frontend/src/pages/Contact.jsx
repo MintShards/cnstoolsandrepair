@@ -95,10 +95,10 @@ export default function Contact() {
   return (
     <>
       <Helmet>
-        <title>Contact CNS Tool Repair | Pneumatic Tool Repair Surrey BC | Phone & Location</title>
+        <title>Contact CNS Tool Repair | Surrey BC Tool Repair Shop</title>
         <meta
           name="description"
-          content="Contact CNS Tool Repair in Surrey, BC. Get in touch for industrial pneumatic tool repair services. Phone, email, and location information for Metro Vancouver's premier tool repair specialists."
+          content="Contact CNS Tool Repair in Surrey, BC. Phone, email, hours, and directions to our pneumatic tool repair facility serving Metro Vancouver."
         />
         <meta
           name="keywords"

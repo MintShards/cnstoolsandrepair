@@ -61,8 +61,8 @@ async def main():
             "tagline": "Expert Pneumatic Tool Repair & Maintenance",
 
             # Contact Information
-            "phone": "(604) 581-8930",
-            "email": "contact@cnstoolrepair.com",
+            "phone": "(778) 488-0777",
+            "email": "service@cnstoolrepair.com",
             "notification_email": "cnstoolrepair@gmail.com",
 
             # Address
@@ -86,7 +86,7 @@ async def main():
 
             # Map Configuration
             "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d20858.147554763895!2d-122.8638754307069!3d49.195466912791005!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x5485d7823fdd1005%3A0xe9d616f8891ef184!2sCNS%20Tools%20And%20Repair!5e0!3m2!1sen!2sca!4v1772435502604!5m2!1sen!2sca",
-            "map_directions_url": "https://www.google.com/maps/dir/?api=1&destination=CNS+Tools+And+Repair,13335+115+Ave,Surrey,BC+V3R+2X1",
+            "map_directions_url": "https://www.google.com/maps/dir/?api=1&destination=CNS+Tools+And+Repair,13335+115+Ave,Surrey,BC+V3R+0R8",
 
             # Social Media (optional)
             "social": {

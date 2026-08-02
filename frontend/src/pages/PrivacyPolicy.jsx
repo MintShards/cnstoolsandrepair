@@ -148,7 +148,7 @@ export default function PrivacyPolicy() {
                 <li>Withdraw consent for our use of your information</li>
               </ul>
               <p className="mt-3">
-                To exercise these rights, contact us at <a href="mailto:contact@cnstoolrepair.com" className="text-primary hover:underline font-bold">contact@cnstoolrepair.com</a>. We will respond within 30 days.
+                To exercise these rights, contact us at <a href="mailto:service@cnstoolrepair.com" className="text-primary hover:underline font-bold">service@cnstoolrepair.com</a>. We will respond within 30 days.
               </p>
             </div>
 
@@ -185,8 +185,8 @@ export default function PrivacyPolicy() {
                 <p>Surrey, British Columbia, Canada</p>
                 <p>
                   Email:{' '}
-                  <a href="mailto:contact@cnstoolrepair.com" className="text-primary hover:underline font-bold">
-                    contact@cnstoolrepair.com
+                  <a href="mailto:service@cnstoolrepair.com" className="text-primary hover:underline font-bold">
+                    service@cnstoolrepair.com
                   </a>
                 </p>
               </address>

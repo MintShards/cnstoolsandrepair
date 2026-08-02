@@ -33,10 +33,10 @@ export default function Services() {
   return (
     <>
       <Helmet>
-        <title>Pneumatic Tool Services & Repair | Tools We Repair | CNS Tool Repair Surrey BC</title>
+        <title>Pneumatic Tool Repair Services | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors. Complete repair services for air tools, electric tools, and lifting equipment."
+          content="Expert pneumatic tool repair in Surrey, BC. Factory-trained technicians servicing air tools, electric tools, and lifting equipment for industrial clients."
         />
         <meta
           name="keywords"
