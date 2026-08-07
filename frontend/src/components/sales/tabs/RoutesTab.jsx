@@ -246,6 +246,10 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                       {expanded && (
                         <tr className="bg-slate-50 dark:bg-slate-800/30">
                           <td colSpan={6} className="px-4 sm:px-6 py-2">
+                            {/* w-0 + min-w-full keeps long visit notes from
+                                widening the table past the phone viewport —
+                                the cell truncates instead of scrolling. */}
+                            <div className="w-0 min-w-full">
                             {(route.stops || []).length === 0 ? (
                               <p className="text-xs text-slate-400 dark:text-slate-500 py-2">No stops on this run.</p>
                             ) : (
@@ -296,6 +300,7 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                                 ))}
                               </div>
                             )}
+                            </div>
                           </td>
                         </tr>
                       )}
