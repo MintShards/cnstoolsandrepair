@@ -247,7 +247,10 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
                           <div className="flex items-center gap-2 min-w-0">
                             {/* Interest has no column on mobile, so carry it as a dot */}
                             <InterestDot level={biz.interest_level} withLabel={false} className="sm:hidden flex-shrink-0" />
-                            <span className="text-slate-900 dark:text-white font-bold uppercase truncate">{biz.company_name}</span>
+                            {/* Sibling names differ at the tail (Ashcroft X,
+                                Ashcroft Y) — wrap on phones instead of cutting
+                                off the one distinguishing word. */}
+                            <span className="text-slate-900 dark:text-white font-bold uppercase min-w-0 break-words sm:truncate">{biz.company_name}</span>
                             {/* Status has no column on mobile, so flag customers inline */}
                             {biz.customer_id && (
                               <StatusLabel isCustomer className="sm:hidden flex-shrink-0" />
