@@ -258,22 +258,32 @@ export default function TodayRouteTab({ currentUser, onTabSwitch, refreshSignal 
         </div>
       )}
 
-      {/* Route header */}
+      {/* Route header — title, then labelled facts; the old run-on meta line
+          ("Delta  Rep: …  0 of 2 stops completed") crumpled on phones. */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {route.name || "Today's Route"}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {route.zone_name && <span className="mr-2">{route.zone_name}</span>}
-            {route.assigned_to_name && routes.length > 1 && <span className="mr-2">Rep: {route.assigned_to_name}</span>}
-            {completedCount} of {total} stops completed
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {(route.zone_path || route.zone_name) && (
+              <span className="inline-flex items-center gap-1 min-w-0">
+                <span className="material-symbols-outlined text-sm">map</span>
+                <span className="truncate">{route.zone_path || route.zone_name}</span>
+              </span>
+            )}
+            {route.assigned_to_name && routes.length > 1 && (
+              <span className="inline-flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">person</span>
+                {route.assigned_to_name}
+              </span>
+            )}
+          </div>
         </div>
-        {/* Progress bar */}
-        <div className="sm:w-48">
-          <div className="flex justify-between text-xs text-slate-500 mb-1">
-            <span>Progress</span>
+        {/* Progress — the stop count lives with the bar it measures */}
+        <div className="sm:w-48 flex-shrink-0">
+          <div className="flex justify-between gap-3 text-xs text-slate-500 mb-1">
+            <span>{completedCount} of {total} stops</span>
             <span>{progress}%</span>
           </div>
           <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -285,29 +295,33 @@ export default function TodayRouteTab({ currentUser, onTabSwitch, refreshSignal 
         </div>
       </div>
 
-      {/* Action bar: one launch for the whole remaining run */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
+      {/* Action bar: the launch button owns the phone row; secondary actions
+          share the line below it. On sm+ the wrapper dissolves (contents) and
+          everything sits in one wrap row as before. */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 mb-5">
         {nav && pending.length > 0 && (
-          <a href={nav.url} target="_blank" rel="noopener noreferrer" className={BTN_PRIMARY}>
+          <a href={nav.url} target="_blank" rel="noopener noreferrer" className={`${BTN_PRIMARY} w-full sm:w-auto`}>
             <span className="material-symbols-outlined text-lg">navigation</span>
             {pending.length <= MAX_NAV_STOPS
               ? `Navigate ${pending.length} stop${pending.length !== 1 ? 's' : ''}`
               : `Navigate next ${nav.included} of ${pending.length}`}
           </a>
         )}
-        <button onClick={() => setShowPlanner(true)} className={`${BTN_NEUTRAL} text-xs`}>
-          <span className="material-symbols-outlined text-base">edit_location_alt</span>
-          Edit Route
-        </button>
-        {followUpsChip}
-        <button
-          onClick={() => setConfirmDeleteRun(true)}
-          title="Clear from today — kept in Run History"
-          aria-label={`Clear ${route.name || "today's run"} from today`}
-          className={`${ICON_BTN} hover:text-slate-700 dark:hover:text-white ml-auto`}
-        >
-          <span className="material-symbols-outlined text-base">archive</span>
-        </button>
+        <div className="flex items-center gap-2 sm:contents">
+          <button onClick={() => setShowPlanner(true)} className={`${BTN_NEUTRAL} text-xs`}>
+            <span className="material-symbols-outlined text-base">edit_location_alt</span>
+            Edit Route
+          </button>
+          {followUpsChip}
+          <button
+            onClick={() => setConfirmDeleteRun(true)}
+            title="Clear from today — kept in Run History"
+            aria-label={`Clear ${route.name || "today's run"} from today`}
+            className={`${ICON_BTN} hover:text-slate-700 dark:hover:text-white ml-auto`}
+          >
+            <span className="material-symbols-outlined text-base">archive</span>
+          </button>
+        </div>
       </div>
 
       {route.stops?.length === 0 ? (
