@@ -209,25 +209,49 @@ export default function TodayRouteTab({ currentUser, onTabSwitch, refreshSignal 
 
   return (
     <div>
-      {/* Route selector — only shown when multiple routes exist today */}
+      {/* Route selector — only shown when multiple routes exist today. On a
+          phone each run is one slim card with just the necessities; desktop
+          chips add rep, start time and a mini progress bar to tell
+          otherwise-identical runs apart. */}
       {routes.length > 1 && (
-        <div className="flex gap-2 flex-wrap mb-5">
+        <div className="flex flex-col gap-2 mb-5 sm:flex-row sm:flex-wrap">
           {routes.map(r => {
             const isSelected = r.id === route.id;
             const c = r.stops_completed ?? 0;
             const t = r.stops_total ?? 0;
+            const pct = t > 0 ? Math.round((c / t) * 100) : 0;
+            const runDone = t > 0 && c === t;
             return (
               <button
                 key={r.id}
                 onClick={() => setSelectedId(r.id)}
-                className={`flex flex-col items-start px-4 py-2.5 rounded-xl border text-left transition-colors text-sm ${
+                className={`w-full sm:w-auto px-3.5 py-2.5 sm:py-2 rounded-xl border text-left transition-colors text-sm ${
                   isSelected
                     ? 'bg-primary/10 border-primary/30 text-primary'
                     : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-primary/30'
                 }`}
               >
-                <span className="font-black uppercase tracking-tight text-xs">{r.name || 'Route'}</span>
-                <span className="text-xs opacity-70">{r.assigned_to_name || 'Unknown Rep'} · {c}/{t} stops</span>
+                <span className="flex items-center justify-between sm:justify-start gap-2">
+                  <span className="flex items-center gap-1.5 font-black uppercase tracking-tight text-xs truncate">
+                    {r.name || 'Route'}
+                    {runDone && (
+                      <span className="material-symbols-outlined text-sm text-green-500">check_circle</span>
+                    )}
+                  </span>
+                  <span className="text-xs font-bold opacity-80 whitespace-nowrap sm:hidden">
+                    {c}/{t}
+                  </span>
+                </span>
+                <span className="hidden sm:block text-xs opacity-70 whitespace-nowrap">
+                  {isAdmin ? `${r.assigned_to_name || 'Unknown Rep'} · ` : ''}
+                  {c}/{t} · started {formatTimePacific(r.created_at)}
+                </span>
+                <span className="hidden sm:block mt-1.5 h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <span
+                    className={`block h-full rounded-full transition-all ${runDone ? 'bg-green-500' : 'bg-primary'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </span>
               </button>
             );
           })}
