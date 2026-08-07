@@ -82,7 +82,7 @@ export default function BusinessForm({ business, zones, defaultZoneIds, onSucces
   useEffect(() => {
     let cancelled = false;
     savedRoutesAPI.list()
-      .then((all) => {
+      .then(({ data: all }) => {
         if (cancelled) return;
         setSavedRoutes(all);
         if (business) {

@@ -43,6 +43,7 @@ function SectionBar({ icon, label, open, onToggle }) {
 // History lives with the zones, where the routes themselves do.
 function RoutesHub({ currentUser, onTabSwitch }) {
   const [todaySignal, setTodaySignal] = useState(0);
+  const [savedSignal, setSavedSignal] = useState(0);
   const [savedOpen, setSavedOpen] = useState(false);
 
   return (
@@ -51,6 +52,7 @@ function RoutesHub({ currentUser, onTabSwitch }) {
         currentUser={currentUser}
         onTabSwitch={onTabSwitch}
         refreshSignal={todaySignal}
+        onMutate={() => setSavedSignal((v) => v + 1)}
       />
 
       <div className="mt-8">
@@ -63,9 +65,11 @@ function RoutesHub({ currentUser, onTabSwitch }) {
         {savedOpen && (
           <div className="mt-3">
             {/* Starting a saved route creates a run — the runner above needs
-                to hear about it. */}
+                to hear about it. Completing stops up there moves sweep counts
+                down here, so the signals run both ways. */}
             <SavedRoutesSection
               onChanged={() => setTodaySignal((v) => v + 1)}
+              refreshSignal={savedSignal}
             />
           </div>
         )}

@@ -705,7 +705,8 @@ export const routesAPI = {
 export const savedRoutesAPI = {
   list: async (params = {}) => {
     const response = await api.get('/api/saved-routes/', { params });
-    return response.data;
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { data: response.data, total };
   },
   create: async (data) => {
     const response = await api.post('/api/saved-routes/', data);

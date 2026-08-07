@@ -45,7 +45,7 @@ def _person_name(doc: dict) -> Optional[str]:
 
 
 async def _build_route_responses(db, docs: List[dict]) -> List[RouteResponse]:
-    """Build responses for a page of routes using three queries in total.
+    """Build responses for a page of routes using four queries in total.
 
     Doing this per row meant one user + one zone lookup per route plus two more
     per stop — a 20-route page issued a few hundred sequential round trips.
@@ -62,6 +62,18 @@ async def _build_route_responses(db, docs: List[dict]) -> List[RouteResponse]:
     businesses = await _fetch_by_ids(db.businesses, business_ids)
     users = await _fetch_by_ids(db.users, user_ids)
     zones = await _fetch_by_ids(db.zones, zone_ids)
+    # Parents complete the zone path for subzones.
+    parent_ids = {z.get("parent_id") for z in zones.values() if z.get("parent_id")}
+    zones.update(await _fetch_by_ids(db.zones, parent_ids - set(zones)))
+
+    # The visit written up at each stop, keyed by (route, business). Ascending
+    # sort means a later visit overwrites an earlier one, keeping the latest.
+    visits: dict = {}
+    route_ids = [doc["id"] for doc in docs]
+    if route_ids:
+        cursor = db.visits.find({"route_id": {"$in": route_ids}}).sort("visited_at", 1)
+        async for v in cursor:
+            visits[(v["route_id"], v["business_id"])] = v
 
     responses = []
     for doc in docs:
@@ -81,6 +93,12 @@ async def _build_route_responses(db, docs: List[dict]) -> List[RouteResponse]:
                 detail.address = biz.get("address")
                 detail.phone = biz.get("phone")
                 detail.notes = biz.get("notes")
+            visit = visits.get((doc["id"], stop["business_id"]))
+            if visit:
+                detail.visit_id = str(visit["_id"])
+                detail.visit_notes = visit.get("notes")
+                detail.follow_up_date = visit.get("follow_up_date")
+                detail.follow_up_note = visit.get("follow_up_note")
             stop_details.append(detail)
 
         route_zone = zones.get(doc.get("zone_id"))
@@ -90,11 +108,14 @@ async def _build_route_responses(db, docs: List[dict]) -> List[RouteResponse]:
             date=doc["date"],
             zone_id=doc.get("zone_id"),
             zone_name=route_zone["name"] if route_zone else None,
+            zone_path=zone_tree.zone_path(doc.get("zone_id"), zones),
             stops=stop_details,
             stops_total=len(stop_details),
             stops_completed=sum(1 for s in stop_details if s.completed),
             assigned_to=doc["assigned_to"],
             assigned_to_name=_person_name(users.get(doc["assigned_to"])),
+            dismissed=bool(doc.get("dismissed")),
+            saved_route_id=doc.get("saved_route_id"),
             created_by=doc["created_by"],
             created_at=doc["created_at"],
             updated_at=doc["updated_at"],

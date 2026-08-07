@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.database import get_database
 from app.dependencies.auth import require_sales_or_admin
@@ -14,7 +14,7 @@ from app.models.route_management import (
     SavedRouteResponse,
     SavedRouteBusiness,
 )
-from app.services.zone_tree import coverage_cutoff
+from app.services.zone_tree import coverage_cutoff, zone_path
 from app.utils import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/saved-routes", tags=["saved-routes"])
@@ -45,6 +45,9 @@ async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
         business_ids.update(doc.get("business_ids", []))
 
     zones = await _fetch_by_ids(db.zones, zone_ids)
+    # Parents complete the zone path for subzones.
+    parent_ids = {z.get("parent_id") for z in zones.values() if z.get("parent_id")}
+    zones.update(await _fetch_by_ids(db.zones, parent_ids - set(zones)))
     businesses = await _fetch_by_ids(db.businesses, business_ids)
 
     # A sweep is a fully-completed run stamped from this saved route. Dismissed
@@ -59,10 +62,11 @@ async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
                 "stops.0": {"$exists": True},
                 "stops": {"$not": {"$elemMatch": {"completed": {"$ne": True}}}},
             }},
-            {"$group": {"_id": "$saved_route_id", "count": {"$sum": 1}}},
+            # Run dates are YYYY-MM-DD strings, so $max is the latest sweep day.
+            {"$group": {"_id": "$saved_route_id", "count": {"$sum": 1}, "last_date": {"$max": "$date"}}},
         ]
         async for row in db.routes.aggregate(pipeline):
-            sweeps[row["_id"]] = row["count"]
+            sweeps[row["_id"]] = row
 
     cutoff = coverage_cutoff()
     responses = []
@@ -83,17 +87,20 @@ async def _build_responses(db, docs: List[dict]) -> List[SavedRouteResponse]:
                     covered += 1
         zone = zones.get(doc.get("zone_id"))
         total = len(members)
+        sweep = sweeps.get(doc["id"]) or {}
         responses.append(SavedRouteResponse(
             id=doc["id"],
             name=doc["name"],
             zone_id=doc.get("zone_id"),
             zone_name=zone["name"] if zone else None,
+            zone_path=zone_path(doc.get("zone_id"), zones),
             business_ids=[m.id for m in members],
             businesses=members,
             business_count=total,
             covered_count=covered,
             coverage_pct=round(covered / total * 100) if total else None,
-            times_swept=sweeps.get(doc["id"], 0),
+            times_swept=sweep.get("count", 0),
+            last_swept_date=sweep.get("last_date"),
             created_by=doc["created_by"],
             created_at=doc["created_at"],
             updated_at=doc["updated_at"],
@@ -125,12 +132,18 @@ async def _validate_zone(db, zone_id) -> None:
 
 @router.get("/", response_model=List[SavedRouteResponse])
 async def list_saved_routes(
+    response: Response,
     zone_id: Optional[str] = None,
     business_id: Optional[str] = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=0, ge=0, le=100),  # 0 = unpaged, for pickers
     current_user: User = Depends(require_sales_or_admin),
 ):
     """List saved routes. They're a shared team library — every rep sees all
     of them; that's what makes "tap any route, any day" work.
+
+    Ordered by zone path then name so a page clusters cleanly under the zone
+    headers the library draws; routes without a zone sink to the end.
     """
     db = get_database()
     query: dict = {}
@@ -140,10 +153,28 @@ async def list_saved_routes(
         query["business_ids"] = business_id
 
     docs = []
-    async for doc in db.saved_routes.find(query).sort("name", 1):
+    async for doc in db.saved_routes.find(query):
         doc = convert_objectid_to_str(doc)
         doc["id"] = doc.pop("_id")
         docs.append(doc)
+
+    # The sort key is a joined field, so ordering happens here — and the page
+    # is sliced BEFORE the expensive coverage/sweep joins run on it. The zones
+    # collection is small enough to pull whole.
+    zones_all = {str(z["_id"]): z async for z in db.zones.find({})}
+
+    def sort_key(d):
+        path = zone_path(d.get("zone_id"), zones_all)
+        return (path is None, (path or "").lower(), d["name"].lower())
+
+    docs.sort(key=sort_key)
+
+    response.headers["X-Total-Count"] = str(len(docs))
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
+    if limit:
+        docs = docs[skip:skip + limit]
+    elif skip:
+        docs = docs[skip:]
     return await _build_responses(db, docs)
 
 

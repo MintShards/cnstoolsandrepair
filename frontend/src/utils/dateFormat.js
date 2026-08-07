@@ -75,12 +75,7 @@ export const daysSince = (dateString) => {
   return Math.round((today - thenDay) / 86400000);
 };
 
-/**
- * Short "how long ago" label — for lists where recency matters more than the
- * exact date (e.g. which prospects are going stale).
- */
-export const formatAge = (dateString) => {
-  const days = daysSince(dateString);
+const ageLabel = (days) => {
   if (days === null) return null;
   if (days <= 0) return 'today';
   if (days === 1) return 'yesterday';
@@ -89,6 +84,28 @@ export const formatAge = (dateString) => {
   const years = Math.floor(days / 365);
   return `${years}y ago`;
 };
+
+/**
+ * Short "how long ago" label — for lists where recency matters more than the
+ * exact date (e.g. which prospects are going stale).
+ */
+export const formatAge = (dateString) => ageLabel(daysSince(dateString));
+
+/**
+ * Pacific calendar days between a plain YYYY-MM-DD string (route/follow-up
+ * dates, already shop-local) and today. Compared as dates, never through a
+ * timezone, so the day can't shift.
+ */
+export const daysSinceYmd = (ymd) => {
+  if (!ymd) return null;
+  const then = Date.parse(`${ymd}T00:00:00Z`);
+  if (Number.isNaN(then)) return null;
+  const today = Date.parse(`${getTodayPacific()}T00:00:00Z`);
+  return Math.round((today - then) / 86400000);
+};
+
+/** formatAge for plain YYYY-MM-DD strings. */
+export const formatYmdAge = (ymd) => ageLabel(daysSinceYmd(ymd));
 
 /**
  * Format a plain YYYY-MM-DD string (route/follow-up dates) as "Mar 12, 2026".

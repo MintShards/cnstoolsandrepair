@@ -270,6 +270,11 @@ async def create_route_management_indexes():
     )
     print("  ✓ Created visits_rep_follow_up_idx")
 
+    # Stop enrichment joins visits back onto runs by route.
+    print("  Creating index: visits.route_id...")
+    await db.visits.create_index("route_id", name="visits_route_id_idx")
+    print("  ✓ Created visits_route_id_idx")
+
     print("  Creating index: saved_routes.zone_id...")
     await db.saved_routes.create_index("zone_id", name="saved_routes_zone_id_idx")
     print("  ✓ Created saved_routes_zone_id_idx")

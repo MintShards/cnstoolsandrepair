@@ -239,6 +239,13 @@ class RouteStopDetail(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     notes: Optional[str] = None
+    # The visit logged at this stop on this run, if any. A completed stop
+    # without one was ticked off with "Done" and never written up — the UI
+    # surfaces that gap.
+    visit_id: Optional[str] = None
+    visit_notes: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    follow_up_note: Optional[str] = None
 
 
 class RouteResponse(BaseModel):
@@ -247,11 +254,18 @@ class RouteResponse(BaseModel):
     date: str
     zone_id: Optional[str] = None
     zone_name: Optional[str] = None
+    # "Parent › Child" when the zone is a subzone, else just the zone name.
+    zone_path: Optional[str] = None
     stops: List[RouteStopDetail] = []
     stops_total: int = 0
     stops_completed: int = 0
     assigned_to: str
     assigned_to_name: Optional[str] = None   # populated at query time
+    # Cleared from the Today view — the run still counts in history and sweeps,
+    # but without this flag a cleared 0/2 run reads as abandoned work.
+    dismissed: bool = False
+    # Set when Start stamped this run from a saved route.
+    saved_route_id: Optional[str] = None
     created_by: str
     created_at: datetime
     updated_at: datetime
@@ -328,6 +342,9 @@ class SavedRouteResponse(BaseModel):
     name: str
     zone_id: Optional[str] = None
     zone_name: Optional[str] = None          # populated at query time
+    # "Parent › Child" when the zone is a subzone, else just the zone name —
+    # the cross-zone library groups its rows under this.
+    zone_path: Optional[str] = None
     business_ids: List[str] = []
     businesses: List[SavedRouteBusiness] = []  # populated, in list order
     business_count: int = 0
@@ -339,6 +356,8 @@ class SavedRouteResponse(BaseModel):
     coverage_pct: Optional[int] = None
     coverage_window_days: int = COVERAGE_WINDOW_DAYS
     times_swept: int = 0
+    # Run date (YYYY-MM-DD) of the most recent sweep; None when never swept.
+    last_swept_date: Optional[str] = None
     created_by: str
     created_at: datetime
     updated_at: datetime

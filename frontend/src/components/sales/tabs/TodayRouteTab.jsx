@@ -7,7 +7,7 @@ import ConfirmModal from '../ConfirmModal';
 import InterestDot from '../InterestDot';
 import { ICON_BTN, BTN_PRIMARY, BTN_NEUTRAL } from '../ui';
 import { apiErrorMessage } from '../../../utils/apiError';
-import { formatTimePacific, getTodayPacific } from '../../../utils/dateFormat';
+import { formatTimePacific, formatYmd, getTodayPacific } from '../../../utils/dateFormat';
 import { routeNavUrl, stopNavUrl, telHref, MAX_NAV_STOPS } from '../../../utils/maps';
 
 // Icon-only action set shared by every pending stop row. Neutral chrome —
@@ -426,15 +426,57 @@ export default function TodayRouteTab({ currentUser, onTabSwitch, refreshSignal 
               {showCompleted && (
                 <div className="mt-2 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-200 dark:divide-slate-700/60 overflow-hidden">
                   {done.map(stop => (
-                    <div key={stop.idx} className="flex items-center gap-3 px-4 py-2.5 opacity-70">
+                    <div key={stop.idx} className="flex items-start gap-3 px-4 py-2.5 opacity-70 hover:opacity-100 transition-opacity">
                       <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-100 dark:bg-slate-700/60 text-green-600 dark:text-green-400">
                         <span className="material-symbols-outlined text-sm">check</span>
                       </div>
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
-                        {stop.company_name || 'Unknown Business'}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
+                            {stop.company_name || 'Unknown Business'}
+                          </p>
+                          {stop.interest_level && <InterestDot level={stop.interest_level} />}
+                          {stop.follow_up_date && (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap"
+                              title={`Follow-up ${formatYmd(stop.follow_up_date)}${stop.follow_up_note ? ` — ${stop.follow_up_note}` : ''}`}
+                            >
+                              <span className="material-symbols-outlined text-xs">event_upcoming</span>
+                              {formatYmd(stop.follow_up_date)}
+                            </span>
+                          )}
+                        </div>
+                        {/* The outcome line: what that check mark actually means. */}
+                        {stop.visit_id ? (
+                          stop.visit_notes ? (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 italic truncate mt-0.5" title={stop.visit_notes}>
+                              &ldquo;{stop.visit_notes}&rdquo;
+                            </p>
+                          ) : (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Visit logged</p>
+                          )
+                        ) : (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Done — no visit logged</p>
+                        )}
+                      </div>
+                      {/* A ticked-off stop can still be written up after the fact. */}
+                      {!stop.visit_id && (
+                        <button
+                          onClick={() => setVisitTarget({
+                            businessId: stop.business_id,
+                            businessName: stop.company_name,
+                            routeId: route.id,
+                            initialInterest: stop.interest_level,
+                          })}
+                          title="Write up this visit"
+                          aria-label={`Log visit at ${stop.company_name || 'stop'}`}
+                          className={`${ICON_BTN} hover:text-primary flex-shrink-0`}
+                        >
+                          <span className="material-symbols-outlined text-base">edit_note</span>
+                        </button>
+                      )}
                       {stop.completed_at && (
-                        <span className="ml-auto text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap flex-shrink-0 pt-1">
                           {formatTimePacific(stop.completed_at)}
                         </span>
                       )}

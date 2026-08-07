@@ -21,6 +21,20 @@ def coverage_cutoff() -> datetime:
     return datetime.utcnow() - timedelta(days=COVERAGE_WINDOW_DAYS)
 
 
+def zone_path(zone_id, zones: dict):
+    """'Parent › Child' for a subzone, the zone's own name otherwise — a
+    subzone's name alone can't tell which zone it sits under.
+
+    ``zones`` is a prefetched {id: zone doc} map that must already contain the
+    parent for the path to include it.
+    """
+    zone = zones.get(zone_id)
+    if not zone:
+        return None
+    parent = zones.get(zone.get("parent_id"))
+    return f"{parent['name']} › {zone['name']}" if parent else zone["name"]
+
+
 async def child_ids(db, zone_id: str) -> List[str]:
     """Ids of the zones directly inside ``zone_id`` (one level only)."""
     cursor = db.zones.find({"parent_id": zone_id}, {"_id": 1})

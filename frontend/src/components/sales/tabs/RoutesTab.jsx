@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { routesAPI, salesRepsAPI, zonesAPI } from '../../../services/api';
 import { useToast } from '../../../pages/sales/SalesDashboard';
-import { apiErrorMessage } from '../../../utils/apiError';
-import { formatYmd } from '../../../utils/dateFormat';
+import { formatTimePacific, formatYmd } from '../../../utils/dateFormat';
 import RoutePlanner from '../RoutePlanner';
-import ConfirmModal from '../ConfirmModal';
+import InterestDot from '../InterestDot';
 import SortableTh from '../SortableTh';
 import TabHeader from '../TabHeader';
 import { ICON_BTN, FILTER_INPUT, FILTER_CLEAR } from '../ui';
@@ -26,7 +25,7 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
   const [filterDate, setFilterDate] = useState('');
   const [showPlanner, setShowPlanner] = useState(false);
   const [editRoute, setEditRoute] = useState(null);
-  const [confirmRoute, setConfirmRoute] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [total, setTotal] = useState(0);
@@ -66,23 +65,6 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
   useEffect(() => {
     load(currentPage, pageSize);
   }, [load, currentPage, pageSize, refreshSignal]);
-
-  const handleDelete = (route) => {
-    setConfirmRoute(route);
-  };
-
-  const confirmDelete = async () => {
-    const route = confirmRoute;
-    setConfirmRoute(null);
-    try {
-      await routesAPI.delete(route.id);
-      showToast('success', 'Route deleted.');
-      load(currentPage, pageSize);
-      onMutate?.();
-    } catch (err) {
-      showToast('error', apiErrorMessage(err, 'Failed to delete route.'));
-    }
-  };
 
   const repName = (id) => {
     const r = reps.find(r => r.id === id);
@@ -165,10 +147,8 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                     ))}
                     {/* Zone comes from a join, and the rep filter covers the same need */}
                     <th className="py-3 px-4 font-bold hidden xl:table-cell">Zone</th>
-                    {/* The word "Actions" is wider than the buttons under it —
-                        on a phone that stole ~60px and pushed them off screen. */}
                     <th className="py-3 px-2 sm:px-4 text-right font-bold">
-                      <span className="sr-only sm:not-sr-only">Actions</span>
+                      <span className="sr-only">Details</span>
                     </th>
                   </tr>
                 </thead>
@@ -178,10 +158,32 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                     const stops = route.stops_total ?? 0;
                     const progress = stops > 0 ? Math.round((done / stops) * 100) : 0;
                     const complete = stops > 0 && done === stops;
+                    const expanded = expandedId === route.id;
+                    // What actually came out of the run — visible without
+                    // expanding, since these are why history gets consulted.
+                    const visitsLogged = (route.stops || []).filter(s => s.visit_id).length;
+                    const followUps = (route.stops || []).filter(s => s.follow_up_date).length;
+                    const context = (visitsLogged > 0 || followUps > 0 || route.dismissed || route.saved_route_id) && (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 font-normal normal-case">
+                        {route.saved_route_id && (
+                          <span className="material-symbols-outlined text-sm" title="Started from a saved route">bookmark</span>
+                        )}
+                        {visitsLogged > 0 && <span>{visitsLogged} visit{visitsLogged !== 1 ? 's' : ''}</span>}
+                        {followUps > 0 && <span>{followUps} follow-up{followUps !== 1 ? 's' : ''}</span>}
+                        {route.dismissed && (
+                          <span
+                            className="px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide"
+                            title="Cleared from the Today view — progress and visits kept"
+                          >
+                            cleared
+                          </span>
+                        )}
+                      </div>
+                    );
                     return (
+                      <Fragment key={route.id}>
                       <tr
-                        key={route.id}
-                        onClick={() => { setEditRoute(route); setShowPlanner(true); }}
+                        onClick={() => setExpandedId(expanded ? null : route.id)}
                         className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
                       >
                         <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
@@ -189,11 +191,13 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                           <div className="text-slate-500 dark:text-slate-400 text-sm sm:hidden truncate">
                             {route.name || 'Untitled route'}
                           </div>
+                          {context && <div className="sm:hidden mt-0.5">{context}</div>}
                         </td>
                         <td className="py-3.5 px-4 hidden sm:table-cell max-w-[200px]">
                           <span className="text-slate-900 dark:text-white font-bold uppercase truncate block">
                             {route.name || <span className="font-normal normal-case text-slate-400 dark:text-slate-600">Untitled</span>}
                           </span>
+                          {context && <div className="mt-0.5">{context}</div>}
                         </td>
                         {isAdmin && (
                           <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-sm hidden md:table-cell whitespace-nowrap">
@@ -214,21 +218,88 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-sm hidden xl:table-cell">
-                          {route.zone_name || zoneName(route.zone_id) || <span className="text-slate-400 dark:text-slate-600">—</span>}
+                          {route.zone_path || route.zone_name || zoneName(route.zone_id) || <span className="text-slate-400 dark:text-slate-600">—</span>}
                         </td>
                         <td className="py-3.5 px-2 sm:px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="inline-flex items-center gap-1.5">
+                          <div className="inline-flex items-center gap-1">
                             <button
-                              onClick={() => handleDelete(route)}
-                              title="Delete route"
-                              aria-label={`Delete route ${route.name || formatYmd(route.date)}`}
-                              className={`${ICON_BTN} hover:text-red-500 dark:hover:text-red-400`}
+                              onClick={() => { setEditRoute(route); setShowPlanner(true); }}
+                              title="Edit run"
+                              aria-label={`Edit run ${route.name || formatYmd(route.date)}`}
+                              className={`${ICON_BTN} hover:text-slate-700 dark:hover:text-white`}
                             >
-                              <span className="material-symbols-outlined text-base">delete</span>
+                              <span className="material-symbols-outlined text-base">edit</span>
+                            </button>
+                            <button
+                              onClick={() => setExpandedId(expanded ? null : route.id)}
+                              title={expanded ? 'Hide stops' : 'Show stops'}
+                              aria-label={`${expanded ? 'Hide' : 'Show'} stops for ${route.name || formatYmd(route.date)}`}
+                              aria-expanded={expanded}
+                              className={ICON_BTN}
+                            >
+                              <span className="material-symbols-outlined text-base">{expanded ? 'expand_less' : 'expand_more'}</span>
                             </button>
                           </div>
                         </td>
                       </tr>
+                      {/* The run's account: which doors, and what happened at each. */}
+                      {expanded && (
+                        <tr className="bg-slate-50 dark:bg-slate-800/30">
+                          <td colSpan={6} className="px-4 sm:px-6 py-2">
+                            {(route.stops || []).length === 0 ? (
+                              <p className="text-xs text-slate-400 dark:text-slate-500 py-2">No stops on this run.</p>
+                            ) : (
+                              <div className="divide-y divide-slate-200 dark:divide-slate-700/40">
+                                {route.stops.map((stop) => (
+                                  <div key={stop.order} className="py-2 flex items-start gap-2.5">
+                                    <span className={`material-symbols-outlined text-base mt-0.5 ${stop.completed ? 'text-green-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                                      {stop.completed ? 'check_circle' : 'radio_button_unchecked'}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                                          {stop.company_name || 'Unknown Business'}
+                                        </span>
+                                        {stop.interest_level && <InterestDot level={stop.interest_level} />}
+                                        {stop.follow_up_date && (
+                                          <span
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap"
+                                            title={`Follow-up ${formatYmd(stop.follow_up_date)}${stop.follow_up_note ? ` — ${stop.follow_up_note}` : ''}`}
+                                          >
+                                            <span className="material-symbols-outlined text-xs">event_upcoming</span>
+                                            {formatYmd(stop.follow_up_date)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {stop.completed ? (
+                                        stop.visit_id ? (
+                                          stop.visit_notes ? (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 italic truncate mt-0.5" title={stop.visit_notes}>
+                                              &ldquo;{stop.visit_notes}&rdquo;
+                                            </p>
+                                          ) : (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Visit logged</p>
+                                          )
+                                        ) : (
+                                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Done — no visit logged</p>
+                                        )
+                                      ) : (
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Not visited</p>
+                                      )}
+                                    </div>
+                                    {stop.completed_at && (
+                                      <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap pt-0.5">
+                                        {formatTimePacific(stop.completed_at)}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -258,13 +329,6 @@ export default function RoutesTab({ currentUser, refreshSignal = 0, onMutate, hi
         />
       )}
 
-      {confirmRoute && (
-        <ConfirmModal
-          message={`Delete route "${confirmRoute.name || formatYmd(confirmRoute.date)}"? This cannot be undone.`}
-          onConfirm={confirmDelete}
-          onCancel={() => setConfirmRoute(null)}
-        />
-      )}
     </div>
   );
 }

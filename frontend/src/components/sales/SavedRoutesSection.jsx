@@ -3,16 +3,18 @@ import { savedRoutesAPI, routesAPI, zonesAPI } from '../../services/api';
 import { useToast } from '../../pages/sales/SalesDashboard';
 import SavedRouteEditor from './SavedRouteEditor';
 import CoverageBar from './CoverageBar';
+import PaginationBar from '../admin/shared/PaginationBar';
 import { ICON_BTN } from './ui';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from './pageSize';
 import { apiErrorMessage } from '../../utils/apiError';
-import { getTodayPacific } from '../../utils/dateFormat';
+import { formatYmdAge, getTodayPacific } from '../../utils/dateFormat';
 
 /**
  * The standing route library: build a list once, start it any day. Starting
  * stamps out a normal dated run for the runner above — assigned to whoever
  * pressed Start.
  */
-export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged }) {
+export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged, refreshSignal = 0 }) {
   const showToast = useToast();
   const [savedRoutes, setSavedRoutes] = useState([]);
   const [fetchedZones, setFetchedZones] = useState([]);
@@ -23,13 +25,22 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
   const [showEditor, setShowEditor] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [startingId, setStartingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [total, setTotal] = useState(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (page, size) => {
     setLoading(true);
     try {
       // Inside a zone screen the section shows only that zone's routes —
       // the route belongs to the zone.
-      setSavedRoutes(await savedRoutesAPI.list(zoneId ? { zone_id: zoneId } : {}));
+      const params = { skip: (page - 1) * size, limit: size };
+      if (zoneId) params.zone_id = zoneId;
+      const { data, total: t } = await savedRoutesAPI.list(params);
+      setSavedRoutes(data);
+      setTotal(t);
+      // Deleting the last row of a trailing page leaves it empty — snap home.
+      if (data.length === 0 && t > 0 && page > 1) setCurrentPage(1);
     } catch {
       showToast('error', 'Failed to load saved routes.');
     } finally {
@@ -37,7 +48,9 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
     }
   }, [showToast, zoneId]);
 
-  useEffect(() => { load(); }, [load]);
+  // refreshSignal bumps when the runner above mutates a run — sweep counts and
+  // recency change the moment the last stop is done.
+  useEffect(() => { load(currentPage, pageSize); }, [load, currentPage, pageSize, refreshSignal]);
   useEffect(() => {
     if (!zonesProp) zonesAPI.list().then(setFetchedZones).catch(() => {});
   }, [zonesProp]);
@@ -73,7 +86,7 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
         <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 flex items-center gap-2">
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Saved Routes</span>
           <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
-            {savedRoutes.length}
+            {total}
           </span>
           {/* A route belongs to its zone, so creating one only happens from
               inside a zone screen — the cross-zone library just starts them. */}
@@ -98,9 +111,22 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
               : 'No saved routes yet — open a zone in the Zones tab and create its routes there.'}
           </p>
         ) : (
+          <>
           <div className="divide-y divide-slate-200 dark:divide-slate-700/60">
-            {savedRoutes.map((sr) => (
-              <div key={sr.id} className="p-3 sm:px-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+            {savedRoutes.map((sr, i) => {
+              // Rows arrive ordered by zone path, so a header goes on top of
+              // each zone's cluster — "Delta › North Delta" for subzones.
+              const path = sr.zone_path || 'No zone';
+              const prevPath = i > 0 ? (savedRoutes[i - 1].zone_path || 'No zone') : null;
+              return (
+              <div key={sr.id}>
+                {path !== prevPath && (
+                  <div className="px-4 py-1.5 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-700/60 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-sm">map</span>
+                    {path}
+                  </div>
+                )}
+              <div className="p-3 sm:px-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0 text-slate-500 dark:text-slate-300">
                   <span className="material-symbols-outlined text-base">route</span>
                 </div>
@@ -109,10 +135,11 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
                     {sr.name}
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                    {sr.zone_name ? `${sr.zone_name} · ` : ''}
                     {sr.business_count} business{sr.business_count !== 1 ? 'es' : ''}
                     {' · '}
-                    {sr.times_swept > 0 ? `swept ${sr.times_swept}×` : 'never swept'}
+                    {sr.times_swept > 0
+                      ? `swept ${sr.times_swept}×${sr.last_swept_date ? ` · ${formatYmdAge(sr.last_swept_date)}` : ''}`
+                      : 'never swept'}
                   </p>
                   {/* Same coverage read as zones: members visited in the window. */}
                   <div className="mt-1 max-w-[160px]">
@@ -148,8 +175,19 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
                   </button>
                 </div>
               </div>
-            ))}
+              </div>
+              );
+            })}
           </div>
+          <PaginationBar
+            currentPage={currentPage}
+            totalItems={total}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+          />
+          </>
         )}
       </div>
 
@@ -161,12 +199,12 @@ export default function SavedRoutesSection({ zoneId, zones: zonesProp, onChanged
           onSuccess={() => {
             setShowEditor(false);
             showToast('success', editTarget ? 'Saved route updated.' : 'Saved route created.');
-            load();
+            load(currentPage, pageSize);
           }}
           onDeleted={() => {
             setShowEditor(false);
             showToast('success', 'Saved route deleted.');
-            load();
+            load(currentPage, pageSize);
           }}
           onClose={() => setShowEditor(false)}
         />
