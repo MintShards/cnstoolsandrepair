@@ -243,21 +243,30 @@ export default function BusinessesTab({ currentUser, initialZoneFilter = '' }) {
                         onClick={() => setProfileTarget(biz)}
                         className="hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group"
                       >
-                        <td className="py-3.5 px-3 sm:px-4 max-w-[150px] sm:max-w-[200px] lg:max-w-[260px]">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {/* Interest has no column on mobile, so carry it as a dot */}
-                            <InterestDot level={biz.interest_level} withLabel={false} className="sm:hidden flex-shrink-0" />
+                        {/* No mobile width cap — the phone row keeps all the
+                            width the hidden columns gave back; capping it
+                            crumpled wrapped names. */}
+                        <td className="py-3.5 px-3 sm:px-4 sm:max-w-[200px] lg:max-w-[260px]">
+                          <div className="flex items-start sm:items-center gap-2 min-w-0">
+                            {/* Interest has no column on mobile, so carry it as
+                                a dot pinned to the name's first line */}
+                            <InterestDot level={biz.interest_level} withLabel={false} className="sm:hidden flex-shrink-0 mt-1 sm:mt-0" />
                             {/* Sibling names differ at the tail (Ashcroft X,
                                 Ashcroft Y) — wrap on phones instead of cutting
                                 off the one distinguishing word. */}
                             <span className="text-slate-900 dark:text-white font-bold uppercase min-w-0 break-words sm:truncate">{biz.company_name}</span>
-                            {/* Status has no column on mobile, so flag customers inline */}
-                            {biz.customer_id && (
-                              <StatusLabel isCustomer className="sm:hidden flex-shrink-0" />
-                            )}
                           </div>
-                          {contactName && (
-                            <div className="text-slate-500 dark:text-slate-400 text-sm mt-0.5 uppercase truncate">{contactName}</div>
+                          {/* Contact and the customer flag share the quiet
+                              second line instead of crowding the name */}
+                          {(contactName || biz.customer_id) && (
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                              {contactName && (
+                                <span className="text-slate-500 dark:text-slate-400 text-sm uppercase truncate">{contactName}</span>
+                              )}
+                              {biz.customer_id && (
+                                <StatusLabel isCustomer className="sm:hidden flex-shrink-0" />
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="py-3.5 px-4 hidden sm:table-cell">
