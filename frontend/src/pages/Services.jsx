@@ -232,13 +232,13 @@ export default function Services() {
                   <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
                   <h2 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools We Repair</h2>
                   <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
-                    Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, and lifting equipment—supporting a wide range of industrial applications.
+                    Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, hydraulic jacks, and lifting equipment—supporting a wide range of industrial applications.
                   </p>
                 </div>
 
                 {/* Tool Categories */}
                 {toolsByCategory ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8 lg:gap-10">
                         {/* Air Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-500">
@@ -325,6 +325,36 @@ export default function Services() {
                           ))
                         ) : (
                           <p className="text-sm text-slate-400 italic">No lifting equipment listed.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Hydraulic Tools Column */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-red-500">
+                        <div className="size-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                          <span
+                            className="material-symbols-outlined text-red-500 text-3xl"
+                            style={{ fontVariationSettings: "'wght' 600" }}
+                          >
+                            compress
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Hydraulic Tools</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {toolsByCategory.hydraulic_tools && toolsByCategory.hydraulic_tools.length > 0 ? (
+                          toolsByCategory.hydraulic_tools.map((tool) => (
+                            <div
+                              key={tool.id}
+                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 transition-colors"
+                            >
+                              <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400 italic">No hydraulic tools listed.</p>
                         )}
                       </div>
                     </div>

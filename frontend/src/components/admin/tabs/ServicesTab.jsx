@@ -459,10 +459,12 @@ export default function ServicesTab() {
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
                             tool.category === 'air_tools' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                             tool.category === 'electric_tools' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                            tool.category === 'hydraulic_tools' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
                             'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                           }`}>
                             {tool.category === 'air_tools' ? 'Air' :
                              tool.category === 'electric_tools' ? 'Electric' :
+                             tool.category === 'hydraulic_tools' ? 'Hydraulic' :
                              'Lifting'}
                           </span>
                         )}
@@ -512,6 +514,7 @@ export default function ServicesTab() {
                             <option value="air_tools">Air Tools (Pneumatic)</option>
                             <option value="electric_tools">Electric Tools</option>
                             <option value="lifting_equipment">Lifting Equipment</option>
+                            <option value="hydraulic_tools">Hydraulic Tools</option>
                           </select>
                           <p className="text-xs text-slate-500 mt-1.5">
                             Category determines which column this tool appears in on the Services page.

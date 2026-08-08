@@ -66,7 +66,8 @@ async def get_tools_by_category(active_only: bool = True):
     categorized = {
         "air_tools": [],
         "electric_tools": [],
-        "lifting_equipment": []
+        "lifting_equipment": [],
+        "hydraulic_tools": []
     }
 
     for tool in tools:

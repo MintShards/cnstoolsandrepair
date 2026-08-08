@@ -7,13 +7,14 @@ class ToolCategory(str, Enum):
     AIR_TOOLS = "air_tools"
     ELECTRIC_TOOLS = "electric_tools"
     LIFTING_EQUIPMENT = "lifting_equipment"
+    HYDRAULIC_TOOLS = "hydraulic_tools"
 
 
 class ToolCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     icon: Optional[str] = Field(default="build", min_length=1, max_length=50)
     description: str = Field(..., min_length=1, max_length=1000)
-    category: ToolCategory = Field(..., description="Tool category: air_tools, electric_tools, or lifting_equipment")
+    category: ToolCategory = Field(..., description="Tool category: air_tools, electric_tools, lifting_equipment, or hydraulic_tools")
     active: bool = True
 
 
