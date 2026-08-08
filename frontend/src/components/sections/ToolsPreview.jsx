@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toolsAPI } from '../../services/api';
 
+// Homepage strip features these tools first; any name not found in the
+// catalog is skipped and the remaining slots fill from catalog order.
+const FEATURED_TOOLS = [
+  'Impact Wrenches',
+  'Air Ratchets',
+  'Air Hammers',
+  'Angle Grinders (Electric)',
+  'Electric Drills',
+  'Chain Hoists',
+  'Ratchet Hoists',
+  'Come-Alongs',
+];
+
 export default function ToolsPreview() {
   const [tools, setTools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,13 +23,16 @@ export default function ToolsPreview() {
     const fetchTools = async () => {
       try {
         const data = await toolsAPI.getByCategory(); // Get tools by category
-        // Take 3 air tools, 2 electric tools, 3 lifting equipment = 8 total
-        const displayTools = [
-          ...(data.air_tools?.slice(0, 3) || []),
-          ...(data.electric_tools?.slice(0, 2) || []),
-          ...(data.lifting_equipment?.slice(0, 3) || [])
+        const allTools = [
+          ...(data.air_tools || []),
+          ...(data.electric_tools || []),
+          ...(data.lifting_equipment || [])
         ];
-        setTools(displayTools);
+        const featured = FEATURED_TOOLS
+          .map((name) => allTools.find((tool) => tool.name === name))
+          .filter(Boolean);
+        const fill = allTools.filter((tool) => !featured.includes(tool));
+        setTools([...featured, ...fill].slice(0, 8));
       } catch (error) {
         console.error('Failed to fetch tools:', error);
       } finally {
