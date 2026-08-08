@@ -34,8 +34,11 @@ async def list_tools(active_only: bool = True):
     db = get_database()
 
     query = {"active": True} if active_only else {}
-    cursor = db.tools_catalog.find(query).sort("name", 1)
+    cursor = db.tools_catalog.find(query)
     tools = await cursor.to_list(length=None)
+
+    # Curated order first (missing/null display_order sinks to the end), then name
+    tools.sort(key=lambda t: (t.get("display_order") or 999, t["name"]))
 
     tools = [convert_objectid_to_str(tool) for tool in tools]
 
@@ -53,8 +56,11 @@ async def get_tools_by_category(active_only: bool = True):
     db = get_database()
 
     query = {"active": True} if active_only else {}
-    cursor = db.tools_catalog.find(query).sort("name", 1)
+    cursor = db.tools_catalog.find(query)
     tools = await cursor.to_list(length=None)
+
+    # Curated order first (missing/null display_order sinks to the end), then name
+    tools.sort(key=lambda t: (t.get("display_order") or 999, t["name"]))
 
     tools = [convert_objectid_to_str(tool) for tool in tools]
 

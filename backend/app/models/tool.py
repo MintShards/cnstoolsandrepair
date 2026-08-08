@@ -16,6 +16,7 @@ class ToolCreate(BaseModel):
     description: str = Field(..., min_length=1, max_length=1000)
     category: ToolCategory = Field(..., description="Tool category: air_tools, electric_tools, lifting_equipment, or hydraulic_tools")
     active: bool = True
+    display_order: int = Field(default=999, description="Sort position within category; lower shows first, ties sort by name")
 
 
 class ToolUpdate(BaseModel):
@@ -24,6 +25,7 @@ class ToolUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=1, max_length=1000)
     category: Optional[ToolCategory] = None
     active: Optional[bool] = None
+    display_order: Optional[int] = None
 
 
 class Tool(ToolCreate):
@@ -50,3 +52,4 @@ class ToolResponse(BaseModel):
     description: str
     category: str
     active: bool
+    display_order: int = 999
