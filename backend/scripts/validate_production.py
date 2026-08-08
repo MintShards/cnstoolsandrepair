@@ -245,7 +245,7 @@ async def validate_mongodb_connection():
 
 async def validate_resend():
     """Validate Resend API key"""
-    print_header("4. SENDGRID EMAIL VALIDATION")
+    print_header("4. RESEND EMAIL VALIDATION")
 
     all_passed = True
     issues = []

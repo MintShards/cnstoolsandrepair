@@ -47,7 +47,7 @@ async def check_email_rate_limit(db, email: str, hours: int = 1, max_messages: i
 async def send_contact_message(request: Request, contact: ContactMessage):
     """
     Send contact form message via email and store in database.
-    Integrates with SendGrid for email delivery.
+    Integrates with Resend for email delivery.
 
     Rate limits:
     - 3 messages per hour per IP address

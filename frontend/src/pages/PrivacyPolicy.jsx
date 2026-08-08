@@ -101,7 +101,7 @@ export default function PrivacyPolicy() {
               </p>
               <ul className="list-disc pl-6 space-y-3">
                 <li>
-                  <strong>SendGrid (Twilio):</strong> Used to deliver email notifications when you submit a form. Your contact details are transmitted through SendGrid's servers to reach us. SendGrid is a U.S.-based service operating under Twilio's privacy policy.
+                  <strong>Resend:</strong> Used to deliver email notifications when you submit a form. Your contact details are transmitted through Resend's servers to reach us. Resend is a U.S.-based email delivery service operating under its own privacy policy.
                 </li>
                 <li>
                   <strong>MongoDB Atlas:</strong> Your submitted data is stored in a cloud database hosted by MongoDB Atlas (MongoDB, Inc.), a U.S.-based cloud provider. Data is stored on servers that may be located outside Canada but is protected by contractual data processing agreements.
