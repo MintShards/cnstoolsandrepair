@@ -25,9 +25,9 @@ export default function ToolsPreview() {
         const data = await toolsAPI.getByCategory(); // Get tools by category
         const allTools = [
           ...(data.air_tools || []),
-          ...(data.electric_tools || []),
+          ...(data.hydraulic_tools || []),
           ...(data.lifting_equipment || []),
-          ...(data.hydraulic_tools || [])
+          ...(data.electric_tools || [])
         ];
         const featured = FEATURED_TOOLS
           .map((name) => allTools.find((tool) => tool.name === name))

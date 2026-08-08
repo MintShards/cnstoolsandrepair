@@ -269,32 +269,32 @@ export default function Services() {
                       </div>
                     </div>
 
-                    {/* Electric Tools Column */}
+                    {/* Hydraulic Tools Column */}
                     <div>
-                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
-                        <div className="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-red-500">
+                        <div className="size-12 rounded-xl bg-red-500/10 flex items-center justify-center">
                           <span
-                            className="material-symbols-outlined text-amber-500 text-3xl"
+                            className="material-symbols-outlined text-red-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
                           >
-                            bolt
+                            compress
                           </span>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Electric Tools</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Hydraulic Tools</h3>
                       </div>
                       <div className="space-y-3">
-                        {toolsByCategory.electric_tools && toolsByCategory.electric_tools.length > 0 ? (
-                          toolsByCategory.electric_tools.map((tool) => (
+                        {toolsByCategory.hydraulic_tools && toolsByCategory.hydraulic_tools.length > 0 ? (
+                          toolsByCategory.hydraulic_tools.map((tool) => (
                             <div
                               key={tool.id}
-                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
+                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 transition-colors"
                             >
                               <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
                             </div>
                           ))
                         ) : (
-                          <p className="text-sm text-slate-400 italic">No electric tools listed.</p>
+                          <p className="text-sm text-slate-400 italic">No hydraulic tools listed.</p>
                         )}
                       </div>
                     </div>
@@ -329,32 +329,32 @@ export default function Services() {
                       </div>
                     </div>
 
-                    {/* Hydraulic Tools Column */}
+                    {/* Electric Tools Column */}
                     <div>
-                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-red-500">
-                        <div className="size-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                      <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
+                        <div className="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
                           <span
-                            className="material-symbols-outlined text-red-500 text-3xl"
+                            className="material-symbols-outlined text-amber-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
                           >
-                            compress
+                            bolt
                           </span>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Hydraulic Tools</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Electric Tools</h3>
                       </div>
                       <div className="space-y-3">
-                        {toolsByCategory.hydraulic_tools && toolsByCategory.hydraulic_tools.length > 0 ? (
-                          toolsByCategory.hydraulic_tools.map((tool) => (
+                        {toolsByCategory.electric_tools && toolsByCategory.electric_tools.length > 0 ? (
+                          toolsByCategory.electric_tools.map((tool) => (
                             <div
                               key={tool.id}
-                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 transition-colors"
+                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
                             >
                               <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
                             </div>
                           ))
                         ) : (
-                          <p className="text-sm text-slate-400 italic">No hydraulic tools listed.</p>
+                          <p className="text-sm text-slate-400 italic">No electric tools listed.</p>
                         )}
                       </div>
                     </div>
