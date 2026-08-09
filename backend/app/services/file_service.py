@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from io import BytesIO
 from fastapi import UploadFile, HTTPException
-from PIL import Image
+from PIL import Image, ImageOps
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -206,6 +206,50 @@ async def save_upload_file(file: UploadFile, folder: str = "uploads") -> str:
             f.write(contents)
 
         return unique_filename
+
+
+def generate_thumbnail_bytes(contents: bytes, max_size: int = 800) -> bytes:
+    """Downscale image bytes to fit max_size (longest edge) and return JPEG bytes.
+
+    EXIF orientation is applied before resizing since JPEG re-encoding drops it.
+    """
+    image = Image.open(BytesIO(contents))
+    image = ImageOps.exif_transpose(image)
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    image.thumbnail((max_size, max_size))
+    out = BytesIO()
+    image.save(out, format="JPEG", quality=82, optimize=True)
+    return out.getvalue()
+
+
+async def save_image_bytes(contents: bytes, folder: str, file_ext: str = "jpg") -> str:
+    """Store raw image bytes the same way save_upload_file does.
+
+    Returns a full Spaces URL when USE_SPACES=true, else a local filename.
+    """
+    unique_filename = f"{uuid.uuid4()}.{file_ext}"
+
+    if settings.use_spaces:
+        key = f"{folder}/{unique_filename}"
+        content_type = "image/jpeg" if file_ext in ("jpg", "jpeg") else f"image/{file_ext}"
+        try:
+            s3_client = get_spaces_client()
+            s3_client.upload_fileobj(
+                BytesIO(contents),
+                settings.spaces_bucket,
+                key,
+                ExtraArgs={'ACL': 'public-read', 'ContentType': content_type}
+            )
+            return f"{settings.spaces_endpoint}/{settings.spaces_bucket}/{key}"
+        except ClientError as e:
+            raise HTTPException(status_code=500, detail=f"Upload to Spaces failed: {str(e)}")
+
+    file_path = Path(settings.upload_dir) / unique_filename
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(file_path, "wb") as f:
+        f.write(contents)
+    return unique_filename
 
 
 async def delete_file_from_spaces(file_url: str) -> bool:

@@ -6,6 +6,7 @@ from datetime import datetime
 class GalleryPhotoBase(BaseModel):
     """Base schema for gallery photos"""
     image_url: str = Field(..., description="Filename of uploaded photo")
+    thumb_url: Optional[str] = Field(default=None, description="Filename/URL of the resized grid thumbnail")
     display_order: int = Field(default=0, description="Order for displaying photos")
     active: bool = Field(default=True, description="Whether photo is visible")
 
@@ -33,6 +34,7 @@ class GalleryPhotoResponse(BaseModel):
     """API response schema for gallery photo"""
     id: str
     image_url: str
+    thumb_url: Optional[str] = None
     display_order: int
     active: bool
     created_at: datetime

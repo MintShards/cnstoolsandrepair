@@ -6,7 +6,7 @@ from bson import ObjectId
 from datetime import datetime
 from app.database import get_database
 from app.models.gallery import GalleryPhotoCreate, GalleryPhotoResponse, GalleryPhotoUpdate
-from app.services.file_service import save_upload_file, delete_file
+from app.services.file_service import save_upload_file, delete_file, generate_thumbnail_bytes, save_image_bytes
 from app.utils.helpers import convert_objectid_to_str
 from app.dependencies.auth import require_admin
 
@@ -46,12 +46,25 @@ async def upload_gallery_photo(
 
         # Save uploaded photo (to 'gallery' folder in Spaces or local)
         logger.info(f"Uploading gallery photo: {photo.filename}")
+        contents = await photo.read()
+        await photo.seek(0)
         filename = await save_upload_file(photo, folder="gallery")
         logger.info(f"Gallery photo uploaded: {filename}")
+
+        # Generate a resized grid thumbnail; the original stays for the lightbox.
+        # Never block the upload on thumbnail failure — the grid falls back to the original.
+        thumb_url = None
+        try:
+            thumb_bytes = generate_thumbnail_bytes(contents)
+            thumb_url = await save_image_bytes(thumb_bytes, folder="gallery/thumbs", file_ext="jpg")
+            logger.info(f"Gallery thumbnail created: {thumb_url}")
+        except Exception as thumb_error:
+            logger.warning(f"Thumbnail generation failed for {filename}: {thumb_error}")
 
         # Create gallery photo document
         photo_data = GalleryPhotoCreate(
             image_url=filename,
+            thumb_url=thumb_url,
             display_order=display_order,
             active=True
         )
@@ -120,10 +133,15 @@ async def delete_gallery_photo(photo_id: str):
     # Delete from database
     await db.gallery_photos.delete_one({"_id": ObjectId(photo_id)})
 
-    # Delete physical file from Spaces or local storage
+    # Delete physical file(s) from Spaces or local storage
     try:
         await delete_file(photo["image_url"])
     except Exception as e:
         logger.warning(f"Failed to delete file {photo['image_url']}: {e}")
+    if photo.get("thumb_url"):
+        try:
+            await delete_file(photo["thumb_url"])
+        except Exception as e:
+            logger.warning(f"Failed to delete thumbnail {photo['thumb_url']}: {e}")
 
     return None

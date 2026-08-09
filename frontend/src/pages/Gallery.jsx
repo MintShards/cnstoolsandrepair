@@ -6,6 +6,9 @@ import DualCTA from '../components/sections/DualCTA';
 // Constants
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Spaces URLs come through absolute; local dev filenames are served from /uploads
+const resolvePhotoUrl = (url) => (url.startsWith('http') ? url : `${API_BASE_URL}/uploads/${url}`);
+
 // Fisher-Yates shuffle algorithm for uniform random distribution
 const shuffleArray = (array) => {
   const shuffled = [...array];
@@ -153,7 +156,7 @@ export default function Gallery() {
                       onClick={() => openLightbox(photo)}
                     >
                       <img
-                        src={photo.image_url.startsWith('http') ? photo.image_url : `${API_BASE_URL}/uploads/${photo.image_url}`}
+                        src={resolvePhotoUrl(photo.thumb_url || photo.image_url)}
                         alt="Workshop gallery"
                         className={`w-full ${photo.randomAspect} object-cover rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]`}
                         loading="lazy"
@@ -192,7 +195,7 @@ export default function Gallery() {
             <span className="material-symbols-outlined text-4xl">close</span>
           </button>
           <img
-            src={selectedPhoto.image_url.startsWith('http') ? selectedPhoto.image_url : `${API_BASE_URL}/uploads/${selectedPhoto.image_url}`}
+            src={resolvePhotoUrl(selectedPhoto.image_url)}
             alt="Workshop gallery"
             className="max-w-full max-h-full rounded-lg"
             onClick={(e) => e.stopPropagation()}
