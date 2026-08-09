@@ -55,7 +55,7 @@ export default function IndustriesServed() {
                   <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
                   <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mt-auto">
                   {[1, 2, 3, 4].map((j) => (
                     <div key={j} className="h-6 w-20 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse"></div>
                   ))}
@@ -111,7 +111,7 @@ export default function IndustriesServed() {
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {industry.description}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mt-auto">
                 {(industry.toolBadges || []).map((badge, idx) => (
                   <span
                     key={idx}

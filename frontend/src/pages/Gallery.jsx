@@ -16,17 +16,12 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// Pinterest-style random height variants for dynamic masonry layout
-const getRandomHeight = () => {
-  const heights = [
-    'h-48',  // Small - 192px
-    'h-56',  // Medium-Small - 224px
-    'h-64',  // Medium - 256px
-    'h-72',  // Medium-Large - 288px
-    'h-80',  // Large - 320px
-    'h-96',  // Extra Large - 384px
-  ];
-  return heights[Math.floor(Math.random() * heights.length)];
+// Pinterest-style aspect variants: tile height scales with column width, so
+// crops stay bounded on narrow mobile columns instead of showing thin slivers
+const ASPECT_VARIANTS = ['aspect-[4/5]', 'aspect-square', 'aspect-[4/3]', 'aspect-[3/2]'];
+
+const getRandomAspect = () => {
+  return ASPECT_VARIANTS[Math.floor(Math.random() * ASPECT_VARIANTS.length)];
 };
 
 export default function Gallery() {
@@ -41,7 +36,7 @@ export default function Gallery() {
         // Shuffle photos for random display order and assign random heights for Pinterest-style variety
         const shuffled = shuffleArray(data).map(photo => ({
           ...photo,
-          randomHeight: getRandomHeight()
+          randomAspect: getRandomAspect()
         }));
         setPhotos(shuffled);
       } catch (error) {
@@ -61,6 +56,20 @@ export default function Gallery() {
   const closeLightbox = () => {
     setSelectedPhoto(null);
   };
+
+  // Escape-close and body scroll lock while the lightbox is open
+  useEffect(() => {
+    if (!selectedPhoto) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedPhoto(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [selectedPhoto]);
 
   return (
     <>
@@ -109,16 +118,15 @@ export default function Gallery() {
               </div>
 
               {/* Gallery Grid Skeleton - Pinterest masonry style */}
-              <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 sm:gap-4 lg:gap-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => {
-                  // Random heights matching actual photo grid pattern
-                  const heights = ['h-48', 'h-56', 'h-64', 'h-72', 'h-80', 'h-96'];
-                  const randomHeight = heights[i % heights.length];
+              <div className="columns-2 md:columns-3 lg:columns-4 gap-3 sm:gap-4 lg:gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => {
+                  // Aspect variants matching the actual photo grid pattern
+                  const randomAspect = ASPECT_VARIANTS[i % ASPECT_VARIANTS.length];
 
                   return (
                     <div
                       key={i}
-                      className={`${randomHeight} bg-slate-200 dark:bg-slate-800 rounded-2xl mb-3 sm:mb-4 lg:mb-6 animate-pulse break-inside-avoid`}
+                      className={`w-full ${randomAspect} bg-slate-200 dark:bg-slate-800 rounded-2xl mb-3 sm:mb-4 lg:mb-6 animate-pulse break-inside-avoid`}
                     ></div>
                   );
                 })}
@@ -137,7 +145,7 @@ export default function Gallery() {
 
               {/* Photo Grid */}
               {photos.length > 0 ? (
-                <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 sm:gap-4 lg:gap-6">
+                <div className="columns-2 md:columns-3 lg:columns-4 gap-3 sm:gap-4 lg:gap-6">
                   {photos.map((photo) => (
                     <div
                       key={photo.id}
@@ -147,8 +155,9 @@ export default function Gallery() {
                       <img
                         src={photo.image_url.startsWith('http') ? photo.image_url : `${API_BASE_URL}/uploads/${photo.image_url}`}
                         alt="Workshop gallery"
-                        className={`w-full ${photo.randomHeight} object-cover rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]`}
+                        className={`w-full ${photo.randomAspect} object-cover rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]`}
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   ))}
@@ -171,10 +180,13 @@ export default function Gallery() {
       {selectedPhoto && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
           onClick={closeLightbox}
         >
           <button
             className="absolute top-4 right-4 text-white hover:text-slate-300 transition-colors"
+            aria-label="Close"
             onClick={closeLightbox}
           >
             <span className="material-symbols-outlined text-4xl">close</span>

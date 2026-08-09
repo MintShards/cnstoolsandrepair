@@ -152,7 +152,7 @@ export default function Industries() {
 
                       {/* Tool Badges */}
                       {industry.toolBadges && industry.toolBadges.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 mt-auto">
                           {industry.toolBadges.map((badge, i) => (
                             <span
                               key={i}
