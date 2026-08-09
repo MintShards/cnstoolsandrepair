@@ -57,7 +57,7 @@ export default function ToolsPreview() {
           </div>
 
           {/* Tool Cards Grid Skeleton */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div
                 key={i}
@@ -89,22 +89,24 @@ export default function ToolsPreview() {
             Tools We Repair
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
-            Expert repair for air tools, electric tools, and lifting equipment
+            Expert repair for air tools, hydraulic tools, lifting equipment, and electric tools
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {tools.map((tool) => (
-            <div
-              key={tool.id}
-              className="flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
-            >
-              <h4 className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-tight text-center leading-tight">
-                {tool.name}
-              </h4>
-            </div>
-          ))}
-        </div>
+        {tools.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+            {tools.map((tool) => (
+              <div
+                key={tool.id}
+                className="flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
+              >
+                <h4 className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-tight text-center leading-tight">
+                  {tool.name}
+                </h4>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-8 sm:mt-10 lg:mt-12 text-center">
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mb-4 sm:mb-5 lg:mb-6 px-4">

@@ -36,11 +36,11 @@ export default function Services() {
         <title>Pneumatic Tool Repair Services | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Expert pneumatic tool repair in Surrey, BC. Factory-trained technicians servicing air tools, electric tools, and lifting equipment for industrial clients."
+          content="Expert pneumatic tool repair in Surrey, BC. Factory-trained technicians servicing air, hydraulic, and electric tools plus lifting equipment for industrial clients."
         />
         <meta
           name="keywords"
-          content="pneumatic tool repair services, air tool maintenance, tool rental Surrey, industrial equipment repair, used pneumatic tools, impact wrench repair, pneumatic grinder repair, air drill service, tool service Surrey BC, electric tool repair, lifting equipment repair"
+          content="pneumatic tool repair services, air tool maintenance, tool rental Surrey, industrial equipment repair, used pneumatic tools, impact wrench repair, pneumatic grinder repair, air drill service, tool service Surrey BC, electric tool repair, lifting equipment repair, hydraulic jack repair, hydraulic tool repair"
         />
         <link rel="canonical" href="https://cnstoolrepair.com/services" />
 
@@ -76,10 +76,10 @@ export default function Services() {
 
                 {/* Service Cards Skeleton */}
                 <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8">
-                  {[1, 2, 3, 4, 5].map((i) => (
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div
                       key={i}
-                      className="flex flex-col gap-4 p-6 bg-slate-100 dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] md:w-[calc(25%-1.5rem)] lg:w-[calc(20%-1.6rem)]"
+                      className="flex flex-col gap-4 p-6 bg-slate-100 dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] lg:w-[calc(33.333%-1.334rem)]"
                     >
                       <div className="mx-auto">
                         <div className="size-16 rounded-2xl bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
@@ -110,7 +110,7 @@ export default function Services() {
                     {services.map((service, index) => (
                       <div
                         key={index}
-                        className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:border-primary dark:hover:border-primary transition-all text-center w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] md:w-[calc(25%-1.5rem)] lg:w-[calc(20%-1.6rem)]"
+                        className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:border-primary dark:hover:border-primary transition-all text-center w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] lg:w-[calc(33.333%-1.334rem)]"
                       >
                         <div className="mx-auto">
                           <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -162,8 +162,8 @@ export default function Services() {
                   </div>
                 </div>
 
-                {/* 3-Column Tool Categories Skeleton */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+                {/* 4-Column Tool Categories Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 lg:gap-10">
                   {/* Air Tools Column Skeleton */}
                   <div>
                     <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-500">
@@ -184,10 +184,10 @@ export default function Services() {
                     </div>
                   </div>
 
-                  {/* Electric Tools Column Skeleton */}
+                  {/* Hydraulic Tools Column Skeleton */}
                   <div>
-                    <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
-                      <div className="size-12 rounded-xl bg-amber-500/10 animate-pulse"></div>
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-red-500">
+                      <div className="size-12 rounded-xl bg-red-500/10 animate-pulse"></div>
                       <div className="h-7 w-36 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
                     </div>
                     <div className="space-y-3">
@@ -223,6 +223,26 @@ export default function Services() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Electric Tools Column Skeleton */}
+                  <div>
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
+                      <div className="size-12 rounded-xl bg-amber-500/10 animate-pulse"></div>
+                      <div className="h-7 w-36 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
+                    </div>
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+                        >
+                          <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
+                          <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded mb-1 animate-pulse"></div>
+                          <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
@@ -238,11 +258,11 @@ export default function Services() {
 
                 {/* Tool Categories */}
                 {toolsByCategory ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8 lg:gap-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 lg:gap-10">
                         {/* Air Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-500">
-                        <div className="size-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-xl bg-blue-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-blue-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -250,7 +270,7 @@ export default function Services() {
                             air
                           </span>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Air Tools</h3>
+                        <h3 className="text-2xl xl:text-lg font-black uppercase tracking-tight">Air Tools</h3>
                       </div>
                       <div className="space-y-3">
                         {toolsByCategory.air_tools && toolsByCategory.air_tools.length > 0 ? (
@@ -272,7 +292,7 @@ export default function Services() {
                     {/* Hydraulic Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-red-500">
-                        <div className="size-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-xl bg-red-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-red-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -280,7 +300,7 @@ export default function Services() {
                             compress
                           </span>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Hydraulic Tools</h3>
+                        <h3 className="text-2xl xl:text-lg font-black uppercase tracking-tight">Hydraulic Tools</h3>
                       </div>
                       <div className="space-y-3">
                         {toolsByCategory.hydraulic_tools && toolsByCategory.hydraulic_tools.length > 0 ? (
@@ -302,7 +322,7 @@ export default function Services() {
                     {/* Lifting Equipment Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-purple-500">
-                        <div className="size-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-xl bg-purple-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-purple-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -310,7 +330,7 @@ export default function Services() {
                             precision_manufacturing
                           </span>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Lifting Equipment</h3>
+                        <h3 className="text-2xl xl:text-lg font-black uppercase tracking-tight">Lifting Equipment</h3>
                       </div>
                       <div className="space-y-3">
                         {toolsByCategory.lifting_equipment && toolsByCategory.lifting_equipment.length > 0 ? (
@@ -332,7 +352,7 @@ export default function Services() {
                     {/* Electric Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
-                        <div className="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-xl bg-amber-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-amber-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -340,7 +360,7 @@ export default function Services() {
                             bolt
                           </span>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Electric Tools</h3>
+                        <h3 className="text-2xl xl:text-lg font-black uppercase tracking-tight">Electric Tools</h3>
                       </div>
                       <div className="space-y-3">
                         {toolsByCategory.electric_tools && toolsByCategory.electric_tools.length > 0 ? (

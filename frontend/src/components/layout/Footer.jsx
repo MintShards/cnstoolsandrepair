@@ -291,8 +291,8 @@ export default function Footer() {
                   href={`mailto:${settings?.contact?.email || 'service@cnstoolrepair.com'}`}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
-                  <span className="material-symbols-outlined text-base text-primary">mail</span>
-                  {settings?.contact?.email || 'service@cnstoolrepair.com'}
+                  <span className="material-symbols-outlined text-base text-primary shrink-0">mail</span>
+                  <span className="min-w-0 break-all">{settings?.contact?.email || 'service@cnstoolrepair.com'}</span>
                 </a>
               </li>
               <li>

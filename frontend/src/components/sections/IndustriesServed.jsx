@@ -95,7 +95,7 @@ export default function IndustriesServed() {
           {industries.map((industry, index) => (
             <div
               key={index}
-              className="flex flex-col gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary transition-colors"
+              className={`flex flex-col gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary transition-colors${index === 2 ? ' md:col-span-2 lg:col-span-1' : ''}`}
             >
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="size-12 sm:size-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -115,7 +115,7 @@ export default function IndustriesServed() {
                 {(industry.toolBadges || []).map((badge, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 sm:px-3 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
+                    className="px-2.5 sm:px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
                   >
                     {badge}
                   </span>

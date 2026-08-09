@@ -156,7 +156,7 @@ export default function Industries() {
                           {industry.toolBadges.map((badge, i) => (
                             <span
                               key={i}
-                              className="px-2.5 sm:px-3 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
+                              className="px-2.5 sm:px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] sm:text-xs font-bold rounded-full uppercase whitespace-nowrap"
                             >
                               {badge}
                             </span>

@@ -67,23 +67,33 @@ export function SettingsProvider({ children }) {
       services: [
         {
           title: 'Pneumatic Tool Repair',
-          description: 'Complete diagnostic and repair services for all types of pneumatic tools.',
+          description: 'Complete diagnostics and repair services for industrial pneumatic tools including impact wrenches, grinders, drills, and air ratchets.',
           icon: 'build',
         },
         {
+          title: 'Hydraulic Repair',
+          description: 'Diagnostics and repair for hydraulic jacks, two-stage jacks, rams, pumps, and bottle jacks used in automotive and industrial operations.',
+          icon: 'compress',
+        },
+        {
+          title: 'Lifting Equipment',
+          description: 'Inspection, safety testing, and repair for chain hoists, lever hoists, and other lifting equipment used in industrial workplaces.',
+          icon: 'engineering',
+        },
+        {
+          title: 'Electric Tool Repair',
+          description: 'Professional repair services for heavy-duty electric tools used in automotive, construction, and manufacturing environments.',
+          icon: 'power',
+        },
+        {
           title: 'Tool Maintenance',
-          description: 'Comprehensive maintenance services for specialty pneumatic tools.',
-          icon: 'tune',
+          description: 'Preventative maintenance and servicing to extend the life and performance of your pneumatic and electric tools.',
+          icon: 'settings',
         },
         {
-          title: 'Equipment Rental',
-          description: 'Quality pneumatic tools available for rent while your equipment is being repaired.',
-          icon: 'handshake',
-        },
-        {
-          title: 'Used Tool Sales',
-          description: 'Quality refurbished pneumatic tools available for purchase.',
-          icon: 'sell',
+          title: 'New/Used Tool Sales',
+          description: 'Quality new and used industrial tools available for automotive, manufacturing, and construction applications.',
+          icon: 'inventory_2',
         },
       ],
       announcement: {
