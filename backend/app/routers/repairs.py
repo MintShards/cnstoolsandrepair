@@ -194,6 +194,74 @@ async def get_lifetime_stats(
     }
 
 
+# Repair work finished on these; "closed" needs history to tell a finished
+# repair apart from one closed after decline/BER/abandon.
+_REPAIRED_STATUSES = ["ready", "invoiced", "completed"]
+
+
+@router.get("/model-repair-counts")
+async def get_model_repair_counts(
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    exclude_job_id: Optional[str] = None,
+    current_user: User = Depends(require_admin),
+):
+    """
+    How many times each (brand, model_number) has actually been repaired.
+
+    Counts tool line quantities, so a line with quantity 3 counts as 3
+    repairs. Declined / beyond-economical-repair / abandoned tools never
+    count. Matching is case-insensitive on trimmed brand/model strings.
+    exclude_job_id leaves out one job (the work order currently open, so
+    a tool doesn't count itself).
+    """
+    db = get_database()
+
+    pipeline = []
+    if exclude_job_id and ObjectId.is_valid(exclude_job_id):
+        pipeline.append({"$match": {"_id": {"$ne": ObjectId(exclude_job_id)}}})
+
+    pipeline += [
+        {"$unwind": "$tools"},
+        {"$match": {"$or": [
+            {"tools.status": {"$in": _REPAIRED_STATUSES}},
+            {"$and": [
+                {"tools.status": "closed"},
+                {"tools.status_history.status": {"$in": _REPAIRED_STATUSES}},
+            ]},
+        ]}},
+        {"$project": {
+            "brand": {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.brand", ""]}}}},
+            "model": {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.model_number", ""]}}}},
+            "quantity": {"$ifNull": ["$tools.quantity", 1]},
+            "last_date": {"$ifNull": ["$tools.date_completed", "$tools.date_received"]},
+        }},
+    ]
+    if brand:
+        pipeline.append({"$match": {"brand": brand.strip().lower()}})
+    if model:
+        pipeline.append({"$match": {"model": model.strip().lower()}})
+    pipeline += [
+        {"$group": {
+            "_id": {"brand": "$brand", "model": "$model"},
+            "count": {"$sum": "$quantity"},
+            "last_repaired": {"$max": "$last_date"},
+        }},
+        {"$sort": {"count": -1}},
+    ]
+
+    results = await db.repairs.aggregate(pipeline).to_list(length=None)
+    return {"counts": [
+        {
+            "brand": r["_id"]["brand"],
+            "model": r["_id"]["model"],
+            "count": r["count"],
+            "last_repaired": r["last_repaired"],
+        }
+        for r in results
+    ]}
+
+
 @router.get("/summary")
 async def get_repair_summary(
     current_user: User = Depends(require_admin)

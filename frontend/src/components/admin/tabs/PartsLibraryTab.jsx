@@ -1764,6 +1764,21 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
   const [modelSearch, setModelSearch] = useState('');
   const [partResults, setPartResults] = useState([]);
   const [partSearchLoading, setPartSearchLoading] = useState(false);
+  // Times each model of this brand has been repaired, keyed by lowercase model name
+  const [repairCounts, setRepairCounts] = useState({});
+
+  useEffect(() => {
+    let cancelled = false;
+    repairsAPI.modelRepairCounts({ brand: brand.name })
+      .then(res => {
+        if (cancelled) return;
+        const map = {};
+        for (const c of (res.counts || [])) map[c.model] = c;
+        setRepairCounts(map);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [brand.name]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1892,7 +1907,7 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
               </div>
               {/* Footer pinned to the card bottom: contents left, actions + arrow right */}
               <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-200/70 dark:border-slate-700/60">
-                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-3 flex-wrap text-xs text-slate-500 dark:text-slate-400">
                   <span className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">settings</span>
                     {model.part_count ?? 0} part{(model.part_count ?? 0) !== 1 ? 's' : ''}
@@ -1903,6 +1918,15 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                       {model.diagram_urls.length} diagram{model.diagram_urls.length > 1 ? 's' : ''}
                     </span>
                   )}
+                  {(() => {
+                    const rc = repairCounts[model.name.trim().toLowerCase()];
+                    return rc?.count > 0 ? (
+                      <span className="flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400" title={`This model has been repaired ${rc.count} time${rc.count !== 1 ? 's' : ''} at the shop`}>
+                        <span className="material-symbols-outlined text-sm">build</span>
+                        {rc.count}&times; repaired
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {/* preventDefault too: stopPropagation alone skips the Link's handler but
