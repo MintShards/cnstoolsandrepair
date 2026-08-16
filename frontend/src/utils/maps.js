@@ -32,15 +32,21 @@ function viewportCoords(link) {
   return m ? `${m[1]},${m[2]}` : null;
 }
 
-// Best geocodable string for a stop, in decreasing order of trust. Exact
-// coords from a pasted link beat the address (which Google must geocode); the
-// company name is a last resort — ", BC" keeps it from matching elsewhere.
+// Best geocodable string for a stop, in decreasing order of trust. A named
+// query ("Company, 1234 Street, City") makes Google label the stop with the
+// business itself; bare coords get snapped to whichever listing sits nearest,
+// which in dense industrial strips is often the neighbour's. Exact coords
+// still beat a bare address or a name alone.
 export function waypointFor(stop) {
   if (!stop) return null;
+  const address = (stop.address || '').trim();
+  if (stop.company_name && address) {
+    return `${stop.company_name}, ${address}${/\bBC\b/i.test(address) ? '' : ', BC'}`;
+  }
   return (
     pinCoords(stop.google_maps_link) ||
     dirCoords(stop.google_maps_link) ||
-    (stop.address || '').trim() ||
+    address ||
     viewportCoords(stop.google_maps_link) ||
     (stop.company_name ? `${stop.company_name}, BC` : null)
   );
