@@ -41,7 +41,11 @@ export function waypointFor(stop) {
   if (!stop) return null;
   const address = (stop.address || '').trim();
   if (stop.company_name && address) {
-    return `${stop.company_name}, ${address}${/\bBC\b/i.test(address) ? '' : ', BC'}`;
+    // Duplicate-branch records carry a " — Location" suffix to keep names
+    // unique in our system; Google only knows the bare listing name, so
+    // query with the name as it appears on Google Business.
+    const listingName = stop.company_name.split(' — ')[0].trim();
+    return `${listingName}, ${address}${/\bBC\b/i.test(address) ? '' : ', BC'}`;
   }
   return (
     pinCoords(stop.google_maps_link) ||
