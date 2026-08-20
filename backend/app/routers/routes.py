@@ -4,6 +4,7 @@ from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pymongo.collation import Collation
 
@@ -461,6 +462,19 @@ async def complete_stop(route_id: str, stop_index: int, current_user: User = Dep
         {"_id": oid},
         {"$set": {"stops": stops, "updated_at": datetime.utcnow()}}
     )
+
+    # Completing a stop counts as a visit for coverage: zone and saved-route
+    # sweep math reads businesses.last_visited_at, so stamp it here too. $max
+    # never regresses a newer timestamp from a real logged visit.
+    business_id = stops[stop_index].get("business_id")
+    if business_id:
+        try:
+            await db.businesses.update_one(
+                {"_id": ObjectId(business_id)},
+                {"$max": {"last_visited_at": datetime.utcnow()}},
+            )
+        except InvalidId:
+            pass  # legacy stop with a malformed id must not block completion
 
     updated = await db.routes.find_one({"_id": oid})
     updated = convert_objectid_to_str(updated)
