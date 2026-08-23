@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { TASK_STATUS_LIST, TASK_PRIORITY_RANK } from '../../constants/workspace';
@@ -81,6 +82,9 @@ export default function TaskBoard({ tasks, onMove, onOpen, onClaim, claimingId }
   // A small movement threshold keeps plain clicks opening the detail modal
   // instead of starting a drag.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // The browser still fires a click on the card after a drag ends; without
+  // this guard every drop would also pop the detail modal.
+  const justDraggedRef = useRef(false);
 
   const byStatus = { todo: [], in_progress: [], done: [] };
   for (const task of tasks) {
@@ -90,7 +94,17 @@ export default function TaskBoard({ tasks, onMove, onOpen, onClaim, claimingId }
   byStatus.in_progress.sort(columnOrder);
   // Done arrives sorted by completion time from the server — leave it.
 
+  const handleOpen = (task) => {
+    if (justDraggedRef.current) return;
+    onOpen(task);
+  };
+
+  const handleDragStart = () => {
+    justDraggedRef.current = true;
+  };
+
   const handleDragEnd = ({ active, over }) => {
+    setTimeout(() => { justDraggedRef.current = false; }, 0);
     if (!over) return;
     const task = active.data.current?.task;
     if (!task || task.status === over.id) return;
@@ -98,14 +112,14 @@ export default function TaskBoard({ tasks, onMove, onOpen, onClaim, claimingId }
   };
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragEnd}>
       <div className="flex flex-col lg:flex-row gap-3">
         {TASK_STATUS_LIST.map((status) => (
           <BoardColumn
             key={status.value}
             status={status}
             tasks={byStatus[status.value]}
-            onOpen={onOpen}
+            onOpen={handleOpen}
             onClaim={onClaim}
             claimingId={claimingId}
             doneNote={status.value === 'done' ? 'recent' : null}

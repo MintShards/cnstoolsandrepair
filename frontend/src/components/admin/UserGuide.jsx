@@ -162,7 +162,8 @@ export default function UserGuide({ onClose }) {
                   ['9', 'Quick Reference'],
                   ['10', 'Zoho Books — Quotes & Invoices'],
                   ['11', 'How To — Step-by-Step'],
-                  ['12', 'Glossary'],
+                  ['12', 'Shop Hub — Tasks & Shop Feed'],
+                  ['13', 'Glossary'],
                 ].map(([num, title]) => (
                   <div key={num} className="flex items-center gap-2 py-1">
                     <span className="w-6 h-6 bg-orange-500 text-white rounded-full text-xs font-black flex items-center justify-center flex-shrink-0">{num}</span>
@@ -193,6 +194,7 @@ export default function UserGuide({ onClose }) {
                   <UrlRow label="Login Page" url="/admin/login" />
                   <UrlRow label="Website CMS" url="/admin/settings" />
                   <UrlRow label="Repair Tracker" url="/admin/repair-tracker" />
+                  <UrlRow label="Shop Hub" url="/admin/workspace" />
                 </div>
               </SubSection>
 
@@ -1120,7 +1122,79 @@ export default function UserGuide({ onClose }) {
 
             {/* ─── SECTION 12: GLOSSARY ─── */}
             <div className="guide-section pt-10">
-              <SectionHeader num="12" title="Glossary" icon="menu_book" />
+              <SectionHeader num="12" title="Shop Hub — Tasks & Shop Feed" icon="hub" />
+              <p className="mb-4 text-slate-600 dark:text-slate-400">
+                Go to <code>/admin/workspace</code> (or click the <strong>Shop Hub</strong> button in the Repair Tracker header).
+                The Shop Hub is the shop&apos;s shared workspace: a to-do list everyone can see, a feed of what&apos;s happening,
+                and the place customer phone calls get written down instead of on sticky notes. Everything updates automatically
+                every 30–60 seconds — when someone adds a task or logs a call, everyone else sees it without refreshing.
+              </p>
+
+              <SubSection title="My Tasks vs All Tasks">
+                <p><strong>My Tasks</strong> shows only work assigned to you. <strong>All Tasks</strong> shows the whole shop&apos;s list.
+                Both offer two views (the toggle remembers your choice):</p>
+                <ul className="mt-2 space-y-1.5">
+                  <li><strong>Board</strong> — three columns: To Do, In Progress, Done. <strong>Drag a card</strong> between columns to change its status. Dropping a card on Done completes it.</li>
+                  <li><strong>List</strong> — a sortable table with filters. Tick the checkboxes and click <strong>Complete selected</strong> to clear several tasks at once.</li>
+                </ul>
+                <p className="mt-2">Tasks past their due date turn <strong className="text-red-600 dark:text-red-400">red</strong> with an OVERDUE label, and your sidebar badge pulses red when you have overdue work.</p>
+              </SubSection>
+
+              <SubSection title="Claiming a Task">
+                <p>A task with no assignee shows an orange <strong>Claim</strong> button. Clicking it assigns the task to you.
+                If two people click at the same moment, the first one wins and the other sees a message — no double-booking.</p>
+              </SubSection>
+
+              <SubSection title="Calendar">
+                <p>The Calendar section lays tasks out on a month grid by due date, colored by priority.
+                <strong> Click any day</strong> to add a task due that day. Click a task chip to open it.
+                Use <strong>Today</strong> and the arrows to move between months, and the eye button to hide completed tasks.</p>
+              </SubSection>
+
+              <SubSection title="Repeating Tasks">
+                <p>Give a task a due date and set it to repeat daily, weekly, or monthly — good for compressor checks,
+                sweeping, ordering consumables. <strong>When you complete a repeating task, the next occurrence is created
+                automatically</strong> with the due date moved forward. If it was long overdue, the next one lands in the
+                future rather than instantly overdue.</p>
+              </SubSection>
+
+              <SubSection title="Logging a Customer Call">
+                <HowTo title="How to Log a Call (and hand off the follow-up)">
+                  {[
+                    'Click the Log Call button — it lives in the Shop Feed and in every Tasks section.',
+                    'Enter who called, their company and phone number, and what the call was about.',
+                    'Flag it Important if nobody should miss it, and link the related work order if there is one.',
+                    'If something needs doing, tick "Create a follow-up task", pick who it’s for, and set a priority and due date.',
+                    'Click Log Call. The call appears in the feed for everyone, and the task lands on that person’s list right away.',
+                  ]}
+                </HowTo>
+              </SubSection>
+
+              <SubSection title="The Shop Feed">
+                <ul className="space-y-1.5">
+                  <li><strong>Posting</strong> — type in the box at the top and click Post (Ctrl+Enter works too). Use the flag for important notices and the WO button to attach a work order.</li>
+                  <li><strong>Pinning</strong> — the pin button keeps a message at the top of the feed (shop closures, safety notices). Anyone can pin or unpin.</li>
+                  <li><strong>👍 Acknowledge</strong> — a quick &quot;seen it, on it&quot; without writing a reply. Hover the button to see who has acknowledged.</li>
+                  <li><strong>Seen by</strong> — the eye count shows how many people have opened the feed since a message was posted. It does not mean they read that exact message — just that they have been in the feed since.</li>
+                  <li><strong>Deleting</strong> — you can only delete your own messages.</li>
+                </ul>
+                <InfoBox icon="info" color="blue" className="mt-3">
+                  Unread counts show as badges on the Shop Feed sidebar item, on the Shop Hub button in the Repair Tracker, and on the dashboard. Opening the feed marks everything read for you.
+                </InfoBox>
+              </SubSection>
+
+              <SubSection title="Staff Accounts">
+                <p>Every shop worker gets <strong>their own login</strong>, so every task, post, and call log shows who did it.
+                In the <strong>Staff</strong> section you can add a person (name, email, password), edit their details,
+                <strong> reset a forgotten password</strong>, or deactivate someone who has left (their history is kept, but they
+                can no longer log in). The system won&apos;t let you deactivate yourself or the last active account.</p>
+                <p className="mt-2">Everyone can change their own password with the <strong>Change My Password</strong> card at the bottom of the Staff section.</p>
+              </SubSection>
+            </div>
+
+            {/* ─── SECTION 13: GLOSSARY ─── */}
+            <div className="guide-section pt-10">
+              <SectionHeader num="13" title="Glossary" icon="menu_book" />
               <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">Plain-English definitions of every word or term used in this guide.</p>
 
               <div className="space-y-3">
