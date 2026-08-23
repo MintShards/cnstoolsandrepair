@@ -334,6 +334,18 @@ async def list_tasks(
     return docs
 
 
+@router.get("/{task_id}", response_model=TaskResponse)
+async def get_task(task_id: str, current_user: User = Depends(require_admin)):
+    """Fetch one task — used by feed entries linking to their spawned task."""
+    db = get_database()
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return _build_task_response(doc)
+
+
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(data: TaskCreate, current_user: User = Depends(require_admin)):
     """Create a task, snapshotting the assignee name and work-order number."""

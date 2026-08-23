@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, useMemo, createContext, useContext, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { repairsAPI, customersAPI, quotesAPI, authAPI } from '../../services/api';
+import { repairsAPI, customersAPI, quotesAPI, authAPI, tasksAPI, messagesAPI } from '../../services/api';
 import DashboardSummary from '../../components/admin/DashboardSummary';
 import ThemeToggle from '../../components/layout/ThemeToggle';
+import { ToastProvider, ToastContext, useToast } from '../../components/admin/shared/ToastProvider';
 
 // Dashboard (the landing tab) stays in this chunk; every other tab loads on
 // first visit so opening the tracker doesn't download the whole admin suite
@@ -25,80 +26,9 @@ function TabLoading() {
 }
 
 // ── TOAST SYSTEM ─────────────────────────────────────────────
-export const ToastContext = createContext(null);
-
-export function useToast() {
-  return useContext(ToastContext);
-}
-
-function Toast({ toast, onDismiss }) {
-  const [progress, setProgress] = useState(100);
-
-  useEffect(() => {
-    const start = Date.now();
-    const duration = 4000;
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
-      setProgress(remaining);
-      if (remaining === 0) clearInterval(interval);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
-
-  const isSuccess = toast.type === 'success';
-  return (
-    <div
-      className={`pointer-events-auto flex items-start gap-3 rounded-xl border shadow-2xl text-sm font-medium max-w-sm overflow-hidden
-        animate-[slideInRight_0.3s_ease-out]
-        ${isSuccess
-          ? 'bg-white dark:bg-slate-800 border-green-300 dark:border-green-600/50'
-          : 'bg-white dark:bg-slate-800 border-red-300 dark:border-red-600/50'
-        }`}
-    >
-      <div className={`flex-shrink-0 w-1 self-stretch ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`} />
-      <div className="flex items-start gap-3 py-3 pr-3 flex-1 min-w-0">
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-          isSuccess ? 'bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-red-500/20 text-red-600 dark:text-red-400'
-        }`}>
-          <span className="material-symbols-outlined text-base">
-            {isSuccess ? 'check_circle' : 'error'}
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className={`font-bold text-sm ${isSuccess ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-            {isSuccess ? 'Success' : 'Error'}
-          </p>
-          <p className="text-slate-600 dark:text-slate-300 text-xs mt-0.5 leading-relaxed">{toast.text}</p>
-          {/* Progress bar */}
-          <div className="mt-2 h-0.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ease-linear ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-        <button
-          onClick={() => onDismiss(toast.id)}
-          className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0 mt-0.5"
-        >
-          <span className="material-symbols-outlined text-base">close</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ToastContainer({ toasts, onDismiss }) {
-  if (toasts.length === 0) return null;
-  return (
-    <div className="fixed bottom-3 sm:bottom-6 right-3 sm:right-6 z-[80] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-1.5rem)] sm:max-w-sm">
-      {toasts.map((t) => (
-        <Toast key={t.id} toast={t} onDismiss={onDismiss} />
-      ))}
-    </div>
-  );
-}
+// Lives in components/admin/shared/ToastProvider.jsx (shared with the Shop
+// Hub). Re-exported here so existing tab imports keep resolving.
+export { ToastContext, useToast };
 
 export default function RepairTracker() {
   const navigate = useNavigate();
@@ -125,8 +55,8 @@ export default function RepairTracker() {
     [plBrand, plModel]
   );
   const [preselectedCustomer, setPreselectedCustomer] = useState(null);
-  const [toasts, setToasts] = useState([]);
   const [tabCounts, setTabCounts] = useState({ customers: null, requests: null, jobs: null });
+  const [hubCounts, setHubCounts] = useState({ unread: 0, myOverdue: 0 });
   const [dashboardOpenNewJob, setDashboardOpenNewJob] = useState(false);
   const [dashboardOpenNewCustomer, setDashboardOpenNewCustomer] = useState(false);
   const [jobsNeedAttention, setJobsNeedAttention] = useState(false);
@@ -141,16 +71,6 @@ export default function RepairTracker() {
     }
     navigate('/admin/login');
   };
-
-  const showToast = useCallback((type, text) => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, type, text }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
-
-  const dismissToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', icon: 'dashboard' },
@@ -174,15 +94,23 @@ export default function RepairTracker() {
   // and ensures counts always reflect unfiltered totals.
   const fetchTabCounts = useCallback(async () => {
     try {
-      const [jobsResult, customers, quotes] = await Promise.all([
+      const [jobsResult, customers, quotes, taskSummary, messageSummary] = await Promise.all([
         repairsAPI.list({ skip: 0, limit: 1 }),
         customersAPI.list({ limit: 200 }),
         quotesAPI.list({}),
+        // Shop Hub counts ride the same loop but must not sink the tracker's
+        // own badges if the hub endpoints error.
+        tasksAPI.summary().catch(() => null),
+        messagesAPI.summary().catch(() => null),
       ]);
       setTabCounts({
         jobs: jobsResult.total,
         customers: customers.length,
         requests: quotes.filter(q => q.status === 'pending').length,
+      });
+      setHubCounts({
+        unread: messageSummary?.unread ?? 0,
+        myOverdue: taskSummary?.my_overdue ?? 0,
       });
     } catch {
       // Silently fail — counts are non-critical
@@ -229,7 +157,7 @@ export default function RepairTracker() {
   }, []);
 
   return (
-    <ToastContext.Provider value={showToast}>
+    <ToastProvider>
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col">
         {/* Repair Tracker Header */}
         <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg shadow-black/10 dark:shadow-black/30">
@@ -251,6 +179,21 @@ export default function RepairTracker() {
               </div>
               {/* Right: actions */}
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <Link
+                  to="/admin/workspace"
+                  className="relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-primary dark:text-blue-400 rounded-xl transition-all text-sm font-bold"
+                >
+                  <span className="material-symbols-outlined text-base">hub</span>
+                  <span className="hidden sm:inline">Shop Hub</span>
+                  {hubCounts.unread > 0 && (
+                    <span className="text-xs font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none bg-primary text-white">
+                      {hubCounts.unread}
+                    </span>
+                  )}
+                  {(hubCounts.unread > 0 || hubCounts.myOverdue > 0) && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title="New activity in the Shop Hub" />
+                  )}
+                </Link>
                 <ThemeToggle />
                 <button
                   onClick={handleLogout}
@@ -402,7 +345,6 @@ export default function RepairTracker() {
           <UserGuide onClose={() => setShowGuide(false)} />
         </Suspense>
       )}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </ToastContext.Provider>
+    </ToastProvider>
   );
 }

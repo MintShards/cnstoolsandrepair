@@ -619,6 +619,105 @@ export const salesRepsAPI = {
   },
 };
 
+// Shop Hub: Tasks API (admin only)
+export const tasksAPI = {
+  summary: async () => {
+    const response = await api.get('/api/tasks/summary');
+    return response.data;
+  },
+  list: async (params = {}) => {
+    const response = await api.get('/api/tasks/', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { tasks: response.data, total };
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/tasks/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/tasks/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/tasks/${id}`, data);
+    return response.data;
+  },
+  claim: async (id) => {
+    const response = await api.post(`/api/tasks/${id}/claim`);
+    return response.data;
+  },
+  batchComplete: async (ids) => {
+    const response = await api.post('/api/tasks/batch-complete', { ids });
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/tasks/${id}`);
+  },
+};
+
+// Shop Hub: Feed messages API (admin only)
+export const messagesAPI = {
+  summary: async () => {
+    const response = await api.get('/api/messages/summary');
+    return response.data;
+  },
+  list: async (params = {}) => {
+    const response = await api.get('/api/messages/', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { messages: response.data, total };
+  },
+  create: async (data) => {
+    const response = await api.post('/api/messages/', data);
+    return response.data;
+  },
+  markAllRead: async () => {
+    const response = await api.post('/api/messages/mark-all-read');
+    return response.data;
+  },
+  ack: async (id) => {
+    const response = await api.post(`/api/messages/${id}/ack`);
+    return response.data;
+  },
+  setPin: async (id, pinned) => {
+    const response = await api.patch(`/api/messages/${id}/pin`, { pinned });
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/messages/${id}`);
+  },
+};
+
+// Shop Hub: Staff accounts API (admin only)
+export const staffAPI = {
+  list: async () => {
+    const response = await api.get('/api/auth/staff');
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/auth/staff', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/auth/staff/${id}`, data);
+    return response.data;
+  },
+  deactivate: async (id) => {
+    const response = await api.patch(`/api/auth/staff/${id}/deactivate`);
+    return response.data;
+  },
+  activate: async (id) => {
+    const response = await api.patch(`/api/auth/staff/${id}/activate`);
+    return response.data;
+  },
+  changePassword: async (currentPassword, newPassword) => {
+    const response = await api.post('/api/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
+};
+
 // Zones API (sales or admin)
 export const zonesAPI = {
   // Returns every zone, flat and unpaginated — callers build the parent/child

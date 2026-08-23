@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { repairsAPI } from '../../services/api';
+import { repairsAPI, tasksAPI, messagesAPI } from '../../services/api';
 import { REPAIR_STATUSES, MAIN_STAGES } from '../../constants/repairStatuses';
+import { TASK_PRIORITIES } from '../../constants/workspace';
+import { getTodayPacific, formatYmd } from '../../utils/dateFormat';
 
 const REFRESH_INTERVAL_MS = 60000;
 
@@ -113,6 +115,30 @@ export default function DashboardSummary({
     const timer = setInterval(fetchSummary, REFRESH_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [fetchSummary]);
+
+  // Shop Hub cards ride their own silent-fail fetch so the repairs dashboard
+  // still renders if the hub endpoints error.
+  const [hubTasks, setHubTasks] = useState(null);
+  const [hubFeed, setHubFeed] = useState(null);
+
+  const fetchHub = useCallback(async () => {
+    try {
+      const [taskRes, feedSummary] = await Promise.all([
+        tasksAPI.list({ assignee: 'me', status: 'open', limit: 5, sort_by: 'due_date', sort_dir: 'asc' }),
+        messagesAPI.summary(),
+      ]);
+      setHubTasks(taskRes.tasks);
+      setHubFeed(feedSummary);
+    } catch {
+      // Silently fail — the cards just stay hidden
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHub();
+    const timer = setInterval(fetchHub, REFRESH_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [fetchHub]);
 
   const navigate = useNavigate();
 
@@ -515,6 +541,88 @@ export default function DashboardSummary({
 
             {/* ── SIDEBAR ─────────────────────────────────── */}
             <div className="space-y-4 sm:space-y-5">
+
+              {/* Shop Hub: my open tasks */}
+              {hubTasks !== null && (
+                <SectionCard
+                  title="My Open Tasks"
+                  subtitle="From the Shop Hub"
+                  action={(
+                    <Link to="/admin/workspace?section=my-tasks" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
+                      Open →
+                    </Link>
+                  )}
+                >
+                  {hubTasks.length === 0 ? (
+                    <p className="text-sm text-slate-400 dark:text-slate-600 text-center py-2">All caught up 🎉</p>
+                  ) : (
+                    <ul className="space-y-1.5 sm:space-y-2">
+                      {hubTasks.map((task) => {
+                        const overdue = task.due_date && task.due_date < getTodayPacific();
+                        const priority = TASK_PRIORITIES[task.priority] || TASK_PRIORITIES.normal;
+                        return (
+                          <li key={task.id}>
+                            <Link
+                              to="/admin/workspace?section=my-tasks"
+                              className="flex items-center justify-between gap-2 px-2.5 sm:px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-primary/40 transition-colors"
+                            >
+                              <span className="flex items-center gap-2 min-w-0">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${priority.dot}`} title={priority.label} />
+                                <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{task.title}</span>
+                              </span>
+                              {task.due_date && (
+                                <span className={`flex-shrink-0 text-[10px] sm:text-xs font-bold ${overdue ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>
+                                  {overdue ? 'Overdue' : formatYmd(task.due_date)}
+                                </span>
+                              )}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </SectionCard>
+              )}
+
+              {/* Shop Hub: feed preview */}
+              {hubFeed !== null && (
+                <SectionCard
+                  title="Shop Feed"
+                  subtitle="Latest from the crew"
+                  action={hubFeed.unread > 0 ? (
+                    <Link to="/admin/workspace?section=feed" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-white text-xs font-black whitespace-nowrap">
+                      {hubFeed.unread} new
+                    </Link>
+                  ) : (
+                    <Link to="/admin/workspace?section=feed" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
+                      Open →
+                    </Link>
+                  )}
+                >
+                  {hubFeed.latest.length === 0 ? (
+                    <p className="text-sm text-slate-400 dark:text-slate-600 text-center py-2">Nothing posted yet</p>
+                  ) : (
+                    <ul className="space-y-1.5 sm:space-y-2">
+                      {hubFeed.latest.map((m) => (
+                        <li key={m.id}>
+                          <Link
+                            to="/admin/workspace?section=feed"
+                            className="block px-2.5 sm:px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-primary/40 transition-colors"
+                          >
+                            <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-400">
+                              {m.important && <span className="material-symbols-outlined text-red-500" style={{ fontSize: '12px' }}>flag</span>}
+                              {m.type === 'call' && <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>phone_in_talk</span>}
+                              <span className="font-bold truncate">{m.author_name}</span>
+                              <span className="flex-shrink-0">{relativeTime(m.created_at)}</span>
+                            </span>
+                            <span className="block text-xs sm:text-sm text-slate-700 dark:text-slate-200 truncate">{m.preview}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </SectionCard>
+              )}
 
               {/* Active Customers */}
               <SectionCard title="Active Customers" subtitle="Customers with open jobs">

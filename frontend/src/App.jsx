@@ -30,6 +30,7 @@ const RepairTracker = lazy(() => import('./pages/admin/RepairTracker'));
 // Sales pages are lazy-loaded — never ships to public visitors
 const SalesLogin = lazy(() => import('./pages/sales/SalesLogin'));
 const SalesDashboard = lazy(() => import('./pages/sales/SalesDashboard'));
+const ShopWorkspace = lazy(() => import('./pages/admin/ShopWorkspace'));
 
 function AdminFallback() {
   return (
@@ -86,6 +87,16 @@ function App() {
                     <ProtectedAdminRoute>
                       <Suspense fallback={<AdminFallback />}>
                         <RepairTracker />
+                      </Suspense>
+                    </ProtectedAdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/workspace"
+                  element={
+                    <ProtectedAdminRoute>
+                      <Suspense fallback={<AdminFallback />}>
+                        <ShopWorkspace />
                       </Suspense>
                     </ProtectedAdminRoute>
                   }
