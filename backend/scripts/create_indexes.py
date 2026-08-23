@@ -282,6 +282,47 @@ async def create_route_management_indexes():
     print("  ✅ Route management indexes created!")
 
 
+async def create_workspace_indexes():
+    """Indexes for the Shop Hub tasks + messages collections"""
+    print("\n📌 Creating WORKSPACE (tasks/messages) indexes...")
+    db = get_database()
+
+    # Board/list default view: open tasks ordered by due date.
+    print("  Creating index: tasks (status, due_date)...")
+    await db.tasks.create_index(
+        [("status", 1), ("due_date", 1)],
+        name="tasks_status_due_idx"
+    )
+    print("  ✓ Created tasks_status_due_idx")
+
+    # "My tasks" badge counts and the assignee filter.
+    print("  Creating index: tasks (assignee_id, status)...")
+    await db.tasks.create_index(
+        [("assignee_id", 1), ("status", 1)],
+        name="tasks_assignee_status_idx"
+    )
+    print("  ✓ Created tasks_assignee_status_idx")
+
+    print("  Creating index: tasks.created_at desc...")
+    await db.tasks.create_index([("created_at", -1)], name="tasks_created_idx")
+    print("  ✓ Created tasks_created_idx")
+
+    # Feed pages newest-first; the unread $ne count stays unindexed by design
+    # (fine at shop scale — see plan notes).
+    print("  Creating index: messages.created_at desc...")
+    await db.messages.create_index([("created_at", -1)], name="messages_created_idx")
+    print("  ✓ Created messages_created_idx")
+
+    print("  Creating index: messages (pinned, created_at desc)...")
+    await db.messages.create_index(
+        [("pinned", 1), ("created_at", -1)],
+        name="messages_pinned_created_idx"
+    )
+    print("  ✓ Created messages_pinned_created_idx")
+
+    print("  ✅ Workspace indexes created!")
+
+
 async def create_all_indexes():
     """Create all production indexes"""
     print("\n" + "=" * 60)
@@ -296,6 +337,7 @@ async def create_all_indexes():
         await create_repairs_indexes()
         await create_customers_indexes()
         await create_route_management_indexes()
+        await create_workspace_indexes()
 
         print("\n" + "=" * 60)
         print("✅ ALL PRODUCTION INDEXES CREATED SUCCESSFULLY!")
@@ -324,7 +366,9 @@ async def verify_indexes():
         ("businesses", "🏭"),
         ("routes", "🚚"),
         ("visits", "📝"),
-        ("saved_routes", "🔖")
+        ("saved_routes", "🔖"),
+        ("tasks", "✅"),
+        ("messages", "💬")
     ]
 
     total_indexes = 0

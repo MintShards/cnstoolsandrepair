@@ -7,12 +7,15 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.models.auth import LoginRequest, LoginResponse, User, SalesRepCreate, SalesRepUpdate, SalesRepResponse
+from app.models.auth import (
+    LoginRequest, LoginResponse, User, SalesRepCreate, SalesRepUpdate, SalesRepResponse,
+    StaffCreate, StaffUpdate, StaffResponse, ChangePasswordRequest,
+)
 from app.core.security import verify_password, create_access_token, hash_password
 from app.database import get_database
 from app.dependencies.auth import get_current_user, require_admin, ACCESS_TOKEN_COOKIE
 from app.config import settings
-from app.utils import convert_objectid_to_str
+from app.utils import convert_objectid_to_str, user_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -262,3 +265,170 @@ async def activate_sales_rep(rep_id: str, current_user: User = Depends(require_a
     total_visits = await db.visits.count_documents({"rep_id": rep_id})
     total_routes = await db.routes.count_documents({"assigned_to": rep_id})
     return _build_sales_rep_response(updated, total_visits, total_routes)
+
+
+# ---------------------------------------------------------------------------
+# Staff CRUD (shop workers — everyone gets their own admin account)
+# ---------------------------------------------------------------------------
+
+def _build_staff_response(doc: dict) -> StaffResponse:
+    return StaffResponse(
+        id=doc["id"],
+        first_name=doc.get("first_name"),
+        last_name=doc.get("last_name"),
+        name=user_display_name(doc),
+        email=doc["email"],
+        is_active=doc.get("is_active", True),
+        created_at=doc["created_at"],
+    )
+
+
+@router.get("/staff", response_model=List[StaffResponse])
+async def list_staff(current_user: User = Depends(require_admin)):
+    """List all shop staff accounts (role=admin). Doubles as the assignee
+    picker source — the frontend filters on is_active for pickers."""
+    db = get_database()
+    staff = []
+    async for doc in db.users.find({"role": "admin"}).sort("created_at", -1):
+        doc = convert_objectid_to_str(doc)
+        doc["id"] = doc.pop("_id")
+        staff.append(_build_staff_response(doc))
+    return staff
+
+
+@router.post("/staff", response_model=StaffResponse, status_code=status.HTTP_201_CREATED)
+async def create_staff(data: StaffCreate, current_user: User = Depends(require_admin)):
+    """Create a new shop staff account."""
+    db = get_database()
+
+    existing = await db.users.find_one({"email": data.email.lower().strip()})
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    now = datetime.utcnow()
+    doc = {
+        "first_name": data.first_name.strip(),
+        "last_name": data.last_name.strip(),
+        "email": data.email.lower().strip(),
+        "password_hash": hash_password(data.password),
+        "role": "admin",
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now,
+    }
+    result = await db.users.insert_one(doc)
+    created = await db.users.find_one({"_id": result.inserted_id})
+    created = convert_objectid_to_str(created)
+    created["id"] = created.pop("_id")
+    logger.info(f"Staff account created: {created['email']} by admin {current_user.email}")
+    return _build_staff_response(created)
+
+
+@router.put("/staff/{user_id}", response_model=StaffResponse)
+async def update_staff(user_id: str, data: StaffUpdate, current_user: User = Depends(require_admin)):
+    """Update a staff member's details or reset their password."""
+    db = get_database()
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    member = await db.users.find_one({"_id": oid, "role": "admin"})
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    updates: dict = {"updated_at": datetime.utcnow()}
+    if data.first_name is not None:
+        updates["first_name"] = data.first_name.strip()
+    if data.last_name is not None:
+        updates["last_name"] = data.last_name.strip()
+    if data.email is not None:
+        email = data.email.lower().strip()
+        conflict = await db.users.find_one({"email": email, "_id": {"$ne": oid}})
+        if conflict:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
+        updates["email"] = email
+    if data.password is not None:
+        updates["password_hash"] = hash_password(data.password)
+        logger.info(f"Password reset for staff {member['email']} by admin {current_user.email}")
+
+    await db.users.update_one({"_id": oid}, {"$set": updates})
+    updated = await db.users.find_one({"_id": oid})
+    updated = convert_objectid_to_str(updated)
+    updated["id"] = updated.pop("_id")
+    return _build_staff_response(updated)
+
+
+@router.patch("/staff/{user_id}/deactivate", response_model=StaffResponse)
+async def deactivate_staff(user_id: str, current_user: User = Depends(require_admin)):
+    """Deactivate a staff account (blocks login, history preserved). Guards
+    against locking the shop out: no self-deactivation, and the last active
+    admin can never be deactivated."""
+    db = get_database()
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    if user_id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="You cannot deactivate your own account")
+
+    member = await db.users.find_one({"_id": oid, "role": "admin"})
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    active_admins = await db.users.count_documents({"role": "admin", "is_active": True})
+    if member.get("is_active", True) and active_admins <= 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Cannot deactivate the last active admin account")
+
+    await db.users.update_one({"_id": oid}, {"$set": {"is_active": False, "updated_at": datetime.utcnow()}})
+    updated = await db.users.find_one({"_id": oid})
+    updated = convert_objectid_to_str(updated)
+    updated["id"] = updated.pop("_id")
+    logger.info(f"Staff account deactivated: {member['email']} by admin {current_user.email}")
+    return _build_staff_response(updated)
+
+
+@router.patch("/staff/{user_id}/activate", response_model=StaffResponse)
+async def activate_staff(user_id: str, current_user: User = Depends(require_admin)):
+    """Re-activate a previously deactivated staff account."""
+    db = get_database()
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    member = await db.users.find_one({"_id": oid, "role": "admin"})
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    await db.users.update_one({"_id": oid}, {"$set": {"is_active": True, "updated_at": datetime.utcnow()}})
+    updated = await db.users.find_one({"_id": oid})
+    updated = convert_objectid_to_str(updated)
+    updated["id"] = updated.pop("_id")
+    logger.info(f"Staff account re-activated: {member['email']} by admin {current_user.email}")
+    return _build_staff_response(updated)
+
+
+@router.post("/change-password")
+@limiter.limit("5/minute")
+async def change_password(
+    request: Request,
+    data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Self-service password change for any logged-in user (admin or sales)."""
+    db = get_database()
+    user_doc = await db.users.find_one({"email": current_user.email})
+    if not user_doc or not verify_password(data.current_password, user_doc.get("password_hash", "")):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Current password is incorrect")
+
+    await db.users.update_one(
+        {"_id": user_doc["_id"]},
+        {"$set": {"password_hash": hash_password(data.new_password), "updated_at": datetime.utcnow()}},
+    )
+    logger.info(f"Password changed by {current_user.email}")
+    return {"success": True}
