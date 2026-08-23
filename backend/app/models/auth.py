@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, EmailStr
 
@@ -74,19 +74,24 @@ class SalesRepResponse(BaseModel):
 # --- Staff (shop admin accounts) CRUD models ---
 
 class StaffCreate(BaseModel):
-    """Create a new shop staff account (admin role)"""
+    """Create a new shop account. `staff` = operational access only (Repair
+    Tracker, Shop Hub, sales routes); `admin` adds the website CMS and
+    account management."""
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8, description="Minimum 8 characters")
+    role: Literal["staff", "admin"] = "staff"
 
 
 class StaffUpdate(BaseModel):
-    """Update a staff account (all fields optional; password = admin reset)"""
+    """Update a staff account (all fields optional; password = admin reset,
+    role = access-level change)"""
     first_name: Optional[str] = Field(None, min_length=1, max_length=50)
     last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(None, min_length=8, description="Leave blank to keep current password")
+    role: Optional[Literal["staff", "admin"]] = None
 
 
 class StaffResponse(BaseModel):
@@ -97,6 +102,7 @@ class StaffResponse(BaseModel):
     last_name: Optional[str] = None
     name: str
     email: str
+    role: str
     is_active: bool
     created_at: datetime
 

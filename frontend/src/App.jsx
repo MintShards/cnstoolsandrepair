@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -19,8 +19,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import NotFound from './pages/NotFound';
 import { lazy, Suspense } from 'react';
-import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
-import ProtectedSalesRoute from './components/sales/ProtectedSalesRoute';
+import RequireRole from './components/RequireRole';
 
 // Admin pages are lazy-loaded so the CMS bundle never ships to public visitors
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
@@ -31,6 +30,7 @@ const RepairTracker = lazy(() => import('./pages/admin/RepairTracker'));
 const SalesLogin = lazy(() => import('./pages/sales/SalesLogin'));
 const SalesDashboard = lazy(() => import('./pages/sales/SalesDashboard'));
 const ShopWorkspace = lazy(() => import('./pages/admin/ShopWorkspace'));
+const WorkspaceLogin = lazy(() => import('./pages/workspace/WorkspaceLogin'));
 
 function AdminFallback() {
   return (
@@ -38,6 +38,13 @@ function AdminFallback() {
       <div className="size-10 rounded-full border-4 border-slate-700 border-t-primary animate-spin" aria-label="Loading" />
     </div>
   );
+}
+
+// The Shop Hub used to live at /admin/workspace — keep old bookmarks working,
+// preserving the ?section= deep link.
+function LegacyWorkspaceRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/workspace${search}`} replace />;
 }
 
 function App() {
@@ -74,31 +81,42 @@ function App() {
                 <Route
                   path="/admin/settings"
                   element={
-                    <ProtectedAdminRoute>
+                    <RequireRole roles={['admin']} loginPath="/admin/login">
                       <Suspense fallback={<AdminFallback />}>
                         <AdminSettings />
                       </Suspense>
-                    </ProtectedAdminRoute>
+                    </RequireRole>
                   }
                 />
                 <Route
                   path="/admin/repair-tracker"
                   element={
-                    <ProtectedAdminRoute>
+                    <RequireRole roles={['staff', 'admin']} loginPath="/admin/login">
                       <Suspense fallback={<AdminFallback />}>
                         <RepairTracker />
                       </Suspense>
-                    </ProtectedAdminRoute>
+                    </RequireRole>
+                  }
+                />
+                <Route path="/admin/workspace" element={<LegacyWorkspaceRedirect />} />
+
+                {/* Shop Hub - the staff-facing workspace with its own entrance */}
+                <Route
+                  path="/workspace/login"
+                  element={
+                    <Suspense fallback={<AdminFallback />}>
+                      <WorkspaceLogin />
+                    </Suspense>
                   }
                 />
                 <Route
-                  path="/admin/workspace"
+                  path="/workspace"
                   element={
-                    <ProtectedAdminRoute>
+                    <RequireRole roles={['staff', 'admin']} loginPath="/workspace/login">
                       <Suspense fallback={<AdminFallback />}>
                         <ShopWorkspace />
                       </Suspense>
-                    </ProtectedAdminRoute>
+                    </RequireRole>
                   }
                 />
 
@@ -114,11 +132,11 @@ function App() {
                 <Route
                   path="/sales/dashboard"
                   element={
-                    <ProtectedSalesRoute>
+                    <RequireRole roles={['sales', 'staff', 'admin']} loginPath="/sales/login">
                       <Suspense fallback={<AdminFallback />}>
                         <SalesDashboard />
                       </Suspense>
-                    </ProtectedSalesRoute>
+                    </RequireRole>
                   }
                 />
                 <Route path="/sales" element={<Navigate to="/sales/dashboard" replace />} />

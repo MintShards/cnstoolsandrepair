@@ -23,7 +23,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const path = window.location.pathname;
-      if (path.startsWith('/sales')) {
+      if (path.startsWith('/workspace')) {
+        if (!path.includes('/workspace/login')) {
+          window.location.href = '/workspace/login';
+        }
+      } else if (path.startsWith('/sales')) {
         if (!path.includes('/sales/login')) {
           window.location.href = '/sales/login';
         }

@@ -548,7 +548,7 @@ export default function DashboardSummary({
                   title="My Open Tasks"
                   subtitle="From the Shop Hub"
                   action={(
-                    <Link to="/admin/workspace?section=my-tasks" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
+                    <Link to="/workspace?section=my-tasks" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
                       Open →
                     </Link>
                   )}
@@ -563,7 +563,7 @@ export default function DashboardSummary({
                         return (
                           <li key={task.id}>
                             <Link
-                              to="/admin/workspace?section=my-tasks"
+                              to="/workspace?section=my-tasks"
                               className="flex items-center justify-between gap-2 px-2.5 sm:px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-primary/40 transition-colors"
                             >
                               <span className="flex items-center gap-2 min-w-0">
@@ -590,11 +590,11 @@ export default function DashboardSummary({
                   title="Shop Feed"
                   subtitle="Latest from the crew"
                   action={hubFeed.unread > 0 ? (
-                    <Link to="/admin/workspace?section=feed" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-white text-xs font-black whitespace-nowrap">
+                    <Link to="/workspace?section=feed" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-white text-xs font-black whitespace-nowrap">
                       {hubFeed.unread} new
                     </Link>
                   ) : (
-                    <Link to="/admin/workspace?section=feed" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
+                    <Link to="/workspace?section=feed" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
                       Open →
                     </Link>
                   )}
@@ -606,7 +606,7 @@ export default function DashboardSummary({
                       {hubFeed.latest.map((m) => (
                         <li key={m.id}>
                           <Link
-                            to="/admin/workspace?section=feed"
+                            to="/workspace?section=feed"
                             className="block px-2.5 sm:px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-primary/40 transition-colors"
                           >
                             <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-400">

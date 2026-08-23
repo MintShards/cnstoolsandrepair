@@ -277,9 +277,10 @@ VITE_API_URL=http://localhost:8000
 
 ## Admin Interface
 
-- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repair-tracker` (hidden, no nav links)
-- **Auth**: JWT-based (email + password), 8-hour expiration
-- **User creation**: `python scripts/create_admin.py`
+- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repair-tracker`, `/workspace` + `/workspace/login` (Shop Hub — staff entrance; `/admin/workspace` redirects there), `/sales/login`, `/sales/dashboard` (all hidden, no nav links)
+- **Auth**: JWT-based (email + password), 8-hour expiration, httpOnly cookie
+- **Roles**: `admin` (everything) · `staff` (Repair Tracker + Shop Hub + sales routes; no CMS, no account management — guarded by `require_staff_or_admin`) · `sales` (sales area only, rep-scoped). Frontend guard: `components/RequireRole.jsx`.
+- **User creation**: admins via `python scripts/create_admin.py` or the Shop Hub Staff section (which also creates `staff`-role accounts with an Access Level select)
 - **Settings tabs**: Home, Services, Industries, Gallery, About, Contact, Global, Parts Library, Repair Jobs, Repair Requests, Customers
 - **Services vs Tools**:
   - Services: Array in settings collection (no IDs)

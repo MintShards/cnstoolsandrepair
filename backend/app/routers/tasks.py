@@ -8,7 +8,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.database import get_database
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.models.auth import User
 from app.models.task import (
     BatchCompleteRequest,
@@ -193,7 +193,7 @@ async def create_task_document(
 
 # /summary and /batch-complete MUST be defined before /{task_id}
 @router.get("/summary")
-async def get_tasks_summary(current_user: User = Depends(require_admin)):
+async def get_tasks_summary(current_user: User = Depends(require_staff_or_admin)):
     """Badge counts for the workspace sidebar / tracker header / dashboard."""
     db = get_database()
     today = _pacific_today_ymd()
@@ -217,7 +217,7 @@ async def get_tasks_summary(current_user: User = Depends(require_admin)):
 @router.post("/batch-complete", response_model=BatchCompleteResponse)
 async def batch_complete_tasks(
     batch: BatchCompleteRequest,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """Mark up to 100 tasks done, reporting per-item results rather than
     failing the whole batch. Already-done tasks count as success (idempotent)."""
@@ -261,7 +261,7 @@ async def list_tasks(
     due_to: Optional[str] = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     sort_by: str = Query(default="due_date"),
     sort_dir: str = Query(default="asc", pattern="^(asc|desc)$"),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """Paginated, server-sorted task list. `status=open` means not done;
     `assignee` accepts `me`, `unassigned`, or a user id."""
@@ -335,7 +335,7 @@ async def list_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-async def get_task(task_id: str, current_user: User = Depends(require_admin)):
+async def get_task(task_id: str, current_user: User = Depends(require_staff_or_admin)):
     """Fetch one task — used by feed entries linking to their spawned task."""
     db = get_database()
     if not ObjectId.is_valid(task_id):
@@ -347,7 +347,7 @@ async def get_task(task_id: str, current_user: User = Depends(require_admin)):
 
 
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
-async def create_task(data: TaskCreate, current_user: User = Depends(require_admin)):
+async def create_task(data: TaskCreate, current_user: User = Depends(require_staff_or_admin)):
     """Create a task, snapshotting the assignee name and work-order number."""
     db = get_database()
     created = await create_task_document(db, data, current_user)
@@ -356,7 +356,7 @@ async def create_task(data: TaskCreate, current_user: User = Depends(require_adm
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
-async def update_task(task_id: str, data: TaskUpdate, current_user: User = Depends(require_admin)):
+async def update_task(task_id: str, data: TaskUpdate, current_user: User = Depends(require_staff_or_admin)):
     """Partial update. Explicit nulls clear due_date/assignee/work-order link;
     status changes run through the completion path (recurrence-aware)."""
     db = get_database()
@@ -408,7 +408,7 @@ async def update_task(task_id: str, data: TaskUpdate, current_user: User = Depen
 
 
 @router.post("/{task_id}/claim", response_model=TaskResponse)
-async def claim_task(task_id: str, current_user: User = Depends(require_admin)):
+async def claim_task(task_id: str, current_user: User = Depends(require_staff_or_admin)):
     """Atomically claim an unassigned task. First claimer wins; the loser
     gets a 409 rather than silently overwriting."""
     db = get_database()
@@ -435,7 +435,7 @@ async def claim_task(task_id: str, current_user: User = Depends(require_admin)):
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(task_id: str, current_user: User = Depends(require_admin)):
+async def delete_task(task_id: str, current_user: User = Depends(require_staff_or_admin)):
     """Hard delete (tasks are operational, not records of business value)."""
     db = get_database()
     if not ObjectId.is_valid(task_id):

@@ -109,15 +109,36 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-async def require_sales_or_admin(current_user: User = Depends(get_current_user)) -> User:
+async def require_staff_or_admin(current_user: User = Depends(get_current_user)) -> User:
     """
-    Dependency to require sales or admin role.
-    Used for route management endpoints accessible by both sales reps and admins.
+    Dependency to require staff or admin role.
+    Used for the shop-floor operational surface — the Repair Tracker
+    (repairs, customers, requests, parts library, sourcing) and the Shop Hub
+    (tasks, feed, staff directory). Website CMS and account management stay
+    admin-only via require_admin.
 
     Raises:
-        HTTPException: 403 if user is not a sales rep or admin
+        HTTPException: 403 if user is not shop staff or an admin
     """
-    if current_user.role not in ("sales", "admin"):
+    if current_user.role not in ("staff", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff or admin access required"
+        )
+    return current_user
+
+
+async def require_sales_or_admin(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency to require sales, staff, or admin role.
+    Used for route management endpoints accessible by sales reps, shop staff,
+    and admins. (Shop staff get the rep-level view; zone/business CRUD stays
+    admin-only on those routers.)
+
+    Raises:
+        HTTPException: 403 if user is not a sales rep, shop staff, or admin
+    """
+    if current_user.role not in ("sales", "staff", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Sales or admin access required"

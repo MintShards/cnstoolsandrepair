@@ -180,7 +180,7 @@ export default function RepairTracker() {
               {/* Right: actions */}
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <Link
-                  to="/admin/workspace"
+                  to="/workspace"
                   className="relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-primary dark:text-blue-400 rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">hub</span>

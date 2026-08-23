@@ -206,7 +206,7 @@ async def create_visit(data: VisitCreate, current_user: User = Depends(require_s
             route_oid = ObjectId(data.route_id)
             route = await db.routes.find_one({"_id": route_oid})
             if route and (
-                current_user.role == "admin" or route.get("assigned_to") == current_user.id
+                current_user.role != "sales" or route.get("assigned_to") == current_user.id
             ):
                 stops = route.get("stops", [])
                 for stop in stops:

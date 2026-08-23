@@ -8,7 +8,7 @@ from datetime import datetime
 from app.database import get_database
 from app.models.supplier import SupplierCreate, SupplierUpdate, SupplierResponse
 from app.models.auth import User
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/suppliers", tags=["suppliers"])
@@ -22,7 +22,7 @@ def _build_supplier_response(doc: dict) -> SupplierResponse:
 
 @router.get("/", response_model=List[SupplierResponse])
 async def list_suppliers(
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """List all active suppliers sorted alphabetically."""
     db = get_database()
@@ -38,7 +38,7 @@ async def list_suppliers(
 @router.post("/", response_model=SupplierResponse, status_code=201)
 async def create_supplier(
     data: SupplierCreate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Create a new supplier. Rejects duplicate names (case-insensitive)."""
     db = get_database()
@@ -69,7 +69,7 @@ async def create_supplier(
 async def update_supplier(
     supplier_id: str,
     data: SupplierUpdate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Update supplier details (name, email, phone, contact_name, website)."""
     db = get_database()
@@ -105,7 +105,7 @@ async def update_supplier(
 @router.delete("/{supplier_id}", status_code=204)
 async def delete_supplier(
     supplier_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Soft-delete a supplier (sets active=False)."""
     db = get_database()

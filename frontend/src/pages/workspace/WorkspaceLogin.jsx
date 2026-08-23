@@ -4,7 +4,11 @@ import { Helmet } from 'react-helmet-async';
 import { authAPI } from '../../services/api';
 import { apiErrorMessage } from '../../utils/apiError';
 
-export default function SalesLogin() {
+/**
+ * The shop floor's own front door: staff bookmark /workspace/login and never
+ * need an /admin URL. Admins can use it too; sales accounts are turned away.
+ */
+export default function WorkspaceLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -21,15 +25,18 @@ export default function SalesLogin() {
     try {
       const result = await authAPI.login({ email, password });
 
-      if (!['sales', 'staff', 'admin'].includes(result.role)) {
-        setError('Your account does not have sales access.');
+      if (result.role !== 'staff' && result.role !== 'admin') {
+        // The cookie is already set; drop the session rather than leaving a
+        // signed-in account behind a "no access" message.
+        authAPI.logout().catch(() => {});
+        setError('Your account does not have Shop Hub access.');
         setLoading(false);
         return;
       }
 
       const from = location.state?.from
         ? `${location.state.from.pathname}${location.state.from.search || ''}`
-        : '/sales/dashboard';
+        : '/workspace';
       navigate(from, { replace: true });
     } catch (err) {
       setError(apiErrorMessage(err, 'Invalid email or password'));
@@ -41,7 +48,7 @@ export default function SalesLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
       <Helmet>
-        <title>Sales Login — CNS Tool Repair</title>
+        <title>Shop Hub Login — CNS Tool Repair</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
@@ -50,14 +57,14 @@ export default function SalesLogin() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
             <span className="material-symbols-outlined text-4xl text-primary">
-              route
+              hub
             </span>
           </div>
           <h1 className="text-2xl font-black text-white uppercase tracking-tight mb-1">
-            Sales Rep Login
+            Shop Hub Login
           </h1>
           <p className="text-slate-400 text-sm">
-            CNS Tool Repair — Route Management
+            CNS Tool Repair — Tasks, Shop Feed &amp; Repair Tracker
           </p>
         </div>
 
@@ -73,7 +80,7 @@ export default function SalesLogin() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-4 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors text-base"
-                placeholder="rep@example.com"
+                placeholder="you@cnstoolrepair.com"
                 required
                 autoFocus
                 autoComplete="email"

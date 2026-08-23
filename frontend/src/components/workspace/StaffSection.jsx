@@ -11,13 +11,15 @@ import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import StaffAvatar from './StaffAvatar';
 import ConfirmModal from '../sales/ConfirmModal';
 
-function StaffFormModal({ member, onSaved, onClose }) {
+function StaffFormModal({ member, currentUser, onSaved, onClose }) {
   const showToast = useToast();
   const editing = Boolean(member);
+  const isSelf = editing && member.id === currentUser?.id;
   const [firstName, setFirstName] = useState(member?.first_name || '');
   const [lastName, setLastName] = useState(member?.last_name || '');
   const [email, setEmail] = useState(member?.email || '');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState(member?.role || 'staff');
   const [saving, setSaving] = useState(false);
   useEscapeClose(onClose);
   useBodyScrollLock(true);
@@ -31,6 +33,7 @@ function StaffFormModal({ member, onSaved, onClose }) {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           email: email.trim(),
+          ...(isSelf ? {} : { role }),
         });
         showToast('success', 'Staff member updated.');
       } else {
@@ -39,6 +42,7 @@ function StaffFormModal({ member, onSaved, onClose }) {
           last_name: lastName.trim(),
           email: email.trim(),
           password,
+          role,
         });
         showToast('success', 'Staff account created — they can log in now.');
       }
@@ -86,6 +90,23 @@ function StaffFormModal({ member, onSaved, onClose }) {
               />
             </div>
           )}
+          <div>
+            <label className={LABEL_CLS}>Access Level</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              disabled={isSelf}
+              className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <option value="staff">Shop Staff — Repair Tracker, Shop Hub &amp; Sales routes</option>
+              <option value="admin">Full Admin — everything incl. Website CMS &amp; accounts</option>
+            </select>
+            {isSelf && (
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                You can&apos;t change your own access level.
+              </p>
+            )}
+          </div>
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className={CANCEL_BTN_CLS}>Cancel</button>
             <button type="submit" disabled={saving} className={SUBMIT_BTN_CLS}>
@@ -225,6 +246,7 @@ function ChangeMyPasswordCard() {
  */
 export default function StaffSection({ currentUser, onStaffChanged }) {
   const showToast = useToast();
+  const isAdmin = currentUser?.role === 'admin';
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formTarget, setFormTarget] = useState(undefined); // undefined=closed, null=create, member=edit
@@ -274,13 +296,15 @@ export default function StaffSection({ currentUser, onStaffChanged }) {
     <div>
       <TabHeader
         title="Staff"
-        subtitle="Everyone gets their own login — tasks and posts show who did what"
-        action={(
+        subtitle={isAdmin
+          ? 'Everyone gets their own login — tasks and posts show who did what'
+          : 'Who’s who in the shop'}
+        action={isAdmin ? (
           <button onClick={() => setFormTarget(null)} className={BTN_PRIMARY}>
             <span className="material-symbols-outlined text-base">person_add</span>
             Add Staff
           </button>
-        )}
+        ) : undefined}
       />
 
       <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-lg shadow-black/5 dark:shadow-black/20 overflow-hidden">
@@ -296,9 +320,10 @@ export default function StaffSection({ currentUser, onStaffChanged }) {
                 <tr>
                   <th className="py-3 px-4 font-bold">Name</th>
                   <th className="py-3 px-4 font-bold hidden md:table-cell">Email</th>
+                  <th className="py-3 px-4 font-bold">Access</th>
                   <th className="py-3 px-4 font-bold hidden sm:table-cell">Status</th>
                   <th className="py-3 px-4 font-bold hidden lg:table-cell">Added</th>
-                  <th className="py-3 px-2 sm:px-4 text-right font-bold">Actions</th>
+                  {isAdmin && <th className="py-3 px-2 sm:px-4 text-right font-bold">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/40">
@@ -319,6 +344,15 @@ export default function StaffSection({ currentUser, onStaffChanged }) {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 hidden md:table-cell text-slate-600 dark:text-slate-300 text-sm">{member.email}</td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border ${
+                          member.role === 'admin'
+                            ? 'bg-purple-100 text-purple-800 border-purple-400 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-600'
+                            : 'bg-slate-200 text-slate-600 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
+                        }`}>
+                          {member.role === 'admin' ? 'Admin' : 'Staff'}
+                        </span>
+                      </td>
                       <td className="py-3.5 px-4 hidden sm:table-cell">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-bold border ${
                           member.is_active
@@ -332,7 +366,7 @@ export default function StaffSection({ currentUser, onStaffChanged }) {
                       <td className="py-3.5 px-4 hidden lg:table-cell text-slate-500 dark:text-slate-400 text-sm whitespace-nowrap">
                         {formatDateShortPacific(member.created_at)}
                       </td>
-                      <td className="py-3.5 px-2 sm:px-4 text-right">
+                      {isAdmin && <td className="py-3.5 px-2 sm:px-4 text-right">
                         <div className="inline-flex items-center gap-1 sm:gap-1.5">
                           <button
                             onClick={() => setFormTarget(member)}
@@ -365,7 +399,7 @@ export default function StaffSection({ currentUser, onStaffChanged }) {
                             </button>
                           )}
                         </div>
-                      </td>
+                      </td>}
                     </tr>
                   );
                 })}
@@ -380,6 +414,7 @@ export default function StaffSection({ currentUser, onStaffChanged }) {
       {formTarget !== undefined && (
         <StaffFormModal
           member={formTarget}
+          currentUser={currentUser}
           onSaved={() => { setFormTarget(undefined); afterChange(); }}
           onClose={() => setFormTarget(undefined)}
         />

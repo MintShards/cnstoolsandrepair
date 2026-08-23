@@ -19,7 +19,7 @@ from app.models.repair import (
     WorkOrderEmailSendRequest,
 )
 from app.models.auth import User
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.services.file_service import save_upload_file, delete_file
 from app.services.work_order_email_service import send_work_order_email
 from app.utils.helpers import convert_objectid_to_str
@@ -126,7 +126,7 @@ def _build_job_response(job: dict) -> RepairJobResponse:
 
 @router.get("/lifetime-stats")
 async def get_lifetime_stats(
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """
     Returns lifetime/historical stats for the dashboard:
@@ -204,7 +204,7 @@ async def get_model_repair_counts(
     brand: Optional[str] = None,
     model: Optional[str] = None,
     exclude_job_id: Optional[str] = None,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """
     How many times each (brand, model_number) has actually been repaired.
@@ -264,7 +264,7 @@ async def get_model_repair_counts(
 
 @router.get("/summary")
 async def get_repair_summary(
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """
     Returns aggregated dashboard stats:
@@ -757,7 +757,7 @@ async def get_repair_summary(
 # ──────────────────────────────────────────────
 
 @router.get("/parts-analytics")
-async def get_parts_analytics(current_user: User = Depends(require_admin)):
+async def get_parts_analytics(current_user: User = Depends(require_staff_or_admin)):
     """Aggregated parts usage analytics for stocking and supplier decisions."""
     db = get_database()
 
@@ -1005,7 +1005,7 @@ async def list_repair_jobs(
     active_only: bool = Query(default=False),
     sort_by: Optional[str] = Query(default="smart", regex="^(created_at|updated_at|request_number|smart)$"),
     sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """List all repair jobs with optional filtering, search, and server-side pagination.
     Returns X-Total-Count header with total matching documents."""
@@ -1104,7 +1104,7 @@ async def list_repair_jobs(
 @router.post("/batch-status", response_model=BatchStatusResponse)
 async def batch_update_tool_status(
     batch: BatchStatusRequest,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Batch update status for multiple tools across one or more repair jobs."""
     db = get_database()
@@ -1292,7 +1292,7 @@ async def _resolve_customer(db, job_data_dict: dict) -> dict:
 @router.post("/", response_model=RepairJobResponse, status_code=201)
 async def create_repair_job(
     job_data: RepairJobCreate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Create a new repair job manually"""
     db = get_database()
@@ -1342,7 +1342,7 @@ async def create_repair_job(
 @router.post("/from-request/{quote_id}", response_model=RepairJobResponse, status_code=201)
 async def convert_from_request(
     quote_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Convert an existing online repair request into a tracked repair job"""
     db = get_database()
@@ -1464,7 +1464,7 @@ async def convert_from_request(
 @router.get("/{job_id}", response_model=RepairJobResponse)
 async def get_repair_job(
     job_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Get a repair job by ID"""
     db = get_database()
@@ -1489,7 +1489,7 @@ async def get_repair_job(
 async def update_repair_job(
     job_id: str,
     job_update: RepairJobUpdate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Update repair job customer/company info"""
     db = get_database()
@@ -1520,7 +1520,7 @@ async def update_repair_job(
 @router.delete("/{job_id}", status_code=204)
 async def delete_repair_job(
     job_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Delete a repair job and all associated tool photos"""
     db = get_database()
@@ -1565,7 +1565,7 @@ async def delete_repair_job(
 async def add_tool(
     job_id: str,
     tool_data: ToolItemCreate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Add a tool item to an existing repair job"""
     db = get_database()
@@ -1610,7 +1610,7 @@ async def update_tool(
     job_id: str,
     tool_id: str,
     tool_update: ToolItemUpdate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Update a tool item's fields within a repair job"""
     db = get_database()
@@ -1681,7 +1681,7 @@ async def toggle_part_sourcing(
     job_id: str,
     tool_id: str,
     part_index: int,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Toggle the needs_sourcing flag on a specific part without replacing the entire parts array."""
     db = get_database()
@@ -1729,7 +1729,7 @@ async def update_tool_status(
     job_id: str,
     tool_id: str,
     status_update: ToolStatusUpdate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Update a tool's repair status and append to status history"""
     db = get_database()
@@ -1820,7 +1820,7 @@ async def upload_tool_photo(
     job_id: str,
     tool_id: str,
     photo: UploadFile = File(...),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Upload a photo for a specific tool in a repair job"""
     db = get_database()
@@ -1866,7 +1866,7 @@ async def delete_tool_photo(
     job_id: str,
     tool_id: str,
     photo_url: str = Query(..., description="Full photo URL or filename to delete"),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Delete a specific photo from a tool in a repair job"""
     db = get_database()
@@ -1917,7 +1917,7 @@ async def delete_tool_photo(
 async def remove_tool(
     job_id: str,
     tool_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Remove a tool item from a repair job"""
     db = get_database()
@@ -1956,11 +1956,11 @@ async def remove_tool(
     return _build_job_response(updated_job)
 
 
-@router.post("/{job_id}/send-work-order-email", dependencies=[Depends(require_admin)])
+@router.post("/{job_id}/send-work-order-email", dependencies=[Depends(require_staff_or_admin)])
 async def send_work_order_email_endpoint(
     job_id: str,
     request: WorkOrderEmailSendRequest,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """Send the work order PDF + tool photos to the customer via email."""
     db = get_database()

@@ -10,7 +10,7 @@ from app.models.quote import QuoteCreate, QuoteResponse, Quote, ToolEntry
 from app.services.file_service import save_upload_file, delete_file
 from app.services.email_service import send_quote_notification
 from app.utils.helpers import convert_objectid_to_str
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.logging_config import log_quote_created, log_quote_deleted, log_email_notification
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -160,7 +160,7 @@ async def create_quote(
     return response
 
 
-@router.get("/{quote_id}", response_model=QuoteResponse, dependencies=[Depends(require_admin)])
+@router.get("/{quote_id}", response_model=QuoteResponse, dependencies=[Depends(require_staff_or_admin)])
 async def get_quote(quote_id: str):
     """Get a quote by ID"""
 
@@ -179,7 +179,7 @@ async def get_quote(quote_id: str):
     return QuoteResponse(**quote)
 
 
-@router.get("/", response_model=List[QuoteResponse], dependencies=[Depends(require_admin)])
+@router.get("/", response_model=List[QuoteResponse], dependencies=[Depends(require_staff_or_admin)])
 async def list_quotes(
     skip: int = 0,
     limit: int = 50,
@@ -203,7 +203,7 @@ async def list_quotes(
 
 
 
-@router.delete("/{quote_id}", status_code=204, dependencies=[Depends(require_admin)])
+@router.delete("/{quote_id}", status_code=204, dependencies=[Depends(require_staff_or_admin)])
 async def delete_quote(quote_id: str):
     """Delete a quote request and all associated photos from storage"""
 

@@ -194,7 +194,8 @@ export default function UserGuide({ onClose }) {
                   <UrlRow label="Login Page" url="/admin/login" />
                   <UrlRow label="Website CMS" url="/admin/settings" />
                   <UrlRow label="Repair Tracker" url="/admin/repair-tracker" />
-                  <UrlRow label="Shop Hub" url="/admin/workspace" />
+                  <UrlRow label="Shop Hub" url="/workspace" />
+                  <UrlRow label="Shop Hub Login" url="/workspace/login" />
                 </div>
               </SubSection>
 
@@ -1124,7 +1125,8 @@ export default function UserGuide({ onClose }) {
             <div className="guide-section pt-10">
               <SectionHeader num="12" title="Shop Hub — Tasks & Shop Feed" icon="hub" />
               <p className="mb-4 text-slate-600 dark:text-slate-400">
-                Go to <code>/admin/workspace</code> (or click the <strong>Shop Hub</strong> button in the Repair Tracker header).
+                Go to <code>/workspace</code> (or click the <strong>Shop Hub</strong> button in the Repair Tracker header).
+                Shop staff sign in at their own door, <code>/workspace/login</code> — no /admin address needed.
                 The Shop Hub is the shop&apos;s shared workspace: a to-do list everyone can see, a feed of what&apos;s happening,
                 and the place customer phone calls get written down instead of on sticky notes. Everything updates automatically
                 every 30–60 seconds — when someone adds a task or logs a call, everyone else sees it without refreshing.
@@ -1183,12 +1185,16 @@ export default function UserGuide({ onClose }) {
                 </InfoBox>
               </SubSection>
 
-              <SubSection title="Staff Accounts">
+              <SubSection title="Staff Accounts &amp; Access Levels">
                 <p>Every shop worker gets <strong>their own login</strong>, so every task, post, and call log shows who did it.
-                In the <strong>Staff</strong> section you can add a person (name, email, password), edit their details,
-                <strong> reset a forgotten password</strong>, or deactivate someone who has left (their history is kept, but they
-                can no longer log in). The system won&apos;t let you deactivate yourself or the last active account.</p>
-                <p className="mt-2">Everyone can change their own password with the <strong>Change My Password</strong> card at the bottom of the Staff section.</p>
+                There are two access levels:</p>
+                <ul className="mt-2 space-y-1.5">
+                  <li><strong>Shop Staff</strong> — the Repair Tracker, the Shop Hub, and the Sales route area. No website settings, no account management. This is the right level for most workers.</li>
+                  <li><strong>Full Admin</strong> — everything, including the Website CMS (<code>/admin/settings</code>) and staff account management.</li>
+                </ul>
+                <p className="mt-2">Shop staff sign in at <code>/workspace/login</code>. If a staff member types an admin-only address like <code>/admin/settings</code>, they are simply sent back to the Shop Hub.</p>
+                <p className="mt-2">Admins manage accounts in the <strong>Staff</strong> section: add a person (name, email, password, access level), edit their details or access level, <strong>reset a forgotten password</strong>, or deactivate someone who has left (history is kept, but they can no longer log in). The system won&apos;t let you deactivate yourself, deactivate the last active admin, or remove admin access from the last active admin — so the shop can never lock itself out.</p>
+                <p className="mt-2">Staff see the section as a read-only team directory. Everyone — staff and admin — can change their own password with the <strong>Change My Password</strong> card at the bottom.</p>
               </SubSection>
             </div>
 

@@ -8,7 +8,7 @@ from datetime import datetime
 from app.database import get_database
 from app.models.technician import TechnicianCreate, TechnicianResponse
 from app.models.auth import User
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/technicians", tags=["technicians"])
@@ -22,7 +22,7 @@ def _build_technician_response(doc: dict) -> TechnicianResponse:
 
 @router.get("/", response_model=List[TechnicianResponse])
 async def list_technicians(
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """List all active technicians sorted alphabetically."""
     db = get_database()
@@ -38,7 +38,7 @@ async def list_technicians(
 @router.post("/", response_model=TechnicianResponse, status_code=201)
 async def create_technician(
     data: TechnicianCreate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Create a new technician. Rejects duplicate names (case-insensitive)."""
     db = get_database()
@@ -64,7 +64,7 @@ async def create_technician(
 @router.delete("/{technician_id}", status_code=204)
 async def delete_technician(
     technician_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Soft-delete a technician (sets active=False)."""
     db = get_database()

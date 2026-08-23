@@ -110,7 +110,7 @@ export default function ShopWorkspace() {
     } catch {
       // Ignore network/logout errors — redirect regardless.
     }
-    navigate('/admin/login');
+    navigate('/workspace/login');
   };
 
   const sectionProps = { currentUser, staff, refreshCounts, focusTick };

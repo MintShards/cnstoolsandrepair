@@ -8,7 +8,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.database import get_database
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.models.auth import User
 from app.models.sourcing_request import SourcingRequest, SourcingQueueItem, SourcingLogEntry
 from app.services.sourcing_email_service import send_bulk_sourcing_emails
@@ -23,7 +23,7 @@ DEFAULT_SUBJECT = "Parts Pricing Request - CNS Tool Repair"
 
 @router.get("/queue", response_model=List[SourcingQueueItem])
 async def get_sourcing_queue(
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """
     Return all parts flagged with needs_sourcing=True across all repair jobs and tools.
@@ -81,7 +81,7 @@ async def update_sourcing_quantity(
     tool_id: str,
     part_index: int,
     quantity: int = Query(..., gt=0),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """Update the sourcing_quantity for a specific part without affecting the repair part quantity."""
     db = get_database()
@@ -116,7 +116,7 @@ async def update_sourcing_quantity(
 @router.post("/send")
 async def send_sourcing_emails(
     request: SourcingRequest,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """
     Send bulk sourcing emails to all recipients — one email per recipient
@@ -219,7 +219,7 @@ async def send_sourcing_emails(
 async def get_sourcing_history(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Return paginated history of sent sourcing emails."""
     db = get_database()

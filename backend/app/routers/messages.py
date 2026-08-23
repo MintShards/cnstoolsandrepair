@@ -6,7 +6,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.database import get_database
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.models.auth import User
 from app.models.message import MessageCreate, MessageResponse, PinRequest, SpawnedTaskRef
 from app.models.task import TaskCreate
@@ -29,7 +29,7 @@ def _build_message_response(doc: dict, task: Optional[SpawnedTaskRef] = None) ->
 
 # /summary and /mark-all-read MUST be defined before /{message_id}
 @router.get("/summary")
-async def get_messages_summary(current_user: User = Depends(require_admin)):
+async def get_messages_summary(current_user: User = Depends(require_staff_or_admin)):
     """Unread count + latest previews for badges and the dashboard card."""
     db = get_database()
     unread = await db.messages.count_documents({"read_by": {"$ne": current_user.id}})
@@ -49,7 +49,7 @@ async def get_messages_summary(current_user: User = Depends(require_admin)):
 
 
 @router.post("/mark-all-read")
-async def mark_all_read(current_user: User = Depends(require_admin)):
+async def mark_all_read(current_user: User = Depends(require_staff_or_admin)):
     """Mark every message read for the current user. Only unread documents
     match the filter, so repeat calls (the feed polls this) are cheap."""
     db = get_database()
@@ -66,7 +66,7 @@ async def list_messages(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=30, ge=1, le=100),
     pinned: bool = Query(default=False),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """Newest-first feed page. `pinned=true` returns only pinned messages
     (small hard cap, no pagination) for the block above the feed."""
@@ -94,7 +94,7 @@ async def list_messages(
 
 
 @router.post("/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-async def create_message(data: MessageCreate, current_user: User = Depends(require_admin)):
+async def create_message(data: MessageCreate, current_user: User = Depends(require_staff_or_admin)):
     """Post to the feed or log a customer call. A call can spawn an assigned
     follow-up task in the same request (`spawn_task`)."""
     db = get_database()
@@ -144,7 +144,7 @@ async def create_message(data: MessageCreate, current_user: User = Depends(requi
 
 
 @router.post("/{message_id}/ack", response_model=MessageResponse)
-async def toggle_acknowledge(message_id: str, current_user: User = Depends(require_admin)):
+async def toggle_acknowledge(message_id: str, current_user: User = Depends(require_staff_or_admin)):
     """Toggle the current user's 👍 on a message."""
     db = get_database()
     if not ObjectId.is_valid(message_id):
@@ -166,7 +166,7 @@ async def toggle_acknowledge(message_id: str, current_user: User = Depends(requi
 
 
 @router.patch("/{message_id}/pin", response_model=MessageResponse)
-async def set_pinned(message_id: str, data: PinRequest, current_user: User = Depends(require_admin)):
+async def set_pinned(message_id: str, data: PinRequest, current_user: User = Depends(require_staff_or_admin)):
     """Pin/unpin a message to the top of the feed. Any staff member may pin —
     everyone shares the admin role, so gating would be meaningless."""
     db = get_database()
@@ -183,7 +183,7 @@ async def set_pinned(message_id: str, data: PinRequest, current_user: User = Dep
 
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_message(message_id: str, current_user: User = Depends(require_admin)):
+async def delete_message(message_id: str, current_user: User = Depends(require_staff_or_admin)):
     """Author-only delete — the escape hatch for a mistaken call log."""
     db = get_database()
     if not ObjectId.is_valid(message_id):

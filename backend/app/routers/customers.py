@@ -10,7 +10,7 @@ from app.database import get_database
 from app.models.customer import CustomerCreate, CustomerUpdate, CustomerResponse
 from app.models.repair import RepairJobResponse
 from app.models.auth import User
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.utils.helpers import convert_objectid_to_str
 from app.routers.repairs import _migrate_tool_parts, _build_job_response
 
@@ -37,7 +37,7 @@ def _build_customer_response(doc: dict) -> CustomerResponse:
 @router.get("/search/by-email", response_model=Optional[CustomerResponse])
 async def search_customer_by_email(
     email: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Find a customer by exact email address. Returns null if not found."""
     db = get_database()
@@ -60,7 +60,7 @@ async def list_customers(
     search: Optional[str] = None,
     sort_by: Optional[str] = Query(default="smart", regex="^(created_at|updated_at|company_name|smart)$"),
     sort_order: Optional[str] = Query(default="desc", regex="^(asc|desc)$"),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """List customers with optional search by company, contact, or email"""
     db = get_database()
@@ -154,7 +154,7 @@ async def list_customers(
 @router.post("/", response_model=CustomerResponse, status_code=201)
 async def create_customer(
     customer_data: CustomerCreate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Create a new customer profile"""
     db = get_database()
@@ -190,7 +190,7 @@ async def create_customer(
 @router.get("/{customer_id}", response_model=CustomerResponse)
 async def get_customer(
     customer_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Get a customer profile by ID"""
     db = get_database()
@@ -214,7 +214,7 @@ async def get_customer(
 @router.get("/{customer_id}/jobs", response_model=List[RepairJobResponse])
 async def get_customer_jobs(
     customer_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Get all repair jobs linked to a customer"""
     db = get_database()
@@ -244,7 +244,7 @@ async def get_customer_jobs(
 async def update_customer(
     customer_id: str,
     customer_update: CustomerUpdate,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Update a customer profile"""
     db = get_database()
@@ -286,7 +286,7 @@ async def update_customer(
 @router.delete("/{customer_id}", status_code=204)
 async def delete_customer(
     customer_id: str,
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_staff_or_admin)
 ):
     """Delete a customer profile (only if no linked repair jobs)"""
     db = get_database()

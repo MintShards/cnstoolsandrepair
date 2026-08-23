@@ -43,7 +43,7 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser })
             return (
               <Link
                 key={section.id}
-                to={`/admin/workspace?section=${section.id}`}
+                to={`/workspace?section=${section.id}`}
                 className={`relative flex items-center justify-center md:justify-start gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0 ${
                   active
                     ? 'bg-primary text-white shadow-md shadow-primary/25'

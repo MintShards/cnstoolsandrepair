@@ -13,7 +13,7 @@ from app.models.auth import (
 )
 from app.core.security import verify_password, create_access_token, hash_password
 from app.database import get_database
-from app.dependencies.auth import get_current_user, require_admin, ACCESS_TOKEN_COOKIE
+from app.dependencies.auth import get_current_user, require_admin, require_staff_or_admin, ACCESS_TOKEN_COOKIE
 from app.config import settings
 from app.utils import convert_objectid_to_str, user_display_name
 
@@ -268,8 +268,11 @@ async def activate_sales_rep(rep_id: str, current_user: User = Depends(require_a
 
 
 # ---------------------------------------------------------------------------
-# Staff CRUD (shop workers — everyone gets their own admin account)
+# Staff CRUD (shop workers — role "staff" is operational-only, "admin" is full)
 # ---------------------------------------------------------------------------
+
+STAFF_ROLES = ["staff", "admin"]
+
 
 def _build_staff_response(doc: dict) -> StaffResponse:
     return StaffResponse(
@@ -278,18 +281,19 @@ def _build_staff_response(doc: dict) -> StaffResponse:
         last_name=doc.get("last_name"),
         name=user_display_name(doc),
         email=doc["email"],
+        role=doc.get("role", "admin"),
         is_active=doc.get("is_active", True),
         created_at=doc["created_at"],
     )
 
 
 @router.get("/staff", response_model=List[StaffResponse])
-async def list_staff(current_user: User = Depends(require_admin)):
-    """List all shop staff accounts (role=admin). Doubles as the assignee
-    picker source — the frontend filters on is_active for pickers."""
+async def list_staff(current_user: User = Depends(require_staff_or_admin)):
+    """List all shop accounts (role staff or admin). Staff-accessible: it
+    feeds the assignee pickers, seen-by names, and the team directory."""
     db = get_database()
     staff = []
-    async for doc in db.users.find({"role": "admin"}).sort("created_at", -1):
+    async for doc in db.users.find({"role": {"$in": STAFF_ROLES}}).sort("created_at", -1):
         doc = convert_objectid_to_str(doc)
         doc["id"] = doc.pop("_id")
         staff.append(_build_staff_response(doc))
@@ -298,7 +302,7 @@ async def list_staff(current_user: User = Depends(require_admin)):
 
 @router.post("/staff", response_model=StaffResponse, status_code=status.HTTP_201_CREATED)
 async def create_staff(data: StaffCreate, current_user: User = Depends(require_admin)):
-    """Create a new shop staff account."""
+    """Create a new shop account at the requested access level."""
     db = get_database()
 
     existing = await db.users.find_one({"email": data.email.lower().strip()})
@@ -311,7 +315,7 @@ async def create_staff(data: StaffCreate, current_user: User = Depends(require_a
         "last_name": data.last_name.strip(),
         "email": data.email.lower().strip(),
         "password_hash": hash_password(data.password),
-        "role": "admin",
+        "role": data.role,
         "is_active": True,
         "created_at": now,
         "updated_at": now,
@@ -326,14 +330,15 @@ async def create_staff(data: StaffCreate, current_user: User = Depends(require_a
 
 @router.put("/staff/{user_id}", response_model=StaffResponse)
 async def update_staff(user_id: str, data: StaffUpdate, current_user: User = Depends(require_admin)):
-    """Update a staff member's details or reset their password."""
+    """Update a staff member's details, reset their password, or change
+    their access level."""
     db = get_database()
     try:
         oid = ObjectId(user_id)
     except Exception:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 
-    member = await db.users.find_one({"_id": oid, "role": "admin"})
+    member = await db.users.find_one({"_id": oid, "role": {"$in": STAFF_ROLES}})
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 
@@ -351,6 +356,19 @@ async def update_staff(user_id: str, data: StaffUpdate, current_user: User = Dep
     if data.password is not None:
         updates["password_hash"] = hash_password(data.password)
         logger.info(f"Password reset for staff {member['email']} by admin {current_user.email}")
+    if data.role is not None and data.role != member.get("role", "admin"):
+        if user_id == current_user.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="You cannot change your own access level")
+        # Demoting the last active admin would lock the shop out of the CMS
+        # and account management.
+        if member.get("role", "admin") == "admin":
+            active_admins = await db.users.count_documents({"role": "admin", "is_active": True})
+            if member.get("is_active", True) and active_admins <= 1:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail="Cannot remove admin access from the last active admin account")
+        updates["role"] = data.role
+        logger.info(f"Access level for {member['email']} set to {data.role} by admin {current_user.email}")
 
     await db.users.update_one({"_id": oid}, {"$set": updates})
     updated = await db.users.find_one({"_id": oid})
@@ -374,14 +392,17 @@ async def deactivate_staff(user_id: str, current_user: User = Depends(require_ad
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="You cannot deactivate your own account")
 
-    member = await db.users.find_one({"_id": oid, "role": "admin"})
+    member = await db.users.find_one({"_id": oid, "role": {"$in": STAFF_ROLES}})
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 
-    active_admins = await db.users.count_documents({"role": "admin", "is_active": True})
-    if member.get("is_active", True) and active_admins <= 1:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Cannot deactivate the last active admin account")
+    # Only admin accounts count toward the lockout guard — deactivating a
+    # staff-role account can never strand the shop.
+    if member.get("role", "admin") == "admin":
+        active_admins = await db.users.count_documents({"role": "admin", "is_active": True})
+        if member.get("is_active", True) and active_admins <= 1:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Cannot deactivate the last active admin account")
 
     await db.users.update_one({"_id": oid}, {"$set": {"is_active": False, "updated_at": datetime.utcnow()}})
     updated = await db.users.find_one({"_id": oid})
@@ -400,7 +421,7 @@ async def activate_staff(user_id: str, current_user: User = Depends(require_admi
     except Exception:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 
-    member = await db.users.find_one({"_id": oid, "role": "admin"})
+    member = await db.users.find_one({"_id": oid, "role": {"$in": STAFF_ROLES}})
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 

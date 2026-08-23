@@ -15,7 +15,7 @@ from app.models.parts_library import (
     StockAdjustment,
 )
 from app.models.auth import User
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_staff_or_admin
 from app.services.file_service import save_upload_file, delete_file
 from app.utils.helpers import convert_objectid_to_str
 
@@ -217,7 +217,7 @@ async def _enrich_parts_batch(db, docs: list) -> List[LibraryPartResponse]:
 @router.get("/brands", response_model=List[LibraryBrandResponse])
 async def list_library_brands(
     active_only: bool = Query(True),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     query = {"active": True} if active_only else {}
@@ -239,7 +239,7 @@ async def create_library_brand(
     website: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     logo: Optional[UploadFile] = File(None),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     data = LibraryBrandCreate(name=name, short_code=short_code, website=website, notes=notes)
@@ -264,7 +264,7 @@ async def create_library_brand(
 @router.get("/brands/{brand_id}", response_model=LibraryBrandResponse)
 async def get_library_brand(
     brand_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
@@ -282,7 +282,7 @@ async def update_library_brand(
     website: str = Form(""),
     notes: str = Form(""),
     logo: Optional[UploadFile] = File(None),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
@@ -320,7 +320,7 @@ async def update_library_brand(
 @router.delete("/brands/{brand_id}")
 async def delete_library_brand(
     brand_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
@@ -355,7 +355,7 @@ async def delete_library_brand(
 async def list_library_models(
     brand_id: str,
     active_only: bool = Query(True),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     brand = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
@@ -381,7 +381,7 @@ async def list_library_models(
 async def create_library_model(
     brand_id: str,
     body: LibraryModelCreate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     brand = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
@@ -407,7 +407,7 @@ async def create_library_model(
 @router.get("/models/{model_id}", response_model=LibraryModelResponse)
 async def get_library_model(
     model_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
@@ -424,7 +424,7 @@ async def get_library_model(
 async def update_library_model(
     model_id: str,
     body: LibraryModelUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
@@ -456,7 +456,7 @@ async def update_library_model(
 @router.delete("/models/{model_id}")
 async def delete_library_model(
     model_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
@@ -482,7 +482,7 @@ async def delete_library_model(
 async def upload_model_diagram(
     model_id: str,
     diagram: UploadFile = File(...),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
@@ -505,7 +505,7 @@ async def upload_model_diagram(
 async def delete_model_diagram(
     model_id: str,
     url: str = Query(...),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
@@ -528,7 +528,7 @@ async def rename_model_diagram(
     model_id: str,
     url: str = Query(...),
     name: str = Query(...),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
@@ -551,7 +551,7 @@ async def rename_model_diagram(
 @router.get("/compat-groups", response_model=List[CompatGroupResponse])
 async def list_compat_groups(
     active_only: bool = Query(True),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     query = {"active": True} if active_only else {}
@@ -571,7 +571,7 @@ async def list_compat_groups(
 @router.post("/compat-groups", response_model=CompatGroupResponse)
 async def create_compat_group(
     body: CompatGroupCreate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     existing = await db.parts_library_compat_groups.find_one(
@@ -591,7 +591,7 @@ async def create_compat_group(
 async def update_compat_group(
     group_id: str,
     body: CompatGroupUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_compat_groups.find_one({"_id": _to_object_id(group_id)})
@@ -621,7 +621,7 @@ async def update_compat_group(
 @router.delete("/compat-groups/{group_id}")
 async def delete_compat_group(
     group_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_compat_groups.find_one({"_id": _to_object_id(group_id)})
@@ -637,7 +637,7 @@ async def delete_compat_group(
 @router.get("/compat-groups/{group_id}/parts", response_model=List[LibraryPartResponse])
 async def list_compat_group_parts(
     group_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_compat_groups.find_one({"_id": _to_object_id(group_id)})
@@ -659,7 +659,7 @@ async def list_library_parts(
     compat_group_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     query: dict = {"active": True}
@@ -696,7 +696,7 @@ async def list_library_parts(
 @router.get("/low-stock", response_model=List[LibraryPartResponse])
 async def get_low_stock_parts(
     limit: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     cursor = db.parts_library_parts.find({
@@ -711,7 +711,7 @@ async def get_low_stock_parts(
 @router.post("/parts", response_model=LibraryPartResponse)
 async def create_library_part(
     body: LibraryPartCreate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     brand = await db.parts_library_brands.find_one({"_id": _to_object_id(body.brand_id)})
@@ -736,7 +736,7 @@ async def create_library_part(
 @router.get("/parts/{part_id}", response_model=LibraryPartResponse)
 async def get_library_part(
     part_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -749,7 +749,7 @@ async def get_library_part(
 async def update_library_part(
     part_id: str,
     body: LibraryPartUpdate,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -793,7 +793,7 @@ async def update_library_part(
 @router.delete("/parts/{part_id}")
 async def delete_library_part(
     part_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -809,7 +809,7 @@ async def delete_library_part(
 @router.get("/parts/{part_id}/compatible", response_model=CompatiblePartsResponse)
 async def get_compatible_parts(
     part_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -847,7 +847,7 @@ async def get_compatible_parts(
 async def adjust_part_stock(
     part_id: str,
     body: StockAdjustment,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -888,7 +888,7 @@ async def adjust_part_stock(
 @router.get("/parts/{part_id}/stock-history")
 async def get_stock_history(
     part_id: str,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -904,7 +904,7 @@ async def get_stock_history(
 async def upload_part_diagram(
     part_id: str,
     diagram: UploadFile = File(...),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -924,7 +924,7 @@ async def upload_part_diagram(
 async def delete_part_diagram(
     part_id: str,
     url: str = Query(...),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
@@ -948,7 +948,7 @@ async def delete_part_diagram(
 async def search_parts(
     q: str = Query(..., min_length=1),
     limit: int = Query(30, ge=1, le=100),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     db = get_database()
     term = re.escape(q.strip())
@@ -968,7 +968,7 @@ async def search_parts(
 async def search_models(
     q: str = Query(..., min_length=1),
     limit: int = Query(20, ge=1, le=50),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_staff_or_admin),
 ):
     """Search models by name or category directly, so a tool is findable by its
     model number even before any parts are entered for it."""

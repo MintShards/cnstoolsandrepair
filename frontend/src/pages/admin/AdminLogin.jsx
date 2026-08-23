@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { authAPI } from '../../services/api';
+import { apiErrorMessage } from '../../utils/apiError';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -19,16 +20,23 @@ export default function AdminLogin() {
 
     try {
       // On success the server sets an httpOnly auth cookie; nothing to store client-side.
-      await authAPI.login({ email, password });
+      const result = await authAPI.login({ email, password });
 
-      // Redirect to intended page or settings, keeping the query string so
-      // deep links like /admin/repair-tracker?tab=jobs land on the right tab
+      // Redirect to intended page, keeping the query string so deep links
+      // like /admin/repair-tracker?tab=jobs land on the right tab. The
+      // fallback is role-aware: staff can't open /admin/settings, so parking
+      // them there would just bounce them straight back out.
+      const roleHome = result.role === 'staff'
+        ? '/admin/repair-tracker'
+        : result.role === 'sales'
+          ? '/sales/dashboard'
+          : '/admin/settings';
       const from = location.state?.from
         ? `${location.state.from.pathname}${location.state.from.search || ''}`
-        : '/admin/settings';
+        : roleHome;
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password');
+      setError(apiErrorMessage(err, 'Invalid email or password'));
     } finally {
       setLoading(false);
     }
