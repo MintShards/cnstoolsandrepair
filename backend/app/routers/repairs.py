@@ -779,8 +779,10 @@ async def get_attention_queues(
 ):
     """Live "what needs doing" queues for the Workspace, derived from tool
     statuses rather than copied into task rows — so they can never drift from
-    the tracker. Counts are always exact; item lists (capped per queue,
-    oldest first) are included only when `include_items=true`.
+    the tracker. Rows are WORK ORDERS, not tools: a job's tools in the same
+    queue collapse into one row (oldest age, combined flags, "N tools" label).
+    Counts are always exact; item lists (capped per queue, oldest first) are
+    included only when `include_items=true`.
 
     Queues: one per actionable status, a cross-cutting `stuck` queue (no
     status change in `stale_days`, the same threshold the tracker dashboard
@@ -835,8 +837,37 @@ async def get_attention_queues(
         }},
     ]
 
-    queues: dict = {key: [] for key in _ATTENTION_QUEUE_BY_STATUS.values()}
-    queues["stuck"] = []
+    # One row per WORK ORDER per queue, not per tool — a job with three tools
+    # awaiting quotes is one thing to act on, and opening the WO shows its
+    # tools anyway. Tools are aggregated: oldest age wins, stuck/parts flags
+    # combine, and the label collapses to "N tools" past one.
+    _PRIORITY_RANK = {"standard": 0, "rush": 1, "urgent": 2}
+    grouped: dict = {}
+
+    def _absorb(queue_key: str, doc: dict, days: int, stuck: bool, tool_label: str) -> None:
+        key = (queue_key, str(doc["_id"]))
+        item = grouped.get(key)
+        if item is None:
+            grouped[key] = {
+                "job_id": str(doc["_id"]),
+                "request_number": doc.get("request_number"),
+                "company": doc.get("company_name")
+                    or f"{doc.get('first_name') or ''} {doc.get('last_name') or ''}".strip()
+                    or "—",
+                "tools": [tool_label],
+                "priority": doc.get("priority", "standard"),
+                "status": doc["tool_status"],
+                "days_in_status": days,
+                "stuck": stuck,
+                "parts_overdue": doc.get("parts_overdue", 0),
+            }
+        else:
+            item["tools"].append(tool_label)
+            item["days_in_status"] = max(item["days_in_status"], days)
+            item["stuck"] = item["stuck"] or stuck
+            item["parts_overdue"] += doc.get("parts_overdue", 0)
+            if _PRIORITY_RANK.get(doc.get("priority", "standard"), 0) > _PRIORITY_RANK.get(item["priority"], 0):
+                item["priority"] = doc.get("priority", "standard")
 
     async for doc in db.repairs.aggregate(pipeline):
         last_change = doc.get("last_change") or doc.get("created_at") or now
@@ -848,26 +879,20 @@ async def get_attention_queues(
         for part in (doc.get("brand"), doc.get("model_number")):
             if part and part not in tool_bits:
                 tool_bits.append(part)
-        item = {
-            "job_id": str(doc["_id"]),
-            "request_number": doc.get("request_number"),
-            "company": doc.get("company_name")
-                or f"{doc.get('first_name') or ''} {doc.get('last_name') or ''}".strip()
-                or "—",
-            "tool_id": doc.get("tool_id"),
-            "tool": " ".join(tool_bits) or doc.get("tool_type") or "—",
-            "tool_type": doc.get("tool_type"),
-            "priority": doc.get("priority", "standard"),
-            "status": doc["tool_status"],
-            "days_in_status": days,
-            "stuck": stuck,
-            "parts_overdue": doc.get("parts_overdue", 0),
-        }
+        tool_label = " ".join(tool_bits) or doc.get("tool_type") or "—"
         queue = _ATTENTION_QUEUE_BY_STATUS.get(doc["tool_status"])
         if queue:
-            queues[queue].append(item)
+            _absorb(queue, doc, days, stuck, tool_label)
         if stuck:
-            queues["stuck"].append(item)
+            _absorb("stuck", doc, days, stuck, tool_label)
+
+    queues: dict = {key: [] for key in _ATTENTION_QUEUE_BY_STATUS.values()}
+    queues["stuck"] = []
+    for (queue_key, _job_id), item in grouped.items():
+        # The display label: the tool itself when there's one, a count when
+        # several — the full list still rides along for tooltips.
+        item["tool"] = item["tools"][0] if len(item["tools"]) == 1 else f"{len(item['tools'])} tools"
+        queues[queue_key].append(item)
 
     # Route management: door-to-door follow-ups due today or overdue.
     # Technicians are tracker+workspace only — the sales area is off-limits

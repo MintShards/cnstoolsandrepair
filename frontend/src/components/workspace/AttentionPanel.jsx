@@ -56,7 +56,10 @@ function QueueRow({ item, verb, onAssign }) {
       <WorkOrderChip repairId={item.job_id} requestNumber={item.request_number} />
       {/* truncate lives on this block parent — putting it on inline children
           silently stops clipping (overflow doesn't apply to display:inline). */}
-      <span className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm truncate">
+      <span
+        className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm truncate"
+        title={item.tools && item.tools.length > 1 ? item.tools.join(' · ') : undefined}
+      >
         <span className="font-bold text-slate-900 dark:text-white">{item.company}</span>
         <span className="text-slate-500 dark:text-slate-400 ml-1.5">{item.tool}</span>
       </span>
@@ -217,7 +220,7 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
                     </p>
                     <div className="space-y-1.5">
                       {items.slice(0, ROWS_SHOWN).map((item) => (
-                        <QueueRow key={`${q.key}-${item.tool_id}`} item={item} verb={q.verb} onAssign={handleAssign} />
+                        <QueueRow key={`${q.key}-${item.job_id}`} item={item} verb={q.verb} onAssign={handleAssign} />
                       ))}
                       {bucket.count > ROWS_SHOWN && (
                         <Link
