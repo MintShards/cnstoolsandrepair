@@ -60,13 +60,6 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
   useEscapeClose(onClose);
   useBodyScrollLock(true);
 
-  // A sales rep account can't be converted to a shop role (or vice versa) —
-  // the two live behind different endpoints — so editing locks the role.
-  const roleLocked = editing && user.kind === 'sales';
-  const options = editing
-    ? ROLE_OPTIONS.filter((o) => o.value !== 'sales')
-    : ROLE_OPTIONS;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -77,10 +70,16 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
     };
     try {
       if (editing) {
+        // Person fields go through the account's CURRENT kind first — after
+        // a cross-kind role switch the old endpoint would 404 it — then the
+        // role change runs through the any-account endpoint.
         if (user.kind === 'sales') {
           await salesRepsAPI.update(user.id, person);
         } else {
-          await staffAPI.update(user.id, { ...person, ...(isSelf ? {} : { role }) });
+          await staffAPI.update(user.id, person);
+        }
+        if (!isSelf && role !== user.role) {
+          await staffAPI.changeRole(user.id, role);
         }
         showToast('success', 'Account updated.');
       } else if (role === 'sales') {
@@ -136,31 +135,27 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
           )}
           <div>
             <label className={LABEL_CLS}>Role</label>
-            {roleLocked ? (
-              <>
-                <div className={`${INPUT_CLS} opacity-60 cursor-not-allowed select-none`}>Sales Rep — Route Management only</div>
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  Sales rep accounts stay sales reps — create a shop account for other access.
-                </p>
-              </>
-            ) : (
-              <>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  disabled={isSelf}
-                  className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {options.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                {isSelf && (
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                    You can&apos;t change your own access level.
-                  </p>
-                )}
-              </>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              disabled={isSelf}
+              className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {ROLE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {isSelf && (
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                You can&apos;t change your own access level.
+              </p>
+            )}
+            {editing && !isSelf && role !== user.role && (role === 'sales' || user.role === 'sales') && (
+              <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+                {role === 'sales'
+                  ? 'They’ll log in at /sales/login and see only Route Management.'
+                  : 'They’ll log in at /workspace/login instead of the sales login.'}
+              </p>
             )}
           </div>
           <div className="flex gap-2 pt-2">

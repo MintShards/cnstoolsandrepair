@@ -719,6 +719,11 @@ export const staffAPI = {
     const response = await api.patch(`/api/auth/staff/${id}/activate`);
     return response.data;
   },
+  // Works on ANY account (shop or sales rep) — the cross-kind role switch.
+  changeRole: async (id, role) => {
+    const response = await api.patch(`/api/auth/users/${id}/role`, { role });
+    return response.data;
+  },
   changePassword: async (currentPassword, newPassword) => {
     const response = await api.post('/api/auth/change-password', {
       current_password: currentPassword,

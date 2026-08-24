@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 
 from app.models.auth import (
     LoginRequest, LoginResponse, User, SalesRepCreate, SalesRepUpdate, SalesRepResponse,
-    StaffCreate, StaffUpdate, StaffResponse, ChangePasswordRequest,
+    StaffCreate, StaffUpdate, StaffResponse, ChangePasswordRequest, RoleChangeRequest,
 )
 from app.core.security import verify_password, create_access_token, hash_password
 from app.database import get_database
@@ -436,6 +436,53 @@ async def activate_staff(user_id: str, current_user: User = Depends(require_admi
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
     logger.info(f"Staff account re-activated: {member['email']} by admin {current_user.email}")
+    return _build_staff_response(updated)
+
+
+@router.patch("/users/{user_id}/role", response_model=StaffResponse)
+async def change_user_role(
+    user_id: str, data: RoleChangeRequest, current_user: User = Depends(require_admin),
+):
+    """Set ANY account's role to any of the four roles — the one place role
+    management lives. Unlike the staff/sales-reps update endpoints (which
+    are scoped to their own kind), this can convert across the boundary:
+    a sales rep can become a technician, a staff member can become a rep.
+    Historical data keeps working either way — task assignments and visit
+    logs snapshot names, and lookups resolve by user id regardless of role.
+
+    Guards: no self-change, and the last active admin can never lose admin.
+    """
+    db = get_database()
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user_id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="You cannot change your own access level")
+
+    member = await db.users.find_one({"_id": oid})
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    old_role = member.get("role", "admin")
+    if data.role != old_role:
+        if old_role == "admin":
+            active_admins = await db.users.count_documents({"role": "admin", "is_active": True})
+            if member.get("is_active", True) and active_admins <= 1:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail="Cannot remove admin access from the last active admin account")
+        await db.users.update_one(
+            {"_id": oid},
+            {"$set": {"role": data.role, "updated_at": datetime.utcnow()}},
+        )
+        logger.info(f"Role for {member['email']} changed {old_role} -> {data.role} "
+                    f"by admin {current_user.email}")
+
+    updated = await db.users.find_one({"_id": oid})
+    updated = convert_objectid_to_str(updated)
+    updated["id"] = updated.pop("_id")
     return _build_staff_response(updated)
 
 

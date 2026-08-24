@@ -94,6 +94,13 @@ class StaffUpdate(BaseModel):
     role: Optional[Literal["staff", "technician", "admin"]] = None
 
 
+class RoleChangeRequest(BaseModel):
+    """Set any account's role — the admin-only cross-kind role switch.
+    Unlike StaffUpdate.role this includes `sales`, because it can convert
+    accounts across the shop/sales boundary."""
+    role: Literal["admin", "staff", "technician", "sales"]
+
+
 class StaffResponse(BaseModel):
     """Staff account public data. `name` is the display fallback (handles
     legacy accounts created before first/last names existed)."""
