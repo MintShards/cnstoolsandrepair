@@ -240,8 +240,10 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
           </div>
         )}
       >
-        {/* View switcher */}
-        <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden self-start">
+        {/* View switcher. In the phone filter grid it gets a half-width cell,
+            so it fills that cell and the two segments split it evenly —
+            the fixed-padding inline version overflowed and clipped "List". */}
+        <div className="flex w-full sm:w-auto sm:inline-flex rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden self-start">
           {[
             { id: 'board', icon: 'view_kanban', label: 'Board' },
             { id: 'list', icon: 'table_rows', label: 'List' },
@@ -249,7 +251,7 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
             <button
               key={v.id}
               onClick={() => setViewPersist(v.id)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-bold transition-colors ${
+              className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2.5 text-sm font-bold transition-colors ${
                 view === v.id
                   ? 'bg-primary text-white'
                   : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
