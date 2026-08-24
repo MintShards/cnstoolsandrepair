@@ -349,9 +349,10 @@ async def create_workspace_indexes():
 
 
 async def create_all_indexes():
-    """Create all production indexes"""
+    """Create every index the app needs, on whatever database .env points to."""
+    from app.config import settings
     print("\n" + "=" * 60)
-    print("PRODUCTION DATABASE INDEX CREATION")
+    print(f"CREATING INDEXES ON: {settings.database_name} ({settings.environment})")
     print("=" * 60)
 
     try:
@@ -365,7 +366,7 @@ async def create_all_indexes():
         await create_workspace_indexes()
 
         print("\n" + "=" * 60)
-        print("✅ ALL PRODUCTION INDEXES CREATED SUCCESSFULLY!")
+        print("✅ ALL INDEXES CREATED SUCCESSFULLY!")
         print("=" * 60)
 
     except Exception as e:
@@ -426,13 +427,25 @@ async def main():
     print(f"Environment: {settings.environment}")
     print("=" * 60)
 
+    # Safety gate: never touch a production database by accident. Dev runs
+    # need no flag; production requires the operator to say so explicitly.
+    looks_like_prod = (
+        settings.environment == "production"
+        or settings.database_name.endswith("_prod")
+    )
+    if looks_like_prod and "--allow-production" not in sys.argv:
+        print(f"\n🛑 This looks like a PRODUCTION database ({settings.database_name}, "
+              f"environment={settings.environment}).")
+        print("   Nothing was changed. To run against production on purpose:")
+        print("   python scripts/create_indexes.py --allow-production")
+        sys.exit(2)
+
     try:
         # Connect to MongoDB
         print("\n🔌 Connecting to MongoDB...")
         await connect_to_mongo()
         print("✓ Connected successfully")
 
-        # Create all production indexes
         await create_all_indexes()
 
         # Verify indexes
