@@ -16,6 +16,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Quick Start
 
+### One command, both servers, in the background
+```bash
+./dev.sh start     # backend :8000 + frontend :5173, terminal stays free
+./dev.sh status    # also: logs · restart · stop
+```
+(Requires the one-time backend venv + frontend npm install below.)
+
 ### Backend (FastAPI)
 ```bash
 cd backend
