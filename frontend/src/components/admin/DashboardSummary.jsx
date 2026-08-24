@@ -116,7 +116,7 @@ export default function DashboardSummary({
     return () => clearInterval(timer);
   }, [fetchSummary]);
 
-  // Shop Hub cards ride their own silent-fail fetch so the repairs dashboard
+  // Workspace cards ride their own silent-fail fetch so the repairs dashboard
   // still renders if the hub endpoints error.
   const [hubTasks, setHubTasks] = useState(null);
   const [hubFeed, setHubFeed] = useState(null);
@@ -542,11 +542,11 @@ export default function DashboardSummary({
             {/* ── SIDEBAR ─────────────────────────────────── */}
             <div className="space-y-4 sm:space-y-5">
 
-              {/* Shop Hub: my open tasks */}
+              {/* Workspace: my open tasks */}
               {hubTasks !== null && (
                 <SectionCard
                   title="My Open Tasks"
-                  subtitle="From the Shop Hub"
+                  subtitle="From the Workspace"
                   action={(
                     <Link to="/workspace?section=my-tasks" className="text-xs font-bold text-primary dark:text-blue-400 hover:underline whitespace-nowrap">
                       Open →
@@ -584,7 +584,7 @@ export default function DashboardSummary({
                 </SectionCard>
               )}
 
-              {/* Shop Hub: feed preview */}
+              {/* Workspace: feed preview */}
               {hubFeed !== null && (
                 <SectionCard
                   title="Shop Feed"

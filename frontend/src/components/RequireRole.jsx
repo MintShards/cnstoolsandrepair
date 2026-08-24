@@ -8,6 +8,7 @@ import { authAPI } from '../services/api';
 const ROLE_HOME = {
   admin: '/admin/repair-tracker',
   staff: '/workspace',
+  technician: '/workspace',
   sales: '/sales/dashboard',
 };
 

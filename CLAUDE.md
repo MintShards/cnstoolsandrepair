@@ -284,11 +284,12 @@ VITE_API_URL=http://localhost:8000
 
 ## Admin Interface
 
-- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repair-tracker`, `/workspace` + `/workspace/login` (Shop Hub — staff entrance; `/admin/workspace` redirects there), `/sales/login`, `/sales/dashboard` (all hidden, no nav links)
+- **Routes**: `/admin/login`, `/admin/settings`, `/admin/repair-tracker`, `/workspace` + `/workspace/login` (Workspace — staff entrance; `/admin/workspace` redirects there), `/sales/login`, `/sales/dashboard` (all hidden, no nav links)
 - **Auth**: JWT-based (email + password), 8-hour expiration, httpOnly cookie
-- **Roles**: `admin` (everything) · `staff` (Repair Tracker + Shop Hub + sales routes; no CMS, no account management — guarded by `require_staff_or_admin`) · `sales` (sales area only, rep-scoped). Frontend guard: `components/RequireRole.jsx`.
-- **User creation**: admins via `python scripts/create_admin.py` or the Shop Hub Staff section (which also creates `staff`-role accounts with an Access Level select)
-- **Settings tabs**: Home, Services, Industries, Gallery, About, Contact, Global, Parts Library, Repair Jobs, Repair Requests, Customers
+- **Roles**: `admin` (everything) · `staff` (Repair Tracker + Workspace + sales routes; no CMS, no account management) · `technician` (Repair Tracker + Workspace only — no sales area) · `sales` (sales area only, rep-scoped). Backend guards: `require_admin`, `require_staff_or_admin` (staff/technician/admin), `require_sales_or_admin` (sales/staff/admin — NOT technician). Frontend guard: `components/RequireRole.jsx`.
+- **User creation**: admins via `python scripts/create_admin.py` or Admin Settings → Users & Accounts (`/admin/settings?tab=users` — staff/admin accounts with an Access Level select, plus sales reps). The Workspace has no Staff section — own-password change lives behind the key button in its sidebar; the sales dashboard has no account management.
+- **Needs Attention panel** (Workspace → All Tasks): live to-do queues DERIVED from repair tool statuses + due route follow-ups via `GET /api/repairs/attention` — never stored as task rows, so they can't drift from the tracker. Queue rows escalate into real assigned tasks via TaskFormModal's `defaultTitle`/`defaultWorkOrder` props. Stuck = no status change in `business_settings.stale_days` (same threshold as the tracker dashboard).
+- **Settings tabs** (`/admin/settings`, `?tab=` deep-linkable): Home, Services, Industries, Gallery, About, Contact, Global, Repair Tracker, Users & Accounts (staff/admin + sales rep CRUD — the only account-management surface)
 - **Services vs Tools**:
   - Services: Array in settings collection (no IDs)
   - Tools: Separate collection with CRUD API (categorized, soft-delete)

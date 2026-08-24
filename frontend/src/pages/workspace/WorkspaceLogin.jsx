@@ -25,11 +25,11 @@ export default function WorkspaceLogin() {
     try {
       const result = await authAPI.login({ email, password });
 
-      if (result.role !== 'staff' && result.role !== 'admin') {
+      if (!['staff', 'technician', 'admin'].includes(result.role)) {
         // The cookie is already set; drop the session rather than leaving a
         // signed-in account behind a "no access" message.
         authAPI.logout().catch(() => {});
-        setError('Your account does not have Shop Hub access.');
+        setError('Your account does not have Workspace access.');
         setLoading(false);
         return;
       }
@@ -48,7 +48,7 @@ export default function WorkspaceLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
       <Helmet>
-        <title>Shop Hub Login — CNS Tool Repair</title>
+        <title>Workspace Login — CNS Tool Repair</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
@@ -61,7 +61,7 @@ export default function WorkspaceLogin() {
             </span>
           </div>
           <h1 className="text-2xl font-black text-white uppercase tracking-tight mb-1">
-            Shop Hub Login
+            Workspace Login
           </h1>
           <p className="text-slate-400 text-sm">
             CNS Tool Repair — Tasks, Shop Feed &amp; Repair Tracker
@@ -96,7 +96,7 @@ export default function WorkspaceLogin() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-4 pr-12 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors text-base"
+                  className="w-full px-4 py-4 pr-14 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors text-base"
                   placeholder="Enter password"
                   required
                   autoComplete="current-password"
@@ -104,7 +104,7 @@ export default function WorkspaceLogin() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-1"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-2.5"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   <span className="material-symbols-outlined text-xl">

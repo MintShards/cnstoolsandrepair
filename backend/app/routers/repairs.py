@@ -753,6 +753,185 @@ async def get_repair_summary(
 
 
 # ──────────────────────────────────────────────
+# NEEDS ATTENTION — the Workspace's live to-do queues
+# ──────────────────────────────────────────────
+
+# Active tool status → the action queue it belongs to. `in_repair` is active
+# but deliberately absent: a tool being worked on is not a to-do. It can still
+# surface in the cross-cutting "stuck" queue if nothing has moved in a while.
+_ATTENTION_QUEUE_BY_STATUS = {
+    "received": "needs_diagnosis",
+    "diagnosed": "needs_quote",
+    "quoted": "waiting_on_customer",
+    "approved": "start_work",
+    "parts_pending": "chase_parts",
+    "ready": "needs_invoice",
+    "invoiced": "ready_for_pickup",
+}
+
+_ATTENTION_ITEM_CAP = 30
+
+
+@router.get("/attention")
+async def get_attention_queues(
+    include_items: bool = Query(default=False),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    """Live "what needs doing" queues for the Workspace, derived from tool
+    statuses rather than copied into task rows — so they can never drift from
+    the tracker. Counts are always exact; item lists (capped per queue,
+    oldest first) are included only when `include_items=true`.
+
+    Queues: one per actionable status, a cross-cutting `stuck` queue (no
+    status change in `stale_days`, the same threshold the tracker dashboard
+    uses), and `followups_due` from route-management visits.
+
+    `total` = sum of the status queues + due follow-ups. Stuck items already
+    sit in their status queue so they are not re-counted (a stuck `in_repair`
+    tool is the one case outside `total`; the `stuck_count` badge covers it).
+    """
+    db = get_database()
+    now = datetime.utcnow()
+
+    # Same configurable threshold the tracker's dashboard uses.
+    settings_doc = await db.business_settings.find_one({"active": True})
+    stale_days = 3
+    if settings_doc:
+        stale_days = int(settings_doc.get("stale_days", 3) or 3)
+
+    active_statuses = list(_ATTENTION_QUEUE_BY_STATUS) + ["in_repair"]
+    pipeline = [
+        {"$match": {"tools.status": {"$in": active_statuses}}},
+        {"$unwind": "$tools"},
+        {"$match": {"tools.status": {"$in": active_statuses}}},
+        {"$project": {
+            "request_number": 1,
+            "company_name": 1,
+            "first_name": 1,
+            "last_name": 1,
+            "created_at": 1,
+            "tool_id": "$tools.tool_id",
+            "tool_type": "$tools.tool_type",
+            "brand": "$tools.brand",
+            "model_number": "$tools.model_number",
+            "priority": "$tools.priority",
+            "tool_status": "$tools.status",
+            # When a tool last moved: newest history entry, falling back to
+            # date_received (legacy tools with empty history) then created_at.
+            "last_change": {"$ifNull": [
+                {"$arrayElemAt": ["$tools.status_history.timestamp", -1]},
+                {"$ifNull": ["$tools.date_received", "$created_at"]},
+            ]},
+            # Parts already ordered/pending whose ETA has passed.
+            "parts_overdue": {"$size": {"$filter": {
+                "input": {"$ifNull": ["$tools.parts", []]},
+                "as": "p",
+                "cond": {"$and": [
+                    {"$in": ["$$p.status", ["pending", "ordered"]]},
+                    {"$ne": [{"$ifNull": ["$$p.eta", None]}, None]},
+                    {"$lt": ["$$p.eta", "$$NOW"]},
+                ]},
+            }}},
+        }},
+    ]
+
+    queues: dict = {key: [] for key in _ATTENTION_QUEUE_BY_STATUS.values()}
+    queues["stuck"] = []
+
+    async for doc in db.repairs.aggregate(pipeline):
+        last_change = doc.get("last_change") or doc.get("created_at") or now
+        days = max(0, (now - last_change).days)
+        stuck = days >= stale_days
+        # Some legacy tools carry the same text in brand and model_number —
+        # joining those verbatim would print the descriptor twice.
+        tool_bits: list = []
+        for part in (doc.get("brand"), doc.get("model_number")):
+            if part and part not in tool_bits:
+                tool_bits.append(part)
+        item = {
+            "job_id": str(doc["_id"]),
+            "request_number": doc.get("request_number"),
+            "company": doc.get("company_name")
+                or f"{doc.get('first_name') or ''} {doc.get('last_name') or ''}".strip()
+                or "—",
+            "tool_id": doc.get("tool_id"),
+            "tool": " ".join(tool_bits) or doc.get("tool_type") or "—",
+            "tool_type": doc.get("tool_type"),
+            "priority": doc.get("priority", "standard"),
+            "status": doc["tool_status"],
+            "days_in_status": days,
+            "stuck": stuck,
+            "parts_overdue": doc.get("parts_overdue", 0),
+        }
+        queue = _ATTENTION_QUEUE_BY_STATUS.get(doc["tool_status"])
+        if queue:
+            queues[queue].append(item)
+        if stuck:
+            queues["stuck"].append(item)
+
+    # Route management: door-to-door follow-ups due today or overdue.
+    # Technicians are tracker+workspace only — the sales area is off-limits
+    # to them, so this queue (business names, visit notes) stays server-side.
+    today_pacific = datetime.now(_PACIFIC).date()
+    today_ymd = today_pacific.strftime("%Y-%m-%d")
+    followups_count = 0
+    if current_user.role != "technician":
+        followup_query = {"follow_up_date": {"$ne": None, "$lte": today_ymd}}
+        followups_count = await db.visits.count_documents(followup_query)
+
+    followup_items = []
+    if include_items and followups_count:
+        from app.routers.visits import _build_visit_responses
+        cursor = (db.visits.find(followup_query)
+                  .sort([("follow_up_date", 1), ("_id", 1)])
+                  .limit(_ATTENTION_ITEM_CAP))
+        docs = [convert_objectid_to_str(d) for d in await cursor.to_list(length=_ATTENTION_ITEM_CAP)]
+        for d in docs:
+            d["id"] = d.pop("_id")
+        for visit in await _build_visit_responses(db, docs):
+            due = datetime.strptime(visit.follow_up_date, "%Y-%m-%d").date()
+            followup_items.append({
+                "visit_id": visit.id,
+                "business_id": visit.business_id,
+                "business_name": visit.business_name or "—",
+                "business_phone": visit.business_phone,
+                "rep_name": visit.rep_name,
+                "follow_up_date": visit.follow_up_date,
+                "days_overdue": max(0, (today_pacific - due).days),
+                "follow_up_note": visit.follow_up_note,
+                "interest_level": visit.interest_level,
+            })
+
+    for items in queues.values():
+        items.sort(key=lambda i: i["days_in_status"], reverse=True)
+
+    total = sum(len(items) for key, items in queues.items() if key != "stuck") + followups_count
+
+    def _bucket(items, count=None):
+        out = {"count": count if count is not None else len(items)}
+        if include_items:
+            out["items"] = items[:_ATTENTION_ITEM_CAP]
+        return out
+
+    return {
+        "stale_days": stale_days,
+        "total": total,
+        "stuck_count": len(queues["stuck"]),
+        "queues": {
+            "stuck": _bucket(queues["stuck"]),
+            "needs_diagnosis": _bucket(queues["needs_diagnosis"]),
+            "needs_quote": _bucket(queues["needs_quote"]),
+            "waiting_on_customer": _bucket(queues["waiting_on_customer"]),
+            "start_work": _bucket(queues["start_work"]),
+            "chase_parts": _bucket(queues["chase_parts"]),
+            "needs_invoice": _bucket(queues["needs_invoice"]),
+            "ready_for_pickup": _bucket(queues["ready_for_pickup"]),
+            "followups_due": _bucket(followup_items, count=followups_count),
+        },
+    }
+
+
+# ──────────────────────────────────────────────
 # PARTS ANALYTICS
 # ──────────────────────────────────────────────
 

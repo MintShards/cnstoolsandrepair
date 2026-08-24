@@ -342,6 +342,12 @@ export const repairsAPI = {
     const response = await api.get('/api/repairs/summary');
     return response.data;
   },
+  // Workspace "Needs Attention" queues, derived live from tool statuses.
+  // Pass { include_items: true } for the row lists; omit for counts only.
+  attention: async (params = {}) => {
+    const response = await api.get('/api/repairs/attention', { params });
+    return response.data;
+  },
   lifetimeStats: async () => {
     const response = await api.get('/api/repairs/lifetime-stats');
     return response.data;
@@ -623,7 +629,7 @@ export const salesRepsAPI = {
   },
 };
 
-// Shop Hub: Tasks API (admin only)
+// Workspace: Tasks API (staff or admin)
 export const tasksAPI = {
   summary: async () => {
     const response = await api.get('/api/tasks/summary');
@@ -659,7 +665,7 @@ export const tasksAPI = {
   },
 };
 
-// Shop Hub: Feed messages API (admin only)
+// Workspace: Feed messages API (staff or admin)
 export const messagesAPI = {
   summary: async () => {
     const response = await api.get('/api/messages/summary');
@@ -691,7 +697,7 @@ export const messagesAPI = {
   },
 };
 
-// Shop Hub: Staff accounts API (admin only)
+// Workspace: Staff accounts API (list is staff-readable; writes admin only)
 export const staffAPI = {
   list: async () => {
     const response = await api.get('/api/auth/staff');

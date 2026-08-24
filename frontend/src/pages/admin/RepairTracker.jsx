@@ -98,8 +98,8 @@ export default function RepairTracker() {
         repairsAPI.list({ skip: 0, limit: 1 }),
         customersAPI.list({ limit: 200 }),
         quotesAPI.list({}),
-        // Shop Hub counts ride the same loop but must not sink the tracker's
-        // own badges if the hub endpoints error.
+        // Workspace counts ride the same loop but must not sink the tracker's
+        // own badges if the workspace endpoints error.
         tasksAPI.summary().catch(() => null),
         messagesAPI.summary().catch(() => null),
       ]);
@@ -184,14 +184,14 @@ export default function RepairTracker() {
                   className="relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-primary dark:text-blue-400 rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">hub</span>
-                  <span className="hidden sm:inline">Shop Hub</span>
+                  <span className="hidden sm:inline">Workspace</span>
                   {hubCounts.unread > 0 && (
                     <span className="text-xs font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none bg-primary text-white">
                       {hubCounts.unread}
                     </span>
                   )}
                   {(hubCounts.unread > 0 || hubCounts.myOverdue > 0) && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title="New activity in the Shop Hub" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title="New activity in the Workspace" />
                   )}
                 </Link>
                 <ThemeToggle />

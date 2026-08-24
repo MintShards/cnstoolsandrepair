@@ -29,7 +29,7 @@ const RepairTracker = lazy(() => import('./pages/admin/RepairTracker'));
 // Sales pages are lazy-loaded — never ships to public visitors
 const SalesLogin = lazy(() => import('./pages/sales/SalesLogin'));
 const SalesDashboard = lazy(() => import('./pages/sales/SalesDashboard'));
-const ShopWorkspace = lazy(() => import('./pages/admin/ShopWorkspace'));
+const Workspace = lazy(() => import('./pages/workspace/Workspace'));
 const WorkspaceLogin = lazy(() => import('./pages/workspace/WorkspaceLogin'));
 
 function AdminFallback() {
@@ -40,7 +40,7 @@ function AdminFallback() {
   );
 }
 
-// The Shop Hub used to live at /admin/workspace — keep old bookmarks working,
+// The Workspace used to live at /admin/workspace — keep old bookmarks working,
 // preserving the ?section= deep link.
 function LegacyWorkspaceRedirect() {
   const { search } = useLocation();
@@ -91,7 +91,7 @@ function App() {
                 <Route
                   path="/admin/repair-tracker"
                   element={
-                    <RequireRole roles={['staff', 'admin']} loginPath="/admin/login">
+                    <RequireRole roles={['staff', 'technician', 'admin']} loginPath="/admin/login">
                       <Suspense fallback={<AdminFallback />}>
                         <RepairTracker />
                       </Suspense>
@@ -100,7 +100,7 @@ function App() {
                 />
                 <Route path="/admin/workspace" element={<LegacyWorkspaceRedirect />} />
 
-                {/* Shop Hub - the staff-facing workspace with its own entrance */}
+                {/* Workspace - the staff-facing hub with its own entrance */}
                 <Route
                   path="/workspace/login"
                   element={
@@ -112,9 +112,9 @@ function App() {
                 <Route
                   path="/workspace"
                   element={
-                    <RequireRole roles={['staff', 'admin']} loginPath="/workspace/login">
+                    <RequireRole roles={['staff', 'technician', 'admin']} loginPath="/workspace/login">
                       <Suspense fallback={<AdminFallback />}>
-                        <ShopWorkspace />
+                        <Workspace />
                       </Suspense>
                     </RequireRole>
                   }

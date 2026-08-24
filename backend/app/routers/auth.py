@@ -103,7 +103,7 @@ async def logout(response: Response):
     return {"success": True}
 
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=User, response_model_by_alias=False)
 async def get_me(current_user: User = Depends(get_current_user)):
     """
     Get current authenticated user information.
@@ -113,6 +113,12 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
     Returns:
         User object with current user information
+
+    Note:
+        response_model_by_alias=False so the id field serializes as `id`,
+        not its `_id` alias — every frontend consumer (`currentUser.id` in
+        the Workspace, RoutePlanner's assign-to default) keys on `id`,
+        matching the rest of the API.
     """
     return current_user
 
@@ -271,7 +277,7 @@ async def activate_sales_rep(rep_id: str, current_user: User = Depends(require_a
 # Staff CRUD (shop workers — role "staff" is operational-only, "admin" is full)
 # ---------------------------------------------------------------------------
 
-STAFF_ROLES = ["staff", "admin"]
+STAFF_ROLES = ["staff", "technician", "admin"]
 
 
 def _build_staff_response(doc: dict) -> StaffResponse:

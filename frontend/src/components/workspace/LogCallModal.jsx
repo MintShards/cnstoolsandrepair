@@ -79,7 +79,7 @@ export default function LogCallModal({ staff, onLogged, onClose }) {
             <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Log a Call</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Everyone sees it in the Shop Feed</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+          <button onClick={onClose} className="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>

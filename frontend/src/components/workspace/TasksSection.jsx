@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { tasksAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import { apiErrorMessage } from '../../utils/apiError';
+import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import TabHeader from '../sales/TabHeader';
 import useSort from '../sales/useSort';
 import { DEFAULT_PAGE_SIZE } from '../sales/pageSize';
 import { BTN_PRIMARY, BTN_NEUTRAL, FILTER_INPUT } from '../sales/ui';
 import { TASK_STATUS_LIST, TASK_PRIORITY_LIST } from '../../constants/workspace';
+import AttentionPanel from './AttentionPanel';
 import TaskBoard from './TaskBoard';
 import TaskList from './TaskList';
 import TaskFormModal from './TaskFormModal';
@@ -103,11 +105,9 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
 
   useEffect(() => { load(true); }, [load]);
 
-  // Sync: quiet interval refetch while this section is on screen.
-  useEffect(() => {
-    const interval = setInterval(() => load(false), view === 'board' ? BOARD_POLL_MS : LIST_POLL_MS);
-    return () => clearInterval(interval);
-  }, [load, view]);
+  // Sync: quiet interval refetch while this section is on screen — skipped
+  // while the tab is hidden (the focus catch-up below covers re-entry).
+  usePollWhileVisible(() => load(false), view === 'board' ? BOARD_POLL_MS : LIST_POLL_MS);
 
   // Sync: immediate catch-up when the browser tab regains focus.
   useEffect(() => {
@@ -226,14 +226,16 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
         title={mine ? 'My Tasks' : 'All Tasks'}
         subtitle={mine ? 'Everything assigned to you' : 'The whole shop’s to-do list'}
         action={(
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button onClick={() => setShowLogCall(true)} className={BTN_NEUTRAL}>
+          // Tracker-style: labels hide below sm so both actions sit beside
+          // the title as compact icon buttons instead of stacked full-width.
+          <div className="flex flex-row gap-2">
+            <button onClick={() => setShowLogCall(true)} className={BTN_NEUTRAL} title="Log a customer call">
               <span className="material-symbols-outlined text-base">phone_in_talk</span>
-              Log Call
+              <span className="hidden sm:inline">Log Call</span>
             </button>
-            <button onClick={openCreate} className={BTN_PRIMARY}>
+            <button onClick={openCreate} className={BTN_PRIMARY} title="New task">
               <span className="material-symbols-outlined text-base">add</span>
-              New Task
+              <span className="hidden sm:inline">New Task</span>
             </button>
           </div>
         )}
@@ -287,7 +289,7 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
         )}
 
         {view === 'list' && batchSelected.size > 0 && (
-          <button onClick={handleBatchComplete} disabled={batchBusy} className={`${BTN_PRIMARY} disabled:opacity-50`}>
+          <button onClick={handleBatchComplete} disabled={batchBusy} className={`${BTN_PRIMARY} disabled:opacity-50 col-span-2`}>
             <span className={`material-symbols-outlined text-base ${batchBusy ? 'animate-spin' : ''}`}>
               {batchBusy ? 'progress_activity' : 'done_all'}
             </span>
@@ -295,6 +297,12 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
           </button>
         )}
       </TabHeader>
+
+      {/* The shop-wide "what needs doing" queues live with the shop-wide
+          task list; My Tasks stays personal. */}
+      {!mine && (
+        <AttentionPanel staff={staff} focusTick={focusTick} onTaskCreated={afterMutation} />
+      )}
 
       {view === 'board' ? (
         loading && boardTasks.length === 0 ? (

@@ -1,4 +1,4 @@
-// Form control classes shared by the Shop Hub modals, matched to VisitLogger.
+// Form control classes shared by the Workspace modals, matched to VisitLogger.
 export const INPUT_CLS = 'w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary transition-colors';
 
 export const LABEL_CLS = 'block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5';

@@ -288,7 +288,7 @@ async def create_route_management_indexes():
 
 
 async def create_workspace_indexes():
-    """Indexes for the Shop Hub tasks + messages collections"""
+    """Indexes for the Workspace tasks + messages collections"""
     print("\n📌 Creating WORKSPACE (tasks/messages) indexes...")
     db = get_database()
 

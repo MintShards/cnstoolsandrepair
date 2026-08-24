@@ -10,10 +10,13 @@ export default function SortableTh({ field, label, cls = '', sortBy, sortDir, on
       aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={`py-3 font-bold ${cls}`}
     >
+      {/* Negative margins push the tap area out to the th's visual padding
+          without moving the label — a bare text-height button is a miserable
+          touch target on the phones the shop actually uses. */}
       <button
         type="button"
         onClick={() => onSort(field)}
-        className="inline-flex items-center gap-1 uppercase hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+        className="inline-flex items-center gap-1 uppercase py-3 -my-3 px-1 -mx-1 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
       >
         {label}
         <span

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { tasksAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
+import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import TabHeader from '../sales/TabHeader';
 import { BTN_NEUTRAL, ICON_BTN } from '../sales/ui';
 import { TASK_PRIORITIES } from '../../constants/workspace';
@@ -38,7 +39,7 @@ function TaskChip({ task, onClick }) {
     <button
       onClick={(e) => { e.stopPropagation(); onClick(task); }}
       title={task.title}
-      className={`w-full flex items-center gap-1 px-1.5 py-0.5 rounded-md text-left text-[11px] font-bold border truncate transition-all hover:shadow-sm ${priority.color} ${done ? 'opacity-50' : ''}`}
+      className={`w-full flex items-center gap-1 px-1.5 py-1 rounded-md text-left text-[11px] font-bold border truncate transition-all hover:shadow-sm ${priority.color} ${done ? 'opacity-50' : ''}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priority.dot}`} />
       <span className={`truncate ${done ? 'line-through' : ''}`}>{task.title}</span>
@@ -112,7 +113,9 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
         due_from: cells[0].ymd,
         due_to: cells[41].ymd,
         status: showDone ? undefined : 'open',
-        limit: 500,
+        // The API rejects limit > 200 with a 422 — anything higher makes the
+        // whole calendar load fail and the grid render empty.
+        limit: 200,
         sort_by: 'priority',
         sort_dir: 'desc',
       });
@@ -126,11 +129,8 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
 
   useEffect(() => { load(true); }, [load]);
 
-  // Sync: quiet interval refetch + focus catch-up.
-  useEffect(() => {
-    const interval = setInterval(() => load(false), POLL_MS);
-    return () => clearInterval(interval);
-  }, [load]);
+  // Sync: quiet interval refetch (visible tabs only) + focus catch-up.
+  usePollWhileVisible(() => load(false), POLL_MS);
   useEffect(() => {
     if (focusTick > 0) load(false);
   }, [focusTick]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -167,7 +167,9 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
         title="Calendar"
         subtitle="Tasks by due date — click a day to add one"
         action={(
-          <div className="flex items-center gap-2">
+          // flex-wrap: at 360px-class phones the widest month label leaves no
+          // slack; wrapping beats forcing horizontal page scroll.
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               onClick={() => setShowDone((v) => !v)}
               className={`${BTN_NEUTRAL} ${showDone ? '' : 'opacity-60'}`}
@@ -180,7 +182,7 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
             <button onClick={() => shiftMonth(-1)} className={ICON_BTN} aria-label="Previous month">
               <span className="material-symbols-outlined text-base">chevron_left</span>
             </button>
-            <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap min-w-[130px] text-center">
+            <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap sm:min-w-[130px] text-center">
               {monthLabel}
             </span>
             <button onClick={() => shiftMonth(1)} className={ICON_BTN} aria-label="Next month">
@@ -234,14 +236,14 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
                       add
                     </span>
                   </div>
-                  <div className="mt-1 space-y-0.5">
+                  <div className="mt-1 space-y-1">
                     {dayTasks.slice(0, MAX_CHIPS).map((task) => (
                       <TaskChip key={task.id} task={task} onClick={setDetailTask} />
                     ))}
                     {overflow > 0 && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setDayModal(cell.ymd); }}
-                        className="w-full text-left px-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
+                        className="w-full text-left px-1.5 py-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
                       >
                         +{overflow} more
                       </button>

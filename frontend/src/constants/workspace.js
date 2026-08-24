@@ -1,4 +1,4 @@
-// Single source of truth for Shop Hub task statuses, priorities, recurrence,
+// Single source of truth for Workspace task statuses, priorities, recurrence,
 // and section navigation — same config-map shape as repairStatuses.js.
 
 export const TASK_STATUSES = {
@@ -48,12 +48,15 @@ export const RECURRENCE_LABELS = {
   daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
 };
 
+// No Staff section: account management lives in Admin Settings → Users &
+// Accounts, and own-password change hangs off the sidebar's key button.
+// shortLabel is the phone tab caption, same convention as the Repair
+// Tracker's tab bar.
 export const WORKSPACE_SECTIONS = [
-  { id: 'my-tasks',  label: 'My Tasks',  icon: 'checklist' },
-  { id: 'all-tasks', label: 'All Tasks', icon: 'list_alt' },
-  { id: 'calendar',  label: 'Calendar',  icon: 'calendar_month' },
-  { id: 'feed',      label: 'Shop Feed', icon: 'forum' },
-  { id: 'staff',     label: 'Staff',     icon: 'group' },
+  { id: 'my-tasks',  label: 'My Tasks',  shortLabel: 'My Tasks', icon: 'checklist' },
+  { id: 'all-tasks', label: 'All Tasks', shortLabel: 'All Tasks', icon: 'list_alt' },
+  { id: 'calendar',  label: 'Calendar',  shortLabel: 'Calendar', icon: 'calendar_month' },
+  { id: 'feed',      label: 'Shop Feed', shortLabel: 'Feed', icon: 'forum' },
 ];
 
 export const WORKSPACE_SECTION_IDS = WORKSPACE_SECTIONS.map((s) => s.id);

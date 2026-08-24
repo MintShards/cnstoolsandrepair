@@ -11,19 +11,25 @@ import WorkOrderPicker from './WorkOrderPicker';
 /**
  * Create/edit a task. VisitLogger-style modal: priority as segmented pills,
  * recurrence unlocks once a due date is set, optional work-order link.
+ * defaultTitle / defaultWorkOrder prefill create mode — the Needs Attention
+ * panel uses them to turn a queue row into an assigned task in one click.
  */
-export default function TaskFormModal({ task, staff, defaultAssigneeId, defaultDueDate, onSaved, onClose }) {
+export default function TaskFormModal({
+  task, staff, defaultAssigneeId, defaultDueDate, defaultTitle, defaultWorkOrder, onSaved, onClose,
+}) {
   const showToast = useToast();
   const editing = Boolean(task);
 
-  const [title, setTitle] = useState(task?.title || '');
+  const [title, setTitle] = useState(task?.title || defaultTitle || '');
   const [details, setDetails] = useState(task?.details || '');
   const [priority, setPriority] = useState(task?.priority || 'normal');
   const [dueDate, setDueDate] = useState(task?.due_date || defaultDueDate || '');
   const [assigneeId, setAssigneeId] = useState(task ? (task.assignee_id || '') : (defaultAssigneeId || ''));
   const [recurrence, setRecurrence] = useState(task?.recurrence || 'none');
   const [workOrder, setWorkOrder] = useState(
-    task?.repair_id ? { repair_id: task.repair_id, request_number: task.request_number } : null
+    task?.repair_id
+      ? { repair_id: task.repair_id, request_number: task.request_number }
+      : (defaultWorkOrder || null)
   );
   const [saving, setSaving] = useState(false);
   useEscapeClose(onClose);
@@ -63,7 +69,7 @@ export default function TaskFormModal({ task, staff, defaultAssigneeId, defaultD
           <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {editing ? 'Edit Task' : 'New Task'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+          <button onClick={onClose} className="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>

@@ -111,16 +111,17 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 async def require_staff_or_admin(current_user: User = Depends(get_current_user)) -> User:
     """
-    Dependency to require staff or admin role.
+    Dependency to require staff, technician, or admin role.
     Used for the shop-floor operational surface — the Repair Tracker
-    (repairs, customers, requests, parts library, sourcing) and the Shop Hub
-    (tasks, feed, staff directory). Website CMS and account management stay
-    admin-only via require_admin.
+    (repairs, customers, requests, parts library, sourcing) and the Workspace
+    (tasks, feed, staff directory). Technicians are bench workers: they get
+    exactly this surface and nothing else (no sales area, unlike staff).
+    Website CMS and account management stay admin-only via require_admin.
 
     Raises:
-        HTTPException: 403 if user is not shop staff or an admin
+        HTTPException: 403 if user is not shop staff, a technician, or an admin
     """
-    if current_user.role not in ("staff", "admin"):
+    if current_user.role not in ("staff", "technician", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Staff or admin access required"

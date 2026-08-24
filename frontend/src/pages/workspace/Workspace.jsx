@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { authAPI, tasksAPI, messagesAPI, staffAPI } from '../../services/api';
+import { authAPI, tasksAPI, messagesAPI, staffAPI, repairsAPI } from '../../services/api';
+import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import ThemeToggle from '../../components/layout/ThemeToggle';
 import { ToastProvider } from '../../components/admin/shared/ToastProvider';
 import WorkspaceSidebar from '../../components/workspace/WorkspaceSidebar';
@@ -10,7 +11,7 @@ import { WORKSPACE_SECTION_IDS } from '../../constants/workspace';
 const TasksSection = lazy(() => import('../../components/workspace/TasksSection'));
 const TaskCalendar = lazy(() => import('../../components/workspace/TaskCalendar'));
 const FeedSection = lazy(() => import('../../components/workspace/FeedSection'));
-const StaffSection = lazy(() => import('../../components/workspace/StaffSection'));
+const ChangePasswordModal = lazy(() => import('../../components/workspace/ChangePasswordModal'));
 
 function SectionLoading() {
   return (
@@ -21,17 +22,18 @@ function SectionLoading() {
 }
 
 /**
- * Shop Hub — the staff workspace: shared to-dos (board/list/calendar), the
+ * Workspace — the staff hub: shared to-dos (board/list/calendar), the
  * shop feed with customer-call logging, and staff account management.
  * Everything stays in sync through polling: a 60s counts loop here, faster
  * per-section polls, an immediate catch-up when the tab regains focus, and
- * refetches after every mutation.
+ * refetches after every mutation. Polls skip ticks while the tab is hidden
+ * (usePollWhileVisible) — the focus catch-up covers re-entry.
  */
-export default function ShopWorkspace() {
+export default function Workspace() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Shop Hub | CNS Tool Repair';
+    document.title = 'Workspace | CNS Tool Repair';
   }, []);
 
   // Active section lives in the URL (?section=feed) so each area is a real
@@ -44,15 +46,19 @@ export default function ShopWorkspace() {
   const [staff, setStaff] = useState([]);
   const [counts, setCounts] = useState({
     myOpen: null, myOverdue: 0, dueToday: null, allOpen: null, unread: null,
+    attention: null, stuck: 0,
   });
   // Bumped when the browser tab regains focus; sections refetch on change.
   const [focusTick, setFocusTick] = useState(0);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const refreshCounts = useCallback(async () => {
     try {
-      const [taskSummary, messageSummary] = await Promise.all([
+      const [taskSummary, messageSummary, attention] = await Promise.all([
         tasksAPI.summary(),
         messagesAPI.summary(),
+        // Counts only — the All Tasks panel fetches its own item lists.
+        repairsAPI.attention().catch(() => null),
       ]);
       setCounts({
         myOpen: taskSummary.my_open,
@@ -60,6 +66,8 @@ export default function ShopWorkspace() {
         dueToday: taskSummary.due_today,
         allOpen: taskSummary.all_open,
         unread: messageSummary.unread,
+        attention: attention ? attention.total : null,
+        stuck: attention ? attention.stuck_count : 0,
       });
     } catch {
       // Silently fail — counts are non-critical
@@ -83,9 +91,9 @@ export default function ShopWorkspace() {
     }).catch(() => {});
     loadStaff();
     refreshCounts();
-    const interval = setInterval(refreshCounts, 60000);
-    return () => clearInterval(interval);
   }, [refreshCounts, loadStaff]);
+
+  usePollWhileVisible(refreshCounts, 60000);
 
   // Focus catch-up: someone tabbing back gets fresh data immediately instead
   // of waiting out the poll interval.
@@ -118,7 +126,7 @@ export default function ShopWorkspace() {
   return (
     <ToastProvider>
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col">
-        {/* Shop Hub Header */}
+        {/* Workspace Header */}
         <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg shadow-black/10 dark:shadow-black/30">
           <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between gap-2">
@@ -131,9 +139,9 @@ export default function ShopWorkspace() {
                 <div className="h-7 sm:h-8 w-px bg-slate-300 dark:bg-slate-700/80 flex-shrink-0"></div>
                 <div className="min-w-0">
                   <h1 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight truncate">
-                    Shop Hub
+                    Workspace
                   </h1>
-                  <p className="text-xs text-slate-500 hidden sm:block leading-tight">Tasks, Shop Feed &amp; Staff</p>
+                  <p className="text-xs text-slate-500 hidden sm:block leading-tight">Tasks, Shop Feed &amp; Calendar</p>
                 </div>
               </div>
               {/* Right: actions */}
@@ -170,7 +178,12 @@ export default function ShopWorkspace() {
         {/* Main: sidebar + section content */}
         <div className="flex-1 max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 w-full">
           <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
-            <WorkspaceSidebar activeSection={activeSection} counts={counts} currentUser={currentUser} />
+            <WorkspaceSidebar
+              activeSection={activeSection}
+              counts={counts}
+              currentUser={currentUser}
+              onChangePassword={() => setShowChangePassword(true)}
+            />
             <main className="flex-1 min-w-0 w-full">
               <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-xl shadow-black/5 dark:shadow-black/20 animate-fadeInScale">
                 <Suspense fallback={<SectionLoading />}>
@@ -182,8 +195,8 @@ export default function ShopWorkspace() {
                   )}
                   {activeSection === 'calendar' && <TaskCalendar {...sectionProps} />}
                   {activeSection === 'feed' && <FeedSection {...sectionProps} />}
-                  {activeSection === 'staff' && (
-                    <StaffSection currentUser={currentUser} onStaffChanged={loadStaff} />
+                  {showChangePassword && (
+                    <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
                   )}
                 </Suspense>
               </div>
@@ -194,7 +207,7 @@ export default function ShopWorkspace() {
         {/* Footer */}
         <footer className="bg-white/50 dark:bg-slate-900/50 border-t border-slate-200/50 dark:border-slate-800/50 mt-auto">
           <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
-            <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-600">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-400 dark:text-slate-600">
               <p className="flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-sm">hub</span>
                 Internal tool — not customer facing

@@ -102,7 +102,7 @@ export default function MessageCard({
             onClick={() => onAck(message)}
             disabled={ackBusyId === message.id}
             title={acked ? `Remove your 👍 (${ackNames.join(', ')})` : ackNames.length ? `👍 by ${ackNames.join(', ')}` : 'Acknowledge — “seen it, on it”'}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border transition-all disabled:opacity-50 ${
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] rounded-lg text-xs font-bold border transition-all disabled:opacity-50 ${
               acked
                 ? 'bg-primary/10 border-primary/40 text-primary dark:text-blue-400'
                 : 'bg-slate-50 dark:bg-slate-700/40 border-slate-200 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:border-primary/40 hover:text-primary'
@@ -115,7 +115,7 @@ export default function MessageCard({
           <button
             onClick={() => setShowSeenBy((v) => !v)}
             title={seenNames.length ? `Seen by ${seenNames.join(', ')}` : 'Nobody has seen this yet'}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] rounded-lg text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <span className="material-symbols-outlined text-sm">visibility</span>
             {message.read_by.length}
@@ -127,7 +127,7 @@ export default function MessageCard({
             onClick={() => onPin(message)}
             disabled={pinBusyId === message.id}
             title={message.pinned ? 'Unpin from the top of the feed' : 'Pin to the top of the feed'}
-            className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
+            className={`inline-flex items-center px-2.5 py-1.5 min-h-[36px] rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
               message.pinned
                 ? 'text-amber-500 hover:text-amber-600'
                 : 'text-slate-400 dark:text-slate-500 hover:text-amber-500'
@@ -140,7 +140,7 @@ export default function MessageCard({
             <button
               onClick={() => onDelete(message)}
               title="Delete your message"
-              className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
+              className="inline-flex items-center px-2.5 py-1.5 min-h-[36px] rounded-lg text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
             >
               <span className="material-symbols-outlined text-sm">delete</span>
             </button>
@@ -150,6 +150,9 @@ export default function MessageCard({
         {showSeenBy && (
           <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
             {seenNames.length ? `Seen by ${seenNames.join(', ')}` : 'Nobody has seen this yet'}
+            {/* Hover tooltips don't exist on touch — this disclosure is the
+                only way a phone user learns WHO acknowledged. */}
+            {ackNames.length > 0 && ` · 👍 ${ackNames.join(', ')}`}
           </p>
         )}
       </div>

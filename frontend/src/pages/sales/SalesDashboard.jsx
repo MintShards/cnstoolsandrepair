@@ -7,17 +7,16 @@ const TodayRouteTab = lazy(() => import('../../components/sales/tabs/TodayRouteT
 const BusinessesTab = lazy(() => import('../../components/sales/tabs/BusinessesTab'));
 const FollowUpsTab = lazy(() => import('../../components/sales/tabs/FollowUpsTab'));
 const ZonesTab = lazy(() => import('../../components/sales/tabs/ZonesTab'));
-const SalesRepsTab = lazy(() => import('../../components/sales/tabs/SalesRepsTab'));
 // Static, not lazy: this page is already lazy at the router, and ZonesTab
 // imports it statically — a second lazy copy just double-chunks it.
 import SavedRoutesSection from '../../components/sales/SavedRoutesSection';
 
 // 'route' is the merged Routes tab: today's runner on top, the full planner
-// below. An old '?tab=routes' link falls outside these ids and lands there too.
-// Reps get everything except Sales Reps — inside Zones, admin-only actions
-// (zone/business CRUD) stay hidden for them.
-const ALL_TAB_IDS = ['route', 'businesses', 'follow-ups', 'zones', 'sales-reps'];
-const SALES_TAB_IDS = ['route', 'businesses', 'follow-ups', 'zones'];
+// below. An old '?tab=routes' (or '?tab=sales-reps') link falls outside these
+// ids and lands there too. Inside Zones, admin-only actions (zone/business
+// CRUD) stay hidden for reps. Sales-rep ACCOUNT management lives in Admin
+// Settings → Users & Accounts, not here.
+const TAB_IDS = ['route', 'businesses', 'follow-ups', 'zones'];
 
 // One collapsed line per secondary section — the runner IS the tab; the
 // library and the history expand only when needed.
@@ -183,11 +182,8 @@ export default function SalesDashboard() {
   }, []);
 
   const isAdmin = currentUser?.role === 'admin';
-  const validTabIds = isAdmin ? ALL_TAB_IDS : SALES_TAB_IDS;
   const tabParam = searchParams.get('tab');
-  // Until the role is known, an admin-only ?tab= would fall back to 'route' and
-  // mount the wrong tab, so hold off on resolving it.
-  const activeTab = validTabIds.includes(tabParam) ? tabParam : 'route';
+  const activeTab = TAB_IDS.includes(tabParam) ? tabParam : 'route';
 
   const [toasts, setToasts] = useState([]);
 
@@ -210,15 +206,12 @@ export default function SalesDashboard() {
     setSearchParams(tabId === 'route' ? {} : { tab: tabId });
   }, [setSearchParams]);
 
-  const allTabs = [
+  const tabs = [
     { id: 'route',      label: 'Routes',         shortLabel: 'Routes',     icon: 'route' },
     { id: 'businesses', label: 'Businesses',     shortLabel: 'Prospects',  icon: 'storefront' },
     { id: 'follow-ups', label: 'Follow-ups',     shortLabel: 'Follow-ups', icon: 'event_upcoming' },
     { id: 'zones',      label: 'Zones',          shortLabel: 'Zones',      icon: 'map' },
-    { id: 'sales-reps', label: 'Sales Reps',     shortLabel: 'Reps',       icon: 'badge', adminOnly: true },
   ];
-
-  const tabs = allTabs.filter((t) => !t.adminOnly || isAdmin);
 
   return (
     <ToastContext.Provider value={showToast}>
@@ -311,9 +304,6 @@ export default function SalesDashboard() {
               )}
               {userLoaded && activeTab === 'zones' && (
                 <ZonesTab currentUser={currentUser} />
-              )}
-              {userLoaded && activeTab === 'sales-reps' && isAdmin && (
-                <SalesRepsTab />
               )}
             </Suspense>
           </div>

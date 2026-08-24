@@ -19,7 +19,9 @@ export default function TaskCard({ task, onOpen, onClaim, claimingId }) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className={`text-sm font-bold leading-snug text-slate-900 dark:text-white ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
+        {/* min-w-0 + break-words: an unbroken token (URL, long part number)
+            must wrap inside the card, not widen the whole page. */}
+        <p className={`min-w-0 break-words text-sm font-bold leading-snug text-slate-900 dark:text-white ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
           {task.title}
         </p>
         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black uppercase border flex-shrink-0 ${priority.color}`}>

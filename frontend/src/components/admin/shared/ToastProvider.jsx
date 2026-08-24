@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
-// Toast system shared by the Repair Tracker and the Shop Hub. Extracted from
+// Toast system shared by the Repair Tracker and the Workspace. Extracted from
 // RepairTracker.jsx; that page re-exports ToastContext/useToast so the
 // existing `import { useToast } from '.../RepairTracker'` sites keep working.
 export const ToastContext = createContext(null);

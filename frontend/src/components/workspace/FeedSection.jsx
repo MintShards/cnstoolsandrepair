@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { messagesAPI, tasksAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import { apiErrorMessage } from '../../utils/apiError';
+import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import TabHeader from '../sales/TabHeader';
 import { BTN_PRIMARY, BTN_NEUTRAL } from '../sales/ui';
 import StaffAvatar from './StaffAvatar';
@@ -61,10 +62,15 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
       setPinned(pinnedRes.messages);
       setMessages(pageRes.messages);
       setTotal(pageRes.total);
-      // Opening (or polling) the feed is what "reading" means here; badges
-      // across everyone's sessions converge within one poll cycle.
-      const { marked } = await messagesAPI.markAllRead();
-      if (marked > 0) refreshCounts();
+      // Opening the feed is what "reading" means here; badges across
+      // everyone's sessions converge within one poll cycle. Only a visible
+      // tab counts as reading — a feed mounted in a background tab
+      // (middle-click) must not mark anything "seen by" until it's actually
+      // looked at; the focus catch-up re-runs load() the moment that happens.
+      if (document.visibilityState === 'visible') {
+        const { marked } = await messagesAPI.markAllRead();
+        if (marked > 0) refreshCounts();
+      }
     } catch {
       showToast('error', 'Failed to load the shop feed.');
     } finally {
@@ -74,11 +80,10 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
 
   useEffect(() => { load(true); }, [load]);
 
-  // Sync: 30s poll while the feed is on screen + focus catch-up.
-  useEffect(() => {
-    const interval = setInterval(() => load(false), POLL_MS);
-    return () => clearInterval(interval);
-  }, [load]);
+  // Sync: 30s poll while the feed is on screen and the tab is visible,
+  // + focus catch-up. A hidden tab polling would mark messages read for
+  // someone who isn't looking.
+  usePollWhileVisible(() => load(false), POLL_MS);
   useEffect(() => {
     if (focusTick > 0) load(false);
   }, [focusTick]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -185,9 +190,9 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
         title="Shop Feed"
         subtitle="What's happening — posts, calls, and heads-ups for the whole shop"
         action={(
-          <button onClick={() => setShowLogCall(true)} className={BTN_PRIMARY}>
+          <button onClick={() => setShowLogCall(true)} className={BTN_PRIMARY} title="Log a customer call">
             <span className="material-symbols-outlined text-base">phone_in_talk</span>
-            Log Call
+            <span className="hidden sm:inline">Log Call</span>
           </button>
         )}
       />
@@ -226,7 +231,7 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
             type="button"
             onClick={() => setImportant((v) => !v)}
             title="Flag as important"
-            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+            className={`inline-flex items-center gap-1 px-2.5 py-2.5 rounded-lg text-xs font-bold border transition-all ${
               important
                 ? 'bg-red-50 dark:bg-red-900/20 border-red-400 text-red-600 dark:text-red-400'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-red-300 hover:text-red-500'
@@ -239,7 +244,7 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
             type="button"
             onClick={() => setShowWorkOrderPicker((v) => !v)}
             title="Link a work order"
-            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+            className={`inline-flex items-center gap-1 px-2.5 py-2.5 rounded-lg text-xs font-bold border transition-all ${
               workOrder
                 ? 'bg-primary/10 border-primary/40 text-primary dark:text-blue-400'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-primary/40 hover:text-primary'

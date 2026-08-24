@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 import AdminLayout from '../../components/admin/AdminLayout';
 import HomeTab from '../../components/admin/tabs/HomeTab';
@@ -9,10 +10,10 @@ import AboutTab from '../../components/admin/tabs/AboutTab';
 import ContactTab from '../../components/admin/tabs/ContactTab';
 import GlobalTab from '../../components/admin/tabs/GlobalTab';
 import RepairTrackerTab from '../../components/admin/tabs/RepairTrackerTab';
+import UsersTab from '../../components/admin/tabs/UsersTab';
 
 export default function AdminSettings() {
   const { settings, loading: settingsLoading } = useSettings();
-  const [activeTab, setActiveTab] = useState('home');
   const [formData, setFormData] = useState(null);
 
   // Load current settings into form
@@ -36,7 +37,15 @@ export default function AdminSettings() {
     { id: 'contact', label: 'Contact Page', icon: 'contact_mail' },
     { id: 'global', label: 'Global Settings', icon: 'settings' },
     { id: 'repair-tracker', label: 'Repair Tracker', icon: 'build_circle' },
+    { id: 'users', label: 'Users & Accounts', icon: 'group' },
   ];
+
+  // Tab in the URL (?tab=users) so the Workspace can deep-link straight to
+  // account management; back/forward and reload keep their place too.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabs.some((t) => t.id === tabParam) ? tabParam : 'home';
+  const setActiveTab = (id) => setSearchParams(id === 'home' ? {} : { tab: id });
 
   const updateField = (path, value) => {
     const keys = path.split('.');
@@ -129,6 +138,10 @@ export default function AdminSettings() {
 
             {activeTab === 'repair-tracker' && (
               <RepairTrackerTab />
+            )}
+
+            {activeTab === 'users' && (
+              <UsersTab />
             )}
 
           </div>

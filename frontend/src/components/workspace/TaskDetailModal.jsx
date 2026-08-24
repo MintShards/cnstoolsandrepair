@@ -68,11 +68,18 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto">
+    // Backdrop tap closes — on phones this modal has no Cancel button and
+    // Escape doesn't exist, so the X must not be the only way out. The
+    // currentTarget check keeps clicks inside the panel (and the nested
+    // delete-confirm overlay) from closing it.
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget && !confirmingDelete) onClose(); }}
+    >
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md">
         <div className="flex items-start justify-between gap-3 p-5 border-b border-slate-200 dark:border-slate-700">
           <div className="min-w-0">
-            <h2 className={`font-black text-slate-900 dark:text-white tracking-tight leading-snug ${task.status === 'done' ? 'line-through opacity-70' : ''}`}>
+            <h2 className={`font-black text-slate-900 dark:text-white tracking-tight leading-snug break-words ${task.status === 'done' ? 'line-through opacity-70' : ''}`}>
               {task.title}
             </h2>
             <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
@@ -88,7 +95,7 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
               <WorkOrderChip repairId={task.repair_id} requestNumber={task.request_number} />
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0">
+          <button onClick={onClose} className="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -102,13 +109,15 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
                 type="button"
                 disabled={busy}
                 onClick={() => setStatus(s.value)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 transition-all font-bold text-xs uppercase disabled:opacity-60 ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 transition-all font-bold text-[11px] sm:text-xs uppercase whitespace-nowrap disabled:opacity-60 ${
                   task.status === s.value
                     ? 'border-primary bg-primary/5 text-slate-900 dark:text-white'
                     : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
+                {/* The dot doesn't fit beside "IN PROGRESS" at 375px — it
+                    forced a two-line wrap that stretched all three pills. */}
+                <span className={`hidden sm:block w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
                 {s.label}
               </button>
             ))}
@@ -120,7 +129,7 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
           )}
 
           {task.details && (
-            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{task.details}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words">{task.details}</p>
           )}
 
           <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
