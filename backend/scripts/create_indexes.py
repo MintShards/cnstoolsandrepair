@@ -32,14 +32,24 @@ async def ensure_index(collection, keys, **kwargs):
     Code 86 (IndexKeySpecsConflict) is the same name with different keys;
     also skipped with a warning so one stale index can't block everything —
     drop it manually if the warning names one you care about.
+
+    Code 11000 (DuplicateKey) means a UNIQUE index cannot build because the
+    collection already holds duplicate values — warn with the offending key
+    and carry on, so one dirty collection can't block every other index.
+    Re-run after cleaning the data to add the constraint.
     """
-    name = kwargs.get("name")
+    name = kwargs.get("name") or str(keys)
     try:
         await collection.create_index(keys, **kwargs)
+        print(f"  ✓ {name}")
     except OperationFailure as e:
+        detail = (e.details or {}).get("errmsg", str(e))
         if e.code in (85, 86):
-            detail = (e.details or {}).get("errmsg", str(e))
-            print(f"  ⚠️ Skipped {name or keys}: {detail}")
+            print(f"  ⚠️ Skipped {name}: {detail}")
+        elif e.code == 11000:
+            print(f"  ⚠️ Could not build unique index {name} — duplicate values already in the data:")
+            print(f"     {detail[:200]}")
+            print("     Clean up the duplicates and re-run this script to add the constraint.")
         else:
             raise
 
@@ -56,7 +66,6 @@ async def create_contact_indexes():
         ("email", 1),
         ("created_at", -1)
     ], name="email_rate_limit_idx")
-    print("  ✓ Created email_rate_limit_idx")
 
     # Index 2: Created At (for general queries and cleanup)
     print("  Creating index: created_at...")
@@ -64,7 +73,6 @@ async def create_contact_indexes():
         "created_at",
         name="created_at_idx"
     )
-    print("  ✓ Created created_at_idx")
 
     print("  ✅ Contact indexes created!")
 
@@ -82,7 +90,6 @@ async def create_quotes_indexes():
         unique=True,
         name="request_number_unique_idx"
     )
-    print("  ✓ Created request_number_unique_idx")
 
     # Index 2: Created At (for sorting by date)
     print("  Creating index: created_at...")
@@ -90,7 +97,6 @@ async def create_quotes_indexes():
         "created_at",
         name="created_at_idx"
     )
-    print("  ✓ Created created_at_idx")
 
     # Index 3: Status (for filtering by status)
     print("  Creating index: status...")
@@ -98,7 +104,6 @@ async def create_quotes_indexes():
         "status",
         name="status_idx"
     )
-    print("  ✓ Created status_idx")
 
     # Index 4: Email (for customer lookups)
     print("  Creating index: email...")
@@ -106,7 +111,6 @@ async def create_quotes_indexes():
         "email",
         name="email_idx"
     )
-    print("  ✓ Created email_idx")
 
     # Index 5: Compound Index - Status + Created At (for admin filtering)
     print("  Creating compound index: status + created_at...")
@@ -114,7 +118,6 @@ async def create_quotes_indexes():
         ("status", 1),
         ("created_at", -1)
     ], name="status_created_at_idx")
-    print("  ✓ Created status_created_at_idx")
 
     print("  ✅ Quote indexes created!")
 
@@ -132,7 +135,6 @@ async def create_users_indexes():
         unique=True,
         name="email_unique_idx"
     )
-    print("  ✓ Created email_unique_idx")
 
     # Index 2: Role (for role-based queries)
     print("  Creating index: role...")
@@ -140,7 +142,6 @@ async def create_users_indexes():
         "role",
         name="role_idx"
     )
-    print("  ✓ Created role_idx")
 
     # Index 3: Active Status (for filtering active users)
     print("  Creating index: is_active...")
@@ -148,7 +149,6 @@ async def create_users_indexes():
         "is_active",
         name="is_active_idx"
     )
-    print("  ✓ Created is_active_idx")
 
     print("  ✅ User indexes created!")
 
@@ -165,28 +165,24 @@ async def create_customers_indexes():
         unique=True,
         name="customers_email_unique_idx"
     )
-    print("  ✓ Created customers_email_unique_idx")
 
     print("  Creating index: company_name...")
     await ensure_index(db.customers, 
         "company_name",
         name="customers_company_name_idx"
     )
-    print("  ✓ Created customers_company_name_idx")
 
     print("  Creating index: last_name...")
     await ensure_index(db.customers, 
         "last_name",
         name="customers_last_name_idx"
     )
-    print("  ✓ Created customers_last_name_idx")
 
     print("  Creating index: created_at...")
     await ensure_index(db.customers, 
         [("created_at", -1)],
         name="customers_created_at_idx"
     )
-    print("  ✓ Created customers_created_at_idx")
 
     print("  ✅ Customer indexes created!")
 
@@ -203,42 +199,36 @@ async def create_repairs_indexes():
         unique=True,
         name="repairs_request_number_unique_idx"
     )
-    print("  ✓ Created repairs_request_number_unique_idx")
 
     print("  Creating index: created_at...")
     await ensure_index(db.repairs, 
         [("created_at", -1)],
         name="repairs_created_at_idx"
     )
-    print("  ✓ Created repairs_created_at_idx")
 
     print("  Creating index: tools.status...")
     await ensure_index(db.repairs, 
         "tools.status",
         name="repairs_tool_status_idx"
     )
-    print("  ✓ Created repairs_tool_status_idx")
 
     print("  Creating index: email...")
     await ensure_index(db.repairs, 
         "email",
         name="repairs_email_idx"
     )
-    print("  ✓ Created repairs_email_idx")
 
     print("  Creating index: company_name...")
     await ensure_index(db.repairs, 
         "company_name",
         name="repairs_company_name_idx"
     )
-    print("  ✓ Created repairs_company_name_idx")
 
     print("  Creating index: customer_id...")
     await ensure_index(db.repairs, 
         "customer_id",
         name="repairs_customer_id_idx"
     )
-    print("  ✓ Created repairs_customer_id_idx")
 
     print("  ✅ Repair indexes created!")
 
@@ -253,20 +243,16 @@ async def create_route_management_indexes():
     # {"parent_id": None} query that finds top-level zones.
     print("  Creating index: zones.parent_id...")
     await ensure_index(db.zones, "parent_id", name="zones_parent_id_idx")
-    print("  ✓ Created zones_parent_id_idx")
 
     # Multikey — drives the zone filter, the $unwind rollup and the $in scope.
     print("  Creating index: businesses.zone_ids...")
     await ensure_index(db.businesses, "zone_ids", name="businesses_zone_ids_idx")
-    print("  ✓ Created businesses_zone_ids_idx")
 
     print("  Creating index: businesses.last_visited_at...")
     await ensure_index(db.businesses, "last_visited_at", name="businesses_last_visited_idx")
-    print("  ✓ Created businesses_last_visited_idx")
 
     print("  Creating index: routes.zone_id...")
     await ensure_index(db.routes, "zone_id", name="routes_zone_id_idx")
-    print("  ✓ Created routes_zone_id_idx")
 
     # The hottest query in the app: /api/routes/today filters date + assignee.
     print("  Creating index: routes (date, assigned_to)...")
@@ -274,35 +260,29 @@ async def create_route_management_indexes():
         [("date", 1), ("assigned_to", 1)],
         name="routes_date_assigned_idx"
     )
-    print("  ✓ Created routes_date_assigned_idx")
 
     # Sweep counts group completed runs by the saved route that spawned them.
     print("  Creating index: routes.saved_route_id...")
     await ensure_index(db.routes, "saved_route_id", name="routes_saved_route_idx")
-    print("  ✓ Created routes_saved_route_idx")
 
     print("  Creating index: visits (business_id, visited_at desc)...")
     await ensure_index(db.visits, 
         [("business_id", 1), ("visited_at", -1)],
         name="visits_business_recent_idx"
     )
-    print("  ✓ Created visits_business_recent_idx")
 
     print("  Creating index: visits (rep_id, follow_up_date)...")
     await ensure_index(db.visits, 
         [("rep_id", 1), ("follow_up_date", 1)],
         name="visits_rep_follow_up_idx"
     )
-    print("  ✓ Created visits_rep_follow_up_idx")
 
     # Stop enrichment joins visits back onto runs by route.
     print("  Creating index: visits.route_id...")
     await ensure_index(db.visits, "route_id", name="visits_route_id_idx")
-    print("  ✓ Created visits_route_id_idx")
 
     print("  Creating index: saved_routes.zone_id...")
     await ensure_index(db.saved_routes, "zone_id", name="saved_routes_zone_id_idx")
-    print("  ✓ Created saved_routes_zone_id_idx")
 
     print("  ✅ Route management indexes created!")
 
@@ -318,7 +298,6 @@ async def create_workspace_indexes():
         [("status", 1), ("due_date", 1)],
         name="tasks_status_due_idx"
     )
-    print("  ✓ Created tasks_status_due_idx")
 
     # "My tasks" badge counts and the assignee filter.
     print("  Creating index: tasks (assignee_id, status)...")
@@ -326,24 +305,20 @@ async def create_workspace_indexes():
         [("assignee_id", 1), ("status", 1)],
         name="tasks_assignee_status_idx"
     )
-    print("  ✓ Created tasks_assignee_status_idx")
 
     print("  Creating index: tasks.created_at desc...")
     await ensure_index(db.tasks, [("created_at", -1)], name="tasks_created_idx")
-    print("  ✓ Created tasks_created_idx")
 
     # Feed pages newest-first; the unread $ne count stays unindexed by design
     # (fine at shop scale — see plan notes).
     print("  Creating index: messages.created_at desc...")
     await ensure_index(db.messages, [("created_at", -1)], name="messages_created_idx")
-    print("  ✓ Created messages_created_idx")
 
     print("  Creating index: messages (pinned, created_at desc)...")
     await ensure_index(db.messages, 
         [("pinned", 1), ("created_at", -1)],
         name="messages_pinned_created_idx"
     )
-    print("  ✓ Created messages_pinned_created_idx")
 
     print("  ✅ Workspace indexes created!")
 
