@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { suppliersAPI, techniciansAPI, partsLibraryAPI } from '../../../services/api';
+import { suppliersAPI, staffAPI, partsLibraryAPI } from '../../../services/api';
 import { getTodayPacific } from '../../../utils/dateFormat';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
@@ -234,40 +234,22 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
     suppliersAPI.getAll().then(setSuppliers).catch(() => {});
   }, []);
 
-  // Technician dropdown state
+  // Technician dropdown: real shop accounts (admin/staff/technician), the
+  // same people the Workspace assigns tasks to — replaced the old standalone
+  // technicians directory, which was a second hand-typed list that couldn't
+  // stay in sync with Users & Accounts.
   const [technicians, setTechnicians] = useState([]);
-  const [addingTechnician, setAddingTechnician] = useState(false);
-  const [newTechnicianName, setNewTechnicianName] = useState('');
-  const [technicianSaving, setTechnicianSaving] = useState(false);
 
   useEffect(() => {
-    techniciansAPI.getAll().then(setTechnicians).catch(() => {});
+    staffAPI.list()
+      .then((accounts) => setTechnicians(
+        accounts
+          .filter((a) => a.is_active)
+          .map((a) => a.name)
+          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      ))
+      .catch(() => {});
   }, []);
-
-  const handleAddTechnician = async () => {
-    if (!newTechnicianName.trim()) return;
-    setTechnicianSaving(true);
-    try {
-      const created = await techniciansAPI.create({ name: newTechnicianName.trim() });
-      setTechnicians(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewTechnicianName('');
-      setAddingTechnician(false);
-      handleChange('assigned_technician', created.name);
-    } catch {
-      // duplicate or error — silently ignore
-    } finally {
-      setTechnicianSaving(false);
-    }
-  };
-
-  const handleRemoveTechnician = async (technician) => {
-    try {
-      await techniciansAPI.remove(technician.id);
-      setTechnicians(prev => prev.filter(t => t.id !== technician.id));
-    } catch {
-      // ignore
-    }
-  };
 
   // Library brands/models for tool identification dropdowns
   const [libraryBrands, setLibraryBrands] = useState([]);
@@ -757,40 +739,18 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
-              {!addingTechnician ? (
-                <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 overflow-hidden">
-                  <select value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
-                    className="flex-1 min-w-0 px-3 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:outline-none border-none">
-                    <option value="">Unassigned</option>
-                    {technicians.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                  </select>
-                  {data.assigned_technician && technicians.find(t => t.name === data.assigned_technician) && (
-                    <button type="button" title="Remove technician" onClick={() => { const t = technicians.find(x => x.name === data.assigned_technician); if (t) handleRemoveTechnician(t); }}
-                      className="px-2 border-l border-slate-300 dark:border-slate-600 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                      <span className="material-symbols-outlined" style={{fontSize:'16px'}}>delete</span>
-                    </button>
-                  )}
-                  <button type="button" onClick={() => setAddingTechnician(true)} title="Add technician"
-                    className="px-3 border-l border-slate-300 dark:border-slate-600 text-slate-400 hover:text-primary dark:hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
-                    <span className="material-symbols-outlined" style={{fontSize:'18px'}}>add</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex rounded-lg border border-primary dark:border-primary/60 bg-white dark:bg-slate-800 overflow-hidden">
-                  <input autoFocus placeholder="New technician name" value={newTechnicianName}
-                    onChange={(e) => { const pos = e.target.selectionStart; setNewTechnicianName(e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTechnician(); } if (e.key === 'Escape') { setAddingTechnician(false); setNewTechnicianName(''); } }}
-                    className="flex-1 min-w-0 px-3 py-3 bg-transparent text-slate-900 dark:text-white text-base focus:outline-none border-none placeholder:text-slate-400 dark:placeholder:text-slate-500" />
-                  <button type="button" onClick={handleAddTechnician} disabled={technicianSaving}
-                    className="px-3 border-l border-slate-300 dark:border-slate-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50">
-                    <span className="material-symbols-outlined" style={{fontSize:'18px'}}>check</span>
-                  </button>
-                  <button type="button" onClick={() => { setAddingTechnician(false); setNewTechnicianName(''); }}
-                    className="px-3 border-l border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                    <span className="material-symbols-outlined" style={{fontSize:'18px'}}>close</span>
-                  </button>
-                </div>
-              )}
+              <select value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
+                className="w-full px-3 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:outline-none focus:border-primary">
+                <option value="">Unassigned</option>
+                {/* A name assigned before this dropdown keyed on accounts (or
+                    from a since-deactivated account) stays selectable so
+                    opening the form never silently clears the assignment. */}
+                {data.assigned_technician && !technicians.includes(data.assigned_technician) && (
+                  <option value={data.assigned_technician}>{data.assigned_technician}</option>
+                )}
+                {technicians.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">People come from Users &amp; Accounts</p>
             </div>
           </div>
         </div>
