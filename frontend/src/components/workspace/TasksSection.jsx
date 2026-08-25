@@ -300,12 +300,6 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
         )}
       </TabHeader>
 
-      {/* The shop-wide "what needs doing" queues live with the shop-wide
-          task list; My Tasks stays personal. */}
-      {!mine && (
-        <AttentionPanel staff={staff} focusTick={focusTick} onTaskCreated={afterMutation} />
-      )}
-
       {view === 'board' ? (
         loading && boardTasks.length === 0 ? (
           <div className="text-center py-16">
@@ -342,6 +336,16 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
           onClaim={handleClaim}
           onOpen={setDetailTask}
         />
+      )}
+
+      {/* The shop-wide "what needs doing" queues sit BELOW the task list —
+          the crew's own board is the first thing on screen; the derived
+          tracker queues are the reference material underneath. My Tasks
+          stays personal and has no panel. */}
+      {!mine && (
+        <div className="mt-6">
+          <AttentionPanel staff={staff} focusTick={focusTick} onTaskCreated={afterMutation} />
+        </div>
       )}
 
       {formTask !== undefined && (
