@@ -36,7 +36,7 @@ function DraggableCard({ task, children }) {
   );
 }
 
-function BoardColumn({ status, tasks, onOpen, onClaim, claimingId, doneNote }) {
+function BoardColumn({ status, tasks, onOpen, onClaim, claimingId, doneNote, emptyNote }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   return (
     <div
@@ -58,7 +58,7 @@ function BoardColumn({ status, tasks, onOpen, onClaim, claimingId, doneNote }) {
       <div className="p-2.5 space-y-2.5 min-h-[160px] flex-1">
         {tasks.length === 0 ? (
           <p className="text-center text-xs text-slate-400 dark:text-slate-600 py-8">
-            {isOver ? 'Drop it here' : 'Nothing here'}
+            {isOver ? 'Drop it here' : (emptyNote || 'Nothing here')}
           </p>
         ) : (
           tasks.map((task) => (
@@ -92,7 +92,8 @@ export default function TaskBoard({ tasks, onMove, onOpen, onClaim, claimingId }
   }
   byStatus.todo.sort(columnOrder);
   byStatus.in_progress.sort(columnOrder);
-  // Done arrives sorted by completion time from the server — leave it.
+  // Done holds only TODAY's completions (TasksSection filters them), already
+  // sorted by completion time from the server — leave it.
 
   const handleOpen = (task) => {
     if (justDraggedRef.current) return;
@@ -122,7 +123,8 @@ export default function TaskBoard({ tasks, onMove, onOpen, onClaim, claimingId }
             onOpen={handleOpen}
             onClaim={onClaim}
             claimingId={claimingId}
-            doneNote={status.value === 'done' ? 'recent' : null}
+            doneNote={status.value === 'done' ? 'today' : null}
+            emptyNote={status.value === 'done' ? 'Nothing finished today yet' : null}
           />
         ))}
       </div>

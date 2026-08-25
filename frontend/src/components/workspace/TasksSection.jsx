@@ -8,6 +8,7 @@ import useSort from '../sales/useSort';
 import { DEFAULT_PAGE_SIZE } from '../sales/pageSize';
 import { BTN_PRIMARY, BTN_NEUTRAL, FILTER_INPUT } from '../sales/ui';
 import { TASK_STATUS_LIST, TASK_PRIORITY_LIST } from '../../constants/workspace';
+import { daysSince } from '../../utils/dateFormat';
 import AttentionPanel from './AttentionPanel';
 import TaskBoard from './TaskBoard';
 import TaskList from './TaskList';
@@ -64,7 +65,9 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
   const assigneeParam = mine ? 'me' : (assigneeFilter || undefined);
 
   const loadBoard = useCallback(async () => {
-    // Open cards plus a short tail of recently finished ones for the Done column.
+    // Open cards plus TODAY's completions for the Done column. The board
+    // resets overnight (Pacific): yesterday's finished work drops off, and
+    // history stays on the calendar and behind the list's Done filter.
     const [openRes, doneRes] = await Promise.all([
       tasksAPI.list({
         status: 'open', assignee: assigneeParam, priority: priorityFilter || undefined,
@@ -72,10 +75,13 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
       }),
       tasksAPI.list({
         status: 'done', assignee: assigneeParam, priority: priorityFilter || undefined,
-        limit: 25, sort_by: 'completed_at', sort_dir: 'desc',
+        limit: 100, sort_by: 'completed_at', sort_dir: 'desc',
       }),
     ]);
-    setBoardTasks([...openRes.tasks, ...doneRes.tasks]);
+    const doneToday = doneRes.tasks.filter(
+      (t) => t.completed_at && daysSince(t.completed_at) <= 0,
+    );
+    setBoardTasks([...openRes.tasks, ...doneToday]);
   }, [assigneeParam, priorityFilter]);
 
   const loadList = useCallback(async () => {
