@@ -11,18 +11,16 @@ const POLL_MS = 60000;
 const ROWS_SHOWN = 5;
 
 /**
- * Queue metadata, in display order. `verb` builds the prefilled task title
- * when a row is escalated to a real assigned task.
+ * Queue metadata, in the shop's priority order: collect finished work, chase
+ * quote approvals, unstick stalled jobs, open the new arrivals. `verb`
+ * builds the prefilled task title when a row is escalated to a real task.
+ * (Follow-ups render after these with their own row shape.)
  */
 const QUEUES = [
-  { key: 'stuck', label: 'Stuck — nothing has moved', icon: 'hourglass_disabled', verb: 'Unstick', red: true },
-  { key: 'needs_diagnosis', label: 'Needs diagnosis', icon: 'search', verb: 'Diagnose' },
-  { key: 'needs_quote', label: 'Needs quoting', icon: 'request_quote', verb: 'Quote' },
-  { key: 'waiting_on_customer', label: 'Waiting on customer', icon: 'hourglass_top', verb: 'Chase customer on' },
-  { key: 'start_work', label: 'Approved — start work', icon: 'play_circle', verb: 'Start work on' },
-  { key: 'chase_parts', label: 'Parts to chase', icon: 'local_shipping', verb: 'Chase parts for' },
-  { key: 'needs_invoice', label: 'Needs invoicing', icon: 'receipt_long', verb: 'Invoice' },
   { key: 'ready_for_pickup', label: 'Ready for pickup — call customer', icon: 'call', verb: 'Arrange pickup for' },
+  { key: 'waiting_on_customer', label: 'Waiting for approval', icon: 'hourglass_top', verb: 'Chase approval on' },
+  { key: 'stuck', label: 'Stuck — nothing has moved', icon: 'hourglass_disabled', verb: 'Unstick', red: true },
+  { key: 'needs_diagnosis', label: 'Received — needs diagnosis', icon: 'search', verb: 'Diagnose' },
 ];
 
 const PRIORITY_BADGE = {

@@ -756,18 +756,27 @@ async def get_repair_summary(
 # NEEDS ATTENTION — the Workspace's live to-do queues
 # ──────────────────────────────────────────────
 
-# Active tool status → the action queue it belongs to. `in_repair` is active
-# but deliberately absent: a tool being worked on is not a to-do. It can still
-# surface in the cross-cutting "stuck" queue if nothing has moved in a while.
+# Displayed queues, the shop's own priority order:
+#   ready_for_pickup — finished work the customer hasn't collected. Covers
+#     BOTH `ready` and `invoiced`: billing happens at the counter, so from
+#     the shop's view they're one pile of "call them, it's done".
+#   waiting_on_customer — quotes awaiting the customer's approval.
+#   needs_diagnosis — tools received, nobody's opened them yet.
+# Everything else (diagnosed/approved/parts_pending/in_repair) is normal
+# pipeline the tracker handles — it earns a row ONLY when stuck, and lands in
+# the cross-cutting `stuck` queue. Statuses in this map are NEVER re-listed
+# under stuck (their rows already show red ages), so no job prints twice.
 _ATTENTION_QUEUE_BY_STATUS = {
     "received": "needs_diagnosis",
-    "diagnosed": "needs_quote",
     "quoted": "waiting_on_customer",
-    "approved": "start_work",
-    "parts_pending": "chase_parts",
-    "ready": "needs_invoice",
+    "ready": "ready_for_pickup",
     "invoiced": "ready_for_pickup",
 }
+
+_ATTENTION_ACTIVE_STATUSES = [
+    "received", "diagnosed", "quoted", "approved",
+    "parts_pending", "in_repair", "ready", "invoiced",
+]
 
 _ATTENTION_ITEM_CAP = 30
 
@@ -784,13 +793,13 @@ async def get_attention_queues(
     Counts are always exact; item lists (capped per queue, oldest first) are
     included only when `include_items=true`.
 
-    Queues: one per actionable status, a cross-cutting `stuck` queue (no
-    status change in `stale_days`, the same threshold the tracker dashboard
-    uses), and `followups_due` from route-management visits.
+    Queues, in the shop's priority order: ready_for_pickup (ready+invoiced),
+    waiting_on_customer (quoted), stuck (no status change in `stale_days` —
+    only for statuses without their own queue, so nothing appears twice),
+    needs_diagnosis (received), and followups_due from route management.
 
-    `total` = sum of the status queues + due follow-ups. Stuck items already
-    sit in their status queue so they are not re-counted (a stuck `in_repair`
-    tool is the one case outside `total`; the `stuck_count` badge covers it).
+    `total` = sum of the four repair queues + due follow-ups; every work
+    order counts at most once per queue. `stuck_count` = the stuck queue.
     """
     db = get_database()
     now = datetime.utcnow()
@@ -801,7 +810,7 @@ async def get_attention_queues(
     if settings_doc:
         stale_days = int(settings_doc.get("stale_days", 3) or 3)
 
-    active_statuses = list(_ATTENTION_QUEUE_BY_STATUS) + ["in_repair"]
+    active_statuses = _ATTENTION_ACTIVE_STATUSES
     pipeline = [
         {"$match": {"tools.status": {"$in": active_statuses}}},
         {"$unwind": "$tools"},
@@ -882,11 +891,13 @@ async def get_attention_queues(
         tool_label = " ".join(tool_bits) or doc.get("tool_type") or "—"
         queue = _ATTENTION_QUEUE_BY_STATUS.get(doc["tool_status"])
         if queue:
+            # Displayed statuses stay in their own queue — stuckness shows as
+            # the red age on the row, never as a duplicate stuck entry.
             _absorb(queue, doc, days, stuck, tool_label)
-        if stuck:
+        elif stuck:
             _absorb("stuck", doc, days, stuck, tool_label)
 
-    queues: dict = {key: [] for key in _ATTENTION_QUEUE_BY_STATUS.values()}
+    queues: dict = {key: [] for key in set(_ATTENTION_QUEUE_BY_STATUS.values())}
     queues["stuck"] = []
     for (queue_key, _job_id), item in grouped.items():
         # The display label: the tool itself when there's one, a count when
@@ -930,7 +941,9 @@ async def get_attention_queues(
     for items in queues.values():
         items.sort(key=lambda i: i["days_in_status"], reverse=True)
 
-    total = sum(len(items) for key, items in queues.items() if key != "stuck") + followups_count
+    # Every work order appears in exactly one queue now, so total is a
+    # straight sum with no double counting.
+    total = sum(len(items) for items in queues.values()) + followups_count
 
     def _bucket(items, count=None):
         out = {"count": count if count is not None else len(items)}
@@ -943,14 +956,10 @@ async def get_attention_queues(
         "total": total,
         "stuck_count": len(queues["stuck"]),
         "queues": {
+            "ready_for_pickup": _bucket(queues["ready_for_pickup"]),
+            "waiting_on_customer": _bucket(queues["waiting_on_customer"]),
             "stuck": _bucket(queues["stuck"]),
             "needs_diagnosis": _bucket(queues["needs_diagnosis"]),
-            "needs_quote": _bucket(queues["needs_quote"]),
-            "waiting_on_customer": _bucket(queues["waiting_on_customer"]),
-            "start_work": _bucket(queues["start_work"]),
-            "chase_parts": _bucket(queues["chase_parts"]),
-            "needs_invoice": _bucket(queues["needs_invoice"]),
-            "ready_for_pickup": _bucket(queues["ready_for_pickup"]),
             "followups_due": _bucket(followup_items, count=followups_count),
         },
     }
