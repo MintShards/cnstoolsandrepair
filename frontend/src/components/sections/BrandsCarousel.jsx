@@ -132,7 +132,7 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
 
         {/* Trademark Disclaimer */}
         <p className="text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-6 sm:mt-8 px-4 max-w-2xl mx-auto">
-          All trademarks and logos are the property of their respective owners. CNS Tool Repair is not affiliated with or authorized by these brands.
+          All trademarks and logos are the property of their respective owners and are shown to indicate the brands we service. Brands marked Authorized are serviced under a factory-authorized warranty repair arrangement; CNS Tool Repair is not otherwise affiliated with or endorsed by the brands shown.
         </p>
 
         {/* CTA */}

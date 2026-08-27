@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { toolsAPI } from '../services/api';
 import { useSettings } from '../contexts/SettingsContext';
@@ -36,7 +37,7 @@ export default function Services() {
         <title>Pneumatic Tool Repair Services | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Expert pneumatic tool repair in Surrey, BC. Factory-trained technicians servicing air, hydraulic, and electric tools plus lifting equipment for industrial clients."
+          content="Expert pneumatic tool repair in Surrey, BC. Authorized JET Tools & Strongarm warranty repair centre. Air, hydraulic and electric tools plus lifting equipment."
         />
         <meta
           name="keywords"
@@ -137,6 +138,49 @@ export default function Services() {
                 )}
               </>
             )}
+          </div>
+        </div>
+
+        {/* Authorized Warranty Repair Section */}
+        <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
+          <div className="max-w-screen-xl mx-auto">
+            <div className="text-center mb-8 lg:mb-10">
+              <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Factory Authorized</p>
+              <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Authorized Warranty Repair</h2>
+            </div>
+            <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 border-2 border-primary/30 rounded-2xl p-6 sm:p-8 text-center shadow-lg">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span
+                  className="material-symbols-outlined text-primary text-3xl"
+                  style={{ fontVariationSettings: "'wght' 600" }}
+                >
+                  verified
+                </span>
+                <p className="text-lg sm:text-xl font-black uppercase tracking-tight">
+                  JET Tools &amp; Strongarm Products
+                </p>
+              </div>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                CNS Tool Repair is an authorized warranty repair centre for JET Tools and
+                Strongarm Products. Warranty claims are assessed and repaired in-shop at our
+                Surrey, BC facility &mdash; bring your tool and proof of purchase, and we handle
+                the claim from diagnosis through repair.
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  to="/repair-request"
+                  className="bg-primary text-white font-black px-8 py-4 rounded-xl uppercase hover:bg-primary/90 transition-colors"
+                >
+                  Start a Warranty Claim
+                </Link>
+                <Link
+                  to="/contact"
+                  className="bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white font-black px-8 py-4 rounded-xl uppercase hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Ask About Coverage
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
