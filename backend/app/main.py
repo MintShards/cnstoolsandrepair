@@ -175,8 +175,9 @@ async def get_csrf_token(request: Request):
     try:
         csrf_protect = CsrfProtect()
         csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
-        response = {"csrf_token": csrf_token}
-        # Set CSRF cookie
+        # set_csrf_cookie needs a real Response (it calls .set_cookie on it);
+        # passing a plain dict here is what made this endpoint 500 forever.
+        response = JSONResponse(content={"csrf_token": csrf_token})
         csrf_protect.set_csrf_cookie(signed_token, response)
         return response
     except Exception as e:

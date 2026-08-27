@@ -352,7 +352,7 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 
 **Implemented protections:**
 - **Rate limiting**: 5 requests/hour per IP on quote endpoint (slowapi) - prevents DOS attacks
-- **CSRF protection**: Token-based validation (fastapi-csrf-protect) with `/api/csrf-token` endpoint
+- **CSRF**: `/api/csrf-token` issues a token + cookie (fastapi-csrf-protect), but no route currently validates it and the frontend never fetches it — actual cross-site protection comes from SameSite cookies, CORS, and rate limiting. Wire up validation before treating CSRF as enforced.
 - **File validation**: Deep image content verification with Pillow before saving
 - **Idempotency**: Duplicate submission prevention with 5-min cache using `idempotency_key`
 - **Phone validation**: Strict ###-###-#### format enforcement via Pydantic validator
