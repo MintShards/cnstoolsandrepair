@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { toolsAPI } from '../services/api';
+import { toolsAPI, brandsAPI } from '../services/api';
 import { useSettings } from '../contexts/SettingsContext';
 import ExperienceBadge from '../components/sections/ExperienceBadge';
 import BrandsCarousel from '../components/sections/BrandsCarousel';
@@ -12,6 +12,9 @@ export default function Services() {
   const { settings, loading: loadingSettings } = useSettings();
   const [toolsByCategory, setToolsByCategory] = useState(null);
   const [loadingTools, setLoadingTools] = useState(true);
+  // Brands flagged `authorized` in Admin Settings → Global drive the warranty
+  // section, so gaining a new authorization is a toggle, not a deploy.
+  const [authorizedBrands, setAuthorizedBrands] = useState([]);
 
   // Get services from Settings (managed via admin dashboard)
   const services = settings?.services || [];
@@ -29,6 +32,19 @@ export default function Services() {
     };
 
     fetchTools();
+  }, []);
+
+  useEffect(() => {
+    const fetchAuthorizedBrands = async () => {
+      try {
+        const data = await brandsAPI.list(true);
+        setAuthorizedBrands((data || []).filter((brand) => brand.authorized));
+      } catch {
+        // Leave empty — the section falls back to its static brand copy.
+      }
+    };
+
+    fetchAuthorizedBrands();
   }, []);
 
   return (
@@ -149,22 +165,50 @@ export default function Services() {
               <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Authorized Warranty Repair</h2>
             </div>
             <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 border-2 border-primary/30 rounded-2xl p-6 sm:p-8 text-center shadow-lg">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <span
-                  className="material-symbols-outlined text-primary text-3xl"
-                  style={{ fontVariationSettings: "'wght' 600" }}
-                >
-                  verified
-                </span>
-                <p className="text-lg sm:text-xl font-black uppercase tracking-tight">
-                  JET Tools &amp; Strongarm Products
-                </p>
-              </div>
+              {authorizedBrands.length > 0 ? (
+                <div className="flex flex-wrap justify-center gap-3 mb-5">
+                  {authorizedBrands.map((brand) => (
+                    <div
+                      key={brand.id}
+                      className="flex items-center gap-2 bg-white dark:bg-slate-100 border-2 border-slate-200 dark:border-slate-300 rounded-xl px-4 py-2"
+                    >
+                      {brand.logo_url && (
+                        <img
+                          src={brand.logo_url}
+                          alt={`${brand.name} logo`}
+                          className="h-6 w-auto"
+                          loading="lazy"
+                        />
+                      )}
+                      <span className="text-sm font-black uppercase tracking-tight text-slate-900">
+                        {brand.name}
+                      </span>
+                      <span
+                        className="material-symbols-outlined text-primary text-base"
+                        style={{ fontVariationSettings: "'wght' 600" }}
+                      >
+                        verified
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <span
+                    className="material-symbols-outlined text-primary text-3xl"
+                    style={{ fontVariationSettings: "'wght' 600" }}
+                  >
+                    verified
+                  </span>
+                  <p className="text-lg sm:text-xl font-black uppercase tracking-tight">
+                    JET Tools &amp; Strongarm Products
+                  </p>
+                </div>
+              )}
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                CNS Tool Repair is an authorized warranty repair centre for JET Tools and
-                Strongarm Products. Warranty claims are assessed and repaired in-shop at our
-                Surrey, BC facility &mdash; bring your tool and proof of purchase, and we handle
-                the claim from diagnosis through repair.
+                {authorizedBrands.length > 0
+                  ? 'CNS Tool Repair is a factory-authorized warranty repair centre for the brands shown here. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'
+                  : 'CNS Tool Repair is an authorized warranty repair centre for JET Tools and Strongarm Products. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'}
               </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
