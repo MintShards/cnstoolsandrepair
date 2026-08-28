@@ -281,7 +281,9 @@ export default function Services() {
                 // centred as a group, with vertical centres aligned per row
                 <div className="mt-12 flex flex-wrap justify-center items-center gap-6">
                   {warrantyVideos.map((video) => (
-                    <figure key={video.url} className="max-w-full">
+                    // width cap lets a landscape clip share a row with others
+                    // instead of claiming the whole container at full height
+                    <figure key={video.url} className="max-w-full sm:max-w-[360px]">
                       {/* preload="metadata" keeps page load light; the file only
                           streams when a visitor presses play. The poster paints
                           instantly so the player is never a blank box. max-h
