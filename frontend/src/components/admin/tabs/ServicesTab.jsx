@@ -59,6 +59,21 @@ export default function ServicesTab() {
     });
   };
 
+  const warrantyVideos = formData?.warranty?.videos || [];
+
+  const addWarrantyVideo = () => {
+    updateWarranty('videos', [...warrantyVideos, { title: '', url: '' }]);
+  };
+
+  const updateWarrantyVideo = (index, field, value) => {
+    const next = warrantyVideos.map((video, i) => (i === index ? { ...video, [field]: value } : video));
+    updateWarranty('videos', next);
+  };
+
+  const removeWarrantyVideo = (index) => {
+    updateWarranty('videos', warrantyVideos.filter((_, i) => i !== index));
+  };
+
   const handleSaveAll = async () => {
     setSaving(true);
     setNotification(null);
@@ -469,6 +484,57 @@ export default function ServicesTab() {
             maxLength={40}
             helperText="Links to the contact page"
           />
+        </div>
+
+        <div className="pt-4 border-t border-slate-700">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-bold text-white">Brand Videos</p>
+              <p className="text-xs text-slate-400">
+                Promo videos shown under the warranty card. Use a direct .mp4 URL (e.g. a Spaces
+                upload of a SureWerx dealer asset).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addWarrantyVideo}
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors text-sm"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              Add Video
+            </button>
+          </div>
+
+          {warrantyVideos.length === 0 && (
+            <p className="text-xs text-slate-500 italic">No videos added.</p>
+          )}
+
+          <div className="space-y-3">
+            {warrantyVideos.map((video, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-3 items-end">
+                <AdminInput
+                  label="Title"
+                  value={video.title ?? ''}
+                  onChange={(v) => updateWarrantyVideo(index, 'title', v)}
+                  maxLength={100}
+                />
+                <AdminInput
+                  label="Video URL (.mp4)"
+                  value={video.url ?? ''}
+                  onChange={(v) => updateWarrantyVideo(index, 'url', v)}
+                  maxLength={500}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeWarrantyVideo(index)}
+                  className="flex items-center gap-1 px-3 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 text-red-400 font-bold rounded-lg transition-colors text-sm"
+                >
+                  <span className="material-symbols-outlined text-base">delete</span>
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

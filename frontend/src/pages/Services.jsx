@@ -66,6 +66,8 @@ export default function Services() {
   const warrantyHeading = warranty.heading?.trim() || 'Authorized Warranty Repair';
   const warrantyPrimaryCta = warranty.primaryCta?.trim() || 'Start a Warranty Claim';
   const warrantySecondaryCta = warranty.secondaryCta?.trim() || 'Ask About Coverage';
+  // Brand promo videos managed in Admin Settings → Services → warranty section.
+  const warrantyVideos = (warranty.videos || []).filter((video) => video.url?.trim());
   const warrantyDescription = warranty.description?.trim()
     || (authorizedBrands.length > 0
       ? 'CNS Tool Repair is a factory-authorized warranty repair centre for the brands shown here. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'
@@ -273,6 +275,35 @@ export default function Services() {
                   {warrantySecondaryCta}
                 </Link>
               </div>
+
+              {warrantyVideos.length > 0 && (
+                <div
+                  className={`mt-12 grid gap-6 ${
+                    warrantyVideos.length === 1 ? 'grid-cols-1 max-w-xl mx-auto' : 'grid-cols-1 sm:grid-cols-2'
+                  }`}
+                >
+                  {warrantyVideos.map((video) => (
+                    <figure key={video.url}>
+                      {/* preload="metadata" keeps page load light; the file only
+                          streams when a visitor presses play */}
+                      {/* max-h keeps portrait (social-format) brand videos from
+                          towering over the section; landscape ones cap the same way */}
+                      <video
+                        controls
+                        preload="metadata"
+                        playsInline
+                        className="mx-auto w-auto max-w-full max-h-[420px] rounded-2xl shadow-lg bg-slate-950"
+                        src={video.url}
+                      />
+                      {video.title?.trim() && (
+                        <figcaption className="mt-2 text-center text-xs font-black uppercase tracking-tight text-slate-500 dark:text-slate-400">
+                          {video.title}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

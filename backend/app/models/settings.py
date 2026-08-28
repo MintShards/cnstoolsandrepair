@@ -56,6 +56,16 @@ class AnnouncementModel(BaseModel):
     type: AnnouncementType = Field(default=AnnouncementType.INFO)
 
 
+class WarrantyVideoModel(BaseModel):
+    """A brand promo video shown in the warranty section (e.g. from the
+    SureWerx dealer media portal, self-hosted on Spaces)."""
+    title: str = Field(default="", max_length=100)
+    url: str = Field(..., max_length=500)
+
+    class Config:
+        populate_by_name = True
+
+
 class WarrantySectionModel(BaseModel):
     """Copy for the services page's Authorized Warranty Repair section.
 
@@ -67,6 +77,7 @@ class WarrantySectionModel(BaseModel):
     description: str = Field(default="", max_length=600)
     primary_cta: str = Field(default="Start a Warranty Claim", alias="primaryCta", max_length=40)
     secondary_cta: str = Field(default="Ask About Coverage", alias="secondaryCta", max_length=40)
+    videos: List[WarrantyVideoModel] = Field(default_factory=list)
 
     class Config:
         populate_by_name = True
