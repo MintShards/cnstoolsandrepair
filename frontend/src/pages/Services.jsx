@@ -6,7 +6,6 @@ import { useSettings } from '../contexts/SettingsContext';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
-import ExperienceBadge from '../components/sections/ExperienceBadge';
 import BrandsCarousel from '../components/sections/BrandsCarousel';
 import HowItWorks from '../components/sections/HowItWorks';
 import DualCTA from '../components/sections/DualCTA';
@@ -275,13 +274,6 @@ export default function Services() {
                 </Link>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Experience Badge Section */}
-        <div className="px-6 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12 bg-slate-100 dark:bg-slate-900">
-          <div className="max-w-screen-xl mx-auto flex justify-center">
-            <ExperienceBadge />
           </div>
         </div>
 
