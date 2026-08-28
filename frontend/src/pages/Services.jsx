@@ -17,7 +17,7 @@ function AuthorizedBrandChip({ brand, uniform = false }) {
   // natural widths (uniform=false) since slides scroll rather than wrap.
   return (
     <div
-      className={`flex items-center gap-2 bg-white dark:bg-slate-100 border-2 border-slate-200 dark:border-slate-300 rounded-xl px-4 py-2 ${
+      className={`flex items-center gap-2 bg-white dark:bg-slate-100 shadow-md rounded-full px-5 py-2 ${
         uniform ? 'w-56 max-w-full min-h-[3.25rem] justify-center text-center' : ''
       }`}
     >
@@ -180,10 +180,10 @@ export default function Services() {
                     {services.map((service, index) => (
                       <div
                         key={index}
-                        className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl hover:border-primary dark:hover:border-primary transition-all text-center w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] lg:w-[calc(33.333%-1.334rem)]"
+                        className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-transparent shadow-lg hover:shadow-xl hover:border-primary dark:hover:border-primary transition-all text-center w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-1rem)] lg:w-[calc(33.333%-1.334rem)]"
                       >
                         <div className="mx-auto">
-                          <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                          <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center">
                             <span
                               className="material-symbols-outlined text-primary text-4xl"
                               style={{ fontVariationSettings: "'wght' 600" }}
@@ -217,7 +217,7 @@ export default function Services() {
               <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">{warrantyLabel}</p>
               <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">{warrantyHeading}</h2>
             </div>
-            <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 border-2 border-primary/30 rounded-2xl p-6 sm:p-8 text-center shadow-lg">
+            <div className="max-w-3xl mx-auto text-center">
               {authorizedBrands.length >= 10 ? (
                 <div className="mb-5">
                   <Swiper
@@ -400,7 +400,7 @@ export default function Services() {
                         {/* Air Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-500">
-                        <div className="size-12 shrink-0 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-full bg-blue-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-blue-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -415,7 +415,7 @@ export default function Services() {
                           toolsByCategory.air_tools.map((tool) => (
                             <div
                               key={tool.id}
-                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
+                              className="border-l-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 pl-4 py-1.5 transition-colors"
                             >
                               <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
@@ -430,7 +430,7 @@ export default function Services() {
                     {/* Hydraulic Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-red-500">
-                        <div className="size-12 shrink-0 rounded-xl bg-red-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-full bg-red-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-red-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -445,7 +445,7 @@ export default function Services() {
                           toolsByCategory.hydraulic_tools.map((tool) => (
                             <div
                               key={tool.id}
-                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 transition-colors"
+                              className="border-l-2 border-slate-200 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 pl-4 py-1.5 transition-colors"
                             >
                               <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
@@ -460,7 +460,7 @@ export default function Services() {
                     {/* Lifting Equipment Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-purple-500">
-                        <div className="size-12 shrink-0 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-full bg-purple-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-purple-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -475,7 +475,7 @@ export default function Services() {
                           toolsByCategory.lifting_equipment.map((tool) => (
                             <div
                               key={tool.id}
-                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 transition-colors"
+                              className="border-l-2 border-slate-200 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 pl-4 py-1.5 transition-colors"
                             >
                               <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>
@@ -490,7 +490,7 @@ export default function Services() {
                     {/* Electric Tools Column */}
                     <div>
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-amber-500">
-                        <div className="size-12 shrink-0 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                        <div className="size-12 shrink-0 rounded-full bg-amber-500/10 flex items-center justify-center">
                           <span
                             className="material-symbols-outlined text-amber-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
@@ -505,7 +505,7 @@ export default function Services() {
                           toolsByCategory.electric_tools.map((tool) => (
                             <div
                               key={tool.id}
-                              className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
+                              className="border-l-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 pl-4 py-1.5 transition-colors"
                             >
                               <h4 className="text-sm font-black uppercase tracking-tight mb-1">{tool.name}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{tool.description}</p>

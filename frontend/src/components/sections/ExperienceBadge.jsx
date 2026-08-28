@@ -1,6 +1,6 @@
 export default function ExperienceBadge() {
   return (
-    <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 border-2 border-primary/30 rounded-xl">
+    <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 border-2 border-primary/30 rounded-full">
       <span
         className="material-symbols-outlined text-primary text-2xl"
         style={{ fontVariationSettings: "'wght' 600" }}
