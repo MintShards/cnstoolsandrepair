@@ -511,7 +511,7 @@ export default function ServicesTab() {
 
           <div className="space-y-3">
             {warrantyVideos.map((video, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-3 items-end">
+              <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_2fr_auto] gap-3 items-end">
                 <AdminInput
                   label="Title"
                   value={video.title ?? ''}
@@ -523,6 +523,13 @@ export default function ServicesTab() {
                   value={video.url ?? ''}
                   onChange={(v) => updateWarrantyVideo(index, 'url', v)}
                   maxLength={500}
+                />
+                <AdminInput
+                  label="Poster Image URL (optional)"
+                  value={video.poster ?? ''}
+                  onChange={(v) => updateWarrantyVideo(index, 'poster', v)}
+                  maxLength={500}
+                  helperText="Thumbnail shown before the video plays"
                 />
                 <button
                   type="button"

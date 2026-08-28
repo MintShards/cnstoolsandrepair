@@ -58,9 +58,11 @@ class AnnouncementModel(BaseModel):
 
 class WarrantyVideoModel(BaseModel):
     """A brand promo video shown in the warranty section (e.g. from the
-    SureWerx dealer media portal, self-hosted on Spaces)."""
+    SureWerx dealer media portal, self-hosted on Spaces). The poster image
+    paints immediately while the video itself loads nothing until played."""
     title: str = Field(default="", max_length=100)
     url: str = Field(..., max_length=500)
+    poster: str = Field(default="", max_length=500)
 
     class Config:
         populate_by_name = True

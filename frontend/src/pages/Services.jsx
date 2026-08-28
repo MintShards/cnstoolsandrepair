@@ -277,21 +277,20 @@ export default function Services() {
               </div>
 
               {warrantyVideos.length > 0 && (
-                <div
-                  className={`mt-12 grid gap-6 items-center ${
-                    warrantyVideos.length === 1 ? 'grid-cols-1 max-w-xl mx-auto' : 'grid-cols-1 sm:grid-cols-2'
-                  }`}
-                >
+                // flex-wrap keeps any count of mixed portrait/landscape videos
+                // centred as a group, with vertical centres aligned per row
+                <div className="mt-12 flex flex-wrap justify-center items-center gap-6">
                   {warrantyVideos.map((video) => (
-                    <figure key={video.url}>
+                    <figure key={video.url} className="max-w-full">
                       {/* preload="metadata" keeps page load light; the file only
-                          streams when a visitor presses play */}
-                      {/* max-h keeps portrait (social-format) brand videos from
-                          towering over the section; landscape ones cap the same way */}
+                          streams when a visitor presses play. The poster paints
+                          instantly so the player is never a blank box. max-h
+                          keeps portrait (social-format) clips phone-sized. */}
                       <video
                         controls
                         preload="metadata"
                         playsInline
+                        poster={video.poster?.trim() || undefined}
                         className="mx-auto w-auto max-w-full max-h-[420px] rounded-2xl shadow-lg bg-slate-950"
                         src={video.url}
                       />
