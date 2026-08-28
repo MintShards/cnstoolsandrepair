@@ -278,7 +278,7 @@ export default function Services() {
 
               {warrantyVideos.length > 0 && (
                 <div
-                  className={`mt-12 grid gap-6 ${
+                  className={`mt-12 grid gap-6 items-center ${
                     warrantyVideos.length === 1 ? 'grid-cols-1 max-w-xl mx-auto' : 'grid-cols-1 sm:grid-cols-2'
                   }`}
                 >
