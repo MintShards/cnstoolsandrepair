@@ -56,6 +56,22 @@ class AnnouncementModel(BaseModel):
     type: AnnouncementType = Field(default=AnnouncementType.INFO)
 
 
+class WarrantySectionModel(BaseModel):
+    """Copy for the services page's Authorized Warranty Repair section.
+
+    Which brands appear there is driven by the `authorized` flag on brands,
+    not by these fields. An empty description falls back to the frontend's
+    built-in prose, which adapts to whether any brands are flagged."""
+    label: str = Field(default="Factory Authorized", max_length=60)
+    heading: str = Field(default="Authorized Warranty Repair", max_length=100)
+    description: str = Field(default="", max_length=600)
+    primary_cta: str = Field(default="Start a Warranty Claim", alias="primaryCta", max_length=40)
+    secondary_cta: str = Field(default="Ask About Coverage", alias="secondaryCta", max_length=40)
+
+    class Config:
+        populate_by_name = True
+
+
 class MapConfigModel(BaseModel):
     embed_url: str = Field(..., alias="embedUrl")
     directions_url: str = Field(..., alias="directionsUrl")
@@ -212,6 +228,7 @@ class BusinessSettingsUpdate(BaseModel):
     hero: HeroModel
     services: List[ServiceItemModel] = Field(default_factory=list)
     announcement: Optional[AnnouncementModel] = Field(default_factory=AnnouncementModel)
+    warranty: Optional[WarrantySectionModel] = Field(default_factory=WarrantySectionModel)
     service_area: str = Field(default="Metro Vancouver", alias="serviceArea")
     map: MapConfigModel
     claims: Optional[ClaimsModel] = Field(default_factory=ClaimsModel)
@@ -291,6 +308,7 @@ class BusinessSettingsResponse(BaseModel):
     hero: HeroModel
     services: List[ServiceItemModel]
     announcement: AnnouncementModel
+    warranty: Optional[WarrantySectionModel] = Field(default_factory=WarrantySectionModel)
     service_area: str = Field(alias="serviceArea")
     map: MapConfigModel
     claims: ClaimsModel

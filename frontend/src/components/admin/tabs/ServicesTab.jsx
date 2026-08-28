@@ -52,6 +52,13 @@ export default function ServicesTab() {
     fetchTools();
   }, []);
 
+  const updateWarranty = (field, value) => {
+    setFormData({
+      ...formData,
+      warranty: { ...(formData.warranty || {}), [field]: value },
+    });
+  };
+
   const handleSaveAll = async () => {
     setSaving(true);
     setNotification(null);
@@ -411,6 +418,59 @@ export default function ServicesTab() {
           <p className="text-sm text-slate-500">Click "Add Service" to create your first service.</p>
         </div>
       )}
+
+      {/* Authorized Warranty Section */}
+      <div className="mb-6 mt-12 pt-8 border-t border-slate-700">
+        <h3 className="text-xl font-black text-white uppercase tracking-tight">
+          Authorized Warranty Section
+        </h3>
+        <p className="text-slate-400 text-sm mt-1">
+          Copy for the &quot;Authorized Warranty Repair&quot; card on the Services page. Which
+          brands appear there is controlled by each brand&apos;s Authorized toggle in the
+          Global tab.
+        </p>
+      </div>
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AdminInput
+            label="Kicker Label"
+            value={formData.warranty?.label ?? ''}
+            onChange={(v) => updateWarranty('label', v)}
+            maxLength={60}
+            helperText='Small orange line above the heading, e.g. "Factory Authorized"'
+          />
+          <AdminInput
+            label="Heading"
+            value={formData.warranty?.heading ?? ''}
+            onChange={(v) => updateWarranty('heading', v)}
+            maxLength={100}
+          />
+        </div>
+        <AdminTextarea
+          label="Description"
+          value={formData.warranty?.description ?? ''}
+          onChange={(v) => updateWarranty('description', v)}
+          maxLength={600}
+          rows={4}
+          helperText="Leave blank to use the built-in wording, which adapts to the authorized brands list."
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AdminInput
+            label="Primary Button"
+            value={formData.warranty?.primaryCta ?? ''}
+            onChange={(v) => updateWarranty('primaryCta', v)}
+            maxLength={40}
+            helperText="Links to the repair request form"
+          />
+          <AdminInput
+            label="Secondary Button"
+            value={formData.warranty?.secondaryCta ?? ''}
+            onChange={(v) => updateWarranty('secondaryCta', v)}
+            maxLength={40}
+            helperText="Links to the contact page"
+          />
+        </div>
+      </div>
 
       {/* Tools We Repair */}
       <div className="flex items-center justify-between mb-6 mt-12 pt-8 border-t border-slate-700">

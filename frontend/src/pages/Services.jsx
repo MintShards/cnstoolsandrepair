@@ -49,6 +49,18 @@ export default function Services() {
   // Get services from Settings (managed via admin dashboard)
   const services = settings?.services || [];
 
+  // Warranty section copy is editable in Admin Settings → Services; every
+  // field falls back to the shipped wording so the section never renders bare.
+  const warranty = settings?.warranty || {};
+  const warrantyLabel = warranty.label?.trim() || 'Factory Authorized';
+  const warrantyHeading = warranty.heading?.trim() || 'Authorized Warranty Repair';
+  const warrantyPrimaryCta = warranty.primaryCta?.trim() || 'Start a Warranty Claim';
+  const warrantySecondaryCta = warranty.secondaryCta?.trim() || 'Ask About Coverage';
+  const warrantyDescription = warranty.description?.trim()
+    || (authorizedBrands.length > 0
+      ? 'CNS Tool Repair is a factory-authorized warranty repair centre for the brands shown here. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'
+      : 'CNS Tool Repair is an authorized warranty repair centre for JET Tools and Strongarm Products. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.');
+
   useEffect(() => {
     const fetchTools = async () => {
       try {
@@ -191,8 +203,8 @@ export default function Services() {
         <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
           <div className="max-w-screen-xl mx-auto">
             <div className="text-center mb-8 lg:mb-10">
-              <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Factory Authorized</p>
-              <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Authorized Warranty Repair</h2>
+              <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">{warrantyLabel}</p>
+              <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">{warrantyHeading}</h2>
             </div>
             <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 border-2 border-primary/30 rounded-2xl p-6 sm:p-8 text-center shadow-lg">
               {authorizedBrands.length >= 10 ? (
@@ -235,22 +247,20 @@ export default function Services() {
                 </div>
               )}
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                {authorizedBrands.length > 0
-                  ? 'CNS Tool Repair is a factory-authorized warranty repair centre for the brands shown here. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'
-                  : 'CNS Tool Repair is an authorized warranty repair centre for JET Tools and Strongarm Products. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'}
+                {warrantyDescription}
               </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   to="/repair-request"
                   className="bg-primary text-white font-black px-8 py-4 rounded-xl uppercase hover:bg-primary/90 transition-colors"
                 >
-                  Start a Warranty Claim
+                  {warrantyPrimaryCta}
                 </Link>
                 <Link
                   to="/contact"
                   className="bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white font-black px-8 py-4 rounded-xl uppercase hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
                 >
-                  Ask About Coverage
+                  {warrantySecondaryCta}
                 </Link>
               </div>
             </div>
