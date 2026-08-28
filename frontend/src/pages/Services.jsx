@@ -11,22 +11,33 @@ import BrandsCarousel from '../components/sections/BrandsCarousel';
 import HowItWorks from '../components/sections/HowItWorks';
 import DualCTA from '../components/sections/DualCTA';
 
-function AuthorizedBrandChip({ brand }) {
+function AuthorizedBrandChip({ brand, uniform = false }) {
+  // uniform: fixed-size chips so wrapped grid rows line up into columns even
+  // though brand logos have wildly different aspect ratios. The carousel keeps
+  // natural widths (uniform=false) since slides scroll rather than wrap.
   return (
-    <div className="flex items-center gap-2 bg-white dark:bg-slate-100 border-2 border-slate-200 dark:border-slate-300 rounded-xl px-4 py-2">
+    <div
+      className={`flex items-center gap-2 bg-white dark:bg-slate-100 border-2 border-slate-200 dark:border-slate-300 rounded-xl px-4 py-2 ${
+        uniform ? 'w-56 max-w-full min-h-[3.25rem] justify-center text-center' : ''
+      }`}
+    >
       {brand.logo_url && (
         <img
           src={brand.logo_url}
           alt={`${brand.name} logo`}
-          className="h-6 w-auto"
+          className="h-6 w-auto max-w-[72px] shrink-0 object-contain"
           loading="lazy"
         />
       )}
-      <span className="text-sm font-black uppercase tracking-tight text-slate-900 whitespace-nowrap">
+      <span
+        className={`text-sm font-black uppercase tracking-tight text-slate-900 ${
+          uniform ? 'leading-tight' : 'whitespace-nowrap'
+        }`}
+      >
         {brand.name}
       </span>
       <span
-        className="material-symbols-outlined text-primary text-base"
+        className="material-symbols-outlined text-primary text-base shrink-0"
         style={{ fontVariationSettings: "'wght' 600" }}
       >
         verified
@@ -230,7 +241,7 @@ export default function Services() {
               ) : authorizedBrands.length > 0 ? (
                 <div className="flex flex-wrap justify-center gap-3 mb-5">
                   {authorizedBrands.map((brand) => (
-                    <AuthorizedBrandChip key={brand.id} brand={brand} />
+                    <AuthorizedBrandChip key={brand.id} brand={brand} uniform />
                   ))}
                 </div>
               ) : (
