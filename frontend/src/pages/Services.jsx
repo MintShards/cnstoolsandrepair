@@ -275,37 +275,39 @@ export default function Services() {
                   {warrantySecondaryCta}
                 </Link>
               </div>
-
-              {warrantyVideos.length > 0 && (
-                // flex-wrap keeps any count of mixed portrait/landscape videos
-                // centred as a group, with vertical centres aligned per row
-                <div className="mt-12 flex flex-wrap justify-center items-center gap-6">
-                  {warrantyVideos.map((video) => (
-                    // width cap lets a landscape clip share a row with others
-                    // instead of claiming the whole container at full height
-                    <figure key={video.url} className="max-w-full sm:max-w-[360px]">
-                      {/* preload="metadata" keeps page load light; the file only
-                          streams when a visitor presses play. The poster paints
-                          instantly so the player is never a blank box. max-h
-                          keeps portrait (social-format) clips phone-sized. */}
-                      <video
-                        controls
-                        preload="metadata"
-                        playsInline
-                        poster={video.poster?.trim() || undefined}
-                        className="mx-auto w-auto max-w-full max-h-[420px] rounded-2xl shadow-lg bg-slate-950"
-                        src={video.url}
-                      />
-                      {video.title?.trim() && (
-                        <figcaption className="mt-2 text-center text-xs font-black uppercase tracking-tight text-slate-500 dark:text-slate-400">
-                          {video.title}
-                        </figcaption>
-                      )}
-                    </figure>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {warrantyVideos.length > 0 && (
+              // The video row escapes the narrow prose column so it can use
+              // the section's full width on desktop; flex-wrap keeps any count
+              // of mixed portrait/landscape videos centred, vertical centres
+              // aligned per row.
+              <div className="mt-12 flex flex-wrap justify-center items-center gap-6">
+                {warrantyVideos.map((video) => (
+                  // width caps let clips share rows: mosaic on tablets, one
+                  // full row of three on large screens
+                  <figure key={video.url} className="max-w-full sm:max-w-[360px] xl:max-w-[440px]">
+                    {/* preload="metadata" keeps page load light; the file only
+                        streams when a visitor presses play. The poster paints
+                        instantly so the player is never a blank box. max-h
+                        keeps portrait (social-format) clips phone-sized. */}
+                    <video
+                      controls
+                      preload="metadata"
+                      playsInline
+                      poster={video.poster?.trim() || undefined}
+                      className="mx-auto w-auto max-w-full max-h-[420px] rounded-2xl shadow-lg bg-slate-950"
+                      src={video.url}
+                    />
+                    {video.title?.trim() && (
+                      <figcaption className="mt-2 text-center text-xs font-black uppercase tracking-tight text-slate-500 dark:text-slate-400">
+                        {video.title}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
