@@ -3,10 +3,37 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { toolsAPI, brandsAPI } from '../services/api';
 import { useSettings } from '../contexts/SettingsContext';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+import 'swiper/css';
 import ExperienceBadge from '../components/sections/ExperienceBadge';
 import BrandsCarousel from '../components/sections/BrandsCarousel';
 import HowItWorks from '../components/sections/HowItWorks';
 import DualCTA from '../components/sections/DualCTA';
+
+function AuthorizedBrandChip({ brand }) {
+  return (
+    <div className="flex items-center gap-2 bg-white dark:bg-slate-100 border-2 border-slate-200 dark:border-slate-300 rounded-xl px-4 py-2">
+      {brand.logo_url && (
+        <img
+          src={brand.logo_url}
+          alt={`${brand.name} logo`}
+          className="h-6 w-auto"
+          loading="lazy"
+        />
+      )}
+      <span className="text-sm font-black uppercase tracking-tight text-slate-900 whitespace-nowrap">
+        {brand.name}
+      </span>
+      <span
+        className="material-symbols-outlined text-primary text-base"
+        style={{ fontVariationSettings: "'wght' 600" }}
+      >
+        verified
+      </span>
+    </div>
+  );
+}
 
 export default function Services() {
   const { settings, loading: loadingSettings } = useSettings();
@@ -15,6 +42,9 @@ export default function Services() {
   // Brands flagged `authorized` in Admin Settings → Global drive the warranty
   // section, so gaining a new authorization is a toggle, not a deploy.
   const [authorizedBrands, setAuthorizedBrands] = useState([]);
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Get services from Settings (managed via admin dashboard)
   const services = settings?.services || [];
@@ -165,31 +195,30 @@ export default function Services() {
               <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Authorized Warranty Repair</h2>
             </div>
             <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 border-2 border-primary/30 rounded-2xl p-6 sm:p-8 text-center shadow-lg">
-              {authorizedBrands.length > 0 ? (
+              {authorizedBrands.length >= 10 ? (
+                <div className="mb-5">
+                  <Swiper
+                    modules={[Autoplay]}
+                    spaceBetween={12}
+                    slidesPerView="auto"
+                    loop={true}
+                    autoplay={prefersReducedMotion ? false : {
+                      delay: 0,
+                      disableOnInteraction: false,
+                    }}
+                    speed={5000}
+                  >
+                    {authorizedBrands.map((brand) => (
+                      <SwiperSlide key={brand.id} className="!w-auto">
+                        <AuthorizedBrandChip brand={brand} />
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
+              ) : authorizedBrands.length > 0 ? (
                 <div className="flex flex-wrap justify-center gap-3 mb-5">
                   {authorizedBrands.map((brand) => (
-                    <div
-                      key={brand.id}
-                      className="flex items-center gap-2 bg-white dark:bg-slate-100 border-2 border-slate-200 dark:border-slate-300 rounded-xl px-4 py-2"
-                    >
-                      {brand.logo_url && (
-                        <img
-                          src={brand.logo_url}
-                          alt={`${brand.name} logo`}
-                          className="h-6 w-auto"
-                          loading="lazy"
-                        />
-                      )}
-                      <span className="text-sm font-black uppercase tracking-tight text-slate-900">
-                        {brand.name}
-                      </span>
-                      <span
-                        className="material-symbols-outlined text-primary text-base"
-                        style={{ fontVariationSettings: "'wght' 600" }}
-                      >
-                        verified
-                      </span>
-                    </div>
+                    <AuthorizedBrandChip key={brand.id} brand={brand} />
                   ))}
                 </div>
               ) : (
