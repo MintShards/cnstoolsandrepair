@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { toolsAPI, brandsAPI } from '../services/api';
@@ -9,6 +9,28 @@ import 'swiper/css';
 import BrandsCarousel from '../components/sections/BrandsCarousel';
 import HowItWorks from '../components/sections/HowItWorks';
 import DualCTA from '../components/sections/DualCTA';
+
+// Shown in the warranty section and mirrored into the FAQPage JSON-LD in the
+// Helmet below; keep the two in sync — Google requires schema answers to
+// match the visible page content.
+const WARRANTY_FAQS = [
+  {
+    q: 'How do JET, Strongarm, and Hathorn warranty repairs work?',
+    a: 'Bring your tool and proof of purchase to our Surrey, BC shop. We confirm warranty coverage with the manufacturer, complete the repair in-shop, and test the tool before pickup.',
+  },
+  {
+    q: 'Do I need a receipt for a warranty claim?',
+    a: 'Yes — proof of purchase is required for warranty claims. Without it, we can still assess and repair your tool as a standard repair.',
+  },
+  {
+    q: 'Does a warranty repair cost anything?',
+    a: "Approved warranty claims are repaired under the manufacturer's warranty terms at no charge to you. If a claim is not covered, we provide a quote before any work is done.",
+  },
+  {
+    q: 'Can you repair JET, Strongarm, or Hathorn tools that are out of warranty?',
+    a: 'Yes. We repair these brands and most other industrial tool brands as standard out-of-warranty repairs, with diagnostics and a quote before work begins.',
+  },
+];
 
 function AuthorizedBrandChip({ brand, uniform = false }) {
   // uniform: fixed-size chips so wrapped grid rows line up into columns even
@@ -102,10 +124,10 @@ export default function Services() {
   return (
     <>
       <Helmet>
-        <title>Pneumatic Tool Repair Services | CNS Tool Repair Surrey BC</title>
+        <title>Tool Repair & Warranty Services | CNS Tool Repair Surrey BC</title>
         <meta
           name="description"
-          content="Expert pneumatic tool repair in Surrey, BC. Authorized JET Tools & Strongarm warranty repair centre. Air, hydraulic and electric tools plus lifting equipment."
+          content="Pneumatic tool repair in Surrey, BC. Authorized JET, Strongarm & Hathorn warranty repair centre. Air, hydraulic and electric tools plus lifting equipment."
         />
         <meta
           name="keywords"
@@ -117,15 +139,28 @@ export default function Services() {
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://cnstoolrepair.com/services" />
         <meta property="og:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tool Repair Surrey BC" />
-        <meta property="og:description" content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors." />
+        <meta property="og:description" content="Pneumatic tool repair in Surrey, BC. Authorized JET, Strongarm & Hathorn warranty repair centre for air, hydraulic and electric tools." />
         <meta property="og:image" content="https://cnstoolrepair.com/og-image.jpg" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://cnstoolrepair.com/services" />
         <meta name="twitter:title" content="Pneumatic Tool Services & Repair | Tools We Repair | CNS Tool Repair Surrey BC" />
-        <meta name="twitter:description" content="Expert pneumatic tool repair and maintenance services in Surrey, BC. Fast turnaround, factory-trained technicians, serving automotive, manufacturing, and industrial sectors." />
+        <meta name="twitter:description" content="Pneumatic tool repair in Surrey, BC. Authorized JET, Strongarm & Hathorn warranty repair centre for air, hydraulic and electric tools." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
+
+        {/* FAQ rich-result markup for the warranty section */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: WARRANTY_FAQS.map((faq) => ({
+              '@type': 'Question',
+              name: faq.q,
+              acceptedAnswer: { '@type': 'Answer', text: faq.a },
+            })),
+          })}
+        </script>
       </Helmet>
       <main className="relative min-h-screen">
         {/* Our Services Section */}
@@ -272,6 +307,21 @@ export default function Services() {
                 >
                   {warrantySecondaryCta}
                 </Link>
+              </div>
+
+              {/* Warranty FAQ — answers mirror the FAQPage schema in Helmet */}
+              <div className="mt-12 text-left">
+                <h3 className="text-xl font-black tracking-tight uppercase text-center mb-6">
+                  Warranty Repair FAQ
+                </h3>
+                <div className="space-y-5">
+                  {WARRANTY_FAQS.map((faq) => (
+                    <div key={faq.q} className="border-l-2 border-primary/40 pl-4">
+                      <h4 className="text-sm font-black uppercase tracking-tight mb-1">{faq.q}</h4>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{faq.a}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
