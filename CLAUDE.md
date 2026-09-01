@@ -63,7 +63,7 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
   - ObjectId conversion: `convert_objectid_to_str()` + rename `_id` to `id` before returning to frontend
   - File uploads: `multipart/form-data` with `UploadFile`, saved to `uploads/` with UUID filenames
   - Email: Non-blocking Resend notifications (don't block quote creation)
-  - Email senders: `request@cnstoolrepair.com` (display: "Request") for repair requests, `message@cnstoolrepair.com` (display: "Message") for contact form, `purchasing@cnstoolrepair.com` (display: "CNS Tool Repair Purchasing") for parts sourcing emails. Reply-To is always set to customer email.
+  - Email senders: `request@cnstoolrepair.com` (display: "Request") for repair requests, `message@cnstoolrepair.com` (display: "Message") for contact form, `purchasing@cnstoolrepair.com` (display: "CNS Tool Repair Purchasing") for parts sourcing emails, `sales@cnstoolrepair.com` (display: "CNS Tool Repair Sales") for Tools for Sale quote requests. Reply-To is always set to customer email.
   - Middleware: Request logging, CORS, static file serving (`/uploads`)
 
 ### Frontend (React)
@@ -111,6 +111,9 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 // compat_groups - Cross-brand interchangeable part compatibility groupings
 
 // tools_catalog - Repairable tools (categorized: air_tools, electric_tools, lifting_equipment)
+// products - Tools we SELL, shown on /products (air_tools|hydraulic|lifting).
+//            Deliberately separate from tools_catalog (tools we REPAIR).
+// product_quotes - Quote requests from /products (PQ-YYYY-XXXX, no prices)
 // brands - Brand logos for carousel (has 'authorized' field for classification)
 // industries_page_content - Industries page content (singleton document with hero + industries array)
 // settings - Business settings (singleton document)
@@ -237,6 +240,14 @@ library_brands → library_models → library_parts
 - Single document in `service_agreement` collection
 - Used by `PrintWorkOrder.jsx` to print terms on work orders
 
+### Tools for Sale (Products)
+- Public page: `/products` (`/tools-for-sale` redirects there). Managed in Admin Settings → Tools for Sale.
+- Routers: `routers/products.py` (`/api/products`, admin-guarded writes) and `routers/product_quotes.py` (`/api/product-quotes`)
+- **No prices anywhere** — the page is quote-only, so distributor cost stays private and rates can flex by customer. `sku` shows publicly as "Item #".
+- `ProductCategory`: `air_tools | hydraulic | lifting` — separate enum from `ToolCategory` (tools we repair)
+- Quote requests get `PQ-YYYY-XXXX` via `get_next_product_quote_number()`, rate limited 5/hour, and are **saved before the email** so a mail failure never loses a lead
+- Seed/refresh the catalogue: `python scripts/seed_products.py` (`--dry-run`, `--new-only`). Reads `scripts/data/products_seed.json`, matches by SKU so it is safe to re-run; product photos already live in Spaces under `products/`.
+
 ### CRUD Pattern
 - **GET /** - List all (with `active_only` param)
 - **POST /** - Create (tools require `category` field)
@@ -289,7 +300,7 @@ VITE_API_URL=http://localhost:8000
 - **Roles**: `admin` (everything) · `staff` (Repair Tracker + Workspace + sales routes; no CMS, no account management) · `technician` (Repair Tracker + Workspace only — no sales area) · `sales` (sales area only, rep-scoped). Backend guards: `require_admin`, `require_staff_or_admin` (staff/technician/admin), `require_sales_or_admin` (sales/staff/admin — NOT technician). Frontend guard: `components/RequireRole.jsx`.
 - **User creation**: admins via `python scripts/create_admin.py` or Admin Settings → Users & Accounts (`/admin/settings?tab=users` — one table for all four roles). Admins can switch ANY account to any role, including across the shop/sales boundary, via `PATCH /api/auth/users/{id}/role` (guards: no self-change, last active admin keeps admin). The Workspace has no Staff section — own-password change lives behind the key button in its sidebar; the sales dashboard has no account management.
 - **Needs Attention panel** (Workspace → All Tasks, below the board): live to-do queues DERIVED from repair tool statuses + due route follow-ups via `GET /api/repairs/attention` — never stored as task rows, so they can't drift from the tracker. Rows are work orders (multi-tool jobs collapse to one row). Five queues in shop priority order: Ready for pickup (`ready`+`invoiced`), Waiting for approval (`quoted`), Stuck (stalled jobs in statuses WITHOUT their own queue — diagnosed/approved/parts_pending/in_repair — so nothing lists twice; displayed queues show stuckness as red ages), Needs diagnosis (`received`), Follow-ups due. Queue rows escalate into real assigned tasks via TaskFormModal's `defaultTitle`/`defaultWorkOrder` props. Stuck = no status change in `business_settings.stale_days` (same threshold as the tracker dashboard).
-- **Settings tabs** (`/admin/settings`, `?tab=` deep-linkable): Home, Services, Industries, Gallery, About, Contact, Global, Repair Tracker, Users & Accounts (staff/admin + sales rep CRUD — the only account-management surface)
+- **Settings tabs** (`/admin/settings`, `?tab=` deep-linkable): Home, Services, Industries, Tools for Sale, Gallery, About, Contact, Global, Repair Tracker, Users & Accounts (staff/admin + sales rep CRUD — the only account-management surface)
 - **Services vs Tools**:
   - Services: Array in settings collection (no IDs)
   - Tools: Separate collection with CRUD API (categorized, soft-delete)
