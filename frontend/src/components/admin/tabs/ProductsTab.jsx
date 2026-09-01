@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { productsAPI, productQuotesAPI } from '../../../services/api';
+import { productsAPI, productQuotesAPI, productsContentAPI } from '../../../services/api';
 import { formatDatePacific } from '../../../utils/dateFormat';
 import AdminInput from '../AdminInput';
 import AdminTextarea from '../AdminTextarea';
@@ -63,11 +63,61 @@ export default function ProductsTab() {
 
   const [expandedQuote, setExpandedQuote] = useState(null);
 
+  // Page copy (hero, category wording, quote panel, SEO)
+  const [pageContent, setPageContent] = useState(null);
+  const [savingContent, setSavingContent] = useState(false);
+  const [contentOpen, setContentOpen] = useState(false);
+
   useEffect(() => {
     fetchProducts();
     fetchQuotes();
+    fetchPageContent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchPageContent = async () => {
+    try {
+      setPageContent(await productsContentAPI.get());
+    } catch (error) {
+      console.error('Failed to fetch page content:', error);
+    }
+  };
+
+  const setContentField = (path, value) => {
+    setPageContent((prev) => {
+      const next = structuredClone(prev);
+      const keys = path.split('.');
+      let target = next;
+      for (const key of keys.slice(0, -1)) target = target[key];
+      target[keys[keys.length - 1]] = value;
+      return next;
+    });
+  };
+
+  const setCategoryField = (index, field, value) => {
+    setPageContent((prev) => {
+      const next = structuredClone(prev);
+      next.categories[index][field] = value;
+      return next;
+    });
+  };
+
+  const handleSaveContent = async () => {
+    setSavingContent(true);
+    try {
+      const saved = await productsContentAPI.update(pageContent);
+      setPageContent(saved);
+      showNotification('Page content saved');
+    } catch (error) {
+      console.error('Failed to save page content:', error);
+      showNotification(
+        'Failed to save page content: ' + (error.response?.data?.detail || error.message),
+        'error'
+      );
+    } finally {
+      setSavingContent(false);
+    }
+  };
 
   const showNotification = (text, type = 'success') => {
     setNotification({ text, type });
@@ -434,6 +484,202 @@ export default function ProductsTab() {
           </div>
         </div>
       )}
+
+      {/* Page copy */}
+      <div className="mb-8 bg-slate-800 rounded-lg border border-slate-700">
+        <button
+          onClick={() => setContentOpen(!contentOpen)}
+          className="w-full flex items-center justify-between p-6 text-left"
+        >
+          <div>
+            <h3 className="text-lg font-bold text-white">Page Content</h3>
+            <p className="text-sm text-slate-400 mt-1">
+              Headings, category wording, quote panel text and SEO tags for the public page
+            </p>
+          </div>
+          <span className="material-symbols-outlined text-slate-400">
+            {contentOpen ? 'expand_less' : 'expand_more'}
+          </span>
+        </button>
+
+        {contentOpen && pageContent && (
+          <div className="px-6 pb-6 border-t border-slate-700 pt-6">
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent-orange mb-3">Hero</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+              <AdminInput
+                label="Eyebrow Label"
+                value={pageContent.hero.label}
+                onChange={(v) => setContentField('hero.label', v)}
+                maxLength={100}
+                helperText="Small orange line above the title"
+              />
+              <AdminInput
+                label="Heading"
+                value={pageContent.hero.heading}
+                onChange={(v) => setContentField('hero.heading', v)}
+                maxLength={120}
+                required
+              />
+              <AdminInput
+                label="Short Heading"
+                value={pageContent.hero.shortHeading || ''}
+                onChange={(v) => setContentField('hero.shortHeading', v)}
+                maxLength={40}
+                helperText="Used on phones, where the full heading wraps"
+              />
+              <AdminInput
+                label="Availability Note"
+                value={pageContent.hero.availabilityNote || ''}
+                onChange={(v) => setContentField('hero.availabilityNote', v)}
+                maxLength={160}
+                helperText="Pill under the intro — leave blank to hide it"
+              />
+            </div>
+            <AdminTextarea
+              label="Intro Paragraph"
+              value={pageContent.hero.description}
+              onChange={(v) => setContentField('hero.description', v)}
+              rows={3}
+              maxLength={600}
+            />
+
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent-orange mt-6 mb-3">
+              Categories
+            </h4>
+            <AdminInput
+              label={'"All" Filter Label'}
+              value={pageContent.allLabel || ''}
+              onChange={(v) => setContentField('allLabel', v)}
+              maxLength={60}
+            />
+            {(pageContent.categories || []).map((cat, idx) => (
+              <div key={cat.key} className="mb-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
+                <p className="text-xs font-mono text-slate-500 mb-3">{cat.key}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                  <AdminInput
+                    label="Filter Pill"
+                    value={cat.label}
+                    onChange={(v) => setCategoryField(idx, 'label', v)}
+                    maxLength={60}
+                  />
+                  <AdminInput
+                    label="Section Heading"
+                    value={cat.heading}
+                    onChange={(v) => setCategoryField(idx, 'heading', v)}
+                    maxLength={80}
+                  />
+                </div>
+              </div>
+            ))}
+            <AdminInput
+              label="Section Count Note"
+              value={pageContent.sectionNote || ''}
+              onChange={(v) => setContentField('sectionNote', v)}
+              maxLength={120}
+              helperText='Follows the count, e.g. "23 tools in stock or available to order"'
+            />
+
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent-orange mt-6 mb-3">
+              Quote Panel
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+              <AdminInput
+                label="Panel Title"
+                value={pageContent.quotePanel.title}
+                onChange={(v) => setContentField('quotePanel.title', v)}
+                maxLength={80}
+              />
+              <AdminInput
+                label="Success Heading"
+                value={pageContent.quotePanel.successHeading}
+                onChange={(v) => setContentField('quotePanel.successHeading', v)}
+                maxLength={80}
+              />
+            </div>
+            <AdminInput
+              label="Footnote Under Send Button"
+              value={pageContent.quotePanel.footnote || ''}
+              onChange={(v) => setContentField('quotePanel.footnote', v)}
+              maxLength={200}
+            />
+            <AdminTextarea
+              label="Success Message"
+              value={pageContent.quotePanel.successNote || ''}
+              onChange={(v) => setContentField('quotePanel.successNote', v)}
+              rows={2}
+              maxLength={300}
+              helperText="Shown after the quote number"
+            />
+
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent-orange mt-6 mb-3">
+              Footer Call to Action
+            </h4>
+            <AdminTextarea
+              label="Text"
+              value={pageContent.footerCta.text || ''}
+              onChange={(v) => setContentField('footerCta.text', v)}
+              rows={2}
+              maxLength={300}
+              helperText="The phone and message links follow this sentence"
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+              <AdminInput
+                label="Phone Link Text"
+                value={pageContent.footerCta.phoneLabel || ''}
+                onChange={(v) => setContentField('footerCta.phoneLabel', v)}
+                maxLength={60}
+              />
+              <AdminInput
+                label="Phone Number"
+                value={pageContent.footerCta.phoneNumber || ''}
+                onChange={(v) => setContentField('footerCta.phoneNumber', v)}
+                maxLength={40}
+                helperText="Digits only, for the tel: link"
+              />
+              <AdminInput
+                label="Message Link Text"
+                value={pageContent.footerCta.messageLabel || ''}
+                onChange={(v) => setContentField('footerCta.messageLabel', v)}
+                maxLength={60}
+              />
+            </div>
+
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent-orange mt-6 mb-3">
+              Search Engine Listing
+            </h4>
+            <AdminInput
+              label="Page Title"
+              value={pageContent.seo.title || ''}
+              onChange={(v) => setContentField('seo.title', v)}
+              maxLength={200}
+              helperText="Browser tab and Google result title"
+            />
+            <AdminTextarea
+              label="Meta Description"
+              value={pageContent.seo.description || ''}
+              onChange={(v) => setContentField('seo.description', v)}
+              rows={2}
+              maxLength={500}
+            />
+            <AdminTextarea
+              label="Keywords"
+              value={pageContent.seo.keywords || ''}
+              onChange={(v) => setContentField('seo.keywords', v)}
+              rows={2}
+              maxLength={500}
+              helperText="Comma separated"
+            />
+
+            <button
+              onClick={handleSaveContent}
+              disabled={savingContent}
+              className="mt-2 bg-primary text-white font-black px-6 py-3 rounded-lg shadow-lg hover:bg-blue-600 transition-all uppercase text-sm disabled:bg-slate-600 disabled:cursor-not-allowed"
+            >
+              {savingContent ? 'Saving...' : 'Save Page Content'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">

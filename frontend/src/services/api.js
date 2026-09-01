@@ -320,6 +320,18 @@ export const industriesContentAPI = {
   },
 };
 
+// Tools for Sale page copy (singleton document)
+export const productsContentAPI = {
+  get: async () => {
+    const response = await api.get('/api/products-content/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/products-content/', data);
+    return response.data;
+  },
+};
+
 // Customers API (admin only)
 export const customersAPI = {
   list: async (params = {}) => {

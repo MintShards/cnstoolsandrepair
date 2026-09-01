@@ -240,3 +240,89 @@ class IndustriesPageContentResponse(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+# ============================================================================
+# Tools for Sale (/products) page
+# ============================================================================
+
+class ProductsPageHeroModel(BaseModel):
+    """Hero section for the Tools for Sale page"""
+    label: str = Field(..., min_length=1, max_length=100)
+    heading: str = Field(..., min_length=1, max_length=120)
+    # Shown instead of `heading` on narrow phones, where the longer wording wraps
+    short_heading: str = Field(default="Products", max_length=40, alias="shortHeading")
+    description: str = Field(..., min_length=1, max_length=600)
+    availability_note: str = Field(default="", max_length=160, alias="availabilityNote")
+
+    class Config:
+        populate_by_name = True
+
+
+class ProductCategoryLabelModel(BaseModel):
+    """Display names for one product category.
+
+    `key` matches ProductCategory in models/product.py and is not editable —
+    only how it is worded on the page.
+    """
+    key: str = Field(..., max_length=40)
+    label: str = Field(..., min_length=1, max_length=60)   # filter pill
+    heading: str = Field(..., min_length=1, max_length=80)  # section heading
+
+    class Config:
+        populate_by_name = True
+
+
+class ProductsQuotePanelModel(BaseModel):
+    """Copy inside the quote request slide-over"""
+    title: str = Field(default="Request a Quote", max_length=80)
+    footnote: str = Field(default="", max_length=200)
+    success_heading: str = Field(default="Request Sent", max_length=80, alias="successHeading")
+    success_note: str = Field(default="", max_length=300, alias="successNote")
+
+    class Config:
+        populate_by_name = True
+
+
+class ProductsFooterCtaModel(BaseModel):
+    """The 'don't see what you need' line under the catalogue"""
+    text: str = Field(default="", max_length=300)
+    phone_label: str = Field(default="", max_length=60, alias="phoneLabel")
+    phone_number: str = Field(default="", max_length=40, alias="phoneNumber")
+    message_label: str = Field(default="", max_length=60, alias="messageLabel")
+
+    class Config:
+        populate_by_name = True
+
+
+class ProductsPageSEOModel(BaseModel):
+    title: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=500)
+    keywords: str = Field(default="", max_length=500)
+
+
+class ProductsPageContentUpdate(BaseModel):
+    """Schema for updating Tools for Sale page content"""
+    hero: ProductsPageHeroModel
+    categories: List[ProductCategoryLabelModel] = Field(default_factory=list)
+    all_label: str = Field(default="All Tools", max_length=60, alias="allLabel")
+    # Rendered after the count, e.g. "23 tools in stock or available to order"
+    section_note: str = Field(default="", max_length=120, alias="sectionNote")
+    quote_panel: ProductsQuotePanelModel = Field(
+        default_factory=ProductsQuotePanelModel, alias="quotePanel"
+    )
+    footer_cta: ProductsFooterCtaModel = Field(
+        default_factory=ProductsFooterCtaModel, alias="footerCta"
+    )
+    seo: ProductsPageSEOModel = Field(default_factory=ProductsPageSEOModel)
+
+    class Config:
+        populate_by_name = True
+
+
+class ProductsPageContentResponse(ProductsPageContentUpdate):
+    """API response schema for Tools for Sale page content"""
+    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+
+    class Config:
+        populate_by_name = True

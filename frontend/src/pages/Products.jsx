@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { productsAPI, productQuotesAPI } from '../services/api';
+import { productsAPI, productQuotesAPI, productsContentAPI } from '../services/api';
 import DualCTA from '../components/sections/DualCTA';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -9,17 +9,55 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const resolveImageUrl = (url) =>
   !url ? null : url.startsWith('http') ? url : `${API_BASE_URL}/uploads/${url}`;
 
-const CATEGORIES = [
-  { key: 'all', label: 'All Tools', icon: 'apps' },
-  { key: 'air_tools', label: 'Air Tools', icon: 'air' },
-  { key: 'hydraulic', label: 'Hydraulic', icon: 'water_drop' },
-  { key: 'lifting', label: 'Lifting', icon: 'forklift' },
-];
+// Icons stay in code — the wording is editable in Admin Settings, the glyph isn't.
+const CATEGORY_ICONS = {
+  all: 'apps',
+  air_tools: 'air',
+  hydraulic: 'water_drop',
+  lifting: 'forklift',
+};
 
-const CATEGORY_LABELS = {
-  air_tools: 'Air Tools',
-  hydraulic: 'Hydraulic',
-  lifting: 'Lifting & Material Handling',
+// Mirrors DEFAULT_PRODUCTS_CONTENT in backend/app/routers/products_content.py.
+// Used until the fetch lands, and if it fails, so the page never renders blank.
+const FALLBACK_CONTENT = {
+  hero: {
+    label: 'Tools & Equipment',
+    heading: 'Tools for Sale',
+    shortHeading: 'Products',
+    description:
+      'We supply the same JET air tools, Strongarm jacks and lifting equipment we service every ' +
+      'day — so the shop that sells you the tool is the shop that can repair it. Tell us what you ' +
+      'need and we’ll send pricing, including volume rates for fleets.',
+    availabilityNote: 'Available to order — typically 2–5 business days',
+  },
+  categories: [
+    { key: 'air_tools', label: 'Air Tools', heading: 'Air Tools' },
+    { key: 'hydraulic', label: 'Hydraulic', heading: 'Hydraulic' },
+    { key: 'lifting', label: 'Lifting', heading: 'Lifting & Material Handling' },
+  ],
+  allLabel: 'All Tools',
+  sectionNote: 'in stock or available to order',
+  quotePanel: {
+    title: 'Request a Quote',
+    footnote: 'We reply with pricing and lead time — usually the same business day.',
+    successHeading: 'Request Sent',
+    successNote: 'We’ll get back to you with pricing and lead time, usually the same business day.',
+  },
+  footerCta: {
+    text: 'Don’t see what you need? We can order most JET, Strongarm and Hathorn products —',
+    phoneLabel: 'call 778-488-0777',
+    phoneNumber: '7784880777',
+    messageLabel: 'send us a message',
+  },
+  seo: {
+    title: 'Tools & Equipment for Sale | CNS Tool Repair Surrey BC',
+    description:
+      'Buy JET air tools, Strongarm jacks, hoists and shop equipment in Surrey, BC. Authorized ' +
+      'dealer and warranty repair centre serving the Lower Mainland. Request a quote.',
+    keywords:
+      'buy JET tools Surrey BC, Strongarm jacks BC, air tools for sale Surrey, shop equipment ' +
+      'Lower Mainland, industrial tool supplier Surrey',
+  },
 };
 
 // Mirrors the repair-request form so both forms behave identically.
@@ -44,6 +82,7 @@ const EMPTY_FORM = {
 
 export default function Products() {
   const [products, setProducts] = useState([]);
+  const [content, setContent] = useState(FALLBACK_CONTENT);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
@@ -70,6 +109,41 @@ export default function Products() {
     fetchProducts();
   }, []);
 
+  // Page copy is editable in Admin Settings; the fallback keeps the page
+  // readable if the request fails.
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const data = await productsContentAPI.get();
+        setContent({ ...FALLBACK_CONTENT, ...data });
+      } catch (err) {
+        console.error('Failed to fetch products page content:', err);
+      }
+    };
+    fetchContent();
+  }, []);
+
+  const hero = content.hero || FALLBACK_CONTENT.hero;
+  const quoteCopy = content.quotePanel || FALLBACK_CONTENT.quotePanel;
+  const footerCta = content.footerCta || FALLBACK_CONTENT.footerCta;
+  const seo = content.seo || FALLBACK_CONTENT.seo;
+
+  const categoryLabels = useMemo(() => {
+    const map = {};
+    (content.categories || []).forEach((c) => {
+      map[c.key] = c.heading || c.label;
+    });
+    return map;
+  }, [content.categories]);
+
+  const filterPills = useMemo(
+    () => [
+      { key: 'all', label: content.allLabel || FALLBACK_CONTENT.allLabel },
+      ...(content.categories || []).map((c) => ({ key: c.key, label: c.label })),
+    ],
+    [content.categories, content.allLabel]
+  );
+
   const basketItems = useMemo(() => Object.values(basket), [basket]);
   const basketCount = basketItems.reduce((sum, entry) => sum + entry.quantity, 0);
 
@@ -93,7 +167,7 @@ export default function Products() {
       if (!sections.has(key)) {
         sections.set(key, {
           key,
-          label: CATEGORY_LABELS[key] || key,
+          label: categoryLabels[key] || key,
           items: [],
         });
       }
@@ -102,12 +176,12 @@ export default function Products() {
     for (const section of sections.values()) {
       section.items.sort((a, b) => (a.display_order || 999) - (b.display_order || 999));
     }
-    // Keep the pill order (air tools, hydraulic, lifting) whatever the API returns
-    const order = CATEGORIES.map((c) => c.key);
+    // Keep the configured pill order whatever order the API returns
+    const order = filterPills.map((c) => c.key);
     return [...sections.values()].sort(
       (a, b) => order.indexOf(a.key) - order.indexOf(b.key)
     );
-  }, [visibleProducts]);
+  }, [visibleProducts, categoryLabels, filterPills]);
 
   const addToBasket = useCallback((product) => {
     setBasket((prev) => {
@@ -188,31 +262,19 @@ export default function Products() {
   return (
     <>
       <Helmet>
-        <title>Tools & Equipment for Sale | CNS Tool Repair Surrey BC</title>
-        <meta
-          name="description"
-          content="Buy JET air tools, Strongarm jacks, hoists and shop equipment in Surrey, BC. Authorized dealer and warranty repair centre serving the Lower Mainland. Request a quote."
-        />
-        <meta
-          name="keywords"
-          content="buy JET tools Surrey BC, Strongarm jacks BC, air tools for sale Surrey, shop equipment Lower Mainland, industrial tool supplier Surrey"
-        />
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.description} />
+        <meta name="keywords" content={seo.keywords} />
         <link rel="canonical" href="https://cnstoolrepair.com/products" />
 
-        <meta property="og:title" content="Tools & Equipment for Sale | CNS Tool Repair Surrey BC" />
-        <meta
-          property="og:description"
-          content="JET air tools, Strongarm jacks and hoists, and shop equipment from an authorized Surrey, BC dealer. Request a quote."
-        />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
         <meta property="og:url" content="https://cnstoolrepair.com/products" />
         <meta property="og:type" content="website" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Tools & Equipment for Sale | CNS Tool Repair Surrey BC" />
-        <meta
-          name="twitter:description"
-          content="JET air tools, Strongarm jacks and hoists, and shop equipment from an authorized Surrey, BC dealer."
-        />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
       </Helmet>
 
       <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
@@ -220,31 +282,32 @@ export default function Products() {
           {/* Hero */}
           <div className="text-center mb-10 lg:mb-14">
             <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
-              Tools &amp; Equipment
+              {hero.label}
             </h2>
-            {/* "Tools for Sale" wraps to two lines on a narrow phone — the
-                shorter word carries the same meaning under the eyebrow above */}
+            {/* The full heading wraps to two lines on a narrow phone, so the
+                shorter wording takes over there — the eyebrow above carries
+                the fuller phrase either way */}
             <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">
-              <span className="sm:hidden">Products</span>
-              <span className="hidden sm:inline">Tools for Sale</span>
+              <span className="sm:hidden">{hero.shortHeading || hero.heading}</span>
+              <span className="hidden sm:inline">{hero.heading}</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-3xl mx-auto text-base lg:text-lg">
-              We supply the same JET air tools, Strongarm jacks and lifting equipment we service every
-              day — so the shop that sells you the tool is the shop that can repair it. Tell us what you
-              need and we&rsquo;ll send pricing, including volume rates for fleets.
+              {hero.description}
             </p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'wght' 600" }}>
-                local_shipping
-              </span>
-              Available to order — typically 2–5 business days
-            </p>
+            {hero.availabilityNote && (
+              <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'wght' 600" }}>
+                  local_shipping
+                </span>
+                {hero.availabilityNote}
+              </p>
+            )}
           </div>
 
           {/* Filters */}
           <div className="flex flex-col gap-4 mb-10 lg:mb-12">
             <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-              {CATEGORIES.map((cat) => {
+              {filterPills.map((cat) => {
                 const isActive = activeCategory === cat.key;
                 return (
                   <button
@@ -262,7 +325,7 @@ export default function Products() {
                       className="material-symbols-outlined text-base"
                       style={{ fontVariationSettings: "'wght' 600" }}
                     >
-                      {cat.icon}
+                      {CATEGORY_ICONS[cat.key] || 'category'}
                     </span>
                     {cat.label}
                   </button>
@@ -309,7 +372,8 @@ export default function Products() {
                       {label}
                     </h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {items.length} {items.length === 1 ? 'tool' : 'tools'} in stock or available to order
+                      {items.length} {items.length === 1 ? 'tool' : 'tools'}{' '}
+                      {content.sectionNote ?? FALLBACK_CONTENT.sectionNote}
                     </p>
                   </div>
 
@@ -348,7 +412,7 @@ export default function Products() {
                               {/* Strongarm catalogues some tools by item number only — those
                                   carry no model, and the Item # below identifies them */}
                               {[product.brand, product.model].filter(Boolean).join(' ') ||
-                                CATEGORY_LABELS[product.category]}
+                                categoryLabels[product.category]}
                             </p>
                             <h3 className="mt-1 text-sm font-black leading-snug text-slate-900 dark:text-white">
                               {product.name}
@@ -415,13 +479,16 @@ export default function Products() {
           {/* Anything not listed */}
           <div className="mt-16 text-center">
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Don&apos;t see what you need? We can order most JET, Strongarm and Hathorn products —{' '}
-              <a href="tel:7784880777" className="text-primary font-bold hover:underline">
-                call 778-488-0777
+              {footerCta.text}{' '}
+              <a
+                href={`tel:${footerCta.phoneNumber}`}
+                className="text-primary font-bold hover:underline"
+              >
+                {footerCta.phoneLabel}
               </a>{' '}
               or{' '}
               <a href="/contact" className="text-primary font-bold hover:underline">
-                send us a message
+                {footerCta.messageLabel}
               </a>
               .
             </p>
@@ -466,7 +533,7 @@ export default function Products() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-5">
-              <h2 className="text-xl font-black uppercase tracking-tight">Request a Quote</h2>
+              <h2 className="text-xl font-black uppercase tracking-tight">{quoteCopy.title}</h2>
               <button
                 type="button"
                 onClick={() => setPanelOpen(false)}
@@ -484,10 +551,12 @@ export default function Products() {
               {submitted ? (
                 <div className="text-center py-10">
                   <span className="material-symbols-outlined text-6xl text-green-600">check_circle</span>
-                  <h3 className="mt-4 text-2xl font-black uppercase tracking-tight">Request Sent</h3>
+                  <h3 className="mt-4 text-2xl font-black uppercase tracking-tight">
+                    {quoteCopy.successHeading}
+                  </h3>
                   <p className="mt-2 text-slate-500 dark:text-slate-400">
-                    Your reference is <span className="font-black text-slate-800 dark:text-slate-200">{submitted}</span>.
-                    We&apos;ll get back to you with pricing and lead time, usually the same business day.
+                    Your reference is <span className="font-black text-slate-800 dark:text-slate-200">{submitted}</span>.{' '}
+                    {quoteCopy.successNote}
                   </p>
                   <button
                     type="button"
@@ -629,7 +698,7 @@ export default function Products() {
                   </button>
 
                   <p className="text-center text-xs text-slate-400">
-                    We reply with pricing and lead time — usually the same business day.
+                    {quoteCopy.footnote}
                   </p>
                 </form>
               )}
