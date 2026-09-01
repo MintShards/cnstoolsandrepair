@@ -1,7 +1,6 @@
 import html
 import logging
 import traceback
-from urllib.parse import quote as urlquote
 
 from app.config import settings as app_settings
 from app.services.resend_client import send_email_via_resend
@@ -22,6 +21,14 @@ ORANGE = "#f97316"
 INK = "#111827"
 MUTED = "#6b7280"
 LINE = "#e5e7eb"
+
+# Same block the sourcing emails and the Gmail "Sales Signature" use, so the
+# automated email and a manual reply from sales@ sign off identically.
+FOOTER_TAGLINE = "Industrial Pneumatic Tool Repair & Maintenance"
+FOOTER_EMAIL = "sales@cnstoolrepair.com"
+FOOTER_PHONE = "778-488-0777"
+FOOTER_WEBSITE = "cnstoolrepair.com"
+FOOTER_LABEL = "Tool & Equipment Sales"
 
 
 def _esc(value) -> str:
@@ -89,9 +96,6 @@ def _build_html(quote: dict, submitted_time: str, total_units: int) -> str:
         <p style="margin:6px 0 0;color:#7c2d12;font-size:14px;line-height:1.6;">{_esc(quote['notes'])}</p>
       </div>"""
 
-    reply_subject = urlquote(f"Your quote request {quote_number} - CNS Tool Repair")
-    reply_url = f"mailto:{urlquote(email)}?subject={reply_subject}"
-
     logo_block = ""
     if app_settings.email_logo_url:
         logo_block = (
@@ -149,23 +153,17 @@ def _build_html(quote: dict, submitted_time: str, total_units: int) -> str:
       {notes_block}
     </div>
 
-    <!-- Action -->
-    <div style="padding:26px 28px 6px;">
-      <a href="{_esc(reply_url)}"
-         style="display:inline-block;background:{BLUE};color:#ffffff;font-size:14px;font-weight:700;
-                text-decoration:none;padding:13px 26px;border-radius:8px;">Reply with pricing</a>
-    </div>
-
     <!-- Footer -->
-    <div style="padding:20px 28px 26px;">
-      <hr style="border:none;border-top:1px solid {LINE};margin:0 0 18px;" />
+    <div style="padding:26px 28px 28px;">
+      <hr style="border:none;border-top:1px solid {LINE};margin:0 0 20px;" />
       {logo_block}
+      <p style="margin:8px 0 4px;color:#374151;font-size:12px;font-weight:700;">{_esc(FOOTER_TAGLINE)}</p>
       <p style="margin:0;color:{MUTED};font-size:12px;line-height:1.8;">
-        Industrial Pneumatic Tool Repair &amp; Sales &mdash; Surrey, BC<br>
-        <a href="mailto:sales@cnstoolrepair.com" style="color:{BLUE};text-decoration:none;">sales@cnstoolrepair.com</a>
-        &nbsp;&middot;&nbsp; 778-488-0777
-        &nbsp;&middot;&nbsp; <a href="https://cnstoolrepair.com" style="color:{BLUE};text-decoration:none;">cnstoolrepair.com</a>
+        &#128231; <a href="mailto:{FOOTER_EMAIL}" style="color:{BLUE};text-decoration:none;">{FOOTER_EMAIL}</a><br>
+        &#128222; {FOOTER_PHONE}<br>
+        &#127760; <a href="https://{FOOTER_WEBSITE}" style="color:{BLUE};text-decoration:none;">{FOOTER_WEBSITE}</a>
       </p>
+      <p style="margin:8px 0 0;color:#9ca3af;font-size:11px;">{_esc(FOOTER_LABEL)}</p>
     </div>
 
   </div>
@@ -205,8 +203,9 @@ def _build_text(quote: dict, submitted_time: str, total_units: int) -> str:
 
     lines += [
         "",
-        "CNS Tool Repair - Industrial Pneumatic Tool Repair & Sales, Surrey BC",
-        "sales@cnstoolrepair.com | 778-488-0777 | cnstoolrepair.com",
+        f"CNS Tool Repair - {FOOTER_TAGLINE}",
+        f"{FOOTER_EMAIL} | {FOOTER_PHONE} | {FOOTER_WEBSITE}",
+        FOOTER_LABEL,
     ]
 
     return "\n".join(lines)
