@@ -27,6 +27,8 @@ from app.routers import saved_routes as saved_routes_router
 from app.routers import visits as visits_router
 from app.routers import tasks as tasks_router
 from app.routers import messages as messages_router
+from app.routers import products as products_router
+from app.routers import product_quotes as product_quotes_router
 from app.logging_config import setup_logging
 
 setup_logging()
@@ -167,6 +169,8 @@ app.include_router(saved_routes_router.router)
 app.include_router(visits_router.router)
 app.include_router(tasks_router.router)
 app.include_router(messages_router.router)
+app.include_router(products_router.router)
+app.include_router(product_quotes_router.router)
 
 
 @app.get("/api/csrf-token")

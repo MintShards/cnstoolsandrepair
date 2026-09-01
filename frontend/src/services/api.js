@@ -95,6 +95,55 @@ export const toolsAPI = {
   },
 };
 
+// Products API — tools we SELL (distinct from toolsAPI, which is what we repair)
+export const productsAPI = {
+  list: async (activeOnly = true, category = undefined) => {
+    const response = await api.get('/api/products/', {
+      params: { active_only: activeOnly, ...(category ? { category } : {}) },
+    });
+    return response.data;
+  },
+  getByCategory: async (activeOnly = true) => {
+    const response = await api.get('/api/products/by-category', { params: { active_only: activeOnly } });
+    return response.data;
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/products/${id}`);
+    return response.data;
+  },
+  create: async (formData) => {
+    const response = await api.post('/api/products/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  update: async (id, formData) => {
+    const response = await api.put(`/api/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  delete: async (id) => {
+    await api.delete(`/api/products/${id}`);
+  },
+};
+
+// Product quote requests (tool sales enquiries from /products)
+export const productQuotesAPI = {
+  create: async (data) => {
+    const response = await api.post('/api/product-quotes/', data);
+    return response.data;
+  },
+  list: async (params = {}) => {
+    const response = await api.get('/api/product-quotes/', { params });
+    return response.data;
+  },
+  updateStatus: async (id, status) => {
+    const response = await api.patch(`/api/product-quotes/${id}`, { status });
+    return response.data;
+  },
+};
+
 // Brands API
 export const brandsAPI = {
   list: async (activeOnly = true) => {

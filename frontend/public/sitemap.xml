@@ -16,6 +16,14 @@
     <priority>0.9</priority>
   </url>
 
+  <!-- Tools for Sale -->
+  <url>
+    <loc>https://cnstoolrepair.com/products</loc>
+    <lastmod>2026-08-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <!-- Industries -->
   <url>
     <loc>https://cnstoolrepair.com/industries</loc>

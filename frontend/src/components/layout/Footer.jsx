@@ -202,6 +202,14 @@ export default function Footer() {
             <ul className="space-y-3 text-sm font-bold">
               <li>
                 <Link
+                  to="/products"
+                  className="text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
+                >
+                  Tools for Sale
+                </Link>
+              </li>
+              <li>
+                <Link
                   to="/services"
                   className="text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >

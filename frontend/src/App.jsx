@@ -15,6 +15,7 @@ import Quote from './pages/Quote';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Gallery from './pages/Gallery';
+import Products from './pages/Products';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import NotFound from './pages/NotFound';
@@ -153,6 +154,9 @@ function App() {
                         <Route path="/" element={<Home />} />
                         <Route path="/services" element={<Services />} />
                         <Route path="/tools" element={<Navigate to="/services" replace />} />
+                        <Route path="/products" element={<Products />} />
+                        {/* Tools we sell — /tools is already a legacy redirect to /services */}
+                        <Route path="/tools-for-sale" element={<Navigate to="/products" replace />} />
                         <Route path="/industries" element={<Industries />} />
                         <Route path="/repair-request" element={<Quote />} />
                         <Route path="/quote" element={<Navigate to="/repair-request" replace />} />

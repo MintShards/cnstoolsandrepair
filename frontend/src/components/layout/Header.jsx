@@ -41,6 +41,14 @@ export default function Header() {
             Services
           </Link>
           <Link
+            to="/products"
+            className={`font-semibold uppercase text-sm transition-colors ${
+              isActive('/products') ? 'text-primary' : 'hover:text-primary'
+            }`}
+          >
+            Tools for Sale
+          </Link>
+          <Link
             to="/industries"
             className={`font-semibold uppercase text-sm transition-colors ${
               isActive('/industries') ? 'text-primary' : 'hover:text-primary'
@@ -120,6 +128,17 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             >
               Services
+            </Link>
+            <Link
+              to="/products"
+              className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${
+                isActive('/products')
+                  ? 'bg-primary/10 text-primary'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Tools for Sale
             </Link>
             <Link
               to="/industries"

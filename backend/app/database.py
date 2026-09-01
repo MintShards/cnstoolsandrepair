@@ -87,3 +87,33 @@ async def get_next_work_order_number(year: int = None) -> str:
 
     seq = result["seq"]
     return f"WO-{year}-{seq:04d}"
+
+
+async def get_next_product_quote_number(year: int = None) -> str:
+    """
+    Generate next product quote number in format PQ-YYYY-XXXX
+    Used for tool-sale quote requests from the /products page.
+    Separate counter from REQ (repair requests) and WO (repair jobs).
+
+    Args:
+        year: Year for the quote (defaults to current year)
+
+    Returns:
+        Quote number string like "PQ-2026-0001"
+    """
+    if year is None:
+        year = datetime.utcnow().year
+
+    db = get_database()
+    counter_id = f"product_quote_{year}"
+
+    # Atomic increment using findOneAndUpdate
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+
+    seq = result["seq"]
+    return f"PQ-{year}-{seq:04d}"

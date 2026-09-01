@@ -5,6 +5,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import HomeTab from '../../components/admin/tabs/HomeTab';
 import ServicesTab from '../../components/admin/tabs/ServicesTab';
 import IndustriesTab from '../../components/admin/tabs/IndustriesTab';
+import ProductsTab from '../../components/admin/tabs/ProductsTab';
 import GalleryTab from '../../components/admin/tabs/GalleryTab';
 import AboutTab from '../../components/admin/tabs/AboutTab';
 import ContactTab from '../../components/admin/tabs/ContactTab';
@@ -32,6 +33,7 @@ export default function AdminSettings() {
     { id: 'home', label: 'Home Page', icon: 'home' },
     { id: 'services', label: 'Services Page', icon: 'build' },
     { id: 'industries', label: 'Industries Page', icon: 'factory' },
+    { id: 'products', label: 'Tools for Sale', icon: 'inventory_2' },
     { id: 'gallery', label: 'Gallery Page', icon: 'photo_library' },
     { id: 'about', label: 'About Page', icon: 'info' },
     { id: 'contact', label: 'Contact Page', icon: 'contact_mail' },
@@ -118,6 +120,10 @@ export default function AdminSettings() {
 
             {activeTab === 'industries' && (
               <IndustriesTab />
+            )}
+
+            {activeTab === 'products' && (
+              <ProductsTab />
             )}
 
             {activeTab === 'gallery' && (
