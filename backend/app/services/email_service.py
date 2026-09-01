@@ -37,6 +37,97 @@ def format_pst_datetime(utc_dt) -> str:
     return f"{month} {day}, {year} at {display_hour}:{minute:02d} {am_pm} {tz_name}"
 
 
+REPAIR_REPLY_EMAIL = "service@cnstoolrepair.com"
+REPAIR_ROLE_LABEL = "Repair & Service"
+
+
+def _build_request_html(quote: Quote, submitted_time: str, photo_note: str) -> str:
+    """House-styled body for the repair request alert.
+
+    Customer-safe: Reply-To is the customer, so this gets quoted back to them.
+    """
+    from app.services import email_layout as L
+
+    customer_name = f"{quote.first_name} {quote.last_name}"
+    tool_count = len(quote.tools)
+    total_units = sum(t.quantity for t in quote.tools)
+
+    first_tool = quote.tools[0] if quote.tools else None
+    first_desc = (
+        " ".join(p for p in [first_tool.tool_brand, first_tool.tool_type] if p)
+        if first_tool else "a tool"
+    )
+    more = f" +{tool_count - 1} more" if tool_count > 1 else ""
+    unit_label = "unit" if total_units == 1 else "units"
+    preheader = f"{total_units} {unit_label} · {first_desc}{more} · {quote.phone}"
+
+    details = L.field_rows([
+        ("Company", L.esc(quote.company_name) if quote.company_name else ""),
+        ("Contact", L.esc(customer_name)),
+        ("Phone", L.link(f"tel:{quote.phone.replace('-', '')}", quote.phone)),
+        ("Email", L.link(f"mailto:{quote.email}", quote.email)),
+        ("Address", L.esc(quote.address) if quote.address else ""),
+    ])
+
+    rows = ""
+    for tool in quote.tools:
+        label = " ".join(p for p in [tool.tool_brand, tool.tool_model] if p)
+        label_html = (
+            f'<div style="color:{L.ORANGE};font-size:11px;font-weight:700;'
+            f'text-transform:uppercase;letter-spacing:0.06em;">{L.esc(label)}</div>'
+            if label else ""
+        )
+        rows += f"""
+        <tr>
+          <td style="padding:12px 12px 12px 0;border-bottom:1px solid {L.LINE};vertical-align:top;">
+            {label_html}
+            <div style="color:{L.INK};font-size:15px;font-weight:700;padding-top:2px;">{L.esc(tool.tool_type)}</div>
+            <div style="color:{L.MUTED};font-size:13px;line-height:1.6;padding-top:4px;">{L.esc(tool.problem_description)}</div>
+          </td>
+          <td style="padding:12px 0;border-bottom:1px solid {L.LINE};vertical-align:top;text-align:right;white-space:nowrap;">
+            <span style="display:inline-block;background:{L.BLUE};color:#ffffff;font-size:14px;font-weight:700;
+                         padding:4px 12px;border-radius:999px;">&times;{L.esc(tool.quantity)}</span>
+          </td>
+        </tr>"""
+
+    photo_html = ""
+    if photo_note:
+        photo_html = (
+            f'<p style="margin:16px 0 0;color:{L.MUTED};font-size:13px;">{L.esc(photo_note)}</p>'
+        )
+
+    item_word = "item" if tool_count == 1 else "items"
+    unit_word = "unit" if total_units == 1 else "units"
+    tools_label = L.section_label(
+        f"Tools — {tool_count} {item_word}, {total_units} {unit_word}"
+    )
+
+    body = f"""
+    <div style="padding:24px 28px 0;">
+      {details}
+    </div>
+
+    <div style="padding:22px 28px 0;">
+      {tools_label}
+      <table style="width:100%;border-collapse:collapse;">
+        <tbody>{rows}
+        </tbody>
+      </table>
+      {photo_html}
+    </div>"""
+
+    return L.shell(
+        preheader=preheader,
+        eyebrow="Repair Request",
+        heading=f"Request {quote.request_number}",
+        timestamp=submitted_time,
+        body=body,
+        from_email=REPAIR_REPLY_EMAIL,
+        role_label=REPAIR_ROLE_LABEL,
+        logo_url=app_settings.email_logo_url,
+    )
+
+
 async def send_quote_notification(quote: Quote, business_settings: dict = None) -> bool:
     """Send email notification to team when new quote is submitted"""
 
@@ -164,12 +255,19 @@ CNS Tool Repair | {city}, {province}
             province=province,
         )
 
+        html_body = _build_request_html(
+            quote=quote,
+            submitted_time=submitted_time,
+            photo_note=photo_text.strip().lstrip("📎ℹ️⚠️📷 ").strip(),
+        )
+
         # Send via Resend API
         payload = {
             "from": "Request <request@cnstoolrepair.com>",
             "to": [app_settings.service_notification_email or app_settings.notification_email],
             "reply_to": f"{quote.first_name} {quote.last_name} <{quote.email}>",
             "subject": f"New Request #{quote.request_number}: {subject_name} - {tool_summary}",
+            "html": html_body,
             "text": body,
         }
 

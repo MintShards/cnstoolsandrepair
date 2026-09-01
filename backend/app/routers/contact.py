@@ -6,6 +6,7 @@ from app.config import settings
 from app.database import get_database
 from app.services.email_service import format_pst_datetime
 from app.services.resend_client import send_email_via_resend
+from app.services import email_layout as L
 from app.routers.settings import DEFAULT_SETTINGS
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -13,6 +14,9 @@ from slowapi.util import get_remote_address
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
+
+CONTACT_REPLY_EMAIL = "service@cnstoolrepair.com"
+CONTACT_ROLE_LABEL = "General Enquiries"
 
 
 class ContactMessage(BaseModel):
@@ -109,11 +113,39 @@ MESSAGE:
 CNS Tool Repair | {city}, {province}
 """
 
+    contact_details = L.field_rows([
+        ("Name", L.esc(contact.name)),
+        ("Phone", L.link("tel:" + contact.phone, contact.phone)),
+        ("Email", L.link("mailto:" + contact.email, contact.email)),
+    ])
+    message_label = L.section_label("Message")
+    message_html = L.esc(contact.message)
+
+    email_html = L.shell(
+        preheader=f"{contact.subject} — {contact.name} · {contact.phone}",
+        eyebrow="Contact Form",
+        heading=contact.subject,
+        timestamp=submitted_time,
+        body=f"""
+    <div style="padding:24px 28px 0;">
+      {contact_details}
+    </div>
+
+    <div style="padding:22px 28px 0;">
+      {message_label}
+      <p style="margin:0;color:{L.INK};font-size:15px;line-height:1.7;white-space:pre-wrap;">{message_html}</p>
+    </div>""",
+        from_email=CONTACT_REPLY_EMAIL,
+        role_label=CONTACT_ROLE_LABEL,
+        logo_url=settings.email_logo_url,
+    )
+
     result = await send_email_via_resend({
         "from": "Message <message@cnstoolrepair.com>",
         "to": [settings.service_notification_email or settings.notification_email],
         "reply_to": f"{contact.name} <{contact.email}>",
         "subject": f"Contact Form: {contact.subject}",
+        "html": email_html,
         "text": email_body,
     })
     if result["success"]:
