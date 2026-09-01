@@ -113,20 +113,24 @@ MESSAGE:
 CNS Tool Repair | {city}, {province}
 """
 
-    contact_details = L.field_rows([
-        ("Name", L.esc(contact.name)),
-        ("Phone", L.link("tel:" + contact.phone, contact.phone)),
-        ("Email", L.link("mailto:" + contact.email, contact.email)),
-    ])
-    message_label = L.section_label("Message")
-    message_html = L.esc(contact.message)
+    # The message is already stored, so a formatting slip must not fail the
+    # customer's submission — fall back to the plain-text body instead.
+    email_html = None
+    try:
+        contact_details = L.field_rows([
+            ("Name", L.esc(contact.name)),
+            ("Phone", L.link("tel:" + contact.phone, contact.phone)),
+            ("Email", L.link("mailto:" + contact.email, contact.email)),
+        ])
+        message_label = L.section_label("Message")
+        message_html = L.esc(contact.message)
 
-    email_html = L.shell(
-        preheader=f"{contact.subject} — {contact.name} · {contact.phone}",
-        eyebrow="Contact Form",
-        heading=contact.subject,
-        timestamp=submitted_time,
-        body=f"""
+        email_html = L.shell(
+            preheader=f"{contact.subject} — {contact.name} · {contact.phone}",
+            eyebrow="Contact Form",
+            heading=contact.subject,
+            timestamp=submitted_time,
+            body=f"""
     <div style="padding:24px 28px 0;">
       {contact_details}
     </div>
@@ -135,19 +139,24 @@ CNS Tool Repair | {city}, {province}
       {message_label}
       <p style="margin:0;color:{L.INK};font-size:15px;line-height:1.7;white-space:pre-wrap;">{message_html}</p>
     </div>""",
-        from_email=CONTACT_REPLY_EMAIL,
-        role_label=CONTACT_ROLE_LABEL,
-        logo_url=settings.email_logo_url,
-    )
+            from_email=CONTACT_REPLY_EMAIL,
+            role_label=CONTACT_ROLE_LABEL,
+            logo_url=settings.email_logo_url,
+        )
+    except Exception as e:
+        logger.error(f"Could not build contact email HTML, sending text only: {e}")
 
-    result = await send_email_via_resend({
+    email_payload = {
         "from": "Message <message@cnstoolrepair.com>",
         "to": [settings.service_notification_email or settings.notification_email],
         "reply_to": f"{contact.name} <{contact.email}>",
         "subject": f"Contact Form: {contact.subject}",
-        "html": email_html,
         "text": email_body,
-    })
+    }
+    if email_html:
+        email_payload["html"] = email_html
+
+    result = await send_email_via_resend(email_payload)
     if result["success"]:
         logger.info(f"Contact form email sent | {contact.name} | {contact.subject}")
     else:
