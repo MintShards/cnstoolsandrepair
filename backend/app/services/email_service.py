@@ -167,7 +167,7 @@ CNS Tool Repair | {city}, {province}
         # Send via Resend API
         payload = {
             "from": "Request <request@cnstoolrepair.com>",
-            "to": [app_settings.notification_email],
+            "to": [app_settings.service_notification_email or app_settings.notification_email],
             "reply_to": f"{quote.first_name} {quote.last_name} <{quote.email}>",
             "subject": f"New Request #{quote.request_number}: {subject_name} - {tool_summary}",
             "text": body,

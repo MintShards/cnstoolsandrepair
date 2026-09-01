@@ -111,7 +111,7 @@ CNS Tool Repair | {city}, {province}
 
     result = await send_email_via_resend({
         "from": "Message <message@cnstoolrepair.com>",
-        "to": [settings.notification_email],
+        "to": [settings.service_notification_email or settings.notification_email],
         "reply_to": f"{contact.name} <{contact.email}>",
         "subject": f"Contact Form: {contact.subject}",
         "text": email_body,
