@@ -222,7 +222,12 @@ export default function Products() {
             <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
               Tools &amp; Equipment
             </h2>
-            <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools for Sale</h1>
+            {/* "Tools for Sale" wraps to two lines on a narrow phone — the
+                shorter word carries the same meaning under the eyebrow above */}
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">
+              <span className="sm:hidden">Products</span>
+              <span className="hidden sm:inline">Tools for Sale</span>
+            </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-3xl mx-auto text-base lg:text-lg">
               We supply the same JET air tools, Strongarm jacks and lifting equipment we service every
               day — so the shop that sells you the tool is the shop that can repair it. Tell us what you
@@ -472,7 +477,10 @@ export default function Products() {
               </button>
             </div>
 
-            <div className="px-6 py-6">
+            {/* pb-32 keeps the submit button clear of the mobile BottomNav,
+                which sits at the same z-index and would otherwise cover it
+                once the basket is long enough to scroll */}
+            <div className="px-6 pt-6 pb-32 lg:pb-6">
               {submitted ? (
                 <div className="text-center py-10">
                   <span className="material-symbols-outlined text-6xl text-green-600">check_circle</span>
