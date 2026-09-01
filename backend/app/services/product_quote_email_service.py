@@ -226,7 +226,7 @@ async def send_product_quote_notification(quote: dict) -> bool:
 
         payload = {
             "from": FROM_ADDRESS,
-            "to": [app_settings.notification_email],
+            "to": [app_settings.sales_notification_email or app_settings.notification_email],
             # Replying goes straight back to the customer, as with repair requests.
             "reply_to": f"{quote['first_name']} {quote['last_name']} <{quote['email']}>",
             "subject": f"Tool Quote {quote_number}: {subject_name} - {summary}",

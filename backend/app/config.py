@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     resend_api_key: str
     sendgrid_from_email: str = "noreply@cnstoolrepair.com"  # kept for backwards compat, unused
     notification_email: str
+    # Tool-sale enquiries go to the sales desk rather than the shared inbox.
+    # sales@ forwards to the same mailbox, but addressing it properly means
+    # Gmail can reply as sales@ and the alias can be filtered on later.
+    sales_notification_email: str = "sales@cnstoolrepair.com"
 
     # File Upload
     max_file_size: int = 10485760  # 10MB
