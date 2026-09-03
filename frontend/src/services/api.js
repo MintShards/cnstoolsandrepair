@@ -413,6 +413,14 @@ export const repairsAPI = {
     const response = await api.get('/api/repairs/lifetime-stats');
     return response.data;
   },
+  // Has this exact unit been on the bench before? serials is comma-separated;
+  // matches the general serial and the Hathorn component serials.
+  serialHistory: async (serials, brand, excludeJobId) => {
+    const response = await api.get('/api/repairs/serial-history', {
+      params: { serials, ...(brand ? { brand } : {}), ...(excludeJobId ? { exclude_job: excludeJobId } : {}) },
+    });
+    return response.data;
+  },
   modelRepairCounts: async (params = {}) => {
     const response = await api.get('/api/repairs/model-repair-counts', { params });
     return response.data;

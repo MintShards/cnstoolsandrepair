@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { suppliersAPI, staffAPI, partsLibraryAPI } from '../../../services/api';
+import { suppliersAPI, staffAPI, partsLibraryAPI, repairsAPI } from '../../../services/api';
 import { getTodayPacific } from '../../../utils/dateFormat';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
@@ -194,7 +194,7 @@ export const syncPartsToLibrary = async (tools) => {
 // ── TOOL FORM (reusable for new job form and add tool modal) ──
 // wizardStep: 2 = Tool Identification + Photos, 3 = Job Details + Parts, 4 = Labour & Scheduling
 // Omit wizardStep (or isNewJobForm=false) to render all sections (add tool modal / edit mode)
-export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm }) {
+export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId }) {
   const handleChange = (fieldOrObj, value) => {
     // Support both handleChange('field', value) and handleChange({ field1: v1, field2: v2 })
     const updates = typeof fieldOrObj === 'string' ? { [fieldOrObj]: value } : fieldOrObj;
@@ -372,6 +372,38 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [showModelDropdown, setShowModelDropdown] = useState(false);
 
   const isHathorn = /hathorn/i.test(toolData.brand || '');
+
+  // Returning-unit check: as serials are typed, look for this exact unit in
+  // past jobs. The shop assigns house serials to unserialized tools, so a
+  // serial match is complete coverage — no fuzzy fallback needed.
+  const [serialHistory, setSerialHistory] = useState([]);
+  const serialHistoryTimer = useRef(null);
+  const serialKey = [
+    toolData.serial_number, toolData.camera_head_serial,
+    toolData.controller_serial, toolData.rod_holder_serial,
+  ].map((s) => (s || '').trim()).join(',');
+
+  useEffect(() => {
+    const filled = serialKey.split(',').filter((s) => s.length >= 3);
+    if (serialHistoryTimer.current) clearTimeout(serialHistoryTimer.current);
+    if (!filled.length) { setSerialHistory([]); return undefined; }
+    serialHistoryTimer.current = setTimeout(async () => {
+      try {
+        const res = await repairsAPI.serialHistory(filled.join(','), toolData.brand?.trim(), currentJobId);
+        setSerialHistory(res.matches || []);
+      } catch { setSerialHistory([]); }
+    }, 600);
+    return () => clearTimeout(serialHistoryTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serialKey, toolData.brand, currentJobId]);
+
+  const WARRANTY_DAYS = 90; // service agreement: 3 months on parts and labour
+  // Clamped at 0: completion stamps are naive UTC, which JS parses as local
+  // and can land a few hours in the future — "-1 days ago" helps nobody.
+  const daysSince = (d) => Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000));
+  const warrantyHit = serialHistory.find(
+    (m) => m.date_completed && daysSince(m.date_completed) <= WARRANTY_DAYS
+  );
 
   // Rod lengths: remaining auto-fills from received − cut, but stays editable
   // because the tech re-measures the finished rod anyway.
@@ -588,6 +620,38 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     All {HATHORN_FINAL_CHECKLIST.length} items required before this tool can be marked Ready for pickup
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Returning unit — this serial has been on the bench before */}
+            {serialHistory.length > 0 && (
+              <div className={`md:col-span-2 p-4 rounded-lg border ${
+                warrantyHit
+                  ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-800/50'
+                  : 'bg-amber-50 dark:bg-amber-900/10 border-amber-300 dark:border-amber-800/50'
+              }`}>
+                <p className={`text-sm font-bold flex items-center gap-1.5 ${
+                  warrantyHit ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'
+                }`}>
+                  <span className="material-symbols-outlined text-lg">history</span>
+                  {warrantyHit
+                    ? `Possible warranty return — last completed ${daysSince(warrantyHit.date_completed)} days ago`
+                    : `Returning unit — ${serialHistory.length} previous visit${serialHistory.length !== 1 ? 's' : ''}`}
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {serialHistory.slice(0, 4).map((m) => (
+                    <li key={`${m.job_id}-${m.tool_id}`} className="text-sm text-slate-600 dark:text-slate-300">
+                      <span className="font-mono font-bold">{m.work_order}</span>
+                      {' · '}{m.company_name || m.customer_name}
+                      {' · '}{(m.brand || '')} {(m.model_number || '')}
+                      {' · '}{m.status}
+                      {m.date_completed
+                        ? ` · ${new Date(m.date_completed).toLocaleDateString('en-CA')}`
+                        : m.date_received ? ` · received ${new Date(m.date_received).toLocaleDateString('en-CA')}` : ''}
+                      <span className="text-xs text-slate-400"> (matched {m.matched_serials.join(', ')})</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

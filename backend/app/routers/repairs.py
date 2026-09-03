@@ -1684,6 +1684,79 @@ async def convert_from_request(
 
 
 # ──────────────────────────────────────────────
+# SERIAL HISTORY — has this exact unit been on the bench before?
+# (declared before /{job_id} so "serial-history" is never parsed as an ID)
+# ──────────────────────────────────────────────
+
+@router.get("/serial-history")
+async def serial_history(
+    serials: str,
+    brand: Optional[str] = None,
+    exclude_job: Optional[str] = None,
+    current_user: User = Depends(require_staff_or_admin)
+):
+    """Past repair visits for the given serial number(s).
+
+    `serials` is comma-separated and matched case-insensitively against a
+    tool's general serial and the three Hathorn component serials — so a
+    camera head that comes back mounted on a different reel still matches.
+    The shop assigns house serials to unserialized tools at intake, so
+    serial matching is complete coverage. Scoped to `brand` when given,
+    since different manufacturers can reuse the same serial string.
+    """
+    db = get_database()
+
+    wanted = [s.strip() for s in serials.split(",") if s.strip() and len(s.strip()) >= 3]
+    if not wanted:
+        return {"matches": []}
+    wanted_lower = {s.lower() for s in wanted}
+
+    regexes = [{"$regex": f"^{re.escape(s)}$", "$options": "i"} for s in wanted]
+    serial_fields = ["serial_number", "camera_head_serial", "controller_serial", "rod_holder_serial"]
+    query = {"tools": {"$elemMatch": {"$or": [
+        {field: rx} for rx in regexes for field in serial_fields
+    ]}}}
+    if exclude_job:
+        try:
+            query["_id"] = {"$ne": ObjectId(exclude_job)}
+        except Exception:
+            pass  # bad id just means nothing to exclude
+
+    matches = []
+    cursor = db.repairs.find(query).sort("created_at", -1).limit(25)
+    async for job in cursor:
+        for tool in job.get("tools", []):
+            if brand and (tool.get("brand") or "").strip().lower() != brand.strip().lower():
+                continue
+            matched_fields = [
+                field for field in serial_fields
+                if (tool.get(field) or "").strip().lower() in wanted_lower
+            ]
+            if not matched_fields:
+                continue
+            matches.append({
+                "job_id": str(job["_id"]),
+                "work_order": job.get("request_number"),
+                "company_name": job.get("company_name"),
+                "customer_name": f"{job.get('first_name') or ''} {job.get('last_name') or ''}".strip(),
+                "tool_id": tool.get("tool_id"),
+                "brand": tool.get("brand"),
+                "model_number": tool.get("model_number"),
+                "status": tool.get("status"),
+                "matched_serials": [tool.get(field) for field in matched_fields],
+                "matched_fields": matched_fields,
+                "date_received": tool.get("date_received"),
+                "date_completed": tool.get("date_completed"),
+            })
+            if len(matches) >= 10:
+                break
+        if len(matches) >= 10:
+            break
+
+    return {"matches": matches}
+
+
+# ──────────────────────────────────────────────
 # GET ONE
 # ──────────────────────────────────────────────
 

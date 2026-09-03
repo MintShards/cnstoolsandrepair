@@ -76,6 +76,32 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [addToolForm, setAddToolForm] = useState(null);
   const [addingTool, setAddingTool] = useState(false);
   const [editingToolId, setEditingToolId] = useState(null);
+
+  // Returning-unit badges: for each tool with serials, has this exact unit
+  // (or one of its Hathorn components) been on the bench before?
+  const [returningMap, setReturningMap] = useState({});
+  useEffect(() => {
+    if (!job?.id) return undefined;
+    let alive = true;
+    (async () => {
+      const entries = await Promise.all((job.tools || []).map(async (t) => {
+        const serials = [t.serial_number, t.camera_head_serial, t.controller_serial, t.rod_holder_serial]
+          .map((s) => (s || '').trim()).filter((s) => s.length >= 3);
+        if (!serials.length) return [t.tool_id, null];
+        try {
+          const res = await repairsAPI.serialHistory(serials.join(','), t.brand?.trim(), job.id);
+          const ms = res.matches || [];
+          if (!ms.length) return [t.tool_id, null];
+          const warranty = ms.some((m) => m.date_completed
+            && (Date.now() - new Date(m.date_completed).getTime()) / 86400000 <= 90);
+          return [t.tool_id, { count: ms.length, warranty, last: ms[0]?.work_order }];
+        } catch { return [t.tool_id, null]; }
+      }));
+      if (alive) setReturningMap(Object.fromEntries(entries.filter((e) => e[1])));
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id, job?.tools?.length]);
   const [toolEditForm, setToolEditForm] = useState(null);
   const [savingToolEdit, setSavingToolEdit] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -893,6 +919,20 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
+                            {returningMap[tool.tool_id] && (
+                              <span
+                                title={returningMap[tool.tool_id].warranty
+                                  ? `Completed within the 3-month warranty window — see ${returningMap[tool.tool_id].last}`
+                                  : `${returningMap[tool.tool_id].count} previous visit${returningMap[tool.tool_id].count !== 1 ? 's' : ''} — last was ${returningMap[tool.tool_id].last}`}
+                                className={`px-2.5 py-1 rounded-full text-sm font-bold border ${
+                                  returningMap[tool.tool_id].warranty
+                                    ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700/50'
+                                    : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
+                                }`}
+                              >
+                                {returningMap[tool.tool_id].warranty ? 'Warranty window' : 'Returning unit'}
+                              </span>
+                            )}
                             {/hathorn/i.test(tool.brand || '') && (() => {
                               const done = new Set((tool.final_checklist || []).map((i) => i.toLowerCase()));
                               const n = HATHORN_FINAL_CHECKLIST.filter((i) => done.has(i.toLowerCase())).length;
@@ -1306,7 +1346,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              <ToolForm toolData={formData} onChange={setFormData} />
+              <ToolForm toolData={formData} onChange={setFormData} currentJobId={job.id} />
               <div className="flex gap-3 mt-6">
                 <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
