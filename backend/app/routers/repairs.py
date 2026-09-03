@@ -15,6 +15,7 @@ from app.models.repair import (
     ToolItemCreate, ToolItemUpdate, ToolStatusUpdate,
     ToolItem, ToolItemResponse, RepairStatus, RepairSource,
     StatusHistoryEntry, ALLOWED_TRANSITIONS, validate_status_transition,
+    hathorn_ready_blockers,
     BatchStatusRequest, BatchStatusResponse, BatchStatusResult,
     WorkOrderEmailSendRequest,
 )
@@ -1373,6 +1374,18 @@ async def batch_update_tool_status(
                 ))
                 continue
 
+            # Same gate as the single-tool route: Hathorn units need the
+            # full final test checklist before "ready".
+            if item.new_status == RepairStatus.READY:
+                missing = hathorn_ready_blockers(tools[tool_index])
+                if missing:
+                    results.append(BatchStatusResult(
+                        job_id=job_id, tool_id=item.tool_id,
+                        success=False,
+                        error="Final test checklist incomplete — still unticked: " + ", ".join(missing)
+                    ))
+                    continue
+
             history_entry = {
                 "status": new_status,
                 "timestamp": now,
@@ -1970,6 +1983,17 @@ async def update_tool_status(
             detail=f"Cannot change from '{current_status}' to '{new_status}'. "
                    f"Allowed: {', '.join(allowed) if allowed else 'none (terminal status)'}"
         )
+
+    # Hathorn units don't reach the pickup shelf half-checked: "ready"
+    # requires the full final test checklist.
+    if status_update.status == RepairStatus.READY:
+        missing = hathorn_ready_blockers(tools[tool_index])
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail="Final test checklist incomplete — still unticked: "
+                       + ", ".join(missing)
+            )
 
     now = datetime.utcnow()
     history_entry = {

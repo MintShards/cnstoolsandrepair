@@ -11,7 +11,7 @@ const EMPTY_TOOL_BASE = {
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   camera_head_serial: '', controller_serial: '', rod_holder_serial: '',
   counter_at_intake: '', counter_after_repair: '',
-  intake_condition: [],
+  intake_condition: [], final_checklist: [],
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
 
@@ -31,6 +31,20 @@ export const HATHORN_CONDITION_OPTIONS = [
   'Bump Test OK', 'Bump Test Fails',
   'LEDs OK', 'LEDs Dim / Dead', 'Sonde Transmits', 'Sonde Dead',
   'Odometer Works', 'Odometer Faulty',
+];
+
+// Outgoing QC. Must mirror HATHORN_FINAL_CHECKLIST in
+// backend/app/models/repair.py — the backend refuses to move a Hathorn tool
+// to "ready" until every one of these is ticked.
+export const HATHORN_FINAL_CHECKLIST = [
+  'Image Clear',
+  'Bump Test Passed',
+  'LEDs Working',
+  'Sonde Verified',
+  'Odometer Verified',
+  'Rod Spools Freely',
+  'Termination Secure',
+  'Accessories Packed',
 ];
 
 // Multi-select dropdown with checkbox rows, a free-text "other" entry and
@@ -556,6 +570,21 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                       placeholder="Auto" className={inputCls} />
                     <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Auto-calculated — adjust if re-measured</p>
                   </div>
+                </div>
+
+                {/* Outgoing QC — the backend blocks "ready" until complete */}
+                <div>
+                  <ChecklistDropdown
+                    label="Final Test Checklist"
+                    options={HATHORN_FINAL_CHECKLIST}
+                    value={data.final_checklist || []}
+                    onChange={(items) => handleChange('final_checklist', items)}
+                    emptyText="Tick off the final tests…"
+                    inputCls={inputCls}
+                  />
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                    All {HATHORN_FINAL_CHECKLIST.length} items required before this tool can be marked Ready for pickup
+                  </p>
                 </div>
               </div>
             )}

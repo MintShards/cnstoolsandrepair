@@ -49,6 +49,30 @@ def validate_status_transition(current: str, new: str) -> bool:
     return new in ALLOWED_TRANSITIONS.get(current, set())
 
 
+# Outgoing QC for Hathorn camera systems. A tool whose brand says Hathorn
+# cannot move to "ready" until every item here is ticked on the tool's
+# final_checklist — a specialty unit doesn't go to the pickup shelf half
+# checked. The wording should track the shop's training material.
+HATHORN_FINAL_CHECKLIST = [
+    "Image Clear",
+    "Bump Test Passed",
+    "LEDs Working",
+    "Sonde Verified",
+    "Odometer Verified",
+    "Rod Spools Freely",
+    "Termination Secure",
+    "Accessories Packed",
+]
+
+
+def hathorn_ready_blockers(tool: dict) -> list:
+    """Canonical checklist items still unticked, empty for non-Hathorn tools."""
+    if 'hathorn' not in (tool.get('brand') or '').lower():
+        return []
+    done = {str(i).strip().lower() for i in (tool.get('final_checklist') or [])}
+    return [item for item in HATHORN_FINAL_CHECKLIST if item.lower() not in done]
+
+
 class RepairSource(str, Enum):
     ONLINE_REQUEST = "online_request"
     DROP_OFF = "drop_off"
@@ -161,6 +185,9 @@ class ToolItemCreate(BaseModel):
     # Power-on condition observed at intake ("Image Cloudy", "LEDs Dead"…) —
     # same shape as included_items, protects against "it worked before".
     intake_condition: List[str] = Field(default_factory=list, max_length=40)
+    # Outgoing QC ticks. Moving a Hathorn tool to "ready" requires every
+    # HATHORN_FINAL_CHECKLIST item to be present here — enforced server-side.
+    final_checklist: List[str] = Field(default_factory=list, max_length=40)
     date_received: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Vancouver")).replace(tzinfo=None))
     estimated_completion: Optional[datetime] = None
 
@@ -171,7 +198,7 @@ class ToolItemCreate(BaseModel):
             return v.strip().title()
         return v
 
-    @field_validator('included_items', 'intake_condition', mode='before')
+    @field_validator('included_items', 'intake_condition', 'final_checklist', mode='before')
     @classmethod
     def clean_included_items(cls, v):
         if not v:
@@ -236,6 +263,7 @@ class ToolItemUpdate(BaseModel):
     counter_at_intake: Optional[float] = Field(None, ge=0, le=100000)
     counter_after_repair: Optional[float] = Field(None, ge=0, le=100000)
     intake_condition: Optional[List[str]] = Field(None, max_length=40)
+    final_checklist: Optional[List[str]] = Field(None, max_length=40)
     estimated_completion: Optional[datetime] = None
 
     @field_validator('tool_type', 'brand', 'model_number', mode='before')
@@ -245,7 +273,7 @@ class ToolItemUpdate(BaseModel):
             return v.strip().title()
         return v
 
-    @field_validator('included_items', 'intake_condition', mode='before')
+    @field_validator('included_items', 'intake_condition', 'final_checklist', mode='before')
     @classmethod
     def clean_included_items(cls, v):
         if v is None:
@@ -334,6 +362,7 @@ class ToolItemResponse(BaseModel):
     counter_at_intake: Optional[float] = None
     counter_after_repair: Optional[float] = None
     intake_condition: List[str] = Field(default_factory=list)
+    final_checklist: List[str] = Field(default_factory=list)
     status: RepairStatus
     date_received: datetime
     estimated_completion: Optional[datetime] = None

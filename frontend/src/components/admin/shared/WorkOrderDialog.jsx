@@ -13,7 +13,7 @@ import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { useSettings } from '../../../contexts/SettingsContext';
-import ToolForm, { getEmptyTool, syncPartsToLibrary } from './ToolForm';
+import ToolForm, { getEmptyTool, syncPartsToLibrary, HATHORN_FINAL_CHECKLIST } from './ToolForm';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -388,6 +388,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       counter_at_intake: tool.counter_at_intake ?? '',
       counter_after_repair: tool.counter_after_repair ?? '',
       intake_condition: tool.intake_condition || [],
+      final_checklist: tool.final_checklist || [],
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
     });
@@ -892,6 +893,24 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
+                            {/hathorn/i.test(tool.brand || '') && (() => {
+                              const done = new Set((tool.final_checklist || []).map((i) => i.toLowerCase()));
+                              const n = HATHORN_FINAL_CHECKLIST.filter((i) => done.has(i.toLowerCase())).length;
+                              const total = HATHORN_FINAL_CHECKLIST.length;
+                              const complete = n === total;
+                              return (
+                                <span
+                                  title={complete ? 'Final test checklist complete' : `Final test checklist ${n}/${total} — required before Ready`}
+                                  className={`px-2.5 py-1 rounded-full text-sm font-bold border ${
+                                    complete
+                                      ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700/50'
+                                      : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
+                                  }`}
+                                >
+                                  QC {n}/{total}
+                                </span>
+                              );
+                            })()}
                             <StepBadge status={tool.status} />
                             <span className="hidden sm:block"><PriorityBadge priority={tool.priority} /></span>
                             {tool.warranty && (
