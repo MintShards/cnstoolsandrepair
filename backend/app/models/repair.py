@@ -148,6 +148,21 @@ class ToolItemCreate(BaseModel):
     rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_cut: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
+    # A camera system is three serialized components. serial_number above is
+    # the unit/reel; these identify the head and controller that came with it.
+    camera_head_serial: Optional[str] = Field(None, max_length=100)
+    controller_serial: Optional[str] = Field(None, max_length=100)
+    # CCU footage counter — the odometer. Read at intake (usage proof) and
+    # after recalibration once the rod has been cut.
+    counter_at_intake: Optional[float] = Field(None, ge=0, le=100000)
+    counter_after_repair: Optional[float] = Field(None, ge=0, le=100000)
+    # Head pressure test after termination or lens work.
+    pressure_test_psi: Optional[float] = Field(None, ge=0, le=500)
+    pressure_test_minutes: Optional[float] = Field(None, ge=0, le=1440)
+    pressure_test_result: Optional[str] = None  # 'pass' | 'fail'
+    # Power-on condition observed at intake ("Image Cloudy", "LEDs Dead"…) —
+    # same shape as included_items, protects against "it worked before".
+    intake_condition: List[str] = Field(default_factory=list, max_length=40)
     date_received: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Vancouver")).replace(tzinfo=None))
     estimated_completion: Optional[datetime] = None
 
@@ -158,7 +173,7 @@ class ToolItemCreate(BaseModel):
             return v.strip().title()
         return v
 
-    @field_validator('included_items', mode='before')
+    @field_validator('included_items', 'intake_condition', mode='before')
     @classmethod
     def clean_included_items(cls, v):
         if not v:
@@ -172,12 +187,31 @@ class ToolItemCreate(BaseModel):
         return out
 
     @field_validator('labour_hours', 'hourly_rate', 'rod_length_received',
-                     'rod_length_cut', 'rod_length_remaining', mode='before')
+                     'rod_length_cut', 'rod_length_remaining',
+                     'counter_at_intake', 'counter_after_repair',
+                     'pressure_test_psi', 'pressure_test_minutes', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
             return None
         return v
+
+    @field_validator('pressure_test_result', mode='before')
+    @classmethod
+    def normalize_pressure_result(cls, v):
+        if v is None or v == '':
+            return None
+        s = str(v).strip().lower()
+        if s not in ('pass', 'fail'):
+            raise ValueError("pressure_test_result must be 'pass' or 'fail'")
+        return s
+
+    @field_validator('camera_head_serial', 'controller_serial', mode='before')
+    @classmethod
+    def empty_serial_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return str(v).strip().upper()
 
     @field_validator('estimated_completion', mode='before')
     @classmethod
@@ -209,6 +243,14 @@ class ToolItemUpdate(BaseModel):
     rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_cut: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
+    camera_head_serial: Optional[str] = Field(None, max_length=100)
+    controller_serial: Optional[str] = Field(None, max_length=100)
+    counter_at_intake: Optional[float] = Field(None, ge=0, le=100000)
+    counter_after_repair: Optional[float] = Field(None, ge=0, le=100000)
+    pressure_test_psi: Optional[float] = Field(None, ge=0, le=500)
+    pressure_test_minutes: Optional[float] = Field(None, ge=0, le=1440)
+    pressure_test_result: Optional[str] = None
+    intake_condition: Optional[List[str]] = Field(None, max_length=40)
     estimated_completion: Optional[datetime] = None
 
     @field_validator('tool_type', 'brand', 'model_number', mode='before')
@@ -218,7 +260,7 @@ class ToolItemUpdate(BaseModel):
             return v.strip().title()
         return v
 
-    @field_validator('included_items', mode='before')
+    @field_validator('included_items', 'intake_condition', mode='before')
     @classmethod
     def clean_included_items(cls, v):
         if v is None:
@@ -232,12 +274,31 @@ class ToolItemUpdate(BaseModel):
         return out
 
     @field_validator('labour_hours', 'hourly_rate', 'rod_length_received',
-                     'rod_length_cut', 'rod_length_remaining', mode='before')
+                     'rod_length_cut', 'rod_length_remaining',
+                     'counter_at_intake', 'counter_after_repair',
+                     'pressure_test_psi', 'pressure_test_minutes', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
             return None
         return v
+
+    @field_validator('pressure_test_result', mode='before')
+    @classmethod
+    def normalize_pressure_result(cls, v):
+        if v is None or v == '':
+            return None
+        s = str(v).strip().lower()
+        if s not in ('pass', 'fail'):
+            raise ValueError("pressure_test_result must be 'pass' or 'fail'")
+        return s
+
+    @field_validator('camera_head_serial', 'controller_serial', mode='before')
+    @classmethod
+    def empty_serial_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return str(v).strip().upper()
 
     @field_validator('estimated_completion', mode='before')
     @classmethod
@@ -293,6 +354,14 @@ class ToolItemResponse(BaseModel):
     rod_length_received: Optional[float] = None
     rod_length_cut: Optional[float] = None
     rod_length_remaining: Optional[float] = None
+    camera_head_serial: Optional[str] = None
+    controller_serial: Optional[str] = None
+    counter_at_intake: Optional[float] = None
+    counter_after_repair: Optional[float] = None
+    pressure_test_psi: Optional[float] = None
+    pressure_test_minutes: Optional[float] = None
+    pressure_test_result: Optional[str] = None
+    intake_condition: List[str] = Field(default_factory=list)
     status: RepairStatus
     date_received: datetime
     estimated_completion: Optional[datetime] = None

@@ -9,6 +9,10 @@ const EMPTY_TOOL_BASE = {
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
   zoho_ref: '', assigned_technician: '', estimated_completion: '',
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
+  camera_head_serial: '', controller_serial: '',
+  counter_at_intake: '', counter_after_repair: '',
+  pressure_test_psi: '', pressure_test_minutes: '', pressure_test_result: '',
+  intake_condition: [],
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
 
@@ -18,6 +22,90 @@ export const HATHORN_INCLUDED_OPTIONS = [
   'Power Cord', 'Controller', 'Patch Cable', 'Battery', 'Battery Charger',
   'SD Card', 'USB Drive', 'Carrying Case', 'Skids / Guides', 'Manual',
 ];
+
+// Power-on condition observed at intake — the answer to "it worked fine
+// before you had it" is written down before the bench touches it.
+export const HATHORN_CONDITION_OPTIONS = [
+  'Powers On', 'No Power', 'Image OK', 'Image Cloudy', 'No Image',
+  'LEDs OK', 'LEDs Dim / Dead', 'Sonde Transmits', 'Sonde Dead',
+  'Counter Works', 'Counter Faulty',
+];
+
+// Multi-select dropdown with checkbox rows, a free-text "other" entry and
+// removable chips — used for the Hathorn included/condition checklists.
+function ChecklistDropdown({ label, options, value = [], onChange, emptyText, inputCls }) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState('');
+
+  const toggleItem = (item) => {
+    const exists = value.some((i) => i.toLowerCase() === item.toLowerCase());
+    onChange(exists ? value.filter((i) => i.toLowerCase() !== item.toLowerCase()) : [...value, item]);
+  };
+
+  const addCustom = () => {
+    const v = custom.trim();
+    if (!v) return;
+    if (!value.some((i) => i.toLowerCase() === v.toLowerCase())) onChange([...value, v]);
+    setCustom('');
+  };
+
+  return (
+    <div className="relative">
+      <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">{label}</label>
+      <button type="button"
+        onClick={() => setOpen(!open)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        className={`${inputCls} flex items-center justify-between text-left`}>
+        <span className={value.length ? '' : 'text-slate-400 dark:text-slate-500'}>
+          {value.length ? `${value.length} item${value.length !== 1 ? 's' : ''} recorded` : emptyText}
+        </span>
+        <span className="material-symbols-outlined text-slate-400">{open ? 'expand_less' : 'expand_more'}</span>
+      </button>
+      {open && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          {options.map((item) => {
+            const checked = value.some((i) => i.toLowerCase() === item.toLowerCase());
+            return (
+              <button key={item} type="button"
+                onMouseDown={(e) => { e.preventDefault(); toggleItem(item); }}
+                className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-700 transition-colors">
+                <span className={`material-symbols-outlined text-lg ${checked ? 'text-primary' : 'text-slate-300 dark:text-slate-600'}`}>
+                  {checked ? 'check_box' : 'check_box_outline_blank'}
+                </span>
+                <span className="text-slate-800 dark:text-slate-100">{item}</span>
+              </button>
+            );
+          })}
+          <div className="flex gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/50"
+            onMouseDown={(e) => e.preventDefault() /* keep the panel open */}>
+            <input value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+              placeholder="Other item…"
+              className="flex-1 px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); addCustom(); }}
+              className="px-3 py-1.5 bg-primary text-white rounded text-sm font-bold hover:bg-blue-600 transition-colors">
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {value.map((item) => (
+            <span key={item} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">
+              {item}
+              <button type="button" onClick={() => toggleItem(item)}
+                className="text-slate-400 hover:text-red-500 transition-colors" title={`Remove ${item}`}>
+                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export const getEmptyTool = () => ({
   ...EMPTY_TOOL_BASE,
@@ -265,30 +353,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
 
-  // Hathorn camera intake — included-accessories dropdown
-  const [showIncludedDropdown, setShowIncludedDropdown] = useState(false);
-  const [customIncluded, setCustomIncluded] = useState('');
-
   const isHathorn = /hathorn/i.test(toolData.brand || '');
-
-  const toggleIncludedItem = (item) => {
-    const current = toolData.included_items || [];
-    const exists = current.some((i) => i.toLowerCase() === item.toLowerCase());
-    handleChange(
-      'included_items',
-      exists ? current.filter((i) => i.toLowerCase() !== item.toLowerCase()) : [...current, item]
-    );
-  };
-
-  const addCustomIncluded = () => {
-    const value = customIncluded.trim();
-    if (!value) return;
-    const current = toolData.included_items || [];
-    if (!current.some((i) => i.toLowerCase() === value.toLowerCase())) {
-      handleChange('included_items', [...current, value]);
-    }
-    setCustomIncluded('');
-  };
 
   // Rod lengths: remaining auto-fills from received − cut, but stays editable
   // because the tech re-measures the finished rod anyway.
@@ -405,65 +470,81 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   Hathorn Camera Intake
                 </p>
 
-                {/* Included accessories dropdown */}
-                <div className="relative">
-                  <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Included With Unit</label>
-                  <button type="button"
-                    onClick={() => setShowIncludedDropdown(!showIncludedDropdown)}
-                    onBlur={() => setTimeout(() => setShowIncludedDropdown(false), 200)}
-                    className={`${inputCls} flex items-center justify-between text-left`}>
-                    <span className={(data.included_items || []).length ? '' : 'text-slate-400 dark:text-slate-500'}>
-                      {(data.included_items || []).length
-                        ? `${data.included_items.length} item${data.included_items.length !== 1 ? 's' : ''} recorded`
-                        : 'Select what came with the unit…'}
-                    </span>
-                    <span className="material-symbols-outlined text-slate-400">
-                      {showIncludedDropdown ? 'expand_less' : 'expand_more'}
-                    </span>
-                  </button>
-                  {showIncludedDropdown && (
-                    <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                      {HATHORN_INCLUDED_OPTIONS.map((item) => {
-                        const checked = (data.included_items || []).some((i) => i.toLowerCase() === item.toLowerCase());
-                        return (
-                          <button key={item} type="button"
-                            onMouseDown={(e) => { e.preventDefault(); toggleIncludedItem(item); }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-700 transition-colors">
-                            <span className={`material-symbols-outlined text-lg ${checked ? 'text-primary' : 'text-slate-300 dark:text-slate-600'}`}>
-                              {checked ? 'check_box' : 'check_box_outline_blank'}
-                            </span>
-                            <span className="text-slate-800 dark:text-slate-100">{item}</span>
-                          </button>
-                        );
-                      })}
-                      {/* Custom entry — "and more" */}
-                      <div className="flex gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/50"
-                        onMouseDown={(e) => e.preventDefault() /* keep the panel open */}>
-                        <input value={customIncluded}
-                          onChange={(e) => setCustomIncluded(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomIncluded(); } }}
-                          placeholder="Other item…"
-                          className="flex-1 px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-                        <button type="button" onMouseDown={(e) => { e.preventDefault(); addCustomIncluded(); }}
-                          className="px-3 py-1.5 bg-primary text-white rounded text-sm font-bold hover:bg-blue-600 transition-colors">
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {(data.included_items || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {data.included_items.map((item) => (
-                        <span key={item} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">
-                          {item}
-                          <button type="button" onClick={() => toggleIncludedItem(item)}
-                            className="text-slate-400 hover:text-red-500 transition-colors" title={`Remove ${item}`}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                {/* Component serial numbers — the reel's serial lives in the
+                    main Serial Number field above */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Camera Head S/N</label>
+                    <input value={data.camera_head_serial || ''}
+                      onChange={(e) => { const pos = e.target.selectionStart; handleChange('camera_head_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                      placeholder="Optional" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Controller S/N</label>
+                    <input value={data.controller_serial || ''}
+                      onChange={(e) => { const pos = e.target.selectionStart; handleChange('controller_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                      placeholder="Optional" className={inputCls} />
+                  </div>
+                </div>
+
+                <ChecklistDropdown
+                  label="Included With Unit"
+                  options={HATHORN_INCLUDED_OPTIONS}
+                  value={data.included_items || []}
+                  onChange={(items) => handleChange('included_items', items)}
+                  emptyText="Select what came with the unit…"
+                  inputCls={inputCls}
+                />
+
+                <ChecklistDropdown
+                  label="Condition At Intake"
+                  options={HATHORN_CONDITION_OPTIONS}
+                  value={data.intake_condition || []}
+                  onChange={(items) => handleChange('intake_condition', items)}
+                  emptyText="Record the power-on check…"
+                  inputCls={inputCls}
+                />
+
+                {/* Footage counter — the odometer, before and after recalibration */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Counter At Intake (ft)</label>
+                    <input type="number" min="0" step="1" value={data.counter_at_intake ?? ''}
+                      onChange={(e) => handleChange('counter_at_intake', e.target.value)}
+                      placeholder="e.g., 1240" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Counter After Repair (ft)</label>
+                    <input type="number" min="0" step="1" value={data.counter_after_repair ?? ''}
+                      onChange={(e) => handleChange('counter_after_repair', e.target.value)}
+                      placeholder="After recalibration" className={inputCls} />
+                  </div>
+                </div>
+
+                {/* Head pressure test after termination / lens work */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Pressure Test (psi)</label>
+                    <input type="number" min="0" step="0.5" value={data.pressure_test_psi ?? ''}
+                      onChange={(e) => handleChange('pressure_test_psi', e.target.value)}
+                      placeholder="e.g., 10" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Held For (min)</label>
+                    <input type="number" min="0" step="1" value={data.pressure_test_minutes ?? ''}
+                      onChange={(e) => handleChange('pressure_test_minutes', e.target.value)}
+                      placeholder="e.g., 15" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Result</label>
+                    <select value={data.pressure_test_result || ''}
+                      onChange={(e) => handleChange('pressure_test_result', e.target.value)}
+                      className={inputCls}>
+                      <option value="">Not tested</option>
+                      <option value="pass">Pass</option>
+                      <option value="fail">Fail</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Pushrod lengths */}

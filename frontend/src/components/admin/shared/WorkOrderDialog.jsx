@@ -382,6 +382,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       rod_length_received: tool.rod_length_received ?? '',
       rod_length_cut: tool.rod_length_cut ?? '',
       rod_length_remaining: tool.rod_length_remaining ?? '',
+      camera_head_serial: (tool.camera_head_serial || '').toUpperCase(),
+      controller_serial: (tool.controller_serial || '').toUpperCase(),
+      counter_at_intake: tool.counter_at_intake ?? '',
+      counter_after_repair: tool.counter_after_repair ?? '',
+      pressure_test_psi: tool.pressure_test_psi ?? '',
+      pressure_test_minutes: tool.pressure_test_minutes ?? '',
+      pressure_test_result: tool.pressure_test_result || '',
+      intake_condition: tool.intake_condition || [],
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
     });
@@ -840,11 +848,39 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 {retailPriceMap[tool.tool_id] != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Retail: ${parseFloat(retailPriceMap[tool.tool_id]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
-                              {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && (
+                              {(tool.camera_head_serial || tool.controller_serial || tool.counter_at_intake != null || tool.counter_after_repair != null) && (
                                 <div className="text-sm text-slate-500 mt-0.5">
-                                  Rod:{tool.rod_length_received != null && <> {tool.rod_length_received} ft received</>}
+                                  {tool.camera_head_serial && <>Head S/N: {tool.camera_head_serial.toUpperCase()}</>}
+                                  {tool.controller_serial && <>{tool.camera_head_serial && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Ctrl S/N: {tool.controller_serial.toUpperCase()}</>}
+                                  {tool.counter_at_intake != null && <>{(tool.camera_head_serial || tool.controller_serial) && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Counter in: {tool.counter_at_intake} ft</>}
+                                  {tool.counter_after_repair != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>out: {tool.counter_after_repair} ft</>}
+                                </div>
+                              )}
+                              {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null || tool.pressure_test_result) && (
+                                <div className="text-sm text-slate-500 mt-0.5">
+                                  {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && <>Rod:</>}
+                                  {tool.rod_length_received != null && <> {tool.rod_length_received} ft received</>}
                                   {tool.rod_length_cut != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>{tool.rod_length_cut} ft cut</>}
                                   {tool.rod_length_remaining != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span><span className="font-medium text-slate-600 dark:text-slate-300">{tool.rod_length_remaining} ft remaining</span></>}
+                                  {tool.pressure_test_result && (
+                                    <>
+                                      {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}
+                                      <span className={`font-bold ${tool.pressure_test_result === 'pass' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {tool.pressure_test_result === 'pass' ? 'TEST PASS' : 'TEST FAIL'}
+                                      </span>
+                                      {tool.pressure_test_psi != null && <> @ {tool.pressure_test_psi} psi{tool.pressure_test_minutes != null && <> / {tool.pressure_test_minutes} min</>}</>}
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {tool.intake_condition?.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                                  <span className="text-xs text-slate-400 dark:text-slate-500 mr-0.5">Condition in:</span>
+                                  {tool.intake_condition.map((item) => (
+                                    <span key={item} className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400">
+                                      {item}
+                                    </span>
+                                  ))}
                                 </div>
                               )}
                               {tool.included_items?.length > 0 && (
