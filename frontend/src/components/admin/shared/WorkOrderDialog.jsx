@@ -13,7 +13,8 @@ import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { useSettings } from '../../../contexts/SettingsContext';
-import ToolForm, { getEmptyTool, syncPartsToLibrary, HATHORN_FINAL_CHECKLIST } from './ToolForm';
+import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from './ToolForm';
+import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -84,6 +85,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   // ?job= URL param, so the dialog simply swaps to the old job.
   const [returningMap, setReturningMap] = useState({});
   const [returningOpenFor, setReturningOpenFor] = useState(null);
+  // Configurable final-test checklist — the QC chip counts against the same
+  // list the backend's Ready gate enforces (Admin Settings → Camera Intake).
+  const [intakeConfig, setIntakeConfig] = useState(CAMERA_INTAKE_DEFAULTS);
+  useEffect(() => {
+    let alive = true;
+    getCameraIntakeConfig().then((cfg) => { if (alive) setIntakeConfig(cfg); });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     if (!job?.id) return undefined;
     let alive = true;
@@ -413,8 +422,11 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       rod_length_received: tool.rod_length_received ?? '',
       rod_length_cut: tool.rod_length_cut ?? '',
       rod_length_remaining: tool.rod_length_remaining ?? '',
+      camera_head_model: (tool.camera_head_model || '').toUpperCase(),
       camera_head_serial: (tool.camera_head_serial || '').toUpperCase(),
+      controller_model: (tool.controller_model || '').toUpperCase(),
       controller_serial: (tool.controller_serial || '').toUpperCase(),
+      rod_holder_model: (tool.rod_holder_model || '').toUpperCase(),
       rod_holder_serial: (tool.rod_holder_serial || '').toUpperCase(),
       counter_at_intake: tool.counter_at_intake ?? '',
       counter_after_repair: tool.counter_after_repair ?? '',
@@ -805,7 +817,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                               }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot || 'bg-slate-400'}`} />
-                              {`${tool.brand} ${tool.model_number}`.toUpperCase()}
+                              {toolDisplayTitle(tool).toUpperCase()}
                             </button>
                           );
                         })}
@@ -865,11 +877,11 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             </div>
                             <div>
                               <Link
-                                to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(tool.brand || '')}&model=${encodeURIComponent(tool.model_number || '')}`}
+                                to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(tool.brand || '')}&model=${encodeURIComponent(tool.model_number || tool.camera_head_model || tool.controller_model || tool.rod_holder_model || '')}`}
                                 className="font-bold text-slate-900 dark:text-white text-base text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
                                 title="View in Parts Library"
                               >
-                                {`${tool.brand} ${tool.model_number}`.toUpperCase()}
+                                {toolDisplayTitle(tool).toUpperCase()}
                                 <span className="material-symbols-outlined text-sm opacity-0 group-hover/pl:opacity-60 transition-opacity">inventory_2</span>
                               </Link>
                               <div className="text-sm text-slate-500 mt-1">
@@ -879,10 +891,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
                               {(() => {
+                                // Each component prints "Label: MODEL #SERIAL",
+                                // dropping whichever half wasn't recorded.
+                                const comp = (label, model, serial) => (model || serial) &&
+                                  `${label}: ${[model && model.toUpperCase(), serial && `#${serial.toUpperCase()}`].filter(Boolean).join(' ')}`;
                                 const bits = [
-                                  tool.camera_head_serial && `Head S/N: ${tool.camera_head_serial.toUpperCase()}`,
-                                  tool.controller_serial && `Ctrl S/N: ${tool.controller_serial.toUpperCase()}`,
-                                  tool.rod_holder_serial && `Holder S/N: ${tool.rod_holder_serial.toUpperCase()}`,
+                                  comp('Ctrl', tool.controller_model, tool.controller_serial),
+                                  comp('Holder', tool.rod_holder_model, tool.rod_holder_serial),
+                                  comp('Head', tool.camera_head_model, tool.camera_head_serial),
                                   tool.counter_at_intake != null && `Odometer in: ${tool.counter_at_intake} ft`,
                                   tool.counter_after_repair != null && `out: ${tool.counter_after_repair} ft`,
                                 ].filter(Boolean);
@@ -966,10 +982,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 )}
                               </div>
                             )}
-                            {/hathorn/i.test(tool.brand || '') && (() => {
+                            {/hathorn/i.test(tool.brand || '') && intakeConfig.final_checklist.length > 0 && (() => {
                               const done = new Set((tool.final_checklist || []).map((i) => i.toLowerCase()));
-                              const n = HATHORN_FINAL_CHECKLIST.filter((i) => done.has(i.toLowerCase())).length;
-                              const total = HATHORN_FINAL_CHECKLIST.length;
+                              const n = intakeConfig.final_checklist.filter((i) => done.has(i.toLowerCase())).length;
+                              const total = intakeConfig.final_checklist.length;
                               const complete = n === total;
                               return (
                                 <span
@@ -1288,7 +1304,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Update Status</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{`${statusUpdateModal.brand} ${statusUpdateModal.model_number}${statusUpdateModal.tool_type ? ` — ${statusUpdateModal.tool_type}` : ''}`.toUpperCase()}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-xs truncate">{`${toolDisplayTitle(statusUpdateModal)}${statusUpdateModal.tool_type ? ` — ${statusUpdateModal.tool_type}` : ''}`.toUpperCase()}</p>
               </div>
               <button onClick={() => setStatusUpdateModal(null)} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                 <span className="material-symbols-outlined text-base">close</span>
@@ -1372,7 +1388,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">{isEdit ? 'Edit Tool' : 'Add Tool to Job'}</h3>
-                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{`${formData.brand} ${formData.model_number}`.toUpperCase()}</p>}
+                {isEdit && <p className="text-xs text-slate-500 mt-0.5 truncate">{toolDisplayTitle(formData).toUpperCase()}</p>}
               </div>
               <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
                 <span className="material-symbols-outlined text-base">close</span>

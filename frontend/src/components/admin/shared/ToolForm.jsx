@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { suppliersAPI, staffAPI, partsLibraryAPI, repairsAPI } from '../../../services/api';
 import { getTodayPacific } from '../../../utils/dateFormat';
+import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
 const EMPTY_TOOL_BASE = {
@@ -10,43 +11,29 @@ const EMPTY_TOOL_BASE = {
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
   zoho_ref: '', assigned_technician: '', estimated_completion: '',
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
-  camera_head_serial: '', controller_serial: '', rod_holder_serial: '',
+  camera_head_model: '', camera_head_serial: '',
+  controller_model: '', controller_serial: '',
+  rod_holder_model: '', rod_holder_serial: '',
   counter_at_intake: '', counter_after_repair: '',
   intake_condition: [], final_checklist: [],
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
 
-// What typically ships with a Hathorn camera system. The intake checklist
-// exists so what goes back to the customer is never a memory contest.
-export const HATHORN_INCLUDED_OPTIONS = [
-  'Power Cord', 'Controller', 'Patch Cable', 'Battery', 'Battery Charger',
-  'SD Card', 'USB Drive', 'Carrying Case', 'Skids / Guides', 'Manual',
-];
+// Display title for a tool row: "BRAND MODEL". A Hathorn unit has no
+// generic model_number (any mix of components arrives alone), so its title
+// falls back to the component models it carries — controller, pushrod
+// holder, camera head, the same order the intake form shows them.
+export const toolDisplayTitle = (t) => {
+  const compModels = [t.controller_model, t.rod_holder_model, t.camera_head_model]
+    .filter(Boolean).join(' / ');
+  return [t.brand, t.model_number || compModels].filter(Boolean).join(' ');
+};
 
-// Power-on condition observed at intake — the answer to "it worked fine
-// before you had it" is written down before the bench touches it. The bump
-// test (tap the head, watch for image flicker) catches intermittents that a
-// static check misses.
-export const HATHORN_CONDITION_OPTIONS = [
-  'Powers On', 'No Power', 'Image OK', 'Image Cloudy', 'No Image',
-  'Bump Test OK', 'Bump Test Fails',
-  'LEDs OK', 'LEDs Dim / Dead', 'Sonde Transmits', 'Sonde Dead',
-  'Odometer Works', 'Odometer Faulty',
-];
-
-// Outgoing QC. Must mirror HATHORN_FINAL_CHECKLIST in
-// backend/app/models/repair.py — the backend refuses to move a Hathorn tool
-// to "ready" until every one of these is ticked.
-export const HATHORN_FINAL_CHECKLIST = [
-  'Image Clear',
-  'Bump Test Passed',
-  'LEDs Working',
-  'Sonde Verified',
-  'Odometer Verified',
-  'Rod Spools Freely',
-  'Termination Secure',
-  'Accessories Packed',
-];
+// The Hathorn option lists (Included With Unit, Condition At Intake, Final
+// Test Checklist) are configurable in Admin Settings → Camera Intake and
+// fetched via getCameraIntakeConfig(); CAMERA_INTAKE_DEFAULTS renders until
+// that resolves. The backend enforces the configured Final Test list on the
+// "ready" transition, so both sides read the same document.
 
 // Multi-select dropdown with checkbox rows, a free-text "other" entry and
 // removable chips — used for the Hathorn included/condition checklists.
@@ -162,7 +149,17 @@ export const syncPartsToLibrary = async (tools) => {
     for (const tool of tools) {
       const brandId = await getBrandId(tool.brand);
       if (!brandId) continue;
-      const modelIds = await getModelId(brandId, tool.model_number, tool.tool_type);
+      // A Hathorn tool has no generic model_number — its component models
+      // (head / controller / reel) each become a library model, and new
+      // parts link to every one that was recorded.
+      const modelNames = [tool.model_number, tool.camera_head_model,
+        tool.controller_model, tool.rod_holder_model]
+        .map((m) => m?.trim()).filter(Boolean);
+      let modelIds = [];
+      for (const name of modelNames) {
+        modelIds.push(...await getModelId(brandId, name, tool.tool_type));
+      }
+      modelIds = [...new Set(modelIds)];
       for (const part of (tool.parts || [])) {
         if (!part.name?.trim() || part.library_part_id) continue;
         try {
@@ -196,6 +193,15 @@ export const syncPartsToLibrary = async (tools) => {
 // wizardStep: 2 = Tool Identification + Photos, 3 = Job Details + Parts, 4 = Labour & Scheduling
 // Omit wizardStep (or isNewJobForm=false) to render all sections (add tool modal / edit mode)
 export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId }) {
+  // Configurable camera-intake lists; the shared fetch resolves once per
+  // page load, so many ToolForm instances don't stack requests.
+  const [intakeConfig, setIntakeConfig] = useState(CAMERA_INTAKE_DEFAULTS);
+  useEffect(() => {
+    let alive = true;
+    getCameraIntakeConfig().then((cfg) => { if (alive) setIntakeConfig(cfg); });
+    return () => { alive = false; };
+  }, []);
+
   const handleChange = (fieldOrObj, value) => {
     // Support both handleChange('field', value) and handleChange({ field1: v1, field2: v2 })
     const updates = typeof fieldOrObj === 'string' ? { [fieldOrObj]: value } : fieldOrObj;
@@ -228,10 +234,14 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
 
   const loadSuggestedParts = async () => {
     if (showSuggestedParts) { setShowSuggestedParts(false); return; }
-    // Find model ID from library brands/models
+    // Find model IDs from library brands/models — a Hathorn tool matches on
+    // its component models (head / controller / reel) instead of the hidden
+    // generic model_number, and suggestions merge across all of them.
     const brand = data.brand?.trim();
-    const model = data.model_number?.trim();
-    if (!brand || !model) return;
+    const modelNames = [data.model_number, data.camera_head_model,
+      data.controller_model, data.rod_holder_model]
+      .map((m) => m?.trim()).filter(Boolean);
+    if (!brand || !modelNames.length) return;
     setSuggestedPartsLoading(true);
     setShowSuggestedParts(true);
     try {
@@ -239,10 +249,18 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       const matchBrand = brands.find(b => b.name.toLowerCase() === brand.toLowerCase());
       if (!matchBrand) { setSuggestedParts([]); return; }
       const models = await partsLibraryAPI.listModels(matchBrand.id);
-      const matchModel = models.find(m => m.name.toLowerCase() === model.toLowerCase());
-      if (!matchModel) { setSuggestedParts([]); return; }
-      const result = await partsLibraryAPI.listParts({ model_id: matchModel.id, limit: 50 });
-      setSuggestedParts(result.items || []);
+      const matched = models.filter(m => modelNames.some(n => n.toLowerCase() === m.name.toLowerCase()));
+      if (!matched.length) { setSuggestedParts([]); return; }
+      const results = await Promise.all(
+        matched.map(m => partsLibraryAPI.listParts({ model_id: m.id, limit: 50 }).catch(() => ({ items: [] })))
+      );
+      const seen = new Set();
+      const merged = results.flatMap(r => r.items || []).filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
+      setSuggestedParts(merged);
     } catch { setSuggestedParts([]); }
     finally { setSuggestedPartsLoading(false); }
   };
@@ -373,6 +391,8 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [showModelDropdown, setShowModelDropdown] = useState(false);
 
   const isHathorn = /hathorn/i.test(toolData.brand || '');
+  // Datalist id for the per-component model inputs' library autocomplete
+  const modelListId = useId();
 
   // Returning-unit check: as serials are typed, look for this exact unit in
   // past jobs. The shop assigns house serials to unserialized tools, so a
@@ -477,6 +497,10 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 </div>
               )}
             </div>
+            {/* Hidden for Hathorn — identity lives on the per-component
+                model/serial fields below, since any mix of components can
+                arrive on its own */}
+            {!isHathorn && (
             <div className="relative">
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
               <input required value={data.model_number || ''} autoComplete="off"
@@ -503,6 +527,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 </div>
               )}
             </div>
+            )}
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
               <input required value={data.tool_type || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('tool_type', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
@@ -526,32 +551,43 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   Hathorn Camera Intake
                 </p>
 
-                {/* One serial per component — these replace the generic
-                    Serial Number field for camera systems */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Camera Head S/N</label>
-                    <input value={data.camera_head_serial || ''}
-                      onChange={(e) => { const pos = e.target.selectionStart; handleChange('camera_head_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                      placeholder="Optional" className={inputCls} />
+                {/* One model + serial per component — customers bring any
+                    mix (reel only, head only, controller only…), so identity
+                    lives here and the generic Model Number / Serial Number
+                    fields are hidden. Fill only what arrived. */}
+                <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {[
+                      { label: 'Controller', modelField: 'controller_model', serialField: 'controller_serial' },
+                      { label: 'Pushrod Holder', modelField: 'rod_holder_model', serialField: 'rod_holder_serial' },
+                      { label: 'Camera Head', modelField: 'camera_head_model', serialField: 'camera_head_serial' },
+                    ].map((c) => (
+                      <div key={c.modelField} className="space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{c.label}</p>
+                        <input value={data[c.modelField] || ''} list={modelListId} autoComplete="off"
+                          onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.modelField, e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                          placeholder="Model" className={inputCls} />
+                        <input value={data[c.serialField] || ''}
+                          onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.serialField, e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                          placeholder="Serial number" className={inputCls} />
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Controller S/N</label>
-                    <input value={data.controller_serial || ''}
-                      onChange={(e) => { const pos = e.target.selectionStart; handleChange('controller_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                      placeholder="Optional" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Pushrod Holder S/N</label>
-                    <input value={data.rod_holder_serial || ''}
-                      onChange={(e) => { const pos = e.target.selectionStart; handleChange('rod_holder_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                      placeholder="Optional" className={inputCls} />
-                  </div>
+                  {/* Library autocomplete: same models the hidden Model
+                      Number field would have suggested for this brand */}
+                  {libraryModels.length > 0 && (
+                    <datalist id={modelListId}>
+                      {libraryModels.map((m) => <option key={m.id} value={m.name.toUpperCase()} />)}
+                    </datalist>
+                  )}
+                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                    Fill only the components that arrived — at least one model or serial is required
+                  </p>
                 </div>
 
                 <ChecklistDropdown
                   label="Included With Unit"
-                  options={HATHORN_INCLUDED_OPTIONS}
+                  options={intakeConfig.included_options}
                   value={data.included_items || []}
                   onChange={(items) => handleChange('included_items', items)}
                   emptyText="Select what came with the unit…"
@@ -560,7 +596,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
 
                 <ChecklistDropdown
                   label="Condition At Intake"
-                  options={HATHORN_CONDITION_OPTIONS}
+                  options={intakeConfig.condition_options}
                   value={data.intake_condition || []}
                   onChange={(items) => handleChange('intake_condition', items)}
                   emptyText="Record the power-on check…"
@@ -611,14 +647,16 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 <div>
                   <ChecklistDropdown
                     label="Final Test Checklist"
-                    options={HATHORN_FINAL_CHECKLIST}
+                    options={intakeConfig.final_checklist}
                     value={data.final_checklist || []}
                     onChange={(items) => handleChange('final_checklist', items)}
                     emptyText="Tick off the final tests…"
                     inputCls={inputCls}
                   />
                   <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                    All {HATHORN_FINAL_CHECKLIST.length} items required before this tool can be marked Ready for pickup
+                    {intakeConfig.final_checklist.length > 0
+                      ? `All ${intakeConfig.final_checklist.length} items required before this tool can be marked Ready for pickup`
+                      : 'No required items configured — the Ready gate is off (Admin Settings → Camera Intake)'}
                   </p>
                 </div>
               </div>
@@ -761,7 +799,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-300 dark:border-slate-700">
           <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
           <div className="flex items-center gap-3">
-            {data.brand && data.model_number && (
+            {data.brand && (data.model_number || data.camera_head_model || data.controller_model || data.rod_holder_model) && (
               <button type="button" onClick={loadSuggestedParts}
                 className={`text-xs font-bold flex items-center gap-1 transition-colors ${showSuggestedParts ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-amber-600 dark:hover:text-amber-400'}`}>
                 <span className="material-symbols-outlined" style={{fontSize:'15px'}}>lightbulb</span>
@@ -779,7 +817,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
         {showSuggestedParts && (
           <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-lg">
             <p className="text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wide mb-2">
-              Parts for {data.brand} {data.model_number}
+              Parts for {toolDisplayTitle(data)}
             </p>
             {suggestedPartsLoading ? (
               <p className="text-xs text-slate-500">Loading…</p>

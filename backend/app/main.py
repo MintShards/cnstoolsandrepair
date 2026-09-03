@@ -19,6 +19,7 @@ from app.routers import settings as settings_router, auth, about_content, home_c
 from app.routers import repairs, customers as customers_router, suppliers as suppliers_router, technicians as technicians_router
 from app.routers import parts_library as parts_library_router
 from app.routers import service_agreement as service_agreement_router
+from app.routers import camera_intake_config as camera_intake_config_router
 from app.routers import sourcing as sourcing_router
 from app.routers import zones as zones_router
 from app.routers import businesses as businesses_router
@@ -162,6 +163,7 @@ app.include_router(suppliers_router.router)
 app.include_router(technicians_router.router)
 app.include_router(parts_library_router.router)
 app.include_router(service_agreement_router.router)
+app.include_router(camera_intake_config_router.router)
 app.include_router(sourcing_router.router)
 app.include_router(zones_router.router)
 app.include_router(businesses_router.router)

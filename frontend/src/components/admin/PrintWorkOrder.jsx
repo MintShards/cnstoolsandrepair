@@ -158,10 +158,15 @@ function buildBody(job, businessInfo, serviceAgreement) {
     ].filter(Boolean).join(' · ');
     const includedItems = (tool.included_items || []).filter(Boolean);
     const conditionItems = (tool.intake_condition || []).filter(Boolean);
+    // "Head D18 (S/N S123)" — each component names its own model, since
+    // any mix of components can arrive without the others
+    const comp = (label, model, serial) => (model || serial)
+      ? `${label}${model ? ` ${escHtml(model.toUpperCase())}` : ''}${serial ? ` (S/N ${escHtml(serial.toUpperCase())})` : ''}`
+      : '';
     const compBits = [
-      tool.camera_head_serial ? `Head S/N ${escHtml(tool.camera_head_serial.toUpperCase())}` : '',
-      tool.controller_serial ? `Controller S/N ${escHtml(tool.controller_serial.toUpperCase())}` : '',
-      tool.rod_holder_serial ? `Pushrod Holder S/N ${escHtml(tool.rod_holder_serial.toUpperCase())}` : '',
+      comp('Controller', tool.controller_model, tool.controller_serial),
+      comp('Pushrod Holder', tool.rod_holder_model, tool.rod_holder_serial),
+      comp('Head', tool.camera_head_model, tool.camera_head_serial),
       tool.counter_at_intake != null ? `Odometer in ${tool.counter_at_intake} ft` : '',
       tool.counter_after_repair != null ? `Odometer out ${tool.counter_after_repair} ft` : '',
     ].filter(Boolean).join(' · ');
@@ -187,7 +192,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
         <div class="tool-header">
           <div class="tool-num">#${idx + 1}</div>
           <div class="tool-title">
-            <strong>${escHtml((tool.brand || '').toUpperCase())} ${escHtml((tool.model_number || '').toUpperCase())}</strong> · <span class="muted">${escHtml((tool.tool_type || '').toUpperCase())}${tool.quantity > 1 ? ' × ' + tool.quantity : ''}${tool.serial_number ? ' · S/N: ' + escHtml(tool.serial_number.toUpperCase()) : ''}</span>
+            <strong>${escHtml([tool.brand, tool.model_number].filter(Boolean).join(' ').toUpperCase())}</strong> · <span class="muted">${escHtml((tool.tool_type || '').toUpperCase())}${tool.quantity > 1 ? ' × ' + tool.quantity : ''}${tool.serial_number ? ' · S/N: ' + escHtml(tool.serial_number.toUpperCase()) : ''}</span>
           </div>
           <div class="tool-badges">
             ${tool.priority && tool.priority !== 'standard' ? `<span class="badge priority-${tool.priority}">${capitalize(tool.priority)}</span>` : ''}

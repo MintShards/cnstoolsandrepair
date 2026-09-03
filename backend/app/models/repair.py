@@ -1,10 +1,12 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 from zoneinfo import ZoneInfo
 import re
 import uuid
+
+from app.models.camera_intake import DEFAULT_FINAL_CHECKLIST
 
 
 class RepairStatus(str, Enum):
@@ -50,27 +52,25 @@ def validate_status_transition(current: str, new: str) -> bool:
 
 
 # Outgoing QC for Hathorn camera systems. A tool whose brand says Hathorn
-# cannot move to "ready" until every item here is ticked on the tool's
+# cannot move to "ready" until every required item is ticked on the tool's
 # final_checklist — a specialty unit doesn't go to the pickup shelf half
-# checked. The wording should track the shop's training material.
-HATHORN_FINAL_CHECKLIST = [
-    "Image Clear",
-    "Bump Test Passed",
-    "LEDs Working",
-    "Sonde Verified",
-    "Odometer Verified",
-    "Rod Spools Freely",
-    "Termination Secure",
-    "Accessories Packed",
-]
+# checked. The required list lives in the camera_intake_config singleton
+# (Admin Settings → Camera Intake); DEFAULT_FINAL_CHECKLIST only covers a
+# missing document.
+HATHORN_FINAL_CHECKLIST = DEFAULT_FINAL_CHECKLIST
 
 
-def hathorn_ready_blockers(tool: dict) -> list:
-    """Canonical checklist items still unticked, empty for non-Hathorn tools."""
+def hathorn_ready_blockers(tool: dict, checklist: Optional[list] = None) -> list:
+    """Required checklist items still unticked, empty for non-Hathorn tools.
+
+    checklist is the configured final-test list; None means use the shipped
+    default. An explicitly empty list means the gate is turned off.
+    """
     if 'hathorn' not in (tool.get('brand') or '').lower():
         return []
+    required = DEFAULT_FINAL_CHECKLIST if checklist is None else checklist
     done = {str(i).strip().lower() for i in (tool.get('final_checklist') or [])}
-    return [item for item in HATHORN_FINAL_CHECKLIST if item.lower() not in done]
+    return [item for item in required if str(item).strip().lower() not in done]
 
 
 class RepairSource(str, Enum):
@@ -151,7 +151,11 @@ class ToolItemCreate(BaseModel):
 
     tool_type: str = Field(..., min_length=1, max_length=100)
     brand: str = Field(..., min_length=1, max_length=100)
-    model_number: str = Field(..., min_length=1, max_length=100)
+    # Optional because Hathorn units arrive as any mix of components (reel
+    # only, head only…) and identity lives on the per-component model/serial
+    # fields instead — require_identity below still demands a model number
+    # for every other brand.
+    model_number: Optional[str] = Field(None, max_length=100)
     serial_number: Optional[str] = Field(None, max_length=100)
     quantity: int = Field(default=1, gt=0, le=1000)
     remarks: Optional[str] = Field(None, max_length=2000)
@@ -174,9 +178,14 @@ class ToolItemCreate(BaseModel):
     rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
     # A camera system is three serialized components: the head, the
     # controller, and the pushrod holder (reel). For Hathorn tools these
-    # replace the generic serial_number field, which the form hides.
+    # replace the generic serial_number AND model_number fields, which the
+    # form hides — customers bring any mix of components, each with its own
+    # model. Fill only what arrived.
+    camera_head_model: Optional[str] = Field(None, max_length=100)
     camera_head_serial: Optional[str] = Field(None, max_length=100)
+    controller_model: Optional[str] = Field(None, max_length=100)
     controller_serial: Optional[str] = Field(None, max_length=100)
+    rod_holder_model: Optional[str] = Field(None, max_length=100)
     rod_holder_serial: Optional[str] = Field(None, max_length=100)
     # CCU footage counter — the odometer. Read at intake (usage proof) and
     # after recalibration once the rod has been cut.
@@ -186,17 +195,26 @@ class ToolItemCreate(BaseModel):
     # same shape as included_items, protects against "it worked before".
     intake_condition: List[str] = Field(default_factory=list, max_length=40)
     # Outgoing QC ticks. Moving a Hathorn tool to "ready" requires every
-    # HATHORN_FINAL_CHECKLIST item to be present here — enforced server-side.
+    # configured final-checklist item (camera_intake_config, or the shipped
+    # default) to be present here — enforced server-side.
     final_checklist: List[str] = Field(default_factory=list, max_length=40)
     date_received: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Vancouver")).replace(tzinfo=None))
     estimated_completion: Optional[datetime] = None
 
-    @field_validator('tool_type', 'brand', 'model_number', mode='before')
+    @field_validator('tool_type', 'brand', mode='before')
     @classmethod
     def capitalize_fields(cls, v):
         if v:
             return v.strip().title()
         return v
+
+    @field_validator('model_number', 'camera_head_model', 'controller_model',
+                     'rod_holder_model', mode='before')
+    @classmethod
+    def clean_optional_model(cls, v):
+        if v == '' or v is None:
+            return None
+        return str(v).strip().title()
 
     @field_validator('included_items', 'intake_condition', 'final_checklist', mode='before')
     @classmethod
@@ -236,6 +254,25 @@ class ToolItemCreate(BaseModel):
             return datetime.fromisoformat(v)
         return v
 
+    @model_validator(mode='after')
+    def require_identity(self):
+        # Hathorn systems arrive as any mix of head / controller / reel, so
+        # the generic model_number is hidden and identity lives on the
+        # component fields — at least one must be filled in. Every other
+        # brand still needs its model number.
+        if 'hathorn' in (self.brand or '').lower():
+            if not any([self.model_number,
+                        self.camera_head_model, self.camera_head_serial,
+                        self.controller_model, self.controller_serial,
+                        self.rod_holder_model, self.rod_holder_serial]):
+                raise ValueError(
+                    'Enter at least one component model or serial '
+                    '(camera head, controller, or pushrod holder)'
+                )
+        elif not self.model_number:
+            raise ValueError('Model number is required')
+        return self
+
 
 class ToolItemUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -257,8 +294,11 @@ class ToolItemUpdate(BaseModel):
     rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_cut: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
+    camera_head_model: Optional[str] = Field(None, max_length=100)
     camera_head_serial: Optional[str] = Field(None, max_length=100)
+    controller_model: Optional[str] = Field(None, max_length=100)
     controller_serial: Optional[str] = Field(None, max_length=100)
+    rod_holder_model: Optional[str] = Field(None, max_length=100)
     rod_holder_serial: Optional[str] = Field(None, max_length=100)
     counter_at_intake: Optional[float] = Field(None, ge=0, le=100000)
     counter_after_repair: Optional[float] = Field(None, ge=0, le=100000)
@@ -266,12 +306,20 @@ class ToolItemUpdate(BaseModel):
     final_checklist: Optional[List[str]] = Field(None, max_length=40)
     estimated_completion: Optional[datetime] = None
 
-    @field_validator('tool_type', 'brand', 'model_number', mode='before')
+    @field_validator('tool_type', 'brand', mode='before')
     @classmethod
     def capitalize_fields(cls, v):
         if v:
             return v.strip().title()
         return v
+
+    @field_validator('model_number', 'camera_head_model', 'controller_model',
+                     'rod_holder_model', mode='before')
+    @classmethod
+    def clean_optional_model(cls, v):
+        if v == '' or v is None:
+            return None
+        return str(v).strip().title()
 
     @field_validator('included_items', 'intake_condition', 'final_checklist', mode='before')
     @classmethod
@@ -340,7 +388,7 @@ class ToolItemResponse(BaseModel):
     tool_id: str
     tool_type: str
     brand: str
-    model_number: str
+    model_number: Optional[str] = None
     serial_number: Optional[str] = None
     quantity: int
     remarks: Optional[str] = None
@@ -356,8 +404,11 @@ class ToolItemResponse(BaseModel):
     rod_length_received: Optional[float] = None
     rod_length_cut: Optional[float] = None
     rod_length_remaining: Optional[float] = None
+    camera_head_model: Optional[str] = None
     camera_head_serial: Optional[str] = None
+    controller_model: Optional[str] = None
     controller_serial: Optional[str] = None
+    rod_holder_model: Optional[str] = None
     rod_holder_serial: Optional[str] = None
     counter_at_intake: Optional[float] = None
     counter_after_repair: Optional[float] = None

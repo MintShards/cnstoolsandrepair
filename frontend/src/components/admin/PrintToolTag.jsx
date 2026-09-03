@@ -61,10 +61,14 @@ function buildTagHTML(job, toolItem, toolIndex) {
   ].filter(Boolean).join(' · ');
   const rodHTML = rodBits ? `<div class="rod-line">ROD: ${rodBits}</div>` : '';
 
+  // "HEAD D18 #S123" — model then serial, whichever halves were recorded
+  const comp = (label, model, serial) => (model || serial)
+    ? `${label} ${[model && escHtml(model.toUpperCase()), serial && `#${escHtml(serial.toUpperCase())}`].filter(Boolean).join(' ')}`
+    : '';
   const compBits = [
-    toolItem.camera_head_serial ? `HEAD ${escHtml(toolItem.camera_head_serial.toUpperCase())}` : '',
-    toolItem.controller_serial ? `CTRL ${escHtml(toolItem.controller_serial.toUpperCase())}` : '',
-    toolItem.rod_holder_serial ? `HOLDER ${escHtml(toolItem.rod_holder_serial.toUpperCase())}` : '',
+    comp('CTRL', toolItem.controller_model, toolItem.controller_serial),
+    comp('HOLDER', toolItem.rod_holder_model, toolItem.rod_holder_serial),
+    comp('HEAD', toolItem.camera_head_model, toolItem.camera_head_serial),
   ].filter(Boolean).join(' · ');
   const compHTML = compBits ? `<div class="rod-line">${compBits}</div>` : '';
 
@@ -87,7 +91,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
               ${toolItem.warranty ? '<div class="warranty-badge">WARRANTY</div>' : ''}
             </div>
             <div class="section">
-              <div class="value">${escHtml((toolItem.brand || '').toUpperCase())} ${escHtml((toolItem.model_number || '').toUpperCase())}</div>
+              <div class="value">${escHtml([toolItem.brand, toolItem.model_number].filter(Boolean).join(' ').toUpperCase())}</div>
               <div class="value">${escHtml((toolItem.tool_type || '').toUpperCase())}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number.toUpperCase())}` : ''}</div>
               ${compHTML}
               ${rodHTML}

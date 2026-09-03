@@ -674,6 +674,20 @@ export const serviceAgreementAPI = {
   },
 };
 
+// Camera intake option lists (staff read, admin write) — the Hathorn
+// suite's Included / Condition / Final Test checklists, editable in
+// Admin Settings → Camera Intake instead of hardcoded.
+export const cameraIntakeAPI = {
+  get: async () => {
+    const response = await api.get('/api/camera-intake-config/');
+    return response.data;
+  },
+  update: async (data) => {
+    const response = await api.put('/api/camera-intake-config/', data);
+    return response.data;
+  },
+};
+
 // Sales Reps API (admin only)
 export const salesRepsAPI = {
   list: async () => {

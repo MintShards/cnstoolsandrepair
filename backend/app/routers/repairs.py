@@ -45,6 +45,18 @@ def _pacific_date_to_utc(dt: datetime) -> datetime:
     return aware.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
 
+async def _configured_final_checklist(db) -> Optional[list]:
+    """The final-test checklist the Ready gate enforces, read fresh from
+    camera_intake_config (Admin Settings → Camera Intake) so a settings edit
+    changes enforcement immediately. None = no document yet, which tells
+    hathorn_ready_blockers to use the shipped default; an explicitly saved
+    empty list turns the gate off."""
+    doc = await db.camera_intake_config.find_one({"active": True})
+    if doc and isinstance(doc.get("final_checklist"), list):
+        return doc["final_checklist"]
+    return None
+
+
 async def _adjust_library_part_stock(db, library_part_id: str, delta: int, reason: str,
                                       job_id: str = None, tool_id: str = None):
     """Adjust stock for a library part. Floors at 0. Appends to stock_history."""
@@ -233,10 +245,27 @@ async def get_model_repair_counts(
         ]}},
         {"$project": {
             "brand": {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.brand", ""]}}}},
-            "model": {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.model_number", ""]}}}},
+            # A tool can carry several model identities: the generic
+            # model_number, or (Hathorn camera systems) per-component models
+            # for the head / controller / pushrod holder. Each non-empty one
+            # earns the repair count, so a head that came in on its own still
+            # credits its model card in the parts library. $setUnion dedupes
+            # in case two fields carry the same text.
+            "models": {"$setUnion": [{"$filter": {
+                "input": [
+                    {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.model_number", ""]}}}},
+                    {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.camera_head_model", ""]}}}},
+                    {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.controller_model", ""]}}}},
+                    {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.rod_holder_model", ""]}}}},
+                ],
+                "as": "m",
+                "cond": {"$ne": ["$$m", ""]},
+            }}, []]},
             "quantity": {"$ifNull": ["$tools.quantity", 1]},
             "last_date": {"$ifNull": ["$tools.date_completed", "$tools.date_received"]},
         }},
+        {"$unwind": "$models"},
+        {"$project": {"brand": 1, "model": "$models", "quantity": 1, "last_date": 1}},
     ]
     if brand:
         pipeline.append({"$match": {"brand": brand.strip().lower()}})
@@ -465,7 +494,7 @@ async def get_repair_summary(
                     "job_id": str(job.get("_id", "")),
                     "tool_type": tool.get("tool_type", ""),
                     "brand": tool.get("brand", ""),
-                    "model_number": tool.get("model_number", ""),
+                    "model_number": tool.get("model_number") or "",
                     "customer_name": cust_name,
                     "status": tool_status,
                     "days_in_status": days_since,
@@ -507,7 +536,7 @@ async def get_repair_summary(
                         "job_id": str(job.get("_id", "")),
                         "tool_type": tool.get("tool_type", ""),
                         "brand": tool.get("brand", ""),
-                        "model_number": tool.get("model_number", ""),
+                        "model_number": tool.get("model_number") or "",
                         "customer_name": cust_name,
                         "status": tool_status,
                         "parts_count": len(tool_parts_list),
@@ -549,7 +578,7 @@ async def get_repair_summary(
                 recent_completions.append({
                     "request_number": request_number,
                     "brand": tool.get("brand", ""),
-                    "model_number": tool.get("model_number", ""),
+                    "model_number": tool.get("model_number") or "",
                     "assigned_technician": tool.get("assigned_technician", ""),
                     "date_completed": dc_dt.isoformat() + "Z",
                 })
@@ -1254,6 +1283,14 @@ async def list_repair_jobs(
             {"tools.model_number": {"$regex": escaped, "$options": "i"}},
             {"tools.tool_type": {"$regex": escaped, "$options": "i"}},
             {"tools.serial_number": {"$regex": escaped, "$options": "i"}},
+            # Hathorn camera components carry their own models and serials
+            # (the generic fields above are hidden for that brand).
+            {"tools.camera_head_model": {"$regex": escaped, "$options": "i"}},
+            {"tools.camera_head_serial": {"$regex": escaped, "$options": "i"}},
+            {"tools.controller_model": {"$regex": escaped, "$options": "i"}},
+            {"tools.controller_serial": {"$regex": escaped, "$options": "i"}},
+            {"tools.rod_holder_model": {"$regex": escaped, "$options": "i"}},
+            {"tools.rod_holder_serial": {"$regex": escaped, "$options": "i"}},
         ]
 
     total = await db.repairs.count_documents(query)
@@ -1325,6 +1362,8 @@ async def batch_update_tool_status(
 
     results: list[BatchStatusResult] = []
     now = datetime.utcnow()
+    # One read for the whole batch — the Ready gate below checks against it.
+    final_checklist = await _configured_final_checklist(db)
 
     # Group items by job_id to minimize DB round-trips
     by_job: dict[str, list] = defaultdict(list)
@@ -1377,7 +1416,7 @@ async def batch_update_tool_status(
             # Same gate as the single-tool route: Hathorn units need the
             # full final test checklist before "ready".
             if item.new_status == RepairStatus.READY:
-                missing = hathorn_ready_blockers(tools[tool_index])
+                missing = hathorn_ready_blockers(tools[tool_index], final_checklist)
                 if missing:
                     results.append(BatchStatusResult(
                         job_id=job_id, tool_id=item.tool_id,
@@ -2060,7 +2099,7 @@ async def update_tool_status(
     # Hathorn units don't reach the pickup shelf half-checked: "ready"
     # requires the full final test checklist.
     if status_update.status == RepairStatus.READY:
-        missing = hathorn_ready_blockers(tools[tool_index])
+        missing = hathorn_ready_blockers(tools[tool_index], await _configured_final_checklist(db))
         if missing:
             raise HTTPException(
                 status_code=400,

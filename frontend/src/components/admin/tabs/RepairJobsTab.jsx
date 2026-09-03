@@ -9,7 +9,7 @@ import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { useSettings } from '../../../contexts/SettingsContext';
-import ToolForm, { getEmptyTool, syncPartsToLibrary } from '../shared/ToolForm';
+import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from '../shared/ToolForm';
 import WorkOrderDialog from '../shared/WorkOrderDialog';
 
 const getErrorMessage = (err, fallback) => {
@@ -1306,7 +1306,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                                   className="accent-primary w-3.5 h-3.5"
                                 />
                                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot || 'bg-slate-400'}`} />
-                                <span>{`${tool.brand} ${tool.model_number}`.toUpperCase()}</span>
+                                <span>{toolDisplayTitle(tool).toUpperCase()}</span>
                                 <span className="opacity-60">— {cfg.label || tool.status}</span>
                               </label>
                             );
@@ -1727,9 +1727,22 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   <button
                     type="button"
                     onClick={() => {
-                      const missing = newJobForm.tools.some(t => !t.tool_type?.trim() || !t.brand?.trim() || !t.model_number?.trim());
-                      if (missing) {
-                        showToast('error', 'Tool type, brand, and model number are required for each tool');
+                      // Hathorn units carry identity on their components (any
+                      // mix can arrive alone), so the generic model number is
+                      // waived when at least one component field is filled.
+                      const hasComponent = (t) => [
+                        t.camera_head_model, t.camera_head_serial,
+                        t.controller_model, t.controller_serial,
+                        t.rod_holder_model, t.rod_holder_serial,
+                      ].some((v) => v?.trim());
+                      const badTool = newJobForm.tools.find(t =>
+                        !t.tool_type?.trim() || !t.brand?.trim() ||
+                        (/hathorn/i.test(t.brand || '') ? !hasComponent(t) : !t.model_number?.trim())
+                      );
+                      if (badTool) {
+                        showToast('error', /hathorn/i.test(badTool.brand || '')
+                          ? 'Each Hathorn tool needs at least one component model or serial (camera head, controller, or pushrod holder)'
+                          : 'Tool type, brand, and model number are required for each tool');
                         return;
                       }
                       setNewJobStep(3);
@@ -1770,7 +1783,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           </div>
                           <div>
                             <h5 className="font-bold text-slate-900 dark:text-white text-sm">Tool {idx + 1}</h5>
-                            <p className="text-slate-500 dark:text-slate-400 text-xs">{tool.brand} {tool.model_number}</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs">{toolDisplayTitle(tool)}</p>
                           </div>
                         </div>
                         <div className="p-4">
@@ -1807,7 +1820,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           </div>
                           <div>
                             <h5 className="font-bold text-slate-900 dark:text-white text-sm">Tool {idx + 1}</h5>
-                            <p className="text-slate-500 dark:text-slate-400 text-xs">{tool.brand} {tool.model_number}</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs">{toolDisplayTitle(tool)}</p>
                           </div>
                         </div>
                         <div className="p-4">

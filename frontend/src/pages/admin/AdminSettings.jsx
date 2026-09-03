@@ -11,6 +11,7 @@ import AboutTab from '../../components/admin/tabs/AboutTab';
 import ContactTab from '../../components/admin/tabs/ContactTab';
 import GlobalTab from '../../components/admin/tabs/GlobalTab';
 import RepairTrackerTab from '../../components/admin/tabs/RepairTrackerTab';
+import CameraIntakeTab from '../../components/admin/tabs/CameraIntakeTab';
 import UsersTab from '../../components/admin/tabs/UsersTab';
 
 export default function AdminSettings() {
@@ -39,6 +40,7 @@ export default function AdminSettings() {
     { id: 'contact', label: 'Contact Page', icon: 'contact_mail' },
     { id: 'global', label: 'Global Settings', icon: 'settings' },
     { id: 'repair-tracker', label: 'Repair Tracker', icon: 'build_circle' },
+    { id: 'camera-intake', label: 'Camera Intake', icon: 'videocam' },
     { id: 'users', label: 'Users & Accounts', icon: 'group' },
   ];
 
@@ -144,6 +146,10 @@ export default function AdminSettings() {
 
             {activeTab === 'repair-tracker' && (
               <RepairTrackerTab />
+            )}
+
+            {activeTab === 'camera-intake' && (
+              <CameraIntakeTab />
             )}
 
             {activeTab === 'users' && (

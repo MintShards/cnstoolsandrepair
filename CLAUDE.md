@@ -116,6 +116,9 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 // product_quotes - Quote requests from /products (PQ-YYYY-XXXX, no prices)
 // brands - Brand logos for carousel (has 'authorized' field for classification)
 // industries_page_content - Industries page content (singleton document with hero + industries array)
+// camera_intake_config - Hathorn camera option lists (singleton: included_options, condition_options,
+//                        final_checklist). Edited in Admin Settings → Camera Intake; the repairs
+//                        router re-reads final_checklist on every status change (Ready gate).
 // settings - Business settings (singleton document)
 // gallery - Photo gallery
 // users - Admin authentication
@@ -240,6 +243,13 @@ library_brands → library_models → library_parts
 - Single document in `service_agreement` collection
 - Used by `PrintWorkOrder.jsx` to print terms on work orders
 
+### Hathorn Camera Intake (Repair Tracker)
+- Trigger: tool brand matches `/hathorn/i` (hardcoded). A Hathorn tool hides the generic Model Number + Serial Number fields; identity lives on three component pairs — `camera_head_model/_serial`, `controller_model/_serial`, `rod_holder_model/_serial` — because customers bring any mix (reel only, head only…). Backend `require_identity` validator: non-Hathorn needs `model_number`; Hathorn needs ≥1 component field.
+- Option lists (Included With Unit, Condition At Intake, Final Test Checklist) come from `camera_intake_config` via `GET/PUT /api/camera-intake-config/` (staff read / admin write), edited in Admin Settings → Camera Intake. Frontend caches one fetch per page load (`utils/cameraIntake.js`); defaults live in `app/models/camera_intake.py` + mirrored in that util.
+- Ready gate: a Hathorn tool can't move to `ready` until every configured final-checklist item is ticked (`hathorn_ready_blockers` in models/repair.py; enforced in single + batch status routes, list re-read from DB per request). Empty configured list = gate off.
+- Parts library: component models are matched/auto-created as library models (`syncPartsToLibrary`), suggested parts merge across all filled component models, and `model-repair-counts` credits each component model. `toolDisplayTitle()` (ToolForm) renders titles when `model_number` is null.
+- Other Hathorn fields: rod lengths (received/cut/remaining), odometer in/out (`counter_at_intake/_after_repair`), all printed on the tool tag + work order. Serial-history (`GET /api/repairs/serial-history`) matches component serials for returning-unit badges.
+
 ### Tools for Sale (Products)
 - Public page: `/products` (`/tools-for-sale` redirects there). Managed in Admin Settings → Tools for Sale.
 - Routers: `routers/products.py` (`/api/products`, admin-guarded writes) and `routers/product_quotes.py` (`/api/product-quotes`)
@@ -300,7 +310,7 @@ VITE_API_URL=http://localhost:8000
 - **Roles**: `admin` (everything) · `staff` (Repair Tracker + Workspace + sales routes; no CMS, no account management) · `technician` (Repair Tracker + Workspace only — no sales area) · `sales` (sales area only, rep-scoped). Backend guards: `require_admin`, `require_staff_or_admin` (staff/technician/admin), `require_sales_or_admin` (sales/staff/admin — NOT technician). Frontend guard: `components/RequireRole.jsx`.
 - **User creation**: admins via `python scripts/create_admin.py` or Admin Settings → Users & Accounts (`/admin/settings?tab=users` — one table for all four roles). Admins can switch ANY account to any role, including across the shop/sales boundary, via `PATCH /api/auth/users/{id}/role` (guards: no self-change, last active admin keeps admin). The Workspace has no Staff section — own-password change lives behind the key button in its sidebar; the sales dashboard has no account management.
 - **Needs Attention panel** (Workspace → All Tasks, below the board): live to-do queues DERIVED from repair tool statuses + due route follow-ups via `GET /api/repairs/attention` — never stored as task rows, so they can't drift from the tracker. Rows are work orders (multi-tool jobs collapse to one row). Five queues in shop priority order: Ready for pickup (`ready`+`invoiced`), Waiting for approval (`quoted`), Stuck (stalled jobs in statuses WITHOUT their own queue — diagnosed/approved/parts_pending/in_repair — so nothing lists twice; displayed queues show stuckness as red ages), Needs diagnosis (`received`), Follow-ups due. Queue rows escalate into real assigned tasks via TaskFormModal's `defaultTitle`/`defaultWorkOrder` props. Stuck = no status change in `business_settings.stale_days` (same threshold as the tracker dashboard).
-- **Settings tabs** (`/admin/settings`, `?tab=` deep-linkable): Home, Services, Industries, Tools for Sale, Gallery, About, Contact, Global, Repair Tracker, Users & Accounts (staff/admin + sales rep CRUD — the only account-management surface)
+- **Settings tabs** (`/admin/settings`, `?tab=` deep-linkable): Home, Services, Industries, Tools for Sale, Gallery, About, Contact, Global, Repair Tracker, Camera Intake (Hathorn option lists — see camera_intake_config), Users & Accounts (staff/admin + sales rep CRUD — the only account-management surface)
 - **Services vs Tools**:
   - Services: Array in settings collection (no IDs)
   - Tools: Separate collection with CRUD API (categorized, soft-delete)
