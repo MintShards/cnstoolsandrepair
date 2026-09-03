@@ -923,7 +923,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* flex-wrap: the cluster grew (Returning unit + QC)
+                              and a fixed-width row overflowed the dialog at
+                              tablet sizes and clipped on phones */}
+                          <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
                             {returningMap[tool.tool_id] && (
                               <div className="relative">
                                 <button
