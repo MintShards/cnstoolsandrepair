@@ -70,6 +70,9 @@ function getStyles(prefix) {
     ${p}.badge.warranty { background: #fff; color: #000; border-color: #000; }
     ${p}.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
     ${p}.remarks { margin-bottom: 8px; line-height: 1.5; font-size: 11px; }
+    ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
+    ${p}.camera-line { font-size: 11px; line-height: 1.5; }
+    ${p}.camera-label { display: inline-block; margin-right: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
     ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: auto; }
     ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: auto; word-break: break-word; }
     ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { white-space: nowrap; }
@@ -146,6 +149,21 @@ function buildBody(job, businessInfo, serviceAgreement) {
         </tr>
       `;
     }).join('');
+    // Hathorn camera intake — pushrod footage and the accessories that came
+    // in, so the signed work order records both before and after the cut.
+    const rodBits = [
+      tool.rod_length_received != null ? `${tool.rod_length_received} ft received` : '',
+      tool.rod_length_cut != null ? `${tool.rod_length_cut} ft cut` : '',
+      tool.rod_length_remaining != null ? `<strong>${tool.rod_length_remaining} ft remaining</strong>` : '',
+    ].filter(Boolean).join(' · ');
+    const includedItems = (tool.included_items || []).filter(Boolean);
+    const cameraHTML = (rodBits || includedItems.length) ? `
+      <div class="camera-intake">
+        ${rodBits ? `<div class="camera-line"><span class="camera-label">Pushrod</span>${rodBits}</div>` : ''}
+        ${includedItems.length ? `<div class="camera-line"><span class="camera-label">Included with unit</span>${includedItems.map(i => escHtml(i)).join(', ')}</div>` : ''}
+      </div>
+    ` : '';
+
     const partsTotal = filteredParts.filter(p => p.price != null && p.price !== '').reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
     const partsTotalRow = filteredParts.length > 0 && partsTotal > 0 ? `
       <tr style="border-top:2px solid #e2e8f0;font-weight:700;">
@@ -182,6 +200,8 @@ function buildBody(job, businessInfo, serviceAgreement) {
           </div>
           <div class="field-group"><div class="field-label">Zoho Ref</div><div>${tool.zoho_ref ? escHtml(tool.zoho_ref) : '—'}</div></div>
         </div>
+
+        ${cameraHTML}
 
         ${partsRows ? `
           <table class="parts-table">

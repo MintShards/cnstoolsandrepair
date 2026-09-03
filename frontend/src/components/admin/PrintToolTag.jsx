@@ -52,6 +52,23 @@ function buildTagHTML(job, toolItem, toolIndex) {
     ? `<div class="section"><div class="label">REMARKS</div><div class="remarks-text">${escHtml(toolItem.remarks.toUpperCase())}</div></div>`
     : '';
 
+  // Hathorn camera intake: pushrod footage and what arrived with the unit.
+  // The tag travels with the tool, so this is the checklist at pickup.
+  const rodBits = [
+    toolItem.rod_length_received != null ? `RECV ${toolItem.rod_length_received} FT` : '',
+    toolItem.rod_length_cut != null ? `CUT ${toolItem.rod_length_cut} FT` : '',
+    toolItem.rod_length_remaining != null ? `REM ${toolItem.rod_length_remaining} FT` : '',
+  ].filter(Boolean).join(' · ');
+  const rodHTML = rodBits ? `<div class="rod-line">ROD: ${rodBits}</div>` : '';
+
+  const included = (toolItem.included_items || []).filter(Boolean);
+  const includesHTML = included.length
+    ? `<div class="section">
+        <div class="label">INCLUDED WITH UNIT (${included.length})</div>
+        <div class="includes-line">${included.map(i => escHtml(i.toUpperCase())).join(', ')}</div>
+      </div>`
+    : '';
+
   return `
     <div class="tag">
       <!-- Main content -->
@@ -65,6 +82,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
             <div class="section">
               <div class="value">${escHtml((toolItem.brand || '').toUpperCase())} ${escHtml((toolItem.model_number || '').toUpperCase())}</div>
               <div class="value">${escHtml((toolItem.tool_type || '').toUpperCase())}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number.toUpperCase())}` : ''}</div>
+              ${rodHTML}
             </div>
           </div>
           <div class="right-col">
@@ -90,6 +108,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
         </div>
 
         ${remarksHTML}
+        ${includesHTML}
 
         <div class="section parts-section">
           <div class="label">PARTS NEEDED</div>
@@ -240,6 +259,17 @@ function getTagStyles(prefix) {
       flex-shrink: 0;
     }
     ${p}.part-name { flex: 1; }
+    ${p}.rod-line {
+      font-size: 8px;
+      font-weight: 700;
+      margin-top: 2px;
+      letter-spacing: 0.02em;
+    }
+    ${p}.includes-line {
+      font-size: 8px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
     ${p}.part-num {
       font-size: 7px;
       color: #777;
