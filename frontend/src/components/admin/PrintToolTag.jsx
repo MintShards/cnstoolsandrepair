@@ -64,6 +64,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
   const compBits = [
     toolItem.camera_head_serial ? `HEAD ${escHtml(toolItem.camera_head_serial.toUpperCase())}` : '',
     toolItem.controller_serial ? `CTRL ${escHtml(toolItem.controller_serial.toUpperCase())}` : '',
+    toolItem.rod_holder_serial ? `HOLDER ${escHtml(toolItem.rod_holder_serial.toUpperCase())}` : '',
   ].filter(Boolean).join(' · ');
   const compHTML = compBits ? `<div class="rod-line">${compBits}</div>` : '';
 

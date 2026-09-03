@@ -9,7 +9,7 @@ const EMPTY_TOOL_BASE = {
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
   zoho_ref: '', assigned_technician: '', estimated_completion: '',
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
-  camera_head_serial: '', controller_serial: '',
+  camera_head_serial: '', controller_serial: '', rod_holder_serial: '',
   counter_at_intake: '', counter_after_repair: '',
   intake_condition: [],
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
@@ -459,11 +459,16 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <input required value={data.tool_type || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('tool_type', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 placeholder="e.g., Impact Wrench" className={inputCls} />
             </div>
-            <div>
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Serial Number</label>
-              <input value={data.serial_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('serial_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                placeholder="Optional" className={inputCls} />
-            </div>
+            {/* For Hathorn the three component serials in the panel below
+                replace this — one generic serial can't identify a
+                three-component system */}
+            {!isHathorn && (
+              <div>
+                <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Serial Number</label>
+                <input value={data.serial_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('serial_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                  placeholder="Optional" className={inputCls} />
+              </div>
+            )}
 
             {/* Hathorn camera intake — only when the brand says so */}
             {isHathorn && (
@@ -472,9 +477,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   Hathorn Camera Intake
                 </p>
 
-                {/* Component serial numbers — the reel's serial lives in the
-                    main Serial Number field above */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* One serial per component — these replace the generic
+                    Serial Number field for camera systems */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Camera Head S/N</label>
                     <input value={data.camera_head_serial || ''}
@@ -485,6 +490,12 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Controller S/N</label>
                     <input value={data.controller_serial || ''}
                       onChange={(e) => { const pos = e.target.selectionStart; handleChange('controller_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                      placeholder="Optional" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Pushrod Holder S/N</label>
+                    <input value={data.rod_holder_serial || ''}
+                      onChange={(e) => { const pos = e.target.selectionStart; handleChange('rod_holder_serial', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                       placeholder="Optional" className={inputCls} />
                   </div>
                 </div>

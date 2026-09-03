@@ -148,10 +148,12 @@ class ToolItemCreate(BaseModel):
     rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_cut: Optional[float] = Field(None, ge=0, le=1000)
     rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
-    # A camera system is three serialized components. serial_number above is
-    # the unit/reel; these identify the head and controller that came with it.
+    # A camera system is three serialized components: the head, the
+    # controller, and the pushrod holder (reel). For Hathorn tools these
+    # replace the generic serial_number field, which the form hides.
     camera_head_serial: Optional[str] = Field(None, max_length=100)
     controller_serial: Optional[str] = Field(None, max_length=100)
+    rod_holder_serial: Optional[str] = Field(None, max_length=100)
     # CCU footage counter — the odometer. Read at intake (usage proof) and
     # after recalibration once the rod has been cut.
     counter_at_intake: Optional[float] = Field(None, ge=0, le=100000)
@@ -191,7 +193,7 @@ class ToolItemCreate(BaseModel):
             return None
         return v
 
-    @field_validator('camera_head_serial', 'controller_serial', mode='before')
+    @field_validator('camera_head_serial', 'controller_serial', 'rod_holder_serial', mode='before')
     @classmethod
     def empty_serial_to_none(cls, v):
         if v == '' or v is None:
@@ -230,6 +232,7 @@ class ToolItemUpdate(BaseModel):
     rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
     camera_head_serial: Optional[str] = Field(None, max_length=100)
     controller_serial: Optional[str] = Field(None, max_length=100)
+    rod_holder_serial: Optional[str] = Field(None, max_length=100)
     counter_at_intake: Optional[float] = Field(None, ge=0, le=100000)
     counter_after_repair: Optional[float] = Field(None, ge=0, le=100000)
     intake_condition: Optional[List[str]] = Field(None, max_length=40)
@@ -264,7 +267,7 @@ class ToolItemUpdate(BaseModel):
             return None
         return v
 
-    @field_validator('camera_head_serial', 'controller_serial', mode='before')
+    @field_validator('camera_head_serial', 'controller_serial', 'rod_holder_serial', mode='before')
     @classmethod
     def empty_serial_to_none(cls, v):
         if v == '' or v is None:
@@ -327,6 +330,7 @@ class ToolItemResponse(BaseModel):
     rod_length_remaining: Optional[float] = None
     camera_head_serial: Optional[str] = None
     controller_serial: Optional[str] = None
+    rod_holder_serial: Optional[str] = None
     counter_at_intake: Optional[float] = None
     counter_after_repair: Optional[float] = None
     intake_condition: List[str] = Field(default_factory=list)

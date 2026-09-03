@@ -161,6 +161,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
     const compBits = [
       tool.camera_head_serial ? `Head S/N ${escHtml(tool.camera_head_serial.toUpperCase())}` : '',
       tool.controller_serial ? `Controller S/N ${escHtml(tool.controller_serial.toUpperCase())}` : '',
+      tool.rod_holder_serial ? `Pushrod Holder S/N ${escHtml(tool.rod_holder_serial.toUpperCase())}` : '',
       tool.counter_at_intake != null ? `Odometer in ${tool.counter_at_intake} ft` : '',
       tool.counter_after_repair != null ? `Odometer out ${tool.counter_after_repair} ft` : '',
     ].filter(Boolean).join(' · ');

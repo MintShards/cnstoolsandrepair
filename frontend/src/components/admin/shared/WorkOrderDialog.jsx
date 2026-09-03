@@ -384,6 +384,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       rod_length_remaining: tool.rod_length_remaining ?? '',
       camera_head_serial: (tool.camera_head_serial || '').toUpperCase(),
       controller_serial: (tool.controller_serial || '').toUpperCase(),
+      rod_holder_serial: (tool.rod_holder_serial || '').toUpperCase(),
       counter_at_intake: tool.counter_at_intake ?? '',
       counter_after_repair: tool.counter_after_repair ?? '',
       intake_condition: tool.intake_condition || [],
@@ -845,14 +846,22 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 {retailPriceMap[tool.tool_id] != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Retail: ${parseFloat(retailPriceMap[tool.tool_id]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
-                              {(tool.camera_head_serial || tool.controller_serial || tool.counter_at_intake != null || tool.counter_after_repair != null) && (
-                                <div className="text-sm text-slate-500 mt-0.5">
-                                  {tool.camera_head_serial && <>Head S/N: {tool.camera_head_serial.toUpperCase()}</>}
-                                  {tool.controller_serial && <>{tool.camera_head_serial && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Ctrl S/N: {tool.controller_serial.toUpperCase()}</>}
-                                  {tool.counter_at_intake != null && <>{(tool.camera_head_serial || tool.controller_serial) && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Odometer in: {tool.counter_at_intake} ft</>}
-                                  {tool.counter_after_repair != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>out: {tool.counter_after_repair} ft</>}
-                                </div>
-                              )}
+                              {(() => {
+                                const bits = [
+                                  tool.camera_head_serial && `Head S/N: ${tool.camera_head_serial.toUpperCase()}`,
+                                  tool.controller_serial && `Ctrl S/N: ${tool.controller_serial.toUpperCase()}`,
+                                  tool.rod_holder_serial && `Holder S/N: ${tool.rod_holder_serial.toUpperCase()}`,
+                                  tool.counter_at_intake != null && `Odometer in: ${tool.counter_at_intake} ft`,
+                                  tool.counter_after_repair != null && `out: ${tool.counter_after_repair} ft`,
+                                ].filter(Boolean);
+                                return bits.length > 0 && (
+                                  <div className="text-sm text-slate-500 mt-0.5">
+                                    {bits.map((b, i) => (
+                                      <span key={b}>{i > 0 && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}{b}</span>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                               {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && (
                                 <div className="text-sm text-slate-500 mt-0.5">
                                   Rod:{tool.rod_length_received != null && <> {tool.rod_length_received} ft received</>}
