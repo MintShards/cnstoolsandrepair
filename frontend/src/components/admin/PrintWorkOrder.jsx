@@ -164,16 +164,10 @@ function buildBody(job, businessInfo, serviceAgreement) {
       tool.counter_at_intake != null ? `Counter in ${tool.counter_at_intake} ft` : '',
       tool.counter_after_repair != null ? `Counter out ${tool.counter_after_repair} ft` : '',
     ].filter(Boolean).join(' · ');
-    const testBits = tool.pressure_test_result
-      ? `<strong style="color:${tool.pressure_test_result === 'pass' ? '#15803d' : '#b91c1c'};">${escHtml(tool.pressure_test_result.toUpperCase())}</strong>${
-          tool.pressure_test_psi != null ? ` @ ${tool.pressure_test_psi} psi` : ''}${
-          tool.pressure_test_minutes != null ? ` held ${tool.pressure_test_minutes} min` : ''}`
-      : '';
-    const cameraHTML = (rodBits || includedItems.length || compBits || testBits || conditionItems.length) ? `
+    const cameraHTML = (rodBits || includedItems.length || compBits || conditionItems.length) ? `
       <div class="camera-intake">
         ${compBits ? `<div class="camera-line"><span class="camera-label">Components</span>${compBits}</div>` : ''}
         ${rodBits ? `<div class="camera-line"><span class="camera-label">Pushrod</span>${rodBits}</div>` : ''}
-        ${testBits ? `<div class="camera-line"><span class="camera-label">Pressure test</span>${testBits}</div>` : ''}
         ${conditionItems.length ? `<div class="camera-line"><span class="camera-label">Condition at intake</span>${conditionItems.map(i => escHtml(i)).join(', ')}</div>` : ''}
         ${includedItems.length ? `<div class="camera-line"><span class="camera-label">Included with unit</span>${includedItems.map(i => escHtml(i)).join(', ')}</div>` : ''}
       </div>

@@ -386,9 +386,6 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       controller_serial: (tool.controller_serial || '').toUpperCase(),
       counter_at_intake: tool.counter_at_intake ?? '',
       counter_after_repair: tool.counter_after_repair ?? '',
-      pressure_test_psi: tool.pressure_test_psi ?? '',
-      pressure_test_minutes: tool.pressure_test_minutes ?? '',
-      pressure_test_result: tool.pressure_test_result || '',
       intake_condition: tool.intake_condition || [],
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
@@ -856,21 +853,11 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                   {tool.counter_after_repair != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>out: {tool.counter_after_repair} ft</>}
                                 </div>
                               )}
-                              {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null || tool.pressure_test_result) && (
+                              {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && (
                                 <div className="text-sm text-slate-500 mt-0.5">
-                                  {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && <>Rod:</>}
-                                  {tool.rod_length_received != null && <> {tool.rod_length_received} ft received</>}
+                                  Rod:{tool.rod_length_received != null && <> {tool.rod_length_received} ft received</>}
                                   {tool.rod_length_cut != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>{tool.rod_length_cut} ft cut</>}
                                   {tool.rod_length_remaining != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span><span className="font-medium text-slate-600 dark:text-slate-300">{tool.rod_length_remaining} ft remaining</span></>}
-                                  {tool.pressure_test_result && (
-                                    <>
-                                      {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}
-                                      <span className={`font-bold ${tool.pressure_test_result === 'pass' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        {tool.pressure_test_result === 'pass' ? 'TEST PASS' : 'TEST FAIL'}
-                                      </span>
-                                      {tool.pressure_test_psi != null && <> @ {tool.pressure_test_psi} psi{tool.pressure_test_minutes != null && <> / {tool.pressure_test_minutes} min</>}</>}
-                                    </>
-                                  )}
                                 </div>
                               )}
                               {tool.intake_condition?.length > 0 && (

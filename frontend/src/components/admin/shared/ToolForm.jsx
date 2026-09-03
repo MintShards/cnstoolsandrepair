@@ -11,7 +11,6 @@ const EMPTY_TOOL_BASE = {
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   camera_head_serial: '', controller_serial: '',
   counter_at_intake: '', counter_after_repair: '',
-  pressure_test_psi: '', pressure_test_minutes: '', pressure_test_result: '',
   intake_condition: [],
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
@@ -518,32 +517,6 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     <input type="number" min="0" step="1" value={data.counter_after_repair ?? ''}
                       onChange={(e) => handleChange('counter_after_repair', e.target.value)}
                       placeholder="After recalibration" className={inputCls} />
-                  </div>
-                </div>
-
-                {/* Head pressure test after termination / lens work */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Pressure Test (psi)</label>
-                    <input type="number" min="0" step="0.5" value={data.pressure_test_psi ?? ''}
-                      onChange={(e) => handleChange('pressure_test_psi', e.target.value)}
-                      placeholder="e.g., 10" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Held For (min)</label>
-                    <input type="number" min="0" step="1" value={data.pressure_test_minutes ?? ''}
-                      onChange={(e) => handleChange('pressure_test_minutes', e.target.value)}
-                      placeholder="e.g., 15" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Result</label>
-                    <select value={data.pressure_test_result || ''}
-                      onChange={(e) => handleChange('pressure_test_result', e.target.value)}
-                      className={inputCls}>
-                      <option value="">Not tested</option>
-                      <option value="pass">Pass</option>
-                      <option value="fail">Fail</option>
-                    </select>
                   </div>
                 </div>
 

@@ -67,12 +67,6 @@ function buildTagHTML(job, toolItem, toolIndex) {
   ].filter(Boolean).join(' · ');
   const compHTML = compBits ? `<div class="rod-line">${compBits}</div>` : '';
 
-  const testHTML = toolItem.pressure_test_result
-    ? `<div class="rod-line">TEST: ${escHtml(toolItem.pressure_test_result.toUpperCase())}${
-        toolItem.pressure_test_psi != null ? ` · ${toolItem.pressure_test_psi} PSI` : ''}${
-        toolItem.pressure_test_minutes != null ? ` · ${toolItem.pressure_test_minutes} MIN` : ''}</div>`
-    : '';
-
   const included = (toolItem.included_items || []).filter(Boolean);
   const includesHTML = included.length
     ? `<div class="section">
@@ -96,7 +90,6 @@ function buildTagHTML(job, toolItem, toolIndex) {
               <div class="value">${escHtml((toolItem.tool_type || '').toUpperCase())}${toolItem.serial_number ? ` · S/N: ${escHtml(toolItem.serial_number.toUpperCase())}` : ''}</div>
               ${compHTML}
               ${rodHTML}
-              ${testHTML}
             </div>
           </div>
           <div class="right-col">
