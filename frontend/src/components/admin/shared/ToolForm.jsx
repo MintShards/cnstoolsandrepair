@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { suppliersAPI, staffAPI, partsLibraryAPI, repairsAPI } from '../../../services/api';
 import { getTodayPacific } from '../../../utils/dateFormat';
 
@@ -641,7 +642,16 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 <ul className="mt-2 space-y-1">
                   {serialHistory.slice(0, 4).map((m) => (
                     <li key={`${m.job_id}-${m.tool_id}`} className="text-sm text-slate-600 dark:text-slate-300">
-                      <span className="font-mono font-bold">{m.work_order}</span>
+                      {/* Mid-wizard the draft isn't saved yet, so history opens
+                          in a new browser tab; in the edit dialog the same URL
+                          just swaps the open work order. */}
+                      {isNewJobForm ? (
+                        <a href={`/admin/repair-tracker?tab=jobs&job=${m.job_id}`} target="_blank" rel="noopener noreferrer"
+                          className="font-mono font-bold text-primary hover:underline">{m.work_order}</a>
+                      ) : (
+                        <Link to={`/admin/repair-tracker?tab=jobs&job=${m.job_id}`}
+                          className="font-mono font-bold text-primary hover:underline">{m.work_order}</Link>
+                      )}
                       {' · '}{m.company_name || m.customer_name}
                       {' · '}{(m.brand || '')} {(m.model_number || '')}
                       {' · '}{m.status}

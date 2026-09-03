@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { repairsAPI, customersAPI, partsLibraryAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import {
@@ -76,13 +76,18 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [addToolForm, setAddToolForm] = useState(null);
   const [addingTool, setAddingTool] = useState(false);
   const [editingToolId, setEditingToolId] = useState(null);
+  const navigate = useNavigate();
 
   // Returning-unit badges: for each tool with serials, has this exact unit
-  // (or one of its Hathorn components) been on the bench before?
+  // (or one of its Hathorn components) been on the bench before? Clicking
+  // the badge lists the visits; each row jumps to that work order via the
+  // ?job= URL param, so the dialog simply swaps to the old job.
   const [returningMap, setReturningMap] = useState({});
+  const [returningOpenFor, setReturningOpenFor] = useState(null);
   useEffect(() => {
     if (!job?.id) return undefined;
     let alive = true;
+    setReturningOpenFor(null);
     (async () => {
       const entries = await Promise.all((job.tools || []).map(async (t) => {
         const serials = [t.serial_number, t.camera_head_serial, t.controller_serial, t.rod_holder_serial]
@@ -94,7 +99,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
           if (!ms.length) return [t.tool_id, null];
           const warranty = ms.some((m) => m.date_completed
             && (Date.now() - new Date(m.date_completed).getTime()) / 86400000 <= 90);
-          return [t.tool_id, { count: ms.length, warranty, last: ms[0]?.work_order }];
+          return [t.tool_id, { count: ms.length, warranty, matches: ms }];
         } catch { return [t.tool_id, null]; }
       }));
       if (alive) setReturningMap(Object.fromEntries(entries.filter((e) => e[1])));
@@ -920,18 +925,43 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {returningMap[tool.tool_id] && (
-                              <span
-                                title={returningMap[tool.tool_id].warranty
-                                  ? `Completed within the 3-month warranty window — see ${returningMap[tool.tool_id].last}`
-                                  : `${returningMap[tool.tool_id].count} previous visit${returningMap[tool.tool_id].count !== 1 ? 's' : ''} — last was ${returningMap[tool.tool_id].last}`}
-                                className={`px-2.5 py-1 rounded-full text-sm font-bold border ${
-                                  returningMap[tool.tool_id].warranty
-                                    ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700/50'
-                                    : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
-                                }`}
-                              >
-                                {returningMap[tool.tool_id].warranty ? 'Warranty window' : 'Returning unit'}
-                              </span>
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setReturningOpenFor(returningOpenFor === tool.tool_id ? null : tool.tool_id)}
+                                  onBlur={() => setTimeout(() => setReturningOpenFor((cur) => (cur === tool.tool_id ? null : cur)), 200)}
+                                  title={`${returningMap[tool.tool_id].count} previous visit${returningMap[tool.tool_id].count !== 1 ? 's' : ''} — click to view`}
+                                  className={`px-2.5 py-1 rounded-full text-sm font-bold border transition-shadow hover:shadow ${
+                                    returningMap[tool.tool_id].warranty
+                                      ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700/50'
+                                      : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
+                                  }`}
+                                >
+                                  {returningMap[tool.tool_id].warranty ? 'Warranty window' : 'Returning unit'}
+                                </button>
+                                {returningOpenFor === tool.tool_id && (
+                                  <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl overflow-hidden">
+                                    <p className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                      Previous visits
+                                    </p>
+                                    {returningMap[tool.tool_id].matches.slice(0, 6).map((m) => (
+                                      <button
+                                        key={`${m.job_id}-${m.tool_id}`}
+                                        type="button"
+                                        onMouseDown={() => navigate(`/admin/repair-tracker?tab=jobs&job=${m.job_id}`)}
+                                        className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
+                                      >
+                                        <span className="font-mono font-bold text-sm text-primary">{m.work_order}</span>
+                                        <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                          {m.company_name || m.customer_name} · {m.status}
+                                          {m.date_completed && ` · ${new Date(m.date_completed).toLocaleDateString('en-CA')}`}
+                                          {' · matched '}{m.matched_serials.join(', ')}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             )}
                             {/hathorn/i.test(tool.brand || '') && (() => {
                               const done = new Set((tool.final_checklist || []).map((i) => i.toLowerCase()));
