@@ -850,8 +850,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
             <span className="material-symbols-outlined text-base">checklist</span>
           </button>
         </div>
-        {/* Desktop: single row, full labels */}
-        <div className="hidden sm:flex items-center gap-3">
+        {/* Desktop: full labels. flex-wrap matters — the row's minimum widths
+            total ~880px, which at tablet sizes stretched the whole page and
+            dragged every w-full element (table included) past the viewport */}
+        <div className="hidden sm:flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg pointer-events-none">search</span>
             <input
