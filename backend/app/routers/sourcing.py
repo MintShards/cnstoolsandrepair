@@ -49,7 +49,14 @@ async def get_sourcing_queue(
             tool_id = tool.get("tool_id", str(tool_idx))
             tool_type = tool.get("tool_type", "Unknown")
             tool_brand = tool.get("brand", None)
-            tool_model = tool.get("model_number", None)
+            # Hathorn camera tools have no generic model_number — identity
+            # lives on the component models, so the queue row falls back to
+            # them (controller / holder / head, the intake form's order).
+            tool_model = tool.get("model_number") or " / ".join(
+                m for m in [tool.get("controller_model"),
+                            tool.get("rod_holder_model"),
+                            tool.get("camera_head_model")] if m
+            ) or None
 
             for part_idx, part in enumerate(tool.get("parts", [])):
                 if part.get("needs_sourcing", False):
