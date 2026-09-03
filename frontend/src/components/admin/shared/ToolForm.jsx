@@ -23,11 +23,14 @@ export const HATHORN_INCLUDED_OPTIONS = [
 ];
 
 // Power-on condition observed at intake — the answer to "it worked fine
-// before you had it" is written down before the bench touches it.
+// before you had it" is written down before the bench touches it. The bump
+// test (tap the head, watch for image flicker) catches intermittents that a
+// static check misses.
 export const HATHORN_CONDITION_OPTIONS = [
   'Powers On', 'No Power', 'Image OK', 'Image Cloudy', 'No Image',
+  'Bump Test OK', 'Bump Test Fails',
   'LEDs OK', 'LEDs Dim / Dead', 'Sonde Transmits', 'Sonde Dead',
-  'Counter Works', 'Counter Faulty',
+  'Odometer Works', 'Odometer Faulty',
 ];
 
 // Multi-select dropdown with checkbox rows, a free-text "other" entry and
@@ -504,16 +507,17 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   inputCls={inputCls}
                 />
 
-                {/* Footage counter — the odometer, before and after recalibration */}
+                {/* Footage odometer — training calls it that, so the label does
+                    too (the API field is still counter_at_intake underneath) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Counter At Intake (ft)</label>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Odometer At Intake (ft)</label>
                     <input type="number" min="0" step="1" value={data.counter_at_intake ?? ''}
                       onChange={(e) => handleChange('counter_at_intake', e.target.value)}
                       placeholder="e.g., 1240" className={inputCls} />
                   </div>
                   <div>
-                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Counter After Repair (ft)</label>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Odometer After Repair (ft)</label>
                     <input type="number" min="0" step="1" value={data.counter_after_repair ?? ''}
                       onChange={(e) => handleChange('counter_after_repair', e.target.value)}
                       placeholder="After recalibration" className={inputCls} />

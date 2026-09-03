@@ -849,7 +849,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 <div className="text-sm text-slate-500 mt-0.5">
                                   {tool.camera_head_serial && <>Head S/N: {tool.camera_head_serial.toUpperCase()}</>}
                                   {tool.controller_serial && <>{tool.camera_head_serial && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Ctrl S/N: {tool.controller_serial.toUpperCase()}</>}
-                                  {tool.counter_at_intake != null && <>{(tool.camera_head_serial || tool.controller_serial) && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Counter in: {tool.counter_at_intake} ft</>}
+                                  {tool.counter_at_intake != null && <>{(tool.camera_head_serial || tool.controller_serial) && <span className="mx-1 text-slate-500 dark:text-slate-700">·</span>}Odometer in: {tool.counter_at_intake} ft</>}
                                   {tool.counter_after_repair != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>out: {tool.counter_after_repair} ft</>}
                                 </div>
                               )}

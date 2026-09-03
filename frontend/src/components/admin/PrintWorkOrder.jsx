@@ -161,8 +161,8 @@ function buildBody(job, businessInfo, serviceAgreement) {
     const compBits = [
       tool.camera_head_serial ? `Head S/N ${escHtml(tool.camera_head_serial.toUpperCase())}` : '',
       tool.controller_serial ? `Controller S/N ${escHtml(tool.controller_serial.toUpperCase())}` : '',
-      tool.counter_at_intake != null ? `Counter in ${tool.counter_at_intake} ft` : '',
-      tool.counter_after_repair != null ? `Counter out ${tool.counter_after_repair} ft` : '',
+      tool.counter_at_intake != null ? `Odometer in ${tool.counter_at_intake} ft` : '',
+      tool.counter_after_repair != null ? `Odometer out ${tool.counter_after_repair} ft` : '',
     ].filter(Boolean).join(' · ');
     const cameraHTML = (rodBits || includedItems.length || compBits || conditionItems.length) ? `
       <div class="camera-intake">
