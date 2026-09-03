@@ -22,8 +22,10 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Desktop Navigation - Hidden on mobile */}
-        <nav className="hidden lg:flex items-center lg:gap-4 xl:gap-6">
+        {/* Desktop Navigation — from xl up. At lg (1024) eight links plus the
+            toggle and button only fit by shrinking: the logo touched Home and
+            GET REPAIR wrapped to two lines, so tablets keep the hamburger. */}
+        <nav className="hidden xl:flex items-center gap-6">
           <Link
             to="/"
             className={`font-semibold uppercase text-sm transition-colors ${
@@ -46,7 +48,10 @@ export default function Header() {
               isActive('/products') ? 'text-primary' : 'hover:text-primary'
             }`}
           >
-            Tools for Sale
+            {/* "Tools for Sale" overflows the nav at exactly lg (1024px) —
+                the logo hits HOME and the label wraps. The page hero still
+                carries the full wording. */}
+            Products
           </Link>
           <Link
             to="/industries"
@@ -81,13 +86,13 @@ export default function Header() {
             Contact
           </Link>
           <ThemeToggle />
-          <Link to="/repair-request" className="inline-block bg-primary text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
+          <Link to="/repair-request" className="inline-block whitespace-nowrap bg-primary text-white text-sm font-bold px-6 py-3 rounded-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 active:scale-95 transition-all uppercase">
             Get Repair
           </Link>
         </nav>
 
         {/* Mobile Navigation Toggle - Hidden on desktop */}
-        <div className="flex lg:hidden items-center gap-2">
+        <div className="flex xl:hidden items-center gap-2">
           <Link to="/repair-request" className="inline-block bg-primary text-white text-xs font-bold px-2.5 min-[400px]:px-3 py-2.5 rounded-lg shadow-md active:scale-95 transition-transform uppercase">
             Repair
           </Link>
@@ -138,7 +143,7 @@ export default function Header() {
               }`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Tools for Sale
+              Products
             </Link>
             <Link
               to="/industries"

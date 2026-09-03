@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { productsAPI, productQuotesAPI, productsContentAPI } from '../services/api';
 import DualCTA from '../components/sections/DualCTA';
@@ -204,15 +204,53 @@ export default function Products() {
     });
   }, []);
 
-  // Escape-close and scroll lock while the quote panel is open
+  // Escape-close, scroll lock and keyboard focus while the quote panel is
+  // open: focus moves into the panel, Tab wraps inside it, and closing hands
+  // focus back to whatever opened it. Without this a keyboard or screen
+  // reader user keeps tabbing through the catalogue hidden behind the modal.
+  const panelRef = useRef(null);
   useEffect(() => {
     if (!panelOpen) return;
-    const onKeyDown = (e) => e.key === 'Escape' && setPanelOpen(false);
+    const opener = document.activeElement;
+    panelRef.current?.focus();
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setPanelOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const focusable = [
+        ...panelRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ),
+      ].filter((el) => !el.disabled && el.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      // Wrap at the edges; also pull focus in if it's still outside the panel
+      if (e.shiftKey && (document.activeElement === first || !panelRef.current.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !panelRef.current.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
     document.addEventListener('keydown', onKeyDown);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = '';
+      // The floating button unmounts in the same commit that opens the panel,
+      // so by the time this effect captured activeElement it was already
+      // <body> — treat that as "no opener" and focus the remounted button.
+      if (opener && opener !== document.body && opener.isConnected) {
+        opener.focus?.();
+      } else {
+        document.querySelector('[data-quote-fab]')?.focus();
+      }
     };
   }, [panelOpen]);
 
@@ -281,9 +319,11 @@ export default function Products() {
         <div className="max-w-screen-xl mx-auto">
           {/* Hero */}
           <div className="text-center mb-10 lg:mb-14">
-            <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
+            {/* Decorative eyebrow — a <p>, not a heading, so the document
+                outline starts at the h1 below it */}
+            <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
               {hero.label}
-            </h2>
+            </p>
             {/* The full heading wraps to two lines on a narrow phone, so the
                 shorter wording takes over there — the eyebrow above carries
                 the fuller phrase either way */}
@@ -502,6 +542,7 @@ export default function Products() {
       {basketCount > 0 && !panelOpen && (
         <button
           type="button"
+          data-quote-fab
           onClick={() => {
             setSubmitted(null);
             setPanelOpen(true);
@@ -529,7 +570,9 @@ export default function Products() {
           onClick={() => setPanelOpen(false)}
         >
           <div
-            className="w-full max-w-lg h-full overflow-y-auto bg-white dark:bg-slate-950 shadow-2xl"
+            ref={panelRef}
+            tabIndex={-1}
+            className="w-full max-w-lg h-full overflow-y-auto bg-white dark:bg-slate-950 shadow-2xl outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-5">
