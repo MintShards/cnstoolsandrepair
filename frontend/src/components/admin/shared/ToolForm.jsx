@@ -111,9 +111,11 @@ function ChecklistDropdown({ label, options, value = [], onChange, emptyText, in
           {value.map((item) => (
             <span key={item} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">
               {item}
+              {/* flex + leading-none keeps the glyph vertically centred with
+                  the label — the icon font's line-height sat it a pixel low */}
               <button type="button" onClick={() => toggleItem(item)}
-                className="text-slate-400 hover:text-red-500 transition-colors" title={`Remove ${item}`}>
-                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+                className="flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors" title={`Remove ${item}`}>
+                <span className="material-symbols-outlined leading-none" style={{ fontSize: '14px' }}>close</span>
               </button>
             </span>
           ))}
