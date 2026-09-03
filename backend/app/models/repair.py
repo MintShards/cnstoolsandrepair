@@ -139,6 +139,15 @@ class ToolItemCreate(BaseModel):
     zoho_ref: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
     photos: List[str] = Field(default_factory=list)
+    # Accessories that arrived with the unit (power cord, controller, patch
+    # cable…). Recorded at intake so what goes back out is never a dispute.
+    # Used for Hathorn camera systems today, but any tool may carry it.
+    included_items: List[str] = Field(default_factory=list, max_length=40)
+    # Pushrod lengths in feet for camera reels: measured at intake, footage
+    # cut off during re-termination, and what the customer gets back.
+    rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
+    rod_length_cut: Optional[float] = Field(None, ge=0, le=1000)
+    rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
     date_received: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("America/Vancouver")).replace(tzinfo=None))
     estimated_completion: Optional[datetime] = None
 
@@ -149,7 +158,21 @@ class ToolItemCreate(BaseModel):
             return v.strip().title()
         return v
 
-    @field_validator('labour_hours', 'hourly_rate', mode='before')
+    @field_validator('included_items', mode='before')
+    @classmethod
+    def clean_included_items(cls, v):
+        if not v:
+            return []
+        seen, out = set(), []
+        for item in v:
+            s = str(item).strip()[:100]
+            if s and s.lower() not in seen:
+                seen.add(s.lower())
+                out.append(s)
+        return out
+
+    @field_validator('labour_hours', 'hourly_rate', 'rod_length_received',
+                     'rod_length_cut', 'rod_length_remaining', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
@@ -182,6 +205,10 @@ class ToolItemUpdate(BaseModel):
     warranty: Optional[bool] = None
     zoho_ref: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
+    included_items: Optional[List[str]] = Field(None, max_length=40)
+    rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
+    rod_length_cut: Optional[float] = Field(None, ge=0, le=1000)
+    rod_length_remaining: Optional[float] = Field(None, ge=0, le=1000)
     estimated_completion: Optional[datetime] = None
 
     @field_validator('tool_type', 'brand', 'model_number', mode='before')
@@ -191,7 +218,21 @@ class ToolItemUpdate(BaseModel):
             return v.strip().title()
         return v
 
-    @field_validator('labour_hours', 'hourly_rate', mode='before')
+    @field_validator('included_items', mode='before')
+    @classmethod
+    def clean_included_items(cls, v):
+        if v is None:
+            return None
+        seen, out = set(), []
+        for item in v:
+            s = str(item).strip()[:100]
+            if s and s.lower() not in seen:
+                seen.add(s.lower())
+                out.append(s)
+        return out
+
+    @field_validator('labour_hours', 'hourly_rate', 'rod_length_received',
+                     'rod_length_cut', 'rod_length_remaining', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:
@@ -248,6 +289,10 @@ class ToolItemResponse(BaseModel):
     zoho_ref: Optional[str] = None
     assigned_technician: Optional[str] = None
     photos: List[str]
+    included_items: List[str] = Field(default_factory=list)
+    rod_length_received: Optional[float] = None
+    rod_length_cut: Optional[float] = None
+    rod_length_remaining: Optional[float] = None
     status: RepairStatus
     date_received: datetime
     estimated_completion: Optional[datetime] = None

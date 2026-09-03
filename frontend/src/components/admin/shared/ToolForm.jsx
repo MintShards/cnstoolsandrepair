@@ -8,8 +8,16 @@ const EMPTY_TOOL_BASE = {
   quantity: 1, remarks: '', parts: [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
   zoho_ref: '', assigned_technician: '', estimated_completion: '',
+  included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
+
+// What typically ships with a Hathorn camera system. The intake checklist
+// exists so what goes back to the customer is never a memory contest.
+export const HATHORN_INCLUDED_OPTIONS = [
+  'Power Cord', 'Controller', 'Patch Cable', 'Battery', 'Battery Charger',
+  'SD Card', 'USB Drive', 'Carrying Case', 'Skids / Guides', 'Manual',
+];
 
 export const getEmptyTool = () => ({
   ...EMPTY_TOOL_BASE,
@@ -257,6 +265,45 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
 
+  // Hathorn camera intake — included-accessories dropdown
+  const [showIncludedDropdown, setShowIncludedDropdown] = useState(false);
+  const [customIncluded, setCustomIncluded] = useState('');
+
+  const isHathorn = /hathorn/i.test(toolData.brand || '');
+
+  const toggleIncludedItem = (item) => {
+    const current = toolData.included_items || [];
+    const exists = current.some((i) => i.toLowerCase() === item.toLowerCase());
+    handleChange(
+      'included_items',
+      exists ? current.filter((i) => i.toLowerCase() !== item.toLowerCase()) : [...current, item]
+    );
+  };
+
+  const addCustomIncluded = () => {
+    const value = customIncluded.trim();
+    if (!value) return;
+    const current = toolData.included_items || [];
+    if (!current.some((i) => i.toLowerCase() === value.toLowerCase())) {
+      handleChange('included_items', [...current, value]);
+    }
+    setCustomIncluded('');
+  };
+
+  // Rod lengths: remaining auto-fills from received − cut, but stays editable
+  // because the tech re-measures the finished rod anyway.
+  const handleRodChange = (field, value) => {
+    const updates = { [field]: value };
+    if (field === 'rod_length_received' || field === 'rod_length_cut') {
+      const received = parseFloat(field === 'rod_length_received' ? value : toolData.rod_length_received);
+      const cut = parseFloat(field === 'rod_length_cut' ? value : toolData.rod_length_cut);
+      if (!isNaN(received) && !isNaN(cut)) {
+        updates.rod_length_remaining = String(Math.max(0, Math.round((received - cut) * 10) / 10));
+      }
+    }
+    handleChange(updates);
+  };
+
   useEffect(() => {
     partsLibraryAPI.listBrands().then(setLibraryBrands).catch(() => {});
   }, []);
@@ -350,6 +397,99 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <input value={data.serial_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('serial_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 placeholder="Optional" className={inputCls} />
             </div>
+
+            {/* Hathorn camera intake — only when the brand says so */}
+            {isHathorn && (
+              <div className="md:col-span-2 p-4 bg-blue-50/60 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/40 rounded-lg space-y-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+                  Hathorn Camera Intake
+                </p>
+
+                {/* Included accessories dropdown */}
+                <div className="relative">
+                  <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Included With Unit</label>
+                  <button type="button"
+                    onClick={() => setShowIncludedDropdown(!showIncludedDropdown)}
+                    onBlur={() => setTimeout(() => setShowIncludedDropdown(false), 200)}
+                    className={`${inputCls} flex items-center justify-between text-left`}>
+                    <span className={(data.included_items || []).length ? '' : 'text-slate-400 dark:text-slate-500'}>
+                      {(data.included_items || []).length
+                        ? `${data.included_items.length} item${data.included_items.length !== 1 ? 's' : ''} recorded`
+                        : 'Select what came with the unit…'}
+                    </span>
+                    <span className="material-symbols-outlined text-slate-400">
+                      {showIncludedDropdown ? 'expand_less' : 'expand_more'}
+                    </span>
+                  </button>
+                  {showIncludedDropdown && (
+                    <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {HATHORN_INCLUDED_OPTIONS.map((item) => {
+                        const checked = (data.included_items || []).some((i) => i.toLowerCase() === item.toLowerCase());
+                        return (
+                          <button key={item} type="button"
+                            onMouseDown={(e) => { e.preventDefault(); toggleIncludedItem(item); }}
+                            className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-700 transition-colors">
+                            <span className={`material-symbols-outlined text-lg ${checked ? 'text-primary' : 'text-slate-300 dark:text-slate-600'}`}>
+                              {checked ? 'check_box' : 'check_box_outline_blank'}
+                            </span>
+                            <span className="text-slate-800 dark:text-slate-100">{item}</span>
+                          </button>
+                        );
+                      })}
+                      {/* Custom entry — "and more" */}
+                      <div className="flex gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/50"
+                        onMouseDown={(e) => e.preventDefault() /* keep the panel open */}>
+                        <input value={customIncluded}
+                          onChange={(e) => setCustomIncluded(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomIncluded(); } }}
+                          placeholder="Other item…"
+                          className="flex-1 px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                        <button type="button" onMouseDown={(e) => { e.preventDefault(); addCustomIncluded(); }}
+                          className="px-3 py-1.5 bg-primary text-white rounded text-sm font-bold hover:bg-blue-600 transition-colors">
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {(data.included_items || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {data.included_items.map((item) => (
+                        <span key={item} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">
+                          {item}
+                          <button type="button" onClick={() => toggleIncludedItem(item)}
+                            className="text-slate-400 hover:text-red-500 transition-colors" title={`Remove ${item}`}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pushrod lengths */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Rod Length Received (ft)</label>
+                    <input type="number" min="0" step="0.1" value={data.rod_length_received ?? ''}
+                      onChange={(e) => handleRodChange('rod_length_received', e.target.value)}
+                      placeholder="e.g., 200" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Rod Cut Off (ft)</label>
+                    <input type="number" min="0" step="0.1" value={data.rod_length_cut ?? ''}
+                      onChange={(e) => handleRodChange('rod_length_cut', e.target.value)}
+                      placeholder="e.g., 15" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Rod Remaining (ft)</label>
+                    <input type="number" min="0" step="0.1" value={data.rod_length_remaining ?? ''}
+                      onChange={(e) => handleChange('rod_length_remaining', e.target.value)}
+                      placeholder="Auto" className={inputCls} />
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Auto-calculated — adjust if re-measured</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -378,6 +378,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       warranty: tool.warranty || false,
       zoho_ref: tool.zoho_ref || '',
       assigned_technician: tool.assigned_technician || '',
+      included_items: tool.included_items || [],
+      rod_length_received: tool.rod_length_received ?? '',
+      rod_length_cut: tool.rod_length_cut ?? '',
+      rod_length_remaining: tool.rod_length_remaining ?? '',
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
     });
@@ -836,6 +840,23 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 {retailPriceMap[tool.tool_id] != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Retail: ${parseFloat(retailPriceMap[tool.tool_id]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
+                              {(tool.rod_length_received != null || tool.rod_length_cut != null || tool.rod_length_remaining != null) && (
+                                <div className="text-sm text-slate-500 mt-0.5">
+                                  Rod:{tool.rod_length_received != null && <> {tool.rod_length_received} ft received</>}
+                                  {tool.rod_length_cut != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>{tool.rod_length_cut} ft cut</>}
+                                  {tool.rod_length_remaining != null && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span><span className="font-medium text-slate-600 dark:text-slate-300">{tool.rod_length_remaining} ft remaining</span></>}
+                                </div>
+                              )}
+                              {tool.included_items?.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                                  <span className="text-xs text-slate-400 dark:text-slate-500 mr-0.5">Includes:</span>
+                                  {tool.included_items.map((item) => (
+                                    <span key={item} className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
