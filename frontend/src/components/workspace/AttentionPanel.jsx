@@ -11,13 +11,14 @@ const POLL_MS = 60000;
 const ROWS_SHOWN = 5;
 
 /**
- * Queue metadata, in the shop's priority order: collect finished work, chase
- * quote approvals, unstick stalled jobs, open the new arrivals. `verb`
- * builds the prefilled task title when a row is escalated to a real task.
- * (Follow-ups render after these with their own row shape.)
+ * Queue metadata, in the shop's priority order: collect finished work, start
+ * approved work, chase quote approvals, unstick stalled jobs, open the new
+ * arrivals. `verb` builds the prefilled task title when a row is escalated
+ * to a real task. (Follow-ups render after these with their own row shape.)
  */
 const QUEUES = [
   { key: 'ready_for_pickup', label: 'Ready for pickup — call customer', icon: 'call', verb: 'Arrange pickup for' },
+  { key: 'approved_to_start', label: 'Approved — order parts / start repair', icon: 'order_approve', verb: 'Start work on' },
   { key: 'waiting_on_customer', label: 'Waiting for approval', icon: 'hourglass_top', verb: 'Chase approval on' },
   { key: 'stuck', label: 'Stuck — nothing has moved', icon: 'hourglass_disabled', verb: 'Unstick', red: true },
   { key: 'needs_diagnosis', label: 'Received — needs diagnosis', icon: 'search', verb: 'Diagnose' },

@@ -791,14 +791,18 @@ async def get_repair_summary(
 #     BOTH `ready` and `invoiced`: billing happens at the counter, so from
 #     the shop's view they're one pile of "call them, it's done".
 #   waiting_on_customer — quotes awaiting the customer's approval.
+#   approved_to_start — the customer said yes and nothing has moved yet:
+#     order the parts or put it on the bench. (Once either happens the tool
+#     becomes parts_pending / in_repair and leaves this queue on its own.)
 #   needs_diagnosis — tools received, nobody's opened them yet.
-# Everything else (diagnosed/approved/parts_pending/in_repair) is normal
-# pipeline the tracker handles — it earns a row ONLY when stuck, and lands in
-# the cross-cutting `stuck` queue. Statuses in this map are NEVER re-listed
+# Everything else (diagnosed/parts_pending/in_repair) is normal pipeline the
+# tracker handles — it earns a row ONLY when stuck, and lands in the
+# cross-cutting `stuck` queue. Statuses in this map are NEVER re-listed
 # under stuck (their rows already show red ages), so no job prints twice.
 _ATTENTION_QUEUE_BY_STATUS = {
     "received": "needs_diagnosis",
     "quoted": "waiting_on_customer",
+    "approved": "approved_to_start",
     "ready": "ready_for_pickup",
     "invoiced": "ready_for_pickup",
 }
@@ -824,11 +828,12 @@ async def get_attention_queues(
     included only when `include_items=true`.
 
     Queues, in the shop's priority order: ready_for_pickup (ready+invoiced),
-    waiting_on_customer (quoted), stuck (no status change in `stale_days` —
-    only for statuses without their own queue, so nothing appears twice),
+    waiting_on_customer (quoted), approved_to_start (approved — order parts
+    or begin the repair), stuck (no status change in `stale_days` — only for
+    statuses without their own queue, so nothing appears twice),
     needs_diagnosis (received), and followups_due from route management.
 
-    `total` = sum of the four repair queues + due follow-ups; every work
+    `total` = sum of the five repair queues + due follow-ups; every work
     order counts at most once per queue. `stuck_count` = the stuck queue.
     """
     db = get_database()
@@ -988,6 +993,7 @@ async def get_attention_queues(
         "queues": {
             "ready_for_pickup": _bucket(queues["ready_for_pickup"]),
             "waiting_on_customer": _bucket(queues["waiting_on_customer"]),
+            "approved_to_start": _bucket(queues["approved_to_start"]),
             "stuck": _bucket(queues["stuck"]),
             "needs_diagnosis": _bucket(queues["needs_diagnosis"]),
             "followups_due": _bucket(followup_items, count=followups_count),
