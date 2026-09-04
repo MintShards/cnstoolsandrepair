@@ -891,10 +891,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 {tool.estimated_completion && <><span className="mx-1 text-slate-500 dark:text-slate-700">·</span>Est: {formatDateShort(tool.estimated_completion)}</>}
                               </div>
                               {(() => {
-                                // Each component prints "Label: MODEL #SERIAL",
+                                // Each component prints "Label: MODEL S/N: SERIAL",
                                 // dropping whichever half wasn't recorded.
                                 const comp = (label, model, serial) => (model || serial) &&
-                                  `${label}: ${[model && model.toUpperCase(), serial && `#${serial.toUpperCase()}`].filter(Boolean).join(' ')}`;
+                                  `${label}: ${[model && model.toUpperCase(), serial && `S/N: ${serial.toUpperCase()}`].filter(Boolean).join(' ')}`;
                                 const bits = [
                                   comp('Ctrl', tool.controller_model, tool.controller_serial),
                                   comp('Reel', tool.reel_model, tool.reel_serial),

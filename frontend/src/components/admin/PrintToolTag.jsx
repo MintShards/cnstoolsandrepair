@@ -61,9 +61,9 @@ function buildTagHTML(job, toolItem, toolIndex) {
   ].filter(Boolean).join(' · ');
   const rodHTML = rodBits ? `<div class="rod-line">ROD: ${rodBits}</div>` : '';
 
-  // "HEAD D18 #S123" — model then serial, whichever halves were recorded
+  // "HEAD D18 S/N: S123" — model then serial, whichever halves were recorded
   const comp = (label, model, serial) => (model || serial)
-    ? `${label} ${[model && escHtml(model.toUpperCase()), serial && `#${escHtml(serial.toUpperCase())}`].filter(Boolean).join(' ')}`
+    ? `${label} ${[model && escHtml(model.toUpperCase()), serial && `S/N: ${escHtml(serial.toUpperCase())}`].filter(Boolean).join(' ')}`
     : '';
   const compBits = [
     comp('CTRL', toolItem.controller_model, toolItem.controller_serial),
