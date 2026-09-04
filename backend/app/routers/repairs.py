@@ -1796,6 +1796,56 @@ async def serial_history(
 
 
 # ──────────────────────────────────────────────
+# TOOL TYPES — suggestions for the Tool Type field
+# (declared before /{job_id} so "tool-types" is never parsed as an ID)
+# ──────────────────────────────────────────────
+
+@router.get("/models")
+async def list_used_models(
+    brand: Optional[str] = None,
+    current_user: User = Depends(require_staff_or_admin)
+):
+    """Distinct model identities used on past jobs — the generic
+    model_number plus the three camera component models — scoped to a
+    brand when given. The tool form merges these with parts-library
+    models, so a model typed on an old job suggests itself even if it
+    never earned a library entry."""
+    db = get_database()
+    pipeline = [{"$unwind": "$tools"}]
+    if brand:
+        pipeline.append({"$match": {"tools.brand": {
+            "$regex": f"^{re.escape(brand.strip())}$", "$options": "i"}}})
+    pipeline += [
+        {"$project": {"models": [
+            "$tools.model_number", "$tools.controller_model",
+            "$tools.reel_model", "$tools.camera_head_model"]}},
+        {"$unwind": "$models"},
+        {"$match": {"models": {"$nin": [None, ""]}}},
+        {"$group": {"_id": {"$toLower": "$models"}, "name": {"$first": "$models"}}},
+    ]
+    rows = await db.repairs.aggregate(pipeline).to_list(length=None)
+    return {"models": sorted((r["name"] for r in rows), key=str.lower)}
+
+
+@router.get("/tool-types")
+async def list_tool_types(current_user: User = Depends(require_staff_or_admin)):
+    """Distinct tool types already in use — every repair job's tool_type plus
+    every parts-library model category — so the form suggests instead of
+    making techs retype (and re-typo) the same names."""
+    db = get_database()
+    from_repairs = await db.repairs.distinct("tools.tool_type")
+    from_library = await db.parts_library_models.distinct("category")
+    seen, out = set(), []
+    for t in list(from_repairs) + list(from_library):
+        s = str(t or "").strip()
+        if s and s.lower() not in seen:
+            seen.add(s.lower())
+            out.append(s)
+    out.sort(key=str.lower)
+    return {"tool_types": out}
+
+
+# ──────────────────────────────────────────────
 # GET ONE
 # ──────────────────────────────────────────────
 

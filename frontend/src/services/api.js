@@ -421,6 +421,17 @@ export const repairsAPI = {
     });
     return response.data;
   },
+  // Distinct tool types across jobs + library categories, for suggestions
+  toolTypes: async () => {
+    const response = await api.get('/api/repairs/tool-types');
+    return response.data;
+  },
+  // Distinct models used on past jobs (generic + camera components),
+  // optionally brand-scoped — merged with library models for suggestions
+  usedModels: async (brand) => {
+    const response = await api.get('/api/repairs/models', { params: brand ? { brand } : {} });
+    return response.data;
+  },
   modelRepairCounts: async (params = {}) => {
     const response = await api.get('/api/repairs/model-repair-counts', { params });
     return response.data;

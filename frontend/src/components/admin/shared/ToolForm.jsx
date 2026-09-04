@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { suppliersAPI, staffAPI, partsLibraryAPI, repairsAPI } from '../../../services/api';
 import { getTodayPacific } from '../../../utils/dateFormat';
@@ -19,6 +19,18 @@ const EMPTY_TOOL_BASE = {
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
 };
 
+// One tool-type suggestion fetch per page load, shared by every ToolForm
+// instance — distinct types from past jobs plus library model categories.
+let toolTypesCache = null;
+const getToolTypes = () => {
+  if (!toolTypesCache) {
+    toolTypesCache = repairsAPI.toolTypes()
+      .then((d) => (Array.isArray(d?.tool_types) ? d.tool_types : []))
+      .catch(() => { toolTypesCache = null; return []; });
+  }
+  return toolTypesCache;
+};
+
 // Display title for a tool row: "BRAND MODEL". A Hathorn unit has no
 // generic model_number (any mix of components arrives alone), so its title
 // falls back to the component models it carries — controller, reel,
@@ -37,7 +49,7 @@ export const toolDisplayTitle = (t) => {
 
 // Multi-select dropdown with checkbox rows, a free-text "other" entry and
 // removable chips — used for the Hathorn included/condition checklists.
-function ChecklistDropdown({ label, options, value = [], onChange, emptyText, inputCls }) {
+function ChecklistDropdown({ label, options, value = [], onChange, emptyText, inputCls, allowCustom = true, gridLayout = false }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState('');
 
@@ -67,6 +79,9 @@ function ChecklistDropdown({ label, options, value = [], onChange, emptyText, in
       </button>
       {open && (
         <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          {/* gridLayout: 1 column on phones, 2 from sm, 3 from lg — long
+              option lists stay scannable instead of a tall scroll */}
+          <div className={gridLayout ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : ''}>
           {options.map((item) => {
             const checked = value.some((i) => i.toLowerCase() === item.toLowerCase());
             return (
@@ -80,6 +95,11 @@ function ChecklistDropdown({ label, options, value = [], onChange, emptyText, in
               </button>
             );
           })}
+          </div>
+          {/* Free-text entry — off for lists fully managed in Admin
+              Settings → Camera Intake, where the options themselves are
+              edited instead of ad-hoc additions per tool */}
+          {allowCustom && (
           <div className="flex gap-2 p-2.5 bg-slate-50 dark:bg-slate-900/50"
             onMouseDown={(e) => e.preventDefault() /* keep the panel open */}>
             <input value={custom}
@@ -92,6 +112,7 @@ function ChecklistDropdown({ label, options, value = [], onChange, emptyText, in
               Add
             </button>
           </div>
+          )}
         </div>
       )}
       {value.length > 0 && (
@@ -389,10 +410,16 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [libraryModels, setLibraryModels] = useState([]);
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [toolTypes, setToolTypes] = useState([]);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  // Models seen on past jobs for this brand (generic + camera components) —
+  // merged with library models so every model field suggests both sources.
+  const [jobModels, setJobModels] = useState([]);
+  const jobModelsTimer = useRef(null);
+  // Which component model field's dropdown is open (field name or null)
+  const [openCompField, setOpenCompField] = useState(null);
 
   const isHathorn = /hathorn/i.test(toolData.brand || '');
-  // Datalist id for the per-component model inputs' library autocomplete
-  const modelListId = useId();
 
   // Returning-unit check: as serials are typed, look for this exact unit in
   // past jobs. The shop assigns house serials to unserialized tools, so a
@@ -442,6 +469,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
 
   useEffect(() => {
     partsLibraryAPI.listBrands().then(setLibraryBrands).catch(() => {});
+    let alive = true;
+    getToolTypes().then((t) => { if (alive) setToolTypes(t); });
+    return () => { alive = false; };
   }, []);
 
   // When brand changes, load models for matching library brand
@@ -454,11 +484,46 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
     }
   }, [matchedBrand?.id]);
 
+  // Past-job models for the current brand, debounced so brand keystrokes
+  // don't stack requests
+  useEffect(() => {
+    const brand = toolData.brand?.trim();
+    if (jobModelsTimer.current) clearTimeout(jobModelsTimer.current);
+    if (!brand) { setJobModels([]); return undefined; }
+    jobModelsTimer.current = setTimeout(async () => {
+      try {
+        const res = await repairsAPI.usedModels(brand);
+        setJobModels(res.models || []);
+      } catch { setJobModels([]); }
+    }, 400);
+    return () => clearTimeout(jobModelsTimer.current);
+  }, [toolData.brand]);
+
   const filteredBrands = libraryBrands.filter(b =>
     !toolData.brand?.trim() || b.name.toLowerCase().includes(toolData.brand.trim().toLowerCase())
   );
-  const filteredModels = libraryModels.filter(m =>
+  // Library models first (they carry categories that auto-fill Tool Type),
+  // then past-job models the library doesn't know about.
+  const combinedModels = (() => {
+    const seen = new Set();
+    const out = [];
+    for (const m of libraryModels) {
+      seen.add(m.name.toLowerCase());
+      out.push({ id: m.id, name: m.name, category: m.category });
+    }
+    for (const name of jobModels) {
+      if (!seen.has(name.toLowerCase())) {
+        seen.add(name.toLowerCase());
+        out.push({ name });
+      }
+    }
+    return out;
+  })();
+  const filteredModels = combinedModels.filter(m =>
     !toolData.model_number?.trim() || m.name.toLowerCase().includes(toolData.model_number.trim().toLowerCase())
+  );
+  const filteredTypes = toolTypes.filter(t =>
+    !toolData.tool_type?.trim() || t.toLowerCase().includes(toolData.tool_type.trim().toLowerCase())
   );
 
   const data = toolData;
@@ -505,13 +570,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
               <input required value={data.model_number || ''} autoComplete="off"
                 onChange={(e) => { const pos = e.target.selectionStart; handleChange('model_number', e.target.value.toUpperCase()); setShowModelDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                onFocus={() => { if (libraryModels.length > 0) setShowModelDropdown(true); }}
+                onFocus={() => { if (combinedModels.length > 0) setShowModelDropdown(true); }}
                 onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
                 placeholder="e.g., 2135TIMAX" className={inputCls} />
               {showModelDropdown && filteredModels.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredModels.map(m => (
-                    <button key={m.id} type="button"
+                    <button key={m.id || m.name} type="button"
                       onMouseDown={() => {
                         const updates = { model_number: m.name.toUpperCase() };
                         if (m.category) updates.tool_type = m.category.toUpperCase();
@@ -528,10 +593,25 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               )}
             </div>
             )}
-            <div>
+            <div className="relative">
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Tool Type <span className="text-red-400">*</span></label>
-              <input required value={data.tool_type || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('tool_type', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+              <input required value={data.tool_type || ''} autoComplete="off"
+                onChange={(e) => { const pos = e.target.selectionStart; handleChange('tool_type', e.target.value.toUpperCase()); setShowTypeDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                onFocus={() => { if (toolTypes.length > 0) setShowTypeDropdown(true); }}
+                onBlur={() => setTimeout(() => setShowTypeDropdown(false), 200)}
                 placeholder="e.g., Impact Wrench" className={inputCls} />
+              {showTypeDropdown && filteredTypes.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredTypes.map(t => (
+                    <button key={t} type="button"
+                      onMouseDown={() => { handleChange('tool_type', t.toUpperCase()); setShowTypeDropdown(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
+                    >
+                      <span className="text-slate-800 dark:text-slate-100">{t}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             {/* For Hathorn the three component serials in the panel below
                 replace this — one generic serial can't identify a
@@ -564,22 +644,36 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     ].map((c) => (
                       <div key={c.modelField} className="space-y-2">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{c.label}</p>
-                        <input value={data[c.modelField] || ''} list={modelListId} autoComplete="off"
-                          onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.modelField, e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                          placeholder="Model" className={inputCls} />
+                        {/* Same suggestion dropdown as the generic Model
+                            Number field: library models + past-job models */}
+                        <div className="relative">
+                          <input value={data[c.modelField] || ''} autoComplete="off"
+                            onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.modelField, e.target.value.toUpperCase()); setOpenCompField(c.modelField); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                            onFocus={() => { if (combinedModels.length > 0) setOpenCompField(c.modelField); }}
+                            onBlur={() => setTimeout(() => setOpenCompField((f) => (f === c.modelField ? null : f)), 200)}
+                            placeholder="Model" className={inputCls} />
+                          {openCompField === c.modelField && (() => {
+                            const q = (data[c.modelField] || '').trim().toLowerCase();
+                            const opts = combinedModels.filter((m) => !q || m.name.toLowerCase().includes(q));
+                            return opts.length > 0 && (
+                              <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                {opts.map((m) => (
+                                  <button key={m.id || m.name} type="button"
+                                    onMouseDown={() => { handleChange(c.modelField, m.name.toUpperCase()); setOpenCompField(null); }}
+                                    className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors">
+                                    <span className="text-slate-800 dark:text-slate-100">{m.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <input value={data[c.serialField] || ''}
                           onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.serialField, e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                           placeholder="Serial number" className={inputCls} />
                       </div>
                     ))}
                   </div>
-                  {/* Library autocomplete: same models the hidden Model
-                      Number field would have suggested for this brand */}
-                  {libraryModels.length > 0 && (
-                    <datalist id={modelListId}>
-                      {libraryModels.map((m) => <option key={m.id} value={m.name.toUpperCase()} />)}
-                    </datalist>
-                  )}
                   <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
                     Fill only the components that arrived — at least one model or serial is required
                   </p>
@@ -592,6 +686,8 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   onChange={(items) => handleChange('included_items', items)}
                   emptyText="Select what came with the unit…"
                   inputCls={inputCls}
+                  allowCustom={false}
+                  gridLayout
                 />
 
                 <ChecklistDropdown
@@ -601,6 +697,8 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   onChange={(items) => handleChange('intake_condition', items)}
                   emptyText="Record the power-on check…"
                   inputCls={inputCls}
+                  allowCustom={false}
+                  gridLayout
                 />
 
                 {/* Footage odometer — training calls it that, so the label does
@@ -652,6 +750,8 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     onChange={(items) => handleChange('final_checklist', items)}
                     emptyText="Tick off the final tests…"
                     inputCls={inputCls}
+                    allowCustom={false}
+                    gridLayout
                   />
                   <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                     {intakeConfig.final_checklist.length > 0
