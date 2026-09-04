@@ -1733,7 +1733,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       const hasComponent = (t) => [
                         t.camera_head_model, t.camera_head_serial,
                         t.controller_model, t.controller_serial,
-                        t.rod_holder_model, t.rod_holder_serial,
+                        t.reel_model, t.reel_serial,
                       ].some((v) => v?.trim());
                       const badTool = newJobForm.tools.find(t =>
                         !t.tool_type?.trim() || !t.brand?.trim() ||
@@ -1741,7 +1741,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       );
                       if (badTool) {
                         showToast('error', /hathorn/i.test(badTool.brand || '')
-                          ? 'Each Hathorn tool needs at least one component model or serial (camera head, controller, or pushrod holder)'
+                          ? 'Each Hathorn tool needs at least one component model or serial (camera head, controller, or reel)'
                           : 'Tool type, brand, and model number are required for each tool');
                         return;
                       }

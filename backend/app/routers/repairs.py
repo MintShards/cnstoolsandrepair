@@ -247,7 +247,7 @@ async def get_model_repair_counts(
             "brand": {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.brand", ""]}}}},
             # A tool can carry several model identities: the generic
             # model_number, or (Hathorn camera systems) per-component models
-            # for the head / controller / pushrod holder. Each non-empty one
+            # for the head / controller / reel. Each non-empty one
             # earns the repair count, so a head that came in on its own still
             # credits its model card in the parts library. $setUnion dedupes
             # in case two fields carry the same text.
@@ -256,7 +256,7 @@ async def get_model_repair_counts(
                     {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.model_number", ""]}}}},
                     {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.camera_head_model", ""]}}}},
                     {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.controller_model", ""]}}}},
-                    {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.rod_holder_model", ""]}}}},
+                    {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.reel_model", ""]}}}},
                 ],
                 "as": "m",
                 "cond": {"$ne": ["$$m", ""]},
@@ -1289,8 +1289,8 @@ async def list_repair_jobs(
             {"tools.camera_head_serial": {"$regex": escaped, "$options": "i"}},
             {"tools.controller_model": {"$regex": escaped, "$options": "i"}},
             {"tools.controller_serial": {"$regex": escaped, "$options": "i"}},
-            {"tools.rod_holder_model": {"$regex": escaped, "$options": "i"}},
-            {"tools.rod_holder_serial": {"$regex": escaped, "$options": "i"}},
+            {"tools.reel_model": {"$regex": escaped, "$options": "i"}},
+            {"tools.reel_serial": {"$regex": escaped, "$options": "i"}},
         ]
 
     total = await db.repairs.count_documents(query)
@@ -1751,7 +1751,7 @@ async def serial_history(
     wanted_lower = {s.lower() for s in wanted}
 
     regexes = [{"$regex": f"^{re.escape(s)}$", "$options": "i"} for s in wanted]
-    serial_fields = ["serial_number", "camera_head_serial", "controller_serial", "rod_holder_serial"]
+    serial_fields = ["serial_number", "camera_head_serial", "controller_serial", "reel_serial"]
     query = {"tools": {"$elemMatch": {"$or": [
         {field: rx} for rx in regexes for field in serial_fields
     ]}}}

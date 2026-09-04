@@ -13,7 +13,7 @@ const EMPTY_TOOL_BASE = {
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   camera_head_model: '', camera_head_serial: '',
   controller_model: '', controller_serial: '',
-  rod_holder_model: '', rod_holder_serial: '',
+  reel_model: '', reel_serial: '',
   counter_at_intake: '', counter_after_repair: '',
   intake_condition: [], final_checklist: [],
   _pendingPhotos: [], // File objects staged during wizard — never sent to API
@@ -21,10 +21,10 @@ const EMPTY_TOOL_BASE = {
 
 // Display title for a tool row: "BRAND MODEL". A Hathorn unit has no
 // generic model_number (any mix of components arrives alone), so its title
-// falls back to the component models it carries — controller, pushrod
-// holder, camera head, the same order the intake form shows them.
+// falls back to the component models it carries — controller, reel,
+// camera head, the same order the intake form shows them.
 export const toolDisplayTitle = (t) => {
-  const compModels = [t.controller_model, t.rod_holder_model, t.camera_head_model]
+  const compModels = [t.controller_model, t.reel_model, t.camera_head_model]
     .filter(Boolean).join(' / ');
   return [t.brand, t.model_number || compModels].filter(Boolean).join(' ');
 };
@@ -153,7 +153,7 @@ export const syncPartsToLibrary = async (tools) => {
       // (head / controller / reel) each become a library model, and new
       // parts link to every one that was recorded.
       const modelNames = [tool.model_number, tool.camera_head_model,
-        tool.controller_model, tool.rod_holder_model]
+        tool.controller_model, tool.reel_model]
         .map((m) => m?.trim()).filter(Boolean);
       let modelIds = [];
       for (const name of modelNames) {
@@ -239,7 +239,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
     // generic model_number, and suggestions merge across all of them.
     const brand = data.brand?.trim();
     const modelNames = [data.model_number, data.camera_head_model,
-      data.controller_model, data.rod_holder_model]
+      data.controller_model, data.reel_model]
       .map((m) => m?.trim()).filter(Boolean);
     if (!brand || !modelNames.length) return;
     setSuggestedPartsLoading(true);
@@ -401,7 +401,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const serialHistoryTimer = useRef(null);
   const serialKey = [
     toolData.serial_number, toolData.camera_head_serial,
-    toolData.controller_serial, toolData.rod_holder_serial,
+    toolData.controller_serial, toolData.reel_serial,
   ].map((s) => (s || '').trim()).join(',');
 
   useEffect(() => {
@@ -559,7 +559,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { label: 'Controller', modelField: 'controller_model', serialField: 'controller_serial' },
-                      { label: 'Pushrod Holder', modelField: 'rod_holder_model', serialField: 'rod_holder_serial' },
+                      { label: 'Reel', modelField: 'reel_model', serialField: 'reel_serial' },
                       { label: 'Camera Head', modelField: 'camera_head_model', serialField: 'camera_head_serial' },
                     ].map((c) => (
                       <div key={c.modelField} className="space-y-2">
@@ -799,7 +799,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-300 dark:border-slate-700">
           <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
           <div className="flex items-center gap-3">
-            {data.brand && (data.model_number || data.camera_head_model || data.controller_model || data.rod_holder_model) && (
+            {data.brand && (data.model_number || data.camera_head_model || data.controller_model || data.reel_model) && (
               <button type="button" onClick={loadSuggestedParts}
                 className={`text-xs font-bold flex items-center gap-1 transition-colors ${showSuggestedParts ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-amber-600 dark:hover:text-amber-400'}`}>
                 <span className="material-symbols-outlined" style={{fontSize:'15px'}}>lightbulb</span>

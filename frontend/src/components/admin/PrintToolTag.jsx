@@ -67,7 +67,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
     : '';
   const compBits = [
     comp('CTRL', toolItem.controller_model, toolItem.controller_serial),
-    comp('HOLDER', toolItem.rod_holder_model, toolItem.rod_holder_serial),
+    comp('REEL', toolItem.reel_model, toolItem.reel_serial),
     comp('HEAD', toolItem.camera_head_model, toolItem.camera_head_serial),
   ].filter(Boolean).join(' · ');
   const compHTML = compBits ? `<div class="rod-line">${compBits}</div>` : '';

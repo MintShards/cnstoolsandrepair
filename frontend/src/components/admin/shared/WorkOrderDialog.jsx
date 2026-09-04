@@ -99,7 +99,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     setReturningOpenFor(null);
     (async () => {
       const entries = await Promise.all((job.tools || []).map(async (t) => {
-        const serials = [t.serial_number, t.camera_head_serial, t.controller_serial, t.rod_holder_serial]
+        const serials = [t.serial_number, t.camera_head_serial, t.controller_serial, t.reel_serial]
           .map((s) => (s || '').trim()).filter((s) => s.length >= 3);
         if (!serials.length) return [t.tool_id, null];
         try {
@@ -426,8 +426,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       camera_head_serial: (tool.camera_head_serial || '').toUpperCase(),
       controller_model: (tool.controller_model || '').toUpperCase(),
       controller_serial: (tool.controller_serial || '').toUpperCase(),
-      rod_holder_model: (tool.rod_holder_model || '').toUpperCase(),
-      rod_holder_serial: (tool.rod_holder_serial || '').toUpperCase(),
+      reel_model: (tool.reel_model || '').toUpperCase(),
+      reel_serial: (tool.reel_serial || '').toUpperCase(),
       counter_at_intake: tool.counter_at_intake ?? '',
       counter_after_repair: tool.counter_after_repair ?? '',
       intake_condition: tool.intake_condition || [],
@@ -877,7 +877,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             </div>
                             <div>
                               <Link
-                                to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(tool.brand || '')}&model=${encodeURIComponent(tool.model_number || tool.camera_head_model || tool.controller_model || tool.rod_holder_model || '')}`}
+                                to={`/admin/repair-tracker?tab=parts-library&brand=${encodeURIComponent(tool.brand || '')}&model=${encodeURIComponent(tool.model_number || tool.camera_head_model || tool.controller_model || tool.reel_model || '')}`}
                                 className="font-bold text-slate-900 dark:text-white text-base text-left group/pl flex items-center gap-1.5 hover:text-primary dark:hover:text-blue-400 transition-colors"
                                 title="View in Parts Library"
                               >
@@ -897,7 +897,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                   `${label}: ${[model && model.toUpperCase(), serial && `#${serial.toUpperCase()}`].filter(Boolean).join(' ')}`;
                                 const bits = [
                                   comp('Ctrl', tool.controller_model, tool.controller_serial),
-                                  comp('Holder', tool.rod_holder_model, tool.rod_holder_serial),
+                                  comp('Reel', tool.reel_model, tool.reel_serial),
                                   comp('Head', tool.camera_head_model, tool.camera_head_serial),
                                   tool.counter_at_intake != null && `Odometer in: ${tool.counter_at_intake} ft`,
                                   tool.counter_after_repair != null && `out: ${tool.counter_after_repair} ft`,

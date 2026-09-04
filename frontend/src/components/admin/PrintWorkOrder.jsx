@@ -165,7 +165,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
       : '';
     const compBits = [
       comp('Controller', tool.controller_model, tool.controller_serial),
-      comp('Pushrod Holder', tool.rod_holder_model, tool.rod_holder_serial),
+      comp('Reel', tool.reel_model, tool.reel_serial),
       comp('Head', tool.camera_head_model, tool.camera_head_serial),
       tool.counter_at_intake != null ? `Odometer in ${tool.counter_at_intake} ft` : '',
       tool.counter_after_repair != null ? `Odometer out ${tool.counter_after_repair} ft` : '',
