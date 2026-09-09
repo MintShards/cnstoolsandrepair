@@ -58,12 +58,12 @@ export default function AnnouncementBanner() {
       icon: 'info',
     },
     warning: {
-      bg: 'bg-accent-orange dark:bg-accent-orange/90',
+      bg: 'bg-red-700 dark:bg-red-700/90',
       text: 'text-white',
       icon: 'warning',
     },
     success: {
-      bg: 'bg-green-600 dark:bg-green-700',
+      bg: 'bg-green-700 dark:bg-green-700',
       text: 'text-white',
       icon: 'check_circle',
     },
@@ -75,7 +75,7 @@ export default function AnnouncementBanner() {
     <div className={`${style.bg} ${style.text} py-1 px-4 sm:px-6 sticky top-0 z-50 shadow-md animate-slideDown`}>
       <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         <div className="flex items-center gap-3 flex-1">
-          <span className="material-symbols-outlined text-xl sm:text-2xl flex-shrink-0">
+          <span className="material-symbols-outlined text-xl sm:text-2xl flex-shrink-0" aria-hidden="true">
             {style.icon}
           </span>
           <p className="text-sm sm:text-base font-semibold text-center sm:text-left flex-1">

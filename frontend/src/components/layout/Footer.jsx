@@ -155,7 +155,7 @@ export default function Footer() {
       target="_blank"
       rel="noopener noreferrer"
       className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-primary hover:text-white hover:scale-110 transition-all duration-300 ease-in-out focus:outline-2 focus:outline-primary focus:outline-offset-2"
-      aria-label={`Visit us on ${platform}`}
+      aria-label={`Visit us on ${platform} (opens in new tab)`}
     >
       {getSocialIcon(icon)}
     </a>
@@ -169,10 +169,10 @@ export default function Footer() {
 
           {/* Column 1: Logo & Social */}
           <div>
-            <h2 className="font-logo text-2xl font-bold tracking-wide uppercase mb-3">
+            <p className="font-logo text-2xl font-bold tracking-wide uppercase mb-3">
               <span className="text-accent-orange">CNS</span>{' '}
               <span className="text-slate-900 dark:text-white">Tool Repair</span>
-            </h2>
+            </p>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
               Professional pneumatic and air tool repair services for industrial businesses across Metro Vancouver.
             </p>
@@ -196,7 +196,7 @@ export default function Footer() {
 
           {/* Column 2: Services */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-600 dark:text-slate-400 mb-4">
               Services
             </h3>
             <ul className="space-y-3 text-sm font-bold">
@@ -237,7 +237,7 @@ export default function Footer() {
 
           {/* Column 3: Quick Links */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-600 dark:text-slate-400 mb-4">
               Quick Links
             </h3>
             <ul className="space-y-3 text-sm font-bold">
@@ -286,12 +286,12 @@ export default function Footer() {
 
           {/* Column 4: Contact Us */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            <h3 className="text-xs font-black uppercase tracking-normal sm:tracking-widest text-slate-600 dark:text-slate-400 mb-4">
               Contact Us
             </h3>
             <ul className="space-y-3 text-sm font-bold">
               <li className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                <span className="material-symbols-outlined text-base text-primary">schedule</span>
+                <span className="material-symbols-outlined text-base text-primary" aria-hidden="true">schedule</span>
                 <span>{settings?.hours?.weekdays || 'Monday - Friday: 9:00 AM - 4:00 PM'}</span>
               </li>
               <li>
@@ -299,7 +299,7 @@ export default function Footer() {
                   href={`mailto:${settings?.contact?.email || 'service@cnstoolrepair.com'}`}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
-                  <span className="material-symbols-outlined text-base text-primary shrink-0">mail</span>
+                  <span className="material-symbols-outlined text-base text-primary shrink-0" aria-hidden="true">mail</span>
                   <span className="min-w-0 break-all">{settings?.contact?.email || 'service@cnstoolrepair.com'}</span>
                 </a>
               </li>
@@ -308,12 +308,12 @@ export default function Footer() {
                   href={telHref(settings?.contact?.phoneLink || '7784880777')}
                   className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-primary transition-colors focus:outline-2 focus:outline-primary focus:outline-offset-2"
                 >
-                  <span className="material-symbols-outlined text-base text-primary">call</span>
+                  <span className="material-symbols-outlined text-base text-primary" aria-hidden="true">call</span>
                   {settings?.contact?.phone || '(778) 488-0777'}
                 </a>
               </li>
               <li className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                <span className="material-symbols-outlined text-base text-primary">location_on</span>
+                <span className="material-symbols-outlined text-base text-primary" aria-hidden="true">location_on</span>
                 <span>
                   {settings?.contact?.address?.city || 'Surrey'}, {settings?.contact?.address?.province || 'BC'}
                 </span>

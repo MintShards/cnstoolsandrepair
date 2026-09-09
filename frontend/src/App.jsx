@@ -148,6 +148,7 @@ function App() {
                   path="*"
                   element={
                     <div className="min-h-screen flex flex-col">
+                      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] bg-primary text-white font-bold px-4 py-2 rounded-lg">Skip to main content</a>
                       <AnnouncementBanner />
                       <Header />
                       <Routes>

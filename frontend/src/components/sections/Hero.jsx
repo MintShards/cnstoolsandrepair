@@ -118,11 +118,11 @@ export default function Hero({
             {/* Mobile-First CTA Buttons - Optimized for thumb reach */}
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-3 lg:gap-4 mt-6 sm:mt-6">
               <Link to="/repair-request" className="w-full sm:w-auto order-1 flex items-center justify-center gap-2 sm:gap-3 rounded-xl h-14 sm:h-14 px-6 sm:px-8 bg-primary text-white text-base sm:text-base font-black shadow-2xl shadow-primary/40 active:scale-95 transition-all border-2 border-primary/50 touch-manipulation">
-                <span className="material-symbols-outlined text-xl sm:text-2xl">build</span>
+                <span className="material-symbols-outlined text-xl sm:text-2xl" aria-hidden="true">build</span>
                 <span className="tracking-tight">{content.primaryButtonText}</span>
               </Link>
               <Link to="/services" className="w-full sm:w-auto order-2 flex items-center justify-center gap-2 rounded-xl h-12 sm:h-14 px-6 sm:px-8 bg-white/15 dark:bg-white/10 backdrop-blur-md border-2 border-white/40 dark:border-white/30 text-white text-sm sm:text-base font-bold hover:bg-white/25 dark:hover:bg-white/20 active:scale-95 transition-all touch-manipulation">
-                <span className="material-symbols-outlined text-lg sm:text-xl">construction</span>
+                <span className="material-symbols-outlined text-lg sm:text-xl" aria-hidden="true">construction</span>
                 <span>{content.secondaryButtonText}</span>
               </Link>
             </div>

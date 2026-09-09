@@ -25,7 +25,7 @@ export default function DualCTA({ backgroundColor = 'bg-white dark:bg-slate-900'
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 sm:mb-12">
             {/* Primary CTA - Submit Repair Request */}
             <Link to="/repair-request" className="w-full sm:w-auto bg-primary text-white font-black px-8 py-4 rounded-xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 active:scale-95 transition-all uppercase flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }} aria-hidden="true">
                 build
               </span>
               Submit Repair Request
@@ -33,7 +33,7 @@ export default function DualCTA({ backgroundColor = 'bg-white dark:bg-slate-900'
 
             {/* Secondary CTA - Call Now */}
             <a href={telHref(phoneLink)} className="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black px-8 py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary active:scale-95 transition-all uppercase flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }} aria-hidden="true">
                 phone
               </span>
               Call {phone}

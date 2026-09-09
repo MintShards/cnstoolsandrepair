@@ -88,11 +88,12 @@ export default function About() {
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
 
+      <main id="main-content" tabIndex={-1}>
       {/* Section 1: Our Story */}
       <section className="relative px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Story</h2>
+            <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Story</p>
             <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase mb-6">
               {aboutContent?.page_heading || 'Industrial pneumatic tool repair and maintenance services in Surrey, BC'}
             </h1>
@@ -107,6 +108,7 @@ export default function About() {
 
       {/* Section 2: Why Choose Us */}
       <WhyChooseUs data={homeContent?.whyChooseUs} loading={loading} />
+      </main>
     </>
   );
 }

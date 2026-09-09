@@ -10,17 +10,18 @@ export default function BottomNav() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3 pb-8 z-50">
+    <nav aria-label="Quick access" className="lg:hidden fixed bottom-0 inset-x-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3 pb-8 z-50">
       <div className="flex items-center justify-between w-full mx-auto">
         <Link
           to="/"
           className={`flex flex-col items-center gap-1 min-w-[44px] py-1 ${
-            isActive('/') ? 'text-primary' : 'text-slate-400'
+            isActive('/') ? 'text-primary' : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: isActive('/') ? "'FILL' 1" : "'FILL' 0" }}
+            aria-hidden="true"
           >
             home
           </span>
@@ -30,12 +31,13 @@ export default function BottomNav() {
         <Link
           to="/services"
           className={`flex flex-col items-center gap-1 min-w-[44px] py-1 ${
-            isActive('/services') ? 'text-primary' : 'text-slate-400'
+            isActive('/services') ? 'text-primary' : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: isActive('/services') ? "'FILL' 1" : "'FILL' 0" }}
+            aria-hidden="true"
           >
             handyman
           </span>
@@ -46,12 +48,13 @@ export default function BottomNav() {
         <Link
           to="/industries"
           className={`hidden sm:flex flex-col items-center gap-1 min-w-[44px] py-1 ${
-            isActive('/industries') ? 'text-primary' : 'text-slate-400'
+            isActive('/industries') ? 'text-primary' : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: isActive('/industries') ? "'FILL' 1" : "'FILL' 0" }}
+            aria-hidden="true"
           >
             factory
           </span>
@@ -68,7 +71,7 @@ export default function BottomNav() {
               add_task
             </span>
           </Link>
-          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-black text-primary uppercase whitespace-nowrap">
+          <span aria-hidden="true" className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-black text-primary uppercase whitespace-nowrap">
             Repair
           </span>
         </div>
@@ -76,10 +79,10 @@ export default function BottomNav() {
         {/* Phone only - tap-to-call (Gallery moves to tablet-only; still in header menu) */}
         <a
           href={telHref(phoneLink)}
-          className="flex sm:hidden flex-col items-center gap-1 min-w-[44px] py-1 text-slate-400"
+          className="flex sm:hidden flex-col items-center gap-1 min-w-[44px] py-1 text-slate-600 dark:text-slate-400"
           aria-label="Call CNS Tool Repair"
         >
-          <span className="material-symbols-outlined">call</span>
+          <span className="material-symbols-outlined" aria-hidden="true">call</span>
           <span className="text-[10px] font-black uppercase tracking-tighter">Call</span>
         </a>
 
@@ -87,12 +90,13 @@ export default function BottomNav() {
         <Link
           to="/gallery"
           className={`hidden sm:flex flex-col items-center gap-1 min-w-[44px] py-1 ${
-            isActive('/gallery') ? 'text-primary' : 'text-slate-400'
+            isActive('/gallery') ? 'text-primary' : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: isActive('/gallery') ? "'FILL' 1" : "'FILL' 0" }}
+            aria-hidden="true"
           >
             photo_library
           </span>
@@ -103,12 +107,13 @@ export default function BottomNav() {
         <Link
           to="/about"
           className={`hidden sm:flex flex-col items-center gap-1 min-w-[44px] py-1 ${
-            isActive('/about') ? 'text-primary' : 'text-slate-400'
+            isActive('/about') ? 'text-primary' : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: isActive('/about') ? "'FILL' 1" : "'FILL' 0" }}
+            aria-hidden="true"
           >
             history
           </span>
@@ -118,12 +123,13 @@ export default function BottomNav() {
         <Link
           to="/contact"
           className={`flex flex-col items-center gap-1 min-w-[44px] py-1 ${
-            isActive('/contact') ? 'text-primary' : 'text-slate-400'
+            isActive('/contact') ? 'text-primary' : 'text-slate-600 dark:text-slate-400'
           }`}
         >
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: isActive('/contact') ? "'FILL' 1" : "'FILL' 0" }}
+            aria-hidden="true"
           >
             chat_bubble
           </span>

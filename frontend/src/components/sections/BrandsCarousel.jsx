@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { brandsAPI } from '../../services/api';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay } from 'swiper/modules';
+import { Autoplay, A11y } from 'swiper/modules';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -14,6 +14,19 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [isPaused, setIsPaused] = useState(prefersReducedMotion);
+  const swiperRef = useRef(null);
+
+  const handleAutoplayToggle = () => {
+    const swiper = swiperRef.current;
+    if (!swiper || !swiper.autoplay) return;
+    if (isPaused) {
+      swiper.autoplay.start();
+    } else {
+      swiper.autoplay.stop();
+    }
+    setIsPaused(!isPaused);
+  };
 
   // Fetch brands from API
   useEffect(() => {
@@ -73,28 +86,37 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
       <div className="max-w-screen-xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-6 sm:mb-8 lg:mb-12">
-          <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
+          <p className="text-red-700 dark:text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             Industrial Tool Support
-          </h2>
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight uppercase px-4">
+          </p>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight uppercase px-4">
             Brands We Service
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 sm:mt-3 text-xs sm:text-sm lg:text-base px-4 max-w-2xl mx-auto">
+          </h2>
+          <p className="text-slate-600 dark:text-slate-400 mt-2 sm:mt-3 text-xs sm:text-sm lg:text-base px-4 max-w-2xl mx-auto">
             We service pneumatic and industrial tools used in automotive, fleet maintenance, manufacturing, and MRO environments. Our technicians work with a wide range of professional-grade brands commonly used across industrial operations.
           </p>
         </div>
 
         {/* Swiper Carousel */}
         <Swiper
-          modules={[Autoplay]}
+          modules={[Autoplay, A11y]}
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper;
+            if (prefersReducedMotion) {
+              swiper.autoplay.stop();
+            }
+          }}
           spaceBetween={32}
           slidesPerView="auto"
           loop={true}
-          autoplay={prefersReducedMotion ? false : {
+          autoplay={{
             delay: 0,
             disableOnInteraction: false,
           }}
           speed={5000}
+          a11y={{
+            paginationBulletMessage: 'Go to brand slide {{index}}',
+          }}
           className="brands-swiper"
         >
           {activeBrands.map((brand, index) => (
@@ -104,7 +126,7 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
                 <div className="brands-logo-container">
                   <img
                     src={brand.logo_url}
-                    alt={brand.name}
+                    alt=""
                     className="brands-logo"
                     loading="lazy"
                     decoding="async"
@@ -119,7 +141,7 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
                 {/* Authorized Badge */}
                 {brand.authorized && (
                   <div className="brands-authorized-badge">
-                    <span className="material-symbols-outlined text-xs">
+                    <span className="material-symbols-outlined text-xs" aria-hidden="true">
                       verified
                     </span>
                     <span>Authorized</span>
@@ -130,13 +152,28 @@ export default function BrandsCarousel({ backgroundColor = 'bg-slate-100 dark:bg
           ))}
         </Swiper>
 
+        {/* Carousel Pause/Play Toggle */}
+        <div className="flex justify-center mt-4">
+          <button
+            type="button"
+            onClick={handleAutoplayToggle}
+            aria-pressed={isPaused}
+            aria-label={isPaused ? 'Play carousel' : 'Pause carousel'}
+            className="flex items-center justify-center size-9 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+          >
+            <span className="material-symbols-outlined text-xl">
+              {isPaused ? 'play_arrow' : 'pause'}
+            </span>
+          </button>
+        </div>
+
         {/* Trademark Disclaimer */}
-        <p className="text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-6 sm:mt-8 px-4 max-w-2xl mx-auto">
+        <p className="text-center text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 mt-6 sm:mt-8 px-4 max-w-2xl mx-auto">
           All trademarks and logos are the property of their respective owners and are shown to indicate the brands we service. Brands marked Authorized are serviced under a factory-authorized warranty repair arrangement; CNS Tool Repair is not otherwise affiliated with or endorsed by the brands shown.
         </p>
 
         {/* CTA */}
-        <p className="text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 sm:mt-3 px-4">
+        <p className="text-center text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 sm:mt-3 px-4">
           Don&apos;t see your brand?{' '}
           <Link to="/contact" className="text-accent-orange hover:underline font-bold">
             Contact us

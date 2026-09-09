@@ -1,8 +1,7 @@
-import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 export default function PrivacyPolicy() {
-  const lastUpdated = 'March 30, 2026';
+  const lastUpdated = 'September 8, 2026';
 
   return (
     <>
@@ -24,7 +23,7 @@ export default function PrivacyPolicy() {
       {/* Hero */}
       <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-4xl mx-auto">
-          <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
+          <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
             Legal
           </p>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight uppercase text-slate-900 dark:text-white mb-4">
@@ -38,7 +37,7 @@ export default function PrivacyPolicy() {
 
       {/* Content */}
       <section className="px-6 sm:px-8 lg:px-12 pb-16 sm:pb-20 lg:pb-24 bg-white dark:bg-slate-950">
-        <div className="max-w-4xl mx-auto prose-styles">
+        <div className="max-w-4xl mx-auto">
           <div className="space-y-10 text-slate-700 dark:text-slate-300 leading-relaxed">
 
             {/* Introduction */}
@@ -47,7 +46,7 @@ export default function PrivacyPolicy() {
                 1. Introduction
               </h2>
               <p>
-                CNS Tool Repair ("we," "our," or "us") is committed to protecting the privacy of our clients and website visitors. This Privacy Policy explains how we collect, use, disclose, and safeguard personal information in accordance with Canada's <em>Personal Information Protection and Electronic Documents Act</em> (PIPEDA) and British Columbia's <em>Personal Information Protection Act</em> (PIPA).
+                CNS Tool Repair (“we,” “our,” or “us”) is committed to protecting the privacy of our clients and website visitors. This Privacy Policy explains how we collect, use, disclose, and safeguard personal information in accordance with Canada’s <em>Personal Information Protection and Electronic Documents Act</em> (PIPEDA) and British Columbia’s <em>Personal Information Protection Act</em> (PIPA).
               </p>
               <p className="mt-3">
                 By using our website at <strong>cnstoolrepair.com</strong> or submitting information through our forms, you consent to the practices described in this policy.
@@ -59,15 +58,16 @@ export default function PrivacyPolicy() {
               <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white mb-3">
                 2. Information We Collect
               </h2>
-              <p className="mb-3">We primarily collect business contact information related to commercial service inquiries. Personal information is collected only when you voluntarily provide it through our contact or repair request forms. This may include:</p>
+              <p className="mb-3">We primarily collect business contact information related to commercial service inquiries. Personal information is collected only when you voluntarily provide it through our contact, repair request, or product quote forms. This may include:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li><strong>Contact information:</strong> name, company name, email address, phone number</li>
                 <li><strong>Service information:</strong> tool type, brand, model, quantity, and description of the problem</li>
                 <li><strong>Photos:</strong> images of tools or equipment you upload with your repair request</li>
                 <li><strong>Communication records:</strong> messages sent through our contact form</li>
+                <li><strong>Technical information:</strong> when you visit the site, our servers automatically process your IP address and basic request details (browser type, pages requested) for security, rate limiting, and troubleshooting. Server logs are kept only for a short period.</li>
               </ul>
               <p className="mt-3">
-                We do <strong>not</strong> collect payment information through this website. We do not use tracking cookies or analytics tools. Our website uses a technical cookie solely for security purposes (CSRF protection) to prevent fraudulent form submissions — this cookie does not track your browsing activity.
+                We do <strong>not</strong> collect payment information through this website, and we do <strong>not</strong> use analytics or tracking tools of any kind. Visiting our website sets <strong>no cookies</strong> in your browser. A login cookie is used only for our own staff accounts. Your browser’s local storage may hold a display preference (light/dark theme) and a temporary draft of a form you are filling out — including any contact details you have typed — which stays on your own device and is cleared automatically.
               </p>
             </div>
 
@@ -101,13 +101,22 @@ export default function PrivacyPolicy() {
               </p>
               <ul className="list-disc pl-6 space-y-3">
                 <li>
-                  <strong>Resend:</strong> Used to deliver email notifications when you submit a form. Your contact details are transmitted through Resend's servers to reach us. Resend is a U.S.-based email delivery service operating under its own privacy policy.
+                  <strong>Resend:</strong> Used to deliver email notifications when you submit a form. Your contact details are transmitted through Resend’s servers to reach us. Resend is a U.S.-based email delivery service operating under its own privacy policy.
                 </li>
                 <li>
                   <strong>MongoDB Atlas:</strong> Your submitted data is stored in a cloud database hosted by MongoDB Atlas (MongoDB, Inc.), a U.S.-based cloud provider. Data is stored on servers that may be located outside Canada but is protected by contractual data processing agreements.
                 </li>
                 <li>
-                  <strong>Google Maps:</strong> Our website embeds a Google Maps widget to display our business location. When the map loads, Google may collect technical information such as your IP address and browser details in accordance with Google's privacy policy. We do not control Google's data collection practices.
+                  <strong>Google Maps:</strong> Our website embeds a Google Maps widget to display our business location. When the map loads, Google may collect technical information such as your IP address and browser details, and may set its own cookies within the map frame, in accordance with Google’s privacy policy. We do not control Google’s data collection practices.
+                </li>
+                <li>
+                  <strong>DigitalOcean:</strong> Our website is hosted on DigitalOcean infrastructure, and photos you upload are stored in DigitalOcean Spaces object storage (DigitalOcean, LLC, a U.S. company; storage located in the United States).
+                </li>
+                <li>
+                  <strong>Google Fonts:</strong> The typefaces on this site load from Google’s font servers, which means your IP address and browser details reach Google when a page loads. Google states that Fonts requests set no cookies and are not used for advertising profiles.
+                </li>
+                <li>
+                  <strong>Google (email):</strong> Notification emails generated by our forms are received in a Google-hosted mailbox, so Google processes the contents of those notifications as our email provider.
                 </li>
               </ul>
               <p className="mt-3">
@@ -120,8 +129,17 @@ export default function PrivacyPolicy() {
               <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white mb-3">
                 5. Data Retention
               </h2>
-              <p>
-                We retain your personal information for as long as necessary to fulfill the purpose for which it was collected — typically for the duration of our service relationship and a reasonable period afterward for record-keeping and legal compliance. You may request deletion of your data at any time (see Section 7).
+              <p className="mb-3">
+                We retain your personal information only as long as necessary for the purpose it was collected, then destroy or anonymize it. As a guide:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>Repair and invoice records:</strong> approximately 7 years, as required for tax and business records</li>
+                <li><strong>Quote requests that don’t become repairs:</strong> up to 2 years</li>
+                <li><strong>Contact form messages:</strong> up to 24 months</li>
+                <li><strong>Uploaded photos:</strong> kept while relevant to the repair record, then deleted</li>
+              </ul>
+              <p className="mt-3">
+                You may request deletion of your data at any time (see Section 7), subject to records we are legally required to keep.
               </p>
             </div>
 
@@ -148,14 +166,17 @@ export default function PrivacyPolicy() {
                 <li>Withdraw consent for our use of your information</li>
               </ul>
               <p className="mt-3">
-                To exercise these rights, contact us at <a href="mailto:service@cnstoolrepair.com" className="text-primary hover:underline font-bold">service@cnstoolrepair.com</a>. We will respond within 30 days.
+                To exercise these rights, contact our Privacy Officer at <a href="mailto:service@cnstoolrepair.com" className="text-primary hover:underline font-bold">service@cnstoolrepair.com</a>. We will respond within 30 days.
+              </p>
+              <p className="mt-3">
+                If you are not satisfied with our response, you may contact the Office of the Information and Privacy Commissioner for British Columbia (<a href="https://www.oipc.bc.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold">oipc.bc.ca</a>) or the Office of the Privacy Commissioner of Canada (<a href="https://www.priv.gc.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold">priv.gc.ca</a>).
               </p>
             </div>
 
             {/* Children */}
             <div>
               <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white mb-3">
-                8. Children's Privacy
+                8. Children’s Privacy
               </h2>
               <p>
                 Our website and services are directed at businesses and adult professionals. We do not knowingly collect personal information from individuals under 18 years of age.
@@ -168,7 +189,7 @@ export default function PrivacyPolicy() {
                 9. Changes to This Policy
               </h2>
               <p>
-                We may update this Privacy Policy from time to time. The "Last updated" date at the top of this page reflects the most recent revision. Continued use of our website after any changes constitutes your acceptance of the updated policy.
+                We may update this Privacy Policy from time to time. The “Last updated” date at the top of this page reflects the most recent revision. Continued use of our website after any changes constitutes your acceptance of the updated policy.
               </p>
             </div>
 
@@ -178,17 +199,18 @@ export default function PrivacyPolicy() {
                 10. Contact Us
               </h2>
               <p className="mb-2">
-                If you have questions or concerns about this Privacy Policy, please contact us:
+                Our Privacy Officer is responsible for compliance with this policy and with PIPEDA and PIPA BC. For any privacy question, request, or concern, contact:
               </p>
               <address className="not-italic space-y-1 text-slate-600 dark:text-slate-400">
-                <p><strong className="text-slate-900 dark:text-white">CNS Tool Repair</strong></p>
-                <p>Surrey, British Columbia, Canada</p>
+                <p><strong className="text-slate-900 dark:text-white">Privacy Officer, CNS Tool Repair</strong></p>
+                <p>Unit 65, 13335 115 Ave, Surrey, British Columbia V3R 0R8, Canada</p>
                 <p>
                   Email:{' '}
                   <a href="mailto:service@cnstoolrepair.com" className="text-primary hover:underline font-bold">
                     service@cnstoolrepair.com
                   </a>
                 </p>
+                <p>Phone: (778) 488-0777</p>
               </address>
             </div>
 

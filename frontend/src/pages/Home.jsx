@@ -65,7 +65,7 @@ export default function Home() {
         <meta name="twitter:description" content={seoData.description} />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
-      <main className="relative">
+      <main id="main-content" tabIndex={-1} className="relative">
       {/* 1. Hero - Value proposition + immediate CTA */}
       <Hero
         data={homeContent?.hero}

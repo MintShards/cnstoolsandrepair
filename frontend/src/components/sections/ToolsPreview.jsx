@@ -82,12 +82,12 @@ export default function ToolsPreview() {
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
-          <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
+          <p className="text-red-700 dark:text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             Our Expertise
-          </h2>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
+          </p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
             Tools We Repair
-          </h3>
+          </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
             Expert repair for air tools, hydraulic tools, lifting equipment, and electric tools
           </p>
@@ -100,9 +100,9 @@ export default function ToolsPreview() {
                 key={tool.id}
                 className="flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-5 lg:p-6 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors"
               >
-                <h4 className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-tight text-center leading-tight">
+                <h3 className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-tight text-center leading-tight">
                   {tool.name}
-                </h4>
+                </h3>
               </div>
             ))}
           </div>

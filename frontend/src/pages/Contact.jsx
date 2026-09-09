@@ -38,7 +38,7 @@ export default function Contact() {
 
   if (loading || settingsLoading || !settings || !contactContent) {
     return (
-      <main className="relative min-h-screen bg-white dark:bg-slate-900">
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen bg-white dark:bg-slate-900">
         {/* Hero Skeleton */}
         <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
           <div className="max-w-4xl mx-auto text-center">
@@ -120,13 +120,13 @@ export default function Contact() {
         <meta name="twitter:description" content="Contact CNS Tool Repair in Surrey, BC. Phone, email, and location information for Metro Vancouver's premier tool repair specialists." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
-      <main className="relative min-h-screen bg-white dark:bg-slate-900">
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen bg-white dark:bg-slate-900">
       {/* Hero Section */}
       <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">{hero.label}</h2>
+          <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">{hero.label}</p>
           <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">{hero.heading}</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-4 text-base lg:text-lg">
+          <p className="text-slate-600 dark:text-slate-400 mt-4 text-base lg:text-lg">
             {hero.description}
           </p>
         </div>

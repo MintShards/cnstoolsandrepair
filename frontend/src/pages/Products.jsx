@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { productsAPI, productQuotesAPI, productsContentAPI } from '../services/api';
 import DualCTA from '../components/sections/DualCTA';
@@ -209,6 +210,13 @@ export default function Products() {
   // focus back to whatever opened it. Without this a keyboard or screen
   // reader user keeps tabbing through the catalogue hidden behind the modal.
   const panelRef = useRef(null);
+  const successHeadingRef = useRef(null);
+
+  // Move focus to the confirmation heading so screen readers announce success
+  useEffect(() => {
+    if (submitted) successHeadingRef.current?.focus();
+  }, [submitted]);
+
   useEffect(() => {
     if (!panelOpen) return;
     const opener = document.activeElement;
@@ -315,13 +323,13 @@ export default function Products() {
         <meta name="twitter:description" content={seo.description} />
       </Helmet>
 
-      <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
           {/* Hero */}
           <div className="text-center mb-10 lg:mb-14">
             {/* Decorative eyebrow — a <p>, not a heading, so the document
                 outline starts at the h1 below it */}
-            <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
+            <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">
               {hero.label}
             </p>
             {/* The full heading wraps to two lines on a narrow phone, so the
@@ -336,7 +344,7 @@ export default function Products() {
             </p>
             {hero.availabilityNote && (
               <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'wght' 600" }}>
+                <span aria-hidden="true" className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'wght' 600" }}>
                   local_shipping
                 </span>
                 {hero.availabilityNote}
@@ -362,6 +370,7 @@ export default function Products() {
                     }`}
                   >
                     <span
+                      aria-hidden="true"
                       className="material-symbols-outlined text-base"
                       style={{ fontVariationSettings: "'wght' 600" }}
                     >
@@ -375,6 +384,7 @@ export default function Products() {
 
             <div className="relative max-w-md w-full mx-auto">
               <span
+                aria-hidden="true"
                 className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl"
                 style={{ fontVariationSettings: "'wght' 600" }}
               >
@@ -437,7 +447,7 @@ export default function Products() {
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-700">
-                                <span className="material-symbols-outlined text-5xl">handyman</span>
+                                <span aria-hidden="true" className="material-symbols-outlined text-5xl">handyman</span>
                               </div>
                             )}
                             {product.featured && (
@@ -448,7 +458,7 @@ export default function Products() {
                           </div>
 
                           <div className="flex flex-col flex-1 pt-4">
-                            <p className="text-accent-orange text-[11px] font-black uppercase tracking-[0.15em]">
+                            <p className="text-red-700 dark:text-accent-orange text-[11px] font-black uppercase tracking-[0.15em]">
                               {/* Strongarm catalogues some tools by item number only — those
                                   carry no model, and the Item # below identifies them */}
                               {[product.brand, product.model].filter(Boolean).join(' ') ||
@@ -474,7 +484,7 @@ export default function Products() {
                                 </span>
                               )}
                               {product.sku && (
-                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                                   Item #{product.sku}
                                 </span>
                               )}
@@ -483,6 +493,7 @@ export default function Products() {
                             <button
                               type="button"
                               onClick={() => addToBasket(product)}
+                              aria-label={`Add ${product.name} to quote`}
                               className={`mt-auto pt-4 w-full text-xs font-black uppercase tracking-tight ${
                                 inBasket ? 'text-green-700 dark:text-green-400' : ''
                               }`}
@@ -507,7 +518,7 @@ export default function Products() {
             </div>
           ) : (
             <div className="text-center py-20">
-              <span className="material-symbols-outlined text-6xl text-slate-400">search_off</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-6xl text-slate-400">search_off</span>
               <p className="mt-4 text-slate-500">
                 {products.length === 0
                   ? 'Our catalogue is being updated. Call 778-488-0777 and we’ll source what you need.'
@@ -547,10 +558,11 @@ export default function Products() {
             setSubmitted(null);
             setPanelOpen(true);
           }}
+          aria-label={`Request quote — ${basketCount} ${basketCount === 1 ? 'item' : 'items'} in list`}
           /* bottom-28 clears the mobile BottomNav (96px tall) with room to spare */
           className="fixed bottom-28 right-5 lg:bottom-8 lg:right-8 z-40 inline-flex items-center gap-3 rounded-full bg-primary px-6 py-4 text-sm font-black uppercase tracking-tight text-white shadow-2xl hover:bg-primary/90 transition-all"
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 600" }}>
             request_quote
           </span>
           Request Quote
@@ -566,7 +578,7 @@ export default function Products() {
           className="fixed inset-0 z-50 bg-black/60 flex justify-end"
           role="dialog"
           aria-modal="true"
-          aria-label="Request a quote"
+          aria-labelledby="quote-panel-title"
           onClick={() => setPanelOpen(false)}
         >
           <div
@@ -576,12 +588,12 @@ export default function Products() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-5">
-              <h2 className="text-xl font-black uppercase tracking-tight">{quoteCopy.title}</h2>
+              <h2 id="quote-panel-title" className="text-xl font-black uppercase tracking-tight">{quoteCopy.title}</h2>
               <button
                 type="button"
                 onClick={() => setPanelOpen(false)}
                 aria-label="Close"
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 <span className="material-symbols-outlined text-3xl">close</span>
               </button>
@@ -593,8 +605,8 @@ export default function Products() {
             <div className="px-6 pt-6 pb-32 lg:pb-6">
               {submitted ? (
                 <div className="text-center py-10">
-                  <span className="material-symbols-outlined text-6xl text-green-600">check_circle</span>
-                  <h3 className="mt-4 text-2xl font-black uppercase tracking-tight">
+                  <span aria-hidden="true" className="material-symbols-outlined text-6xl text-green-600">check_circle</span>
+                  <h3 ref={successHeadingRef} tabIndex={-1} className="mt-4 text-2xl font-black uppercase tracking-tight">
                     {quoteCopy.successHeading}
                   </h3>
                   <p className="mt-2 text-slate-500 dark:text-slate-400">
@@ -613,7 +625,7 @@ export default function Products() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Items */}
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-accent-orange mb-3">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-red-700 dark:text-accent-orange mb-3">
                       Your Tools ({basketItems.length})
                     </h3>
                     {basketItems.length === 0 ? (
@@ -643,7 +655,11 @@ export default function Products() {
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 type="button"
-                                aria-label={`Decrease quantity of ${product.name}`}
+                                aria-label={
+                                  quantity === 1
+                                    ? `Remove ${product.name} from quote`
+                                    : `Decrease quantity of ${product.name}`
+                                }
                                 onClick={() => setQuantity(product.id, quantity - 1)}
                                 className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                               >
@@ -667,12 +683,17 @@ export default function Products() {
 
                   {/* Contact */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-accent-orange">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-red-700 dark:text-accent-orange">
                       Your Details
                     </h3>
 
+                    <label htmlFor="product-quote-company" className="sr-only">
+                      Company (optional)
+                    </label>
                     <input
+                      id="product-quote-company"
                       type="text"
+                      autoComplete="organization"
                       value={form.company_name}
                       onChange={(e) => setForm({ ...form, company_name: e.target.value })}
                       placeholder="Company (optional)"
@@ -680,36 +701,60 @@ export default function Products() {
                     />
 
                     <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        required
-                        value={form.first_name}
-                        onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                        placeholder="First name *"
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      <input
-                        type="text"
-                        required
-                        value={form.last_name}
-                        onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                        placeholder="Last name *"
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
+                      <div>
+                        <label htmlFor="product-quote-first-name" className="sr-only">
+                          First name *
+                        </label>
+                        <input
+                          id="product-quote-first-name"
+                          type="text"
+                          required
+                          autoComplete="given-name"
+                          value={form.first_name}
+                          onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                          placeholder="First name *"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="product-quote-last-name" className="sr-only">
+                          Last name *
+                        </label>
+                        <input
+                          id="product-quote-last-name"
+                          type="text"
+                          required
+                          autoComplete="family-name"
+                          value={form.last_name}
+                          onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                          placeholder="Last name *"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
                     </div>
 
+                    <label htmlFor="product-quote-email" className="sr-only">
+                      Email *
+                    </label>
                     <input
+                      id="product-quote-email"
                       type="email"
                       required
+                      autoComplete="email"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       placeholder="Email *"
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
 
+                    <label htmlFor="product-quote-phone" className="sr-only">
+                      Phone * (604-555-0123)
+                    </label>
                     <input
+                      id="product-quote-phone"
                       type="tel"
                       required
+                      autoComplete="tel"
                       value={form.phone}
                       onChange={(e) => setForm({ ...form, phone: formatPhoneNumber(e.target.value) })}
                       placeholder="Phone * (604-555-0123)"
@@ -717,7 +762,11 @@ export default function Products() {
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
 
+                    <label htmlFor="product-quote-notes" className="sr-only">
+                      Anything else we should know? (delivery timing, volume, accessories…)
+                    </label>
                     <textarea
+                      id="product-quote-notes"
                       rows={3}
                       value={form.notes}
                       onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -727,10 +776,17 @@ export default function Products() {
                   </div>
 
                   {error && (
-                    <p className="rounded-xl bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                    <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
                       {error}
                     </p>
                   )}
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    By submitting, you agree to our{' '}
+                    <Link to="/privacy-policy" className="underline hover:text-primary">Privacy Policy</Link>
+                    {' '}and{' '}
+                    <Link to="/terms-of-service" className="underline hover:text-primary">Terms of Service</Link>.
+                  </p>
 
                   <button
                     type="submit"
@@ -740,7 +796,7 @@ export default function Products() {
                     {submitting ? 'Sending…' : 'Send Quote Request'}
                   </button>
 
-                  <p className="text-center text-xs text-slate-400">
+                  <p className="text-center text-xs text-slate-600 dark:text-slate-400">
                     {quoteCopy.footnote}
                   </p>
                 </form>

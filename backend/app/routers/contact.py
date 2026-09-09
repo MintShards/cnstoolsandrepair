@@ -1,9 +1,11 @@
 import logging
-from fastapi import APIRouter, HTTPException, Request
+import re
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
 from app.config import settings
 from app.database import get_database
+from app.dependencies.auth import require_admin
 from app.services.email_service import format_pst_datetime
 from app.services.resend_client import send_email_via_resend
 from app.services import email_layout as L
@@ -166,3 +168,19 @@ CNS Tool Repair | {city}, {province}
         "success": True,
         "message": "Thank you for contacting us. We will get back to you soon!"
     }
+
+
+@router.delete("/messages", dependencies=[Depends(require_admin)])
+async def delete_contact_messages(email: EmailStr = Query(...)):
+    """Erase every stored contact message from one email address.
+
+    This is the deletion valve the privacy policy promises (PIPEDA 4.5/4.9,
+    BC PIPA) — before this existed, contact messages had no delete path at
+    all. Case-insensitive exact match on the address.
+    """
+    db = get_database()
+    result = await db.contact_messages.delete_many({
+        "email": {"$regex": f"^{re.escape(str(email))}$", "$options": "i"}
+    })
+    logger.info(f"Deletion request: removed {result.deleted_count} contact message(s)")
+    return {"deleted": result.deleted_count}

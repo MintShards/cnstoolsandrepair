@@ -80,13 +80,13 @@ export default function IndustriesServed() {
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-16">
-          <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
+          <p className="text-red-700 dark:text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             {industriesData?.hero?.label || 'Who We Serve'}
-          </h2>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4 mb-3 sm:mb-4">
+          </p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4 mb-3 sm:mb-4">
             {industriesData?.hero?.heading || 'Industries We Support'}
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base px-4">
+          </h2>
+          <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base px-4">
             {industriesData?.hero?.description || 'We provide industrial pneumatic tool repair services for businesses operating in demanding environments across Surrey and Metro Vancouver.'}
           </p>
         </div>
@@ -102,11 +102,12 @@ export default function IndustriesServed() {
                   <span
                     className="material-symbols-outlined text-primary text-2xl sm:text-3xl"
                     style={{ fontVariationSettings: "'wght' 600" }}
+                    aria-hidden="true"
                   >
                     {industry.icon}
                   </span>
                 </div>
-                <h4 className="text-lg sm:text-xl font-black uppercase tracking-tight">{industry.name}</h4>
+                <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight">{industry.name}</h3>
               </div>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {industry.description}

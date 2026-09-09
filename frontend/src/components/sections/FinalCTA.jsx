@@ -56,7 +56,7 @@ export default function FinalCTA({
       <div className="max-w-screen-xl mx-auto">
         <div className="flex flex-col items-center gap-4 sm:gap-6 relative z-10">
           <div className="bg-accent-orange size-12 sm:size-14 rounded-full flex items-center justify-center shadow-lg shadow-accent-orange/20">
-            <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">mail</span>
+            <span className="material-symbols-outlined text-white text-2xl sm:text-3xl" aria-hidden="true">mail</span>
           </div>
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tight px-4">
             {content.heading}
@@ -67,11 +67,11 @@ export default function FinalCTA({
           {/* Mobile-First CTA Buttons */}
           <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 lg:gap-4 mt-2 sm:mt-4 px-4 sm:px-0">
             <Link to="/repair-request" className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-16 bg-primary text-white font-black rounded-xl flex items-center justify-center gap-2 sm:gap-3 shadow-2xl shadow-primary/40 border-2 border-primary/50 uppercase text-sm sm:text-base hover:bg-primary/90 transition-all active:scale-95 touch-manipulation">
-              <span className="material-symbols-outlined text-xl sm:text-2xl">fact_check</span>
+              <span className="material-symbols-outlined text-xl sm:text-2xl" aria-hidden="true">fact_check</span>
               <span>{content.primaryButtonText}</span>
             </Link>
             <a href={telHref(settings?.contact?.phoneLink || '7784880777')} className="w-full sm:w-auto px-6 sm:px-8 h-12 sm:h-16 bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white font-black rounded-xl border-2 border-slate-300 dark:border-white/30 backdrop-blur-md flex items-center justify-center gap-2 uppercase text-sm sm:text-base hover:bg-slate-300 dark:hover:bg-white/10 transition-all active:scale-95 touch-manipulation">
-              <span className="material-symbols-outlined text-lg sm:text-xl">call</span>
+              <span className="material-symbols-outlined text-lg sm:text-xl" aria-hidden="true">call</span>
               <span>{content.secondaryButtonText}</span>
             </a>
           </div>

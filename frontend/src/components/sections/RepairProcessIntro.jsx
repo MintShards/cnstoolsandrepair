@@ -37,12 +37,12 @@ export default function RepairProcessIntro({
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 sm:mb-10 lg:mb-12">
-          <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
+          <p className="text-red-700 dark:text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             {content.label}
-          </h2>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
+          </p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase px-4">
             {content.heading}
-          </h3>
+          </h2>
         </div>
         <div className="max-w-3xl mx-auto">
           <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base lg:text-lg leading-relaxed text-center">

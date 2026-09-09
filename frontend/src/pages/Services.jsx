@@ -23,7 +23,7 @@ function AuthorizedBrandChip({ brand, uniform = false }) {
       {brand.logo_url && (
         <img
           src={brand.logo_url}
-          alt={`${brand.name} logo`}
+          alt=""
           className="h-6 w-auto max-w-[72px] shrink-0 object-contain"
           loading="lazy"
         />
@@ -38,6 +38,7 @@ function AuthorizedBrandChip({ brand, uniform = false }) {
       <span
         className="material-symbols-outlined text-primary text-base shrink-0"
         style={{ fontVariationSettings: "'wght' 600" }}
+        aria-hidden="true"
       >
         verified
       </span>
@@ -68,10 +69,13 @@ export default function Services() {
   const warrantySecondaryCta = warranty.secondaryCta?.trim() || 'Ask About Coverage';
   // Brand promo videos managed in Admin Settings → Services → warranty section.
   const warrantyVideos = (warranty.videos || []).filter((video) => video.url?.trim());
+  // Authorization claims must track the brands actually flagged in the DB
+  // (each flag backed by a written agreement on file) — never assert a
+  // specific brand when the data doesn't. Competition Act s.74.01 territory.
   const warrantyDescription = warranty.description?.trim()
     || (authorizedBrands.length > 0
-      ? 'CNS Tool Repair is a factory-authorized warranty repair centre for the brands shown here. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.'
-      : 'CNS Tool Repair is an authorized warranty repair centre for JET Tools and Strongarm Products. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.');
+      ? `CNS Tool Repair is a factory-authorized warranty repair centre for ${authorizedBrands.map((brand) => brand.name).join(', ')}. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.`
+      : 'CNS Tool Repair handles manufacturer warranty claims for the brands we are authorized to service. Warranty claims are assessed and repaired in-shop at our Surrey, BC facility — bring your tool and proof of purchase, and we handle the claim from diagnosis through repair.');
 
   useEffect(() => {
     const fetchTools = async () => {
@@ -129,7 +133,7 @@ export default function Services() {
         <meta name="twitter:description" content="Pneumatic tool repair in Surrey, BC. Authorized JET, Strongarm & Hathorn warranty repair centre for air, hydraulic and electric tools." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
-      <main className="relative min-h-screen">
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen">
         {/* Our Services Section */}
         <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
           <div className="max-w-screen-xl mx-auto">
@@ -168,7 +172,7 @@ export default function Services() {
               <>
                 {/* Hero Section */}
                 <div className="text-center mb-12 lg:mb-16">
-                  <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</h2>
+                  <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">What We Offer</p>
                   <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Our Services</h1>
                   <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
                     Expert pneumatic tool repair and maintenance services in Surrey, BC, supporting automotive, manufacturing, and industrial businesses across Surrey and the Metro Vancouver area.
@@ -188,6 +192,7 @@ export default function Services() {
                             <span
                               className="material-symbols-outlined text-primary text-4xl"
                               style={{ fontVariationSettings: "'wght' 600" }}
+                              aria-hidden="true"
                             >
                               {service.icon}
                             </span>
@@ -202,7 +207,7 @@ export default function Services() {
                   </div>
                 ) : (
                   <div className="text-center py-20">
-                    <span className="material-symbols-outlined text-6xl text-slate-400">build</span>
+                    <span className="material-symbols-outlined text-6xl text-slate-400" aria-hidden="true">build</span>
                     <p className="mt-4 text-slate-500">No services listed yet. Check back soon!</p>
                   </div>
                 )}
@@ -215,7 +220,7 @@ export default function Services() {
         <div className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
           <div className="max-w-screen-xl mx-auto">
             <div className="text-center mb-8 lg:mb-10">
-              <p className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">{warrantyLabel}</p>
+              <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">{warrantyLabel}</p>
               <h2 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">{warrantyHeading}</h2>
             </div>
             <div className="max-w-3xl mx-auto text-center">
@@ -250,6 +255,7 @@ export default function Services() {
                   <span
                     className="material-symbols-outlined text-primary text-3xl"
                     style={{ fontVariationSettings: "'wght' 600" }}
+                    aria-hidden="true"
                   >
                     verified
                   </span>
@@ -296,11 +302,12 @@ export default function Services() {
                       preload="metadata"
                       playsInline
                       poster={video.poster?.trim() || undefined}
+                      aria-label={video.title?.trim() ? `${video.title.trim()} video` : 'Warranty brand video'}
                       className="mx-auto w-auto max-w-full max-h-[420px] rounded-2xl shadow-lg bg-slate-950"
                       src={video.url}
                     />
                     {video.title?.trim() && (
-                      <figcaption className="mt-2 text-center text-xs font-black uppercase tracking-tight text-slate-500 dark:text-slate-400">
+                      <figcaption className="mt-2 text-center text-xs font-black uppercase tracking-tight text-slate-600 dark:text-slate-400">
                         {video.title}
                       </figcaption>
                     )}
@@ -413,7 +420,7 @@ export default function Services() {
               <>
                 {/* Hero Section */}
                 <div className="text-center mb-12 lg:mb-16">
-                  <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</h2>
+                  <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Expertise</p>
                   <h2 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Tools We Repair</h2>
                   <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-base lg:text-lg">
                     Complete repair services for pneumatic impact wrenches, air drills, grinders, sanders, electric tools, hydraulic jacks, and lifting equipment—supporting a wide range of industrial applications.
@@ -430,6 +437,7 @@ export default function Services() {
                           <span
                             className="material-symbols-outlined text-blue-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
+                            aria-hidden="true"
                           >
                             air
                           </span>
@@ -460,6 +468,7 @@ export default function Services() {
                           <span
                             className="material-symbols-outlined text-red-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
+                            aria-hidden="true"
                           >
                             compress
                           </span>
@@ -490,6 +499,7 @@ export default function Services() {
                           <span
                             className="material-symbols-outlined text-purple-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
+                            aria-hidden="true"
                           >
                             precision_manufacturing
                           </span>
@@ -520,6 +530,7 @@ export default function Services() {
                           <span
                             className="material-symbols-outlined text-amber-500 text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
+                            aria-hidden="true"
                           >
                             bolt
                           </span>
@@ -545,7 +556,7 @@ export default function Services() {
                   </div>
                 ) : (
                   <div className="text-center py-20">
-                    <span className="material-symbols-outlined text-6xl text-slate-400">inventory_2</span>
+                    <span className="material-symbols-outlined text-6xl text-slate-400" aria-hidden="true">inventory_2</span>
                     <p className="mt-4 text-slate-500">No tools listed yet. Check back soon!</p>
                   </div>
                 )}

@@ -71,7 +71,7 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 - **State**: ThemeContext (dark mode), SettingsContext (business settings)
 - **Forms**: React Hook Form with collapsible multi-tool quote form, auto-capitalization on inputs
 - **Design**: Tailwind CSS, Russo One logo font, Montserrat body, Material Symbols icons
-- **Colors**: Primary blue #1152d4, Accent orange #f97316
+- **Colors**: Primary blue #1152d4, Accent orange #FF2400 (fails WCAG contrast as small text on white — pair as `text-red-700 dark:text-accent-orange` for small labels)
 - **SEO**: react-helmet-async, sitemap.xml, robots.txt, Open Graph tags, structured data
 - **Vite**: Proxies `/api` and `/uploads` to backend (no CORS issues in dev)
 - **Key components**:

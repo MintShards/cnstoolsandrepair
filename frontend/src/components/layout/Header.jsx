@@ -1,12 +1,25 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef(null);
   const location = useLocation();
 
   const isActive = (path) => location.pathname === path;
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMenuOpen]);
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
@@ -15,17 +28,17 @@ export default function Header() {
           <Link to="/">
             {/* One line from 360px up (smaller type until 420px); below 360px
                 let it wrap rather than collide with the Repair button */}
-            <h2 className="font-logo text-lg min-[420px]:text-xl md:text-2xl font-bold leading-none tracking-normal min-[420px]:tracking-wide uppercase min-[360px]:whitespace-nowrap">
+            <p className="font-logo text-lg min-[420px]:text-xl md:text-2xl font-bold leading-none tracking-normal min-[420px]:tracking-wide uppercase min-[360px]:whitespace-nowrap">
               <span className="text-accent-orange">CNS</span>{' '}
               <span className="text-slate-900 dark:text-white">Tool Repair</span>
-            </h2>
+            </p>
           </Link>
         </div>
 
         {/* Desktop Navigation — from xl up. At lg (1024) eight links plus the
             toggle and button only fit by shrinking: the logo touched Home and
             GET REPAIR wrapped to two lines, so tablets keep the hamburger. */}
-        <nav className="hidden xl:flex items-center gap-6">
+        <nav className="hidden xl:flex items-center gap-6" aria-label="Primary">
           <Link
             to="/"
             className={`font-semibold uppercase text-sm transition-colors ${
@@ -98,10 +111,12 @@ export default function Header() {
           </Link>
           <ThemeToggle />
           <button
+            ref={menuButtonRef}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="flex items-center justify-center size-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
@@ -110,8 +125,8 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg">
-          <nav className="flex flex-col p-4 gap-2">
+        <div id="mobile-menu" className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg">
+          <nav className="flex flex-col p-4 gap-2" aria-label="Mobile">
             <Link
               to="/"
               className={`px-4 py-3 font-semibold uppercase text-sm rounded-lg transition-colors ${

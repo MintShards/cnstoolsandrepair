@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { homeContentAPI } from '../../services/api';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination } from 'swiper/modules';
+import { Autoplay, Pagination, A11y } from 'swiper/modules';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -21,6 +21,22 @@ export default function Testimonials({ data = null, loading = false }) {
   const [testimonials, setTestimonials] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState('all');
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [isPaused, setIsPaused] = useState(prefersReducedMotion);
+  const swiperRef = useRef(null);
+
+  const handleAutoplayToggle = () => {
+    const swiper = swiperRef.current;
+    if (!swiper || !swiper.autoplay) return;
+    if (isPaused) {
+      swiper.autoplay.start();
+    } else {
+      swiper.autoplay.stop();
+    }
+    setIsPaused(!isPaused);
+  };
 
   // Fetch testimonials from API if not provided via props
   useEffect(() => {
@@ -125,10 +141,10 @@ export default function Testimonials({ data = null, loading = false }) {
     <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
       <div className="max-w-screen-xl mx-auto">
         <div className="text-center mb-8 lg:mb-12">
-          <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
+          <p className="text-red-700 dark:text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
             What Our Clients Say
-          </h2>
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase">Success Stories</h3>
+          </p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight uppercase">Success Stories</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base px-4">
             Trusted by industrial and commercial businesses across Surrey and the Lower Mainland.
           </p>
@@ -148,7 +164,7 @@ export default function Testimonials({ data = null, loading = false }) {
               aria-pressed={selectedIndustry === industry.id}
               aria-label={`Filter testimonials by ${industry.label}`}
             >
-              <span className="material-symbols-outlined text-base sm:text-lg">
+              <span className="material-symbols-outlined text-base sm:text-lg" aria-hidden="true">
                 {industry.icon}
               </span>
               <span className="whitespace-nowrap">{industry.label}</span>
@@ -158,7 +174,13 @@ export default function Testimonials({ data = null, loading = false }) {
 
         {/* Testimonials Carousel */}
         <Swiper
-          modules={[Autoplay, Pagination]}
+          modules={[Autoplay, Pagination, A11y]}
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper;
+            if (prefersReducedMotion) {
+              swiper.autoplay.stop();
+            }
+          }}
           spaceBetween={24}
           slidesPerView={1}
           slidesPerGroup={1}
@@ -171,6 +193,9 @@ export default function Testimonials({ data = null, loading = false }) {
           speed={2000}
           pagination={{
             clickable: true,
+          }}
+          a11y={{
+            paginationBulletMessage: 'Go to testimonial slide {{index}}',
           }}
           breakpoints={{
             320: {
@@ -196,6 +221,7 @@ export default function Testimonials({ data = null, loading = false }) {
                   <span
                     className="material-symbols-outlined text-accent-orange text-4xl"
                     style={{ fontVariationSettings: "'wght' 600" }}
+                    aria-hidden="true"
                   >
                     format_quote
                   </span>
@@ -213,6 +239,7 @@ export default function Testimonials({ data = null, loading = false }) {
                     <span
                       className="material-symbols-outlined text-primary text-2xl"
                       style={{ fontVariationSettings: "'wght' 600" }}
+                      aria-hidden="true"
                     >
                       {testimonial.industry || 'person'}
                     </span>
@@ -221,9 +248,9 @@ export default function Testimonials({ data = null, loading = false }) {
                   {/* Person & Company - Show available info */}
                   <div className="flex-grow min-w-0">
                     {testimonial.person && (
-                      <h4 className="text-sm lg:text-base font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">
+                      <h3 className="text-sm lg:text-base font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">
                         {testimonial.person}
-                      </h4>
+                      </h3>
                     )}
                     {testimonial.title && (
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">
@@ -236,7 +263,7 @@ export default function Testimonials({ data = null, loading = false }) {
                       </p>
                     )}
                     {testimonial.location && (
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-1">
                         {testimonial.location}
                       </p>
                     )}
@@ -253,12 +280,27 @@ export default function Testimonials({ data = null, loading = false }) {
           ))}
         </Swiper>
 
+        {/* Carousel Pause/Play Toggle */}
+        <div className="flex justify-center mt-4">
+          <button
+            type="button"
+            onClick={handleAutoplayToggle}
+            aria-pressed={isPaused}
+            aria-label={isPaused ? 'Play carousel' : 'Pause carousel'}
+            className="flex items-center justify-center size-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <span className="material-symbols-outlined text-xl">
+              {isPaused ? 'play_arrow' : 'pause'}
+            </span>
+          </button>
+        </div>
+
         {/* Trust Badge */}
         {/* Trust Badge */}
         <div className="mt-12 lg:mt-16 p-5 lg:p-6 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/20">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-2xl">verified</span>
+              <span className="material-symbols-outlined text-primary text-2xl" aria-hidden="true">verified</span>
               <span className="text-xs lg:text-sm text-slate-700 dark:text-slate-300 font-black uppercase tracking-wider">
                 Trusted by Industrial Clients Across the Lower Mainland
               </span>

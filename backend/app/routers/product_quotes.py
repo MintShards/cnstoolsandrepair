@@ -10,7 +10,7 @@ from app.database import get_database, get_next_product_quote_number
 from app.models.product import ProductQuoteCreate, ProductQuoteResponse
 from app.services.product_quote_email_service import send_product_quote_notification
 from app.utils.helpers import convert_objectid_to_str
-from app.dependencies.auth import require_staff_or_admin
+from app.dependencies.auth import require_admin, require_staff_or_admin
 
 logger = logging.getLogger(__name__)
 
@@ -97,3 +97,23 @@ async def update_product_quote_status(quote_id: str, update: ProductQuoteStatusU
     updated["id"] = updated.pop("_id")
 
     return ProductQuoteResponse(**updated)
+
+
+@router.delete("/{quote_id}", dependencies=[Depends(require_admin)])
+async def delete_product_quote(quote_id: str):
+    """Permanently delete a product quote request.
+
+    The deletion valve the privacy policy promises (PIPEDA 4.5/4.9, BC
+    PIPA) — before this existed, product-quote leads could never be erased.
+    """
+    db = get_database()
+
+    if not ObjectId.is_valid(quote_id):
+        raise HTTPException(status_code=400, detail="Invalid quote ID format")
+
+    result = await db.product_quotes.delete_one({"_id": ObjectId(quote_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Quote request not found")
+
+    logger.info(f"Deletion request: product quote {quote_id} removed")
+    return {"deleted": 1}

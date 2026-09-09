@@ -9,20 +9,44 @@ import { quotesAPI } from '../services/api';
 function SuccessModal({ isOpen, onClose, onNewQuote }) {
   const modalRef = useRef(null);
 
+  // Focus trap: focus moves into the modal, Tab wraps inside it, Escape
+  // closes, and closing hands focus back to whatever opened it.
   useEffect(() => {
-    if (isOpen && modalRef.current) {
-      modalRef.current.focus();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    const opener = document.activeElement;
+    modalRef.current?.focus();
 
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !modalRef.current) return;
+      const focusable = [
+        ...modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ),
+      ].filter((el) => !el.disabled && el.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      // Wrap at the edges; also pull focus in if it's still outside the modal
+      if (e.shiftKey && (document.activeElement === first || !modalRef.current.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !modalRef.current.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
       }
     };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (opener && opener !== document.body && opener.isConnected) {
+        opener.focus?.();
+      }
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -43,11 +67,11 @@ function SuccessModal({ isOpen, onClose, onNewQuote }) {
       >
         <div className="mb-6">
           <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-5xl text-green-600 dark:text-green-400">check_circle</span>
+            <span className="material-symbols-outlined text-5xl text-green-600 dark:text-green-400" aria-hidden="true">check_circle</span>
           </div>
           <h2 id="success-modal-title" className="text-2xl font-black uppercase mb-2">Request Submitted!</h2>
           <p className="text-slate-600 dark:text-slate-400">
-            We've received your repair request. Our team will contact you to schedule a tool inspection and provide a quote after assessment.
+            We’ve received your repair request. Our team will contact you to schedule a tool inspection and provide a quote after assessment.
           </p>
         </div>
 
@@ -481,13 +505,13 @@ export default function Quote() {
         onNewQuote={handleNewQuote}
       />
 
-      <main className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen px-6 py-16 bg-white dark:bg-slate-900">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get Started</h2>
+          <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Get Started</p>
           <h1 className="text-4xl font-black tracking-tight uppercase">Submit Repair Request</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-4">
-            Submit your tool details below. We'll contact you to schedule a diagnostic inspection and provide an accurate quote after assessing your tool.
+            Submit your tool details below. We’ll contact you to schedule a diagnostic inspection and provide an accurate quote after assessing your tool.
           </p>
         </div>
 
@@ -513,7 +537,7 @@ export default function Quote() {
                       setValue('first_name', capitalizeFirstLetters(e.target.value));
                       requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                     }}
-                    className={`w-full px-4 py-3 rounded-lg border ${errors.first_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.first_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="First Name"
                     autoComplete="given-name"
                     aria-required="true"
@@ -521,7 +545,7 @@ export default function Quote() {
                     aria-describedby={errors.first_name ? 'first_name-error' : undefined}
                   />
                   {errors.first_name && (
-                    <p id="first_name-error" className="text-red-500 text-sm mt-1" role="alert">
+                    <p id="first_name-error" className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">
                       {errors.first_name.message}
                     </p>
                   )}
@@ -541,7 +565,7 @@ export default function Quote() {
                       setValue('last_name', capitalizeFirstLetters(e.target.value));
                       requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                     }}
-                    className={`w-full px-4 py-3 rounded-lg border ${errors.last_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.last_name ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Last Name"
                     autoComplete="family-name"
                     aria-required="true"
@@ -549,7 +573,7 @@ export default function Quote() {
                     aria-describedby={errors.last_name ? 'last_name-error' : undefined}
                   />
                   {errors.last_name && (
-                    <p id="last_name-error" className="text-red-500 text-sm mt-1" role="alert">
+                    <p id="last_name-error" className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">
                       {errors.last_name.message}
                     </p>
                   )}
@@ -569,7 +593,7 @@ export default function Quote() {
                     setValue('company_name', capitalizeWords(e.target.value));
                     requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                   }}
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter Company Name"
                   autoComplete="organization"
                   aria-required="false"
@@ -577,7 +601,7 @@ export default function Quote() {
                   aria-describedby={errors.company_name ? 'company_name-error' : undefined}
                 />
                 {errors.company_name && (
-                  <p id="company_name-error" className="text-red-500 text-sm mt-1" role="alert">
+                  <p id="company_name-error" className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">
                     {errors.company_name.message}
                   </p>
                 )}
@@ -595,7 +619,7 @@ export default function Quote() {
                       required: 'Email is required',
                       pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email address' }
                     })}
-                    className={`w-full px-4 py-3 rounded-lg border ${errors.email ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.email ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="Enter Email"
                     autoComplete="email"
                     aria-required="true"
@@ -603,7 +627,7 @@ export default function Quote() {
                     aria-describedby={errors.email ? 'email-error' : undefined}
                   />
                   {errors.email && (
-                    <p id="email-error" className="text-red-500 text-sm mt-1" role="alert">
+                    <p id="email-error" className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">
                       {errors.email.message}
                     </p>
                   )}
@@ -634,7 +658,7 @@ export default function Quote() {
                         input.setSelectionRange(adjusted, adjusted);
                       });
                     }}
-                    className={`w-full px-4 py-3 rounded-lg border ${errors.phone ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                    className={`w-full px-4 py-3 rounded-lg border ${errors.phone ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                     placeholder="604-555-0123"
                     autoComplete="tel"
                     aria-required="true"
@@ -642,7 +666,7 @@ export default function Quote() {
                     aria-describedby={errors.phone ? 'phone-error' : undefined}
                   />
                   {errors.phone && (
-                    <p id="phone-error" className="text-red-500 text-sm mt-1" role="alert">
+                    <p id="phone-error" className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">
                       {errors.phone.message}
                     </p>
                   )}
@@ -662,7 +686,7 @@ export default function Quote() {
                     setValue('address', capitalizeWords(e.target.value));
                     requestAnimationFrame(() => e.target.setSelectionRange(pos, pos));
                   }}
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter Address"
                   autoComplete="street-address"
                   aria-required="false"
@@ -682,7 +706,7 @@ export default function Quote() {
                 className="flex items-center gap-2 bg-primary text-white font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Add another tool"
               >
-                <span className="material-symbols-outlined text-sm">add</span>
+                <span className="material-symbols-outlined text-sm" aria-hidden="true">add</span>
                 Add Tool
               </button>
             </div>
@@ -690,12 +714,15 @@ export default function Quote() {
             {tools.map((tool, index) => (
               <div key={index} className="mb-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all">
                 {/* Collapsible Header */}
-                <div
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  onClick={() => toggleToolCollapse(index)}
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">
+                <div className="flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 flex-1 w-full text-left cursor-pointer"
+                    onClick={() => toggleToolCollapse(index)}
+                    aria-expanded={!collapsedTools[index]}
+                    aria-controls={`tool-panel-${index}`}
+                  >
+                    <span className="material-symbols-outlined text-slate-600 dark:text-slate-400" aria-hidden="true">
                       {collapsedTools[index] ? 'expand_more' : 'expand_less'}
                     </span>
                     {collapsedTools[index] && tool.tool_type ? (
@@ -707,7 +734,7 @@ export default function Quote() {
                     ) : (
                       <h4 className="font-black uppercase text-sm text-slate-600 dark:text-slate-400">Tool {index + 1}</h4>
                     )}
-                  </div>
+                  </button>
                   {tools.length > 1 && (
                     <button
                       type="button"
@@ -718,7 +745,7 @@ export default function Quote() {
                       className="text-red-500 hover:text-red-700 font-bold text-sm uppercase flex items-center gap-1 ml-4"
                       aria-label={`Remove tool ${index + 1}`}
                     >
-                      <span className="material-symbols-outlined text-sm">delete</span>
+                      <span className="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
                       Remove
                     </button>
                   )}
@@ -726,104 +753,117 @@ export default function Quote() {
 
                 {/* Collapsible Content */}
                 {!collapsedTools[index] && (
-                  <div className="p-6 pt-0 space-y-4">
+                  <div id={`tool-panel-${index}`} className="p-6 pt-0 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                        <label htmlFor={`tool_type-${index}`} className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
                           Tool Type *
                         </label>
                         <input
+                          id={`tool_type-${index}`}
                           type="text"
                           value={tool.tool_type}
                           onChange={(e) => updateTool(index, 'tool_type', e.target.value, e)}
                           onBlur={(e) => validateToolField(index, 'tool_type', e.target.value)}
-                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_type ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_type ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Type"
                           aria-invalid={!!toolErrors[index]?.tool_type}
+                          aria-describedby={toolErrors[index]?.tool_type ? `tool_type-${index}-error` : undefined}
                         />
                         {toolErrors[index]?.tool_type && (
-                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_type}</p>
+                          <p id={`tool_type-${index}-error`} className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_type}</p>
                         )}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                        <label htmlFor={`tool_brand-${index}`} className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
                           Brand *
                         </label>
                         <input
+                          id={`tool_brand-${index}`}
                           type="text"
                           value={tool.tool_brand}
                           onChange={(e) => updateTool(index, 'tool_brand', e.target.value, e)}
                           onBlur={(e) => validateToolField(index, 'tool_brand', e.target.value)}
-                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_brand ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_brand ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Brand"
                           aria-invalid={!!toolErrors[index]?.tool_brand}
+                          aria-describedby={toolErrors[index]?.tool_brand ? `tool_brand-${index}-error` : undefined}
                         />
                         {toolErrors[index]?.tool_brand && (
-                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_brand}</p>
+                          <p id={`tool_brand-${index}-error`} className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_brand}</p>
                         )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                        <label htmlFor={`tool_model-${index}`} className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
                           Model *
                         </label>
                         <input
+                          id={`tool_model-${index}`}
                           type="text"
                           value={tool.tool_model}
                           onChange={(e) => updateTool(index, 'tool_model', e.target.value, e)}
                           onBlur={(e) => validateToolField(index, 'tool_model', e.target.value)}
-                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_model ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.tool_model ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Tool Model"
                           aria-invalid={!!toolErrors[index]?.tool_model}
+                          aria-describedby={toolErrors[index]?.tool_model ? `tool_model-${index}-error` : undefined}
                         />
                         {toolErrors[index]?.tool_model && (
-                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_model}</p>
+                          <p id={`tool_model-${index}-error`} className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">{toolErrors[index].tool_model}</p>
                         )}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                        <label htmlFor={`quantity-${index}`} className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
                           Quantity *
                         </label>
                         <input
+                          id={`quantity-${index}`}
                           type="number"
                           value={tool.quantity}
                           onChange={(e) => updateTool(index, 'quantity', parseInt(e.target.value) || 1)}
                           onBlur={(e) => validateToolField(index, 'quantity', parseInt(e.target.value) || 0)}
-                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.quantity ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                          className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.quantity ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                           placeholder="Enter Quantity"
                           min="1"
                           aria-invalid={!!toolErrors[index]?.quantity}
+                          aria-describedby={toolErrors[index]?.quantity ? `quantity-${index}-error` : undefined}
                         />
                         {toolErrors[index]?.quantity && (
-                          <p className="text-red-500 text-sm mt-1" role="alert">{toolErrors[index].quantity}</p>
+                          <p id={`quantity-${index}-error`} className="text-red-600 dark:text-red-500 text-sm mt-1" role="alert">{toolErrors[index].quantity}</p>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
+                      <label htmlFor={`problem_description-${index}`} className="block text-sm font-bold mb-2 uppercase text-slate-700 dark:text-slate-300">
                         Problem Description *
                       </label>
                       <textarea
+                        id={`problem_description-${index}`}
                         value={tool.problem_description}
                         onChange={(e) => updateTool(index, 'problem_description', e.target.value, e)}
                         onBlur={(e) => validateToolField(index, 'problem_description', e.target.value)}
-                        className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.problem_description ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent`}
+                        className={`w-full px-4 py-3 rounded-lg border ${toolErrors[index]?.problem_description ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} bg-white dark:bg-slate-800 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent`}
                         rows={4}
+                        maxLength={2000}
                         placeholder="Enter Problem Description (min. 10 characters)"
                         aria-invalid={!!toolErrors[index]?.problem_description}
+                        aria-describedby={toolErrors[index]?.problem_description
+                          ? `problem_description-${index}-error problem_description-${index}-count`
+                          : `problem_description-${index}-count`}
                       />
                       <div className="flex items-center justify-between mt-1">
                         {toolErrors[index]?.problem_description ? (
-                          <p className="text-red-500 text-sm" role="alert">{toolErrors[index].problem_description}</p>
+                          <p id={`problem_description-${index}-error`} className="text-red-600 dark:text-red-500 text-sm" role="alert">{toolErrors[index].problem_description}</p>
                         ) : (
                           <span />
                         )}
-                        <span className={`text-xs ${tool.problem_description.length < 10 && tool.problem_description.length > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                        <span id={`problem_description-${index}-count`} className={`text-xs ${tool.problem_description.length < 10 && tool.problem_description.length > 0 ? 'text-red-600 dark:text-red-500' : 'text-slate-400'}`}>
                           {tool.problem_description.length}/2000
                         </span>
                       </div>
@@ -872,7 +912,7 @@ export default function Quote() {
             {photoErrors.length > 0 && (
               <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-500 rounded-lg" role="alert">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-lg">error</span>
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-lg" aria-hidden="true">error</span>
                   <p className="font-bold text-red-800 dark:text-red-200">{photoErrors.length === 1 ? 'Upload Error' : `${photoErrors.length} Upload Errors`}</p>
                 </div>
                 <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
@@ -927,6 +967,8 @@ export default function Quote() {
                 <div
                   className="bg-primary h-full transition-all duration-300 ease-out"
                   style={{ width: `${uploadProgress}%` }}
+                  role="progressbar"
+                  aria-label="Upload progress"
                   aria-valuenow={uploadProgress}
                   aria-valuemin="0"
                   aria-valuemax="100"
@@ -952,13 +994,13 @@ export default function Quote() {
             >
               <div className="flex items-start gap-3">
                 {submitStatus.type === 'error' && (
-                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-xl shrink-0 mt-0.5">error</span>
+                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-xl shrink-0 mt-0.5" aria-hidden="true">error</span>
                 )}
                 {submitStatus.type === 'warning' && (
-                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-xl shrink-0 mt-0.5">warning</span>
+                  <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-xl shrink-0 mt-0.5" aria-hidden="true">warning</span>
                 )}
                 {submitStatus.type === 'success' && (
-                  <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-xl shrink-0 mt-0.5">check_circle</span>
+                  <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-xl shrink-0 mt-0.5" aria-hidden="true">check_circle</span>
                 )}
                 <span className="font-bold">{submitStatus.message}</span>
               </div>
@@ -968,10 +1010,10 @@ export default function Quote() {
           {/* Repair Decline Policy Notice */}
           <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-accent-orange text-xl shrink-0 mt-0.5">info</span>
+              <span className="material-symbols-outlined text-accent-orange text-xl shrink-0 mt-0.5" aria-hidden="true">info</span>
               <div>
                 <p className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Important — If You Choose Not to Proceed</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   If you decide not to proceed with the repair after diagnosis, your tool will be returned as-is. If disassembly was required for diagnosis, it will be returned in its disassembled state and may not be safe to use. You also have the option to have the tool scrapped at our facility at no additional cost.
                 </p>
               </div>
@@ -979,7 +1021,7 @@ export default function Quote() {
           </div>
 
           {/* Consent Notice */}
-          <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+          <p className="text-xs text-slate-600 dark:text-slate-400 text-center">
             By submitting, you agree to our{' '}
             <Link to="/privacy-policy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>
             {' '}and{' '}

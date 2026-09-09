@@ -18,7 +18,7 @@ function NotFound() {
 
       <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-900">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-accent-orange text-xs uppercase tracking-[0.25em] font-black mb-4">
+          <p className="text-red-700 dark:text-accent-orange text-xs uppercase tracking-[0.25em] font-black mb-4">
             Error 404
           </p>
           <h1 className="text-4xl sm:text-5xl font-black uppercase text-slate-900 dark:text-white mb-6">
@@ -44,7 +44,7 @@ function NotFound() {
             </Link>
           </div>
 
-          <nav className="mt-12 flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm font-bold">
+          <nav aria-label="Popular pages" className="mt-12 flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm font-bold">
             <Link to="/services" className="text-primary hover:underline">Services</Link>
             <Link to="/industries" className="text-primary hover:underline">Industries</Link>
             <Link to="/gallery" className="text-primary hover:underline">Gallery</Link>

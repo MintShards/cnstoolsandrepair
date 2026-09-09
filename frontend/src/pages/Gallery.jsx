@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { galleryAPI } from '../services/api';
 import DualCTA from '../components/sections/DualCTA';
@@ -31,6 +31,8 @@ export default function Gallery() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const closeButtonRef = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -52,7 +54,8 @@ export default function Gallery() {
     fetchPhotos();
   }, []);
 
-  const openLightbox = (photo) => {
+  const openLightbox = (photo, event) => {
+    triggerRef.current = event?.currentTarget || null;
     setSelectedPhoto(photo);
   };
 
@@ -68,9 +71,11 @@ export default function Gallery() {
     };
     document.addEventListener('keydown', onKeyDown);
     document.body.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = '';
+      triggerRef.current?.focus();
     };
   }, [selectedPhoto]);
 
@@ -100,7 +105,7 @@ export default function Gallery() {
         <meta name="twitter:description" content="Browse photos of our Surrey BC pneumatic tool repair facility and specialized equipment." />
       </Helmet>
 
-      <main className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-white dark:bg-slate-950">
         <div className="max-w-screen-xl mx-auto">
           {loading ? (
             <>
@@ -139,7 +144,7 @@ export default function Gallery() {
             <>
               {/* Hero Section */}
               <div className="text-center mb-12 lg:mb-16">
-                <h2 className="text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Facility</h2>
+                <p className="text-red-700 dark:text-accent-orange text-xs font-black uppercase tracking-[0.25em] mb-2">Our Facility</p>
                 <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">Workshop Gallery</h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-3xl mx-auto text-base lg:text-lg">
                   Browse photos of our Surrey, BC pneumatic tool repair facility. See our specialized diagnostic equipment, testing stations, and the industrial tools we service for businesses across the Lower Mainland.
@@ -149,25 +154,27 @@ export default function Gallery() {
               {/* Photo Grid */}
               {photos.length > 0 ? (
                 <div className="columns-2 md:columns-3 lg:columns-4 gap-3 sm:gap-4 lg:gap-6">
-                  {photos.map((photo) => (
-                    <div
+                  {photos.map((photo, index) => (
+                    <button
                       key={photo.id}
-                      className="mb-3 sm:mb-4 lg:mb-6 break-inside-avoid cursor-pointer group"
-                      onClick={() => openLightbox(photo)}
+                      type="button"
+                      aria-label={`View workshop photo ${index + 1} of ${photos.length}`}
+                      className="block w-full mb-3 sm:mb-4 lg:mb-6 break-inside-avoid cursor-pointer group"
+                      onClick={(e) => openLightbox(photo, e)}
                     >
                       <img
                         src={resolvePhotoUrl(photo.thumb_url || photo.image_url)}
-                        alt="Workshop gallery"
+                        alt={`Workshop photo ${index + 1} of ${photos.length}`}
                         className={`w-full ${photo.randomAspect} object-cover rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]`}
                         loading="lazy"
                         decoding="async"
                       />
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-20">
-                  <span className="material-symbols-outlined text-6xl text-slate-400">photo_library</span>
+                  <span className="material-symbols-outlined text-6xl text-slate-400" aria-hidden="true">photo_library</span>
                   <p className="mt-4 text-slate-500">No photos yet. Check back soon!</p>
                 </div>
               )}
@@ -185,9 +192,11 @@ export default function Gallery() {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
+          aria-label="Photo viewer"
           onClick={closeLightbox}
         >
           <button
+            ref={closeButtonRef}
             className="absolute top-4 right-4 text-white hover:text-slate-300 transition-colors"
             aria-label="Close"
             onClick={closeLightbox}
@@ -196,7 +205,7 @@ export default function Gallery() {
           </button>
           <img
             src={resolvePhotoUrl(selectedPhoto.image_url)}
-            alt="Workshop gallery"
+            alt={`Workshop photo ${photos.indexOf(selectedPhoto) + 1} of ${photos.length}`}
             className="max-w-full max-h-full rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />

@@ -58,7 +58,7 @@ export default function Industries() {
         <meta name="twitter:description" content="Pneumatic tool repair for 10 major industrial sectors serving Surrey and Metro Vancouver businesses." />
         <meta name="twitter:image" content="https://cnstoolrepair.com/og-image.jpg" />
       </Helmet>
-      <main className="relative">
+      <main id="main-content" tabIndex={-1} className="relative">
         {/* Hero + Industries Grid - Combined Section */}
         <section className="px-6 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 bg-slate-100 dark:bg-slate-900">
         <div className="max-w-screen-xl mx-auto">
@@ -113,13 +113,13 @@ export default function Industries() {
             <>
               {/* Hero */}
               <div className="text-center mb-12 lg:mb-16">
-                <h2 className="text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
+                <p className="text-red-700 dark:text-accent-orange text-[10px] sm:text-xs font-black uppercase tracking-[0.20em] sm:tracking-[0.25em] mb-2">
                   {hero?.label || 'Who We Serve'}
-                </h2>
+                </p>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight uppercase px-4 text-slate-900 dark:text-white">
                   {hero?.heading || 'Industries We Support'}
                 </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-sm sm:text-base lg:text-lg px-4">
+                <p className="text-slate-600 dark:text-slate-400 mt-4 max-w-2xl mx-auto text-sm sm:text-base lg:text-lg px-4">
                   {hero?.description || 'Trusted pneumatic tool repair partner for major industrial sectors across Surrey, BC.'}
                 </p>
               </div>
@@ -138,11 +138,12 @@ export default function Industries() {
                           <span
                             className="material-symbols-outlined text-primary text-2xl sm:text-3xl"
                             style={{ fontVariationSettings: "'wght' 600" }}
+                            aria-hidden="true"
                           >
                             {industry.icon || 'business'}
                           </span>
                         </div>
-                        <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">{industry.name}</h3>
+                        <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">{industry.name}</h2>
                       </div>
 
                       {/* Description */}
@@ -168,8 +169,8 @@ export default function Industries() {
                 </div>
               ) : (
                 <div className="text-center py-20">
-                  <span className="material-symbols-outlined text-6xl text-slate-400">business</span>
-                  <p className="mt-4 text-slate-500">No industries listed yet. Check back soon!</p>
+                  <span className="material-symbols-outlined text-6xl text-slate-400" aria-hidden="true">business</span>
+                  <p className="mt-4 text-slate-600">No industries listed yet. Check back soon!</p>
                 </div>
               )}
             </>
