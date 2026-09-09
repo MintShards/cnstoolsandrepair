@@ -123,10 +123,26 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
         return False
 
 
+# Customer-uploaded repair photos are personal information (PIPEDA 4.7 /
+# BC PIPA s.34) — they upload private and are viewed through short-lived
+# presigned URLs. Everything else in the bucket (gallery, products, brands,
+# hero, parts_library, email-templates) is meant to be public and stays so.
+PRIVATE_FOLDERS = ("quotes", "repairs")
+
+# The stored value stays the same plain bucket URL either way — deletion
+# and the frontend's exact-match photo identifiers depend on that shape.
+PRESIGN_EXPIRY_SECONDS = 900
+
+
 async def upload_file_to_spaces(file: UploadFile, folder: str, contents: bytes, file_ext: str) -> str:
-    """Upload file to Digital Ocean Spaces, return public URL"""
+    """Upload file to Digital Ocean Spaces, return its canonical URL.
+
+    Customer photo folders upload private; the returned URL for those is
+    not directly fetchable — use generate_presigned_photo_url() to view.
+    """
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
     key = f"{folder}/{unique_filename}"
+    acl = 'private' if folder.split('/')[0] in PRIVATE_FOLDERS else 'public-read'
 
     try:
         s3_client = get_spaces_client()
@@ -134,14 +150,46 @@ async def upload_file_to_spaces(file: UploadFile, folder: str, contents: bytes, 
             BytesIO(contents),
             settings.spaces_bucket,
             key,
-            ExtraArgs={'ACL': 'public-read', 'ContentType': 'application/pdf' if file_ext == 'pdf' else f'image/{file_ext}'}
+            ExtraArgs={'ACL': acl, 'ContentType': 'application/pdf' if file_ext == 'pdf' else f'image/{file_ext}'}
         )
-        # Return full public URL
         return f"{settings.spaces_endpoint}/{settings.spaces_bucket}/{key}"
     except ClientError as e:
         raise HTTPException(status_code=500, detail=f"Upload to Spaces failed: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error uploading to Spaces: {str(e)}")
+
+
+def spaces_key_from_url(stored_url: str) -> str | None:
+    """The object key for a stored bucket URL, or None if it isn't one."""
+    marker = f"{settings.spaces_bucket}/"
+    if not stored_url.startswith("https://") or marker not in stored_url:
+        return None
+    return stored_url.split(marker, 1)[-1]
+
+
+def generate_presigned_photo_url(stored_url: str, expires_in: int = PRESIGN_EXPIRY_SECONDS) -> str:
+    """A fetchable URL for a stored photo string.
+
+    For a Spaces URL in our bucket, returns a time-limited presigned GET
+    (works for private and public objects alike). Anything else — dev-mode
+    bare filenames, foreign URLs — comes back unchanged, so callers can
+    wrap unconditionally.
+    """
+    if not settings.use_spaces:
+        return stored_url
+    key = spaces_key_from_url(stored_url)
+    if not key:
+        return stored_url
+    try:
+        s3_client = get_spaces_client()
+        return s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': settings.spaces_bucket, 'Key': key},
+            ExpiresIn=expires_in,
+        )
+    except Exception as e:
+        logger.error(f"Presign failed for {key}: {e}")
+        return stored_url
 
 
 async def save_upload_file(file: UploadFile, folder: str = "uploads") -> str:

@@ -5,6 +5,7 @@ import httpx
 from app.config import settings as app_settings
 from app.models.quote import Quote
 from app.routers.settings import DEFAULT_SETTINGS
+from app.services.file_service import generate_presigned_photo_url
 from app.services.resend_client import send_email_via_resend
 from zoneinfo import ZoneInfo
 
@@ -193,6 +194,9 @@ CNS Tool Repair | {city}, {province}
                 try:
                     if app_settings.use_spaces:
                         photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/{photo}'
+                        # Quote photos are private in Spaces now — presign so
+                        # the fetch below still works (no-op for public URLs).
+                        photo_url = generate_presigned_photo_url(photo_url)
                     else:
                         photo_url = photo if photo.startswith('http') else f'{app_settings.upload_base_url}/uploads/{photo}'
 

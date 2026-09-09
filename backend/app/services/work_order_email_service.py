@@ -9,6 +9,7 @@ from typing import Optional
 import httpx
 
 from app.config import settings as app_settings
+from app.services.file_service import generate_presigned_photo_url
 from app.services.resend_client import send_email_via_resend
 from app.services.work_order_pdf_service import generate_work_order_pdf
 
@@ -204,6 +205,9 @@ async def _collect_tool_photos(job: dict) -> list:
             try:
                 if app_settings.use_spaces:
                     photo_url = photo_path if photo_path.startswith("http") else f"{app_settings.upload_base_url}/{photo_path}"
+                    # Repair photos are private in Spaces now — presign so
+                    # the fetch below still works (no-op for public URLs).
+                    photo_url = generate_presigned_photo_url(photo_url)
                 else:
                     photo_url = photo_path if photo_path.startswith("http") else f"{app_settings.upload_base_url}/uploads/{photo_path}"
 

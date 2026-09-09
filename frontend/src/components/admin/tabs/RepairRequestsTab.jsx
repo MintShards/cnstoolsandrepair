@@ -5,8 +5,8 @@ import { useToast } from '../../../pages/admin/RepairTracker';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDatePacific } from '../../../utils/dateFormat';
 import useBodyScrollLock from '../../../utils/useBodyScrollLock';
+import { customerPhotoUrl } from '../../../utils/photoUrl';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -471,7 +471,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
                     {selectedQuote.photos.map((photo, idx) => (
                       <div key={idx} className="aspect-square cursor-pointer group relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/60 hover:border-primary/50 transition-all" onClick={() => setSelectedPhoto(photo)}>
                         <img
-                          src={photo.startsWith('http') ? photo : `${API_BASE_URL}/uploads/${photo}`}
+                          src={customerPhotoUrl(photo)}
                           alt={`Tool photo ${idx + 1}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -495,7 +495,7 @@ export default function RepairRequestsTab({ onConvertSuccess, onCountUpdate }) {
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
           <img
-            src={selectedPhoto.startsWith('http') ? selectedPhoto : `${API_BASE_URL}/uploads/${selectedPhoto}`}
+            src={customerPhotoUrl(selectedPhoto)}
             alt="Full size tool photo"
             className="max-w-full max-h-full rounded-xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}

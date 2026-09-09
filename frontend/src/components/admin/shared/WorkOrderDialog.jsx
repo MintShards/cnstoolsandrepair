@@ -15,8 +15,8 @@ import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { useSettings } from '../../../contexts/SettingsContext';
 import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from './ToolForm';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
+import { customerPhotoUrl } from '../../../utils/photoUrl';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -1226,7 +1226,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             {tool.photos.map((photo, pidx) => (
                               <div key={pidx} className="aspect-square cursor-pointer group relative rounded-lg overflow-hidden" onClick={() => setSelectedPhoto(photo)}>
                                 <img
-                                  src={photo.startsWith('http') ? photo : `${API_BASE_URL}/uploads/${photo}`}
+                                  src={customerPhotoUrl(photo)}
                                   alt={`Photo ${pidx + 1}`}
                                   className="w-full h-full object-cover border border-slate-300 dark:border-slate-700 group-hover:border-primary/60 transition-all duration-200"
                                 />
@@ -1414,7 +1414,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
             <span className="material-symbols-outlined text-4xl">close</span>
           </button>
           <img
-            src={selectedPhoto.startsWith('http') ? selectedPhoto : `${API_BASE_URL}/uploads/${selectedPhoto}`}
+            src={customerPhotoUrl(selectedPhoto)}
             alt="Tool photo"
             className="max-w-full max-h-full rounded-lg"
             onClick={(e) => e.stopPropagation()}
