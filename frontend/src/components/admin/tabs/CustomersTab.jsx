@@ -6,7 +6,6 @@ import { REPAIR_STATUSES } from '../../../constants/repairStatuses';
 import { StatusBadge } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDateShortPacific } from '../../../utils/dateFormat';
-import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { useSettings } from '../../../contexts/SettingsContext';
@@ -84,9 +83,9 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
   const [sortField, setSortField] = useState('smart');
   const [sortDir, setSortDir] = useState('desc');
 
-  // Profile view
+  // Profile view — renders in-page (replaces the list), so the page itself
+  // must stay scrollable; only true overlays (WO dialog, forms) lock scroll.
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  useBodyScrollLock(!!selectedCustomer);
   const [customerJobs, setCustomerJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobsPage, setJobsPage] = useState(1);
@@ -182,6 +181,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
 
   const openCustomer = async (customer) => {
     setSelectedCustomer(customer);
+    window.scrollTo(0, 0);
     setEditing(false);
     setEditForm({});
     setCustomerJobs([]);
