@@ -91,6 +91,63 @@ def _build_task_response(doc: dict) -> TaskResponse:
     return TaskResponse(**doc)
 
 
+# Lifecycle order for sorting a linked job's tool statuses on task rows.
+_JOB_STATUS_ORDER = [
+    "received", "diagnosed", "quoted", "approved", "parts_pending",
+    "in_repair", "ready", "invoiced", "completed",
+    "declined", "beyond_economical_repair", "abandoned", "closed",
+]
+
+
+def _job_tool_label(tool: dict) -> str:
+    # Legacy tools can carry the same text in brand and model_number.
+    bits: list = []
+    for part in (tool.get("brand"), tool.get("model_number")):
+        if part and part not in bits:
+            bits.append(part)
+    return " ".join(bits) or tool.get("tool_type") or "—"
+
+
+async def _attach_job_context(db, docs: List[dict]) -> None:
+    """Join live work-order context (customer, phone, tool, statuses) onto
+    task docs that link a repair. Joined per read so the info always matches
+    the tracker; a broken link just leaves `job` unset."""
+    ids = {d["repair_id"] for d in docs
+           if d.get("repair_id") and ObjectId.is_valid(d["repair_id"])}
+    if not ids:
+        return
+    contexts: dict = {}
+    cursor = db.repairs.find(
+        {"_id": {"$in": [ObjectId(i) for i in ids]}},
+        {"company_name": 1, "first_name": 1, "last_name": 1, "phone": 1,
+         "tools.brand": 1, "tools.model_number": 1, "tools.tool_type": 1,
+         "tools.status": 1},
+    )
+    async for job in cursor:
+        tools = job.get("tools") or []
+        contact = (f"{job.get('first_name') or ''} {job.get('last_name') or ''}".strip()) or None
+        statuses = sorted(
+            {t.get("status") for t in tools if t.get("status")},
+            key=lambda s: _JOB_STATUS_ORDER.index(s) if s in _JOB_STATUS_ORDER else 99,
+        )
+        tool_label = None
+        if len(tools) == 1:
+            tool_label = _job_tool_label(tools[0])
+        elif tools:
+            tool_label = f"{len(tools)} tools"
+        contexts[str(job["_id"])] = {
+            "company": job.get("company_name") or contact,
+            "contact": contact,
+            "phone": job.get("phone"),
+            "tool": tool_label,
+            "statuses": statuses,
+        }
+    for d in docs:
+        ctx = contexts.get(d.get("repair_id") or "")
+        if ctx:
+            d["job"] = ctx
+
+
 async def _resolve_assignee(db, assignee_id: Optional[str]):
     """Validate an assignee id against active users; return (id, display name)."""
     if assignee_id is None:
@@ -330,8 +387,9 @@ async def list_tasks(
     async for doc in db.tasks.aggregate(pipeline):
         doc.pop("_priority_rank", None)
         doc.pop("_due_key", None)
-        docs.append(_build_task_response(doc))
-    return docs
+        docs.append(doc)
+    await _attach_job_context(db, docs)
+    return [_build_task_response(doc) for doc in docs]
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
@@ -343,6 +401,7 @@ async def get_task(task_id: str, current_user: User = Depends(require_staff_or_a
     doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    await _attach_job_context(db, [doc])
     return _build_task_response(doc)
 
 
@@ -352,6 +411,7 @@ async def create_task(data: TaskCreate, current_user: User = Depends(require_sta
     db = get_database()
     created = await create_task_document(db, data, current_user)
     logger.info(f"Task created: '{created['title']}' by {current_user.email}")
+    await _attach_job_context(db, [created])
     return _build_task_response(created)
 
 
@@ -404,6 +464,7 @@ async def update_task(task_id: str, data: TaskUpdate, current_user: User = Depen
         )
 
     updated = await db.tasks.find_one({"_id": oid})
+    await _attach_job_context(db, [updated])
     return _build_task_response(updated)
 
 
@@ -431,6 +492,7 @@ async def claim_task(task_id: str, current_user: User = Depends(require_staff_or
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already claimed")
 
     updated = await db.tasks.find_one({"_id": oid})
+    await _attach_job_context(db, [updated])
     return _build_task_response(updated)
 
 

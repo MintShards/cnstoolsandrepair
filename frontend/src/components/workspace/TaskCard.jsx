@@ -2,6 +2,7 @@ import { TASK_PRIORITIES, RECURRENCE_LABELS } from '../../constants/workspace';
 import { getTodayPacific, formatYmd } from '../../utils/dateFormat';
 import StaffAvatar from './StaffAvatar';
 import WorkOrderChip from './WorkOrderChip';
+import JobContextLine from './JobContextLine';
 
 /** Board card. Click opens the detail modal; the whole card is draggable. */
 export default function TaskCard({ task, onOpen, onClaim, claimingId }) {
@@ -56,6 +57,10 @@ export default function TaskCard({ task, onOpen, onClaim, claimingId }) {
         )}
         <WorkOrderChip repairId={task.repair_id} requestNumber={task.request_number} />
       </div>
+
+      {/* Live context for the linked job — saves opening the tracker just to
+          remember whose tool this is and where it stands. */}
+      <JobContextLine job={task.job} className="mt-2" />
 
       <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2">
         {task.assignee_id ? (

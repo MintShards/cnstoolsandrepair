@@ -145,6 +145,16 @@ export default function TaskList({
                           <span className="hidden sm:inline text-slate-500 dark:text-slate-400 text-sm truncate">{task.details}</span>
                         )}
                         <WorkOrderChip repairId={task.repair_id} requestNumber={task.request_number} />
+                        {task.job && (task.job.company || task.job.tool) && (
+                          <span
+                            className="text-xs text-slate-500 dark:text-slate-400 truncate min-w-0"
+                            title={[task.job.company, task.job.tool].filter(Boolean).join(' · ')}
+                          >
+                            <span className="font-bold text-slate-600 dark:text-slate-300">{task.job.company}</span>
+                            {task.job.company && task.job.tool && ' · '}
+                            {task.job.tool}
+                          </span>
+                        )}
                         {task.assignee_id && (
                           <span className="lg:hidden flex-shrink-0" title={`Assigned to ${task.assignee_name}`}>
                             <StaffAvatar userId={task.assignee_id} name={task.assignee_name} size="sm" />

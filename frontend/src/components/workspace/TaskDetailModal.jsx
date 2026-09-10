@@ -6,8 +6,10 @@ import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import { TASK_STATUS_LIST, TASK_PRIORITIES, RECURRENCE_LABELS } from '../../constants/workspace';
 import { getTodayPacific, formatYmd, formatDatePacific } from '../../utils/dateFormat';
+import { telHref } from '../../utils/links';
 import StaffAvatar from './StaffAvatar';
 import WorkOrderChip from './WorkOrderChip';
+import { RepairStatusMini } from './JobContextLine';
 import ConfirmModal from '../sales/ConfirmModal';
 
 /**
@@ -130,6 +132,36 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
 
           {task.details && (
             <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words">{task.details}</p>
+          )}
+
+          {/* Linked work order, live from the tracker: customer, tool, where
+              the job stands, and a tap-to-call — same treatment as the shop
+              feed's call-log card. */}
+          {task.job && (task.job.company || task.job.tool) && (
+            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 px-3.5 py-2.5 flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary dark:text-blue-400" aria-hidden="true">build_circle</span>
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="font-bold text-slate-900 dark:text-white truncate">
+                  {task.job.company}
+                  {task.job.tool && <span className="font-medium text-slate-500 dark:text-slate-400"> · {task.job.tool}</span>}
+                </p>
+                {(task.job.statuses || []).length > 0 && (
+                  <div className="mt-1 flex items-center gap-1 flex-wrap">
+                    {task.job.statuses.map((s) => <RepairStatusMini key={s} status={s} />)}
+                  </div>
+                )}
+              </div>
+              {task.job.phone && (
+                <a
+                  href={telHref(task.job.phone)}
+                  title={`Call ${task.job.contact || task.job.company} — ${task.job.phone}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 border border-green-300 dark:border-green-800/40 text-green-700 dark:text-green-400 transition-colors flex-shrink-0"
+                >
+                  <span className="material-symbols-outlined text-base" aria-hidden="true">call</span>
+                  <span className="hidden sm:inline">Call</span>
+                </a>
+              )}
+            </div>
           )}
 
           <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">

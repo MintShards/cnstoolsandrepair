@@ -17,6 +17,16 @@ class UserRef(BaseModel):
     name: str
 
 
+class TaskJobContext(BaseModel):
+    """Live context for a task's linked work order, joined at READ time —
+    never stored on the task, so it can't drift from the Repair Tracker."""
+    company: Optional[str] = None
+    contact: Optional[str] = None
+    phone: Optional[str] = None
+    tool: Optional[str] = None          # "BRAND MODEL" for one tool, "N tools" past one
+    statuses: List[str] = []            # distinct tool statuses, lifecycle order
+
+
 class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     details: Optional[str] = Field(None, max_length=5000)
@@ -72,6 +82,7 @@ class TaskResponse(BaseModel):
     assignee_name: Optional[str] = None
     repair_id: Optional[str] = None
     request_number: Optional[str] = None
+    job: Optional[TaskJobContext] = None
     recurrence: TaskRecurrence = "none"
     spawned_from: Optional[str] = None
     source_message_id: Optional[str] = None

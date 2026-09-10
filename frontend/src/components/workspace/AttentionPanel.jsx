@@ -4,7 +4,9 @@ import { repairsAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import { formatYmd } from '../../utils/dateFormat';
+import { telHref } from '../../utils/links';
 import WorkOrderChip from './WorkOrderChip';
+import { RepairStatusMini } from './JobContextLine';
 import TaskFormModal from './TaskFormModal';
 
 const POLL_MS = 60000;
@@ -62,6 +64,11 @@ function QueueRow({ item, verb, onAssign }) {
         <span className="font-bold text-slate-900 dark:text-white">{item.company}</span>
         <span className="text-slate-500 dark:text-slate-400 ml-1.5">{item.tool}</span>
       </span>
+      {item.status === 'invoiced' && (
+        <span title="Invoice already sent — collect payment at pickup">
+          <RepairStatusMini status="invoiced" />
+        </span>
+      )}
       {priorityCls && (
         <>
           <span
@@ -91,6 +98,16 @@ function QueueRow({ item, verb, onAssign }) {
         </>
       )}
       <AgePill days={item.days_in_status} stuck={item.stuck} />
+      {item.phone && (
+        <a
+          href={telHref(item.phone)}
+          title={`Call ${item.contact || item.company} — ${item.phone}`}
+          className="inline-flex items-center px-2.5 py-2 rounded-lg text-xs font-bold bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 border border-green-300 dark:border-green-800/40 text-green-700 dark:text-green-400 transition-colors flex-shrink-0 ml-auto sm:ml-0"
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden="true">call</span>
+          <span className="sr-only">Call {item.contact || item.company}</span>
+        </a>
+      )}
       <button
         onClick={() => onAssign(item, verb)}
         title="Assign this as a task to someone"

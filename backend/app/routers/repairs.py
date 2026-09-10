@@ -855,6 +855,7 @@ async def get_attention_queues(
             "company_name": 1,
             "first_name": 1,
             "last_name": 1,
+            "phone": 1,
             "created_at": 1,
             "tool_id": "$tools.tool_id",
             "tool_type": "$tools.tool_type",
@@ -892,12 +893,13 @@ async def get_attention_queues(
         key = (queue_key, str(doc["_id"]))
         item = grouped.get(key)
         if item is None:
+            contact = f"{doc.get('first_name') or ''} {doc.get('last_name') or ''}".strip() or None
             grouped[key] = {
                 "job_id": str(doc["_id"]),
                 "request_number": doc.get("request_number"),
-                "company": doc.get("company_name")
-                    or f"{doc.get('first_name') or ''} {doc.get('last_name') or ''}".strip()
-                    or "—",
+                "company": doc.get("company_name") or contact or "—",
+                "contact": contact,
+                "phone": doc.get("phone"),
                 "tools": [tool_label],
                 "priority": doc.get("priority", "standard"),
                 "status": doc["tool_status"],
