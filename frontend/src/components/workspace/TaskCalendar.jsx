@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { tasksAPI } from '../../services/api';
+import { tasksAPI, activityAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import TabHeader from '../sales/TabHeader';
 import { BTN_NEUTRAL, ICON_BTN } from '../sales/ui';
 import { TASK_PRIORITIES } from '../../constants/workspace';
+import { ACTIVITY_GROUPS, ACTIVITY_GROUP_ORDER, activityKind, countByGroup } from '../../constants/activity';
 import { getTodayPacific, formatYmd } from '../../utils/dateFormat';
 import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import StaffAvatar from './StaffAvatar';
+import WorkOrderChip from './WorkOrderChip';
 import TaskFormModal from './TaskFormModal';
 import TaskDetailModal from './TaskDetailModal';
+import ActivityReportModal from './ActivityReportModal';
 
 const POLL_MS = 60000;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -47,37 +50,96 @@ function TaskChip({ task, onClick }) {
   );
 }
 
-function DayTasksModal({ ymd, tasks, onOpenTask, onClose }) {
+/**
+ * One day, two halves: the tasks due that day and the day's recorded
+ * happenings (who did what, oldest first). Opened from a cell's "+N more"
+ * or its activity chips.
+ */
+function DayModal({ ymd, tasks, activity, onOpenTask, onClose }) {
   useEscapeClose(onClose);
   useBodyScrollLock(true);
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{formatYmd(ymd)}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+          <div>
+            <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{formatYmd(ymd)}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {tasks.length} task{tasks.length === 1 ? '' : 's'} due · {activity.length} happening{activity.length === 1 ? '' : 's'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" aria-label="Close">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-          {tasks.map((task) => (
-            <button
-              key={task.id}
-              onClick={() => onOpenTask(task)}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 text-left transition-colors"
-            >
-              <span className="min-w-0">
-                <span className={`block text-sm font-bold text-slate-900 dark:text-white truncate ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
-                  {task.title}
-                </span>
-                <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {(TASK_PRIORITIES[task.priority] || TASK_PRIORITIES.normal).label}
-                  {task.assignee_name ? ` · ${task.assignee_name}` : ' · Unassigned'}
-                </span>
-              </span>
-              {task.assignee_id && <StaffAvatar userId={task.assignee_id} name={task.assignee_name} size="sm" />}
-            </button>
-          ))}
+        <div className="p-4 space-y-5 max-h-[70vh] overflow-y-auto">
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Tasks due</h3>
+            {tasks.length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">No tasks due this day.</p>
+            ) : (
+              <div className="space-y-2">
+                {tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => onOpenTask(task)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-primary/50 text-left transition-colors"
+                  >
+                    <span className="min-w-0">
+                      <span className={`block text-sm font-bold text-slate-900 dark:text-white truncate ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
+                        {task.title}
+                      </span>
+                      <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
+                        {(TASK_PRIORITIES[task.priority] || TASK_PRIORITIES.normal).label}
+                        {task.assignee_name ? ` · ${task.assignee_name}` : ' · Unassigned'}
+                      </span>
+                    </span>
+                    {task.assignee_id && <StaffAvatar userId={task.assignee_id} name={task.assignee_name} size="sm" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">What happened</h3>
+            {activity.length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nothing recorded for this day.</p>
+            ) : (
+              <ol className="space-y-1.5">
+                {activity.map((e, i) => {
+                  const kind = activityKind(e.kind);
+                  const group = ACTIVITY_GROUPS[kind.group];
+                  return (
+                    <li key={`${e.ts}-${i}`} className="flex gap-2.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <span className="w-14 flex-shrink-0 pt-0.5 text-xs font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">{e.time}</span>
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${group.chip}`} title={kind.label}>
+                        <span className="material-symbols-outlined text-sm" aria-hidden="true">{kind.icon}</span>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-slate-900 dark:text-white break-words">{e.summary}</span>
+                        {e.details?.length > 0 && (
+                          <span className="block text-xs text-slate-500 dark:text-slate-400 break-words">{e.details.join('; ')}</span>
+                        )}
+                        <span className="mt-1 flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                          {e.actor?.name ? (
+                            <span className="inline-flex items-center gap-1">
+                              <StaffAvatar userId={e.actor.user_id || e.actor.name} name={e.actor.name} size="sm" />
+                              {e.actor.name}
+                            </span>
+                          ) : (
+                            <span className="italic">no name recorded</span>
+                          )}
+                          {e.job_id && e.request_number && (
+                            <WorkOrderChip repairId={e.job_id} requestNumber={e.request_number} />
+                          )}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
         </div>
       </div>
     </div>
@@ -103,6 +165,11 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
   const [createForDate, setCreateForDate] = useState(null);
   const [editTask, setEditTask] = useState(null);
   const [dayModal, setDayModal] = useState(null);
+  // Activity layer: what happened each day (tools in, status changes, tasks
+  // done, edits) from GET /api/activity, keyed by shop-local day.
+  const [activityByDay, setActivityByDay] = useState({});
+  const [showActivity, setShowActivity] = useState(() => localStorage.getItem('ws_calendar_activity') !== '0');
+  const [reportOpen, setReportOpen] = useState(false);
 
   const cells = useMemo(() => monthMatrix(yearMonth.year, yearMonth.month), [yearMonth]);
 
@@ -120,6 +187,14 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
         sort_dir: 'desc',
       });
       setTasks(fetched);
+      try {
+        const { events } = await activityAPI.list({ from: cells[0].ymd, to: cells[41].ymd });
+        const map = {};
+        for (const e of events) (map[e.day] = map[e.day] || []).push(e);
+        setActivityByDay(map);
+      } catch {
+        // The activity layer is optional — tasks still render without it.
+      }
     } catch {
       showToast('error', 'Failed to load the calendar.');
     } finally {
@@ -165,11 +240,28 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
     <div>
       <TabHeader
         title="Calendar"
-        subtitle="Tasks by due date — click a day to add one"
+        subtitle="Tasks by due date and what happened each day — click a day to add a task"
         action={(
           // flex-wrap: at 360px-class phones the widest month label leaves no
           // slack; wrapping beats forcing horizontal page scroll.
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={() => setReportOpen(true)}
+              className={BTN_NEUTRAL}
+              title="Print an activity report for a day, week, month or year"
+            >
+              <span className="material-symbols-outlined text-base">print</span>
+              <span className="hidden sm:inline">Report</span>
+            </button>
+            <button
+              onClick={() => setShowActivity((v) => { localStorage.setItem('ws_calendar_activity', v ? '0' : '1'); return !v; })}
+              className={`${BTN_NEUTRAL} ${showActivity ? '' : 'opacity-60'}`}
+              title={showActivity ? 'Hide daily activity counts' : 'Show daily activity counts'}
+              aria-pressed={showActivity}
+            >
+              <span className="material-symbols-outlined text-base">history</span>
+              <span className="hidden sm:inline">Activity</span>
+            </button>
             <button
               onClick={() => setShowDone((v) => !v)}
               className={`${BTN_NEUTRAL} ${showDone ? '' : 'opacity-60'}`}
@@ -209,6 +301,8 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
           <div className="grid grid-cols-7">
             {cells.map((cell) => {
               const dayTasks = byDate[cell.ymd] || [];
+              const dayActivity = activityByDay[cell.ymd] || [];
+              const activityCounts = countByGroup(dayActivity);
               const isToday = cell.ymd === todayYmd;
               const overflow = dayTasks.length - MAX_CHIPS;
               return (
@@ -249,6 +343,26 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
                       </button>
                     )}
                   </div>
+                  {/* Activity chips: one per group with its count. Click opens
+                      the day's log; the task-add click on the cell is stopped. */}
+                  {showActivity && dayActivity.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDayModal(cell.ymd); }}
+                      title={`${dayActivity.length} happening${dayActivity.length === 1 ? '' : 's'} — open the day's log`}
+                      className="mt-1 w-full flex flex-wrap gap-1 text-left"
+                    >
+                      {ACTIVITY_GROUP_ORDER.filter((g) => activityCounts[g]).map((g) => (
+                        <span key={g} className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-bold leading-none ${ACTIVITY_GROUPS[g].chip}`}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '11px' }} aria-hidden="true">{ACTIVITY_GROUPS[g].icon}</span>
+                          {activityCounts[g]}
+                        </span>
+                      ))}
+                      <span className="sr-only">
+                        {ACTIVITY_GROUP_ORDER.filter((g) => activityCounts[g]).map((g) => `${activityCounts[g]} ${ACTIVITY_GROUPS[g].label}`).join(', ')}
+                      </span>
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -283,12 +397,16 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
         />
       )}
       {dayModal && (
-        <DayTasksModal
+        <DayModal
           ymd={dayModal}
           tasks={byDate[dayModal] || []}
+          activity={activityByDay[dayModal] || []}
           onOpenTask={(task) => { setDayModal(null); setDetailTask(task); }}
           onClose={() => setDayModal(null)}
         />
+      )}
+      {reportOpen && (
+        <ActivityReportModal currentUser={currentUser} onClose={() => setReportOpen(false)} />
       )}
     </div>
   );

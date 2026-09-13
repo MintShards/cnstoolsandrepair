@@ -23,6 +23,9 @@ from app.models.auth import User
 from app.dependencies.auth import require_staff_or_admin
 from app.services.file_service import save_upload_file, delete_file
 from app.services.work_order_email_service import send_work_order_email
+from app.services.activity_service import (
+    actor_ref, record_activity, diff_tool, diff_customer, tool_label, customer_display,
+)
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
@@ -1451,7 +1454,8 @@ async def batch_update_tool_status(
             history_entry = {
                 "status": new_status,
                 "timestamp": now,
-                "notes": item.notes
+                "notes": item.notes,
+                "by": actor_ref(current_user),
             }
             set_data: dict = {
                 f"tools.{tool_index}.status": new_status,
@@ -1605,7 +1609,8 @@ async def create_repair_job(
         tool_dict["status_history"] = [{
             "status": RepairStatus.RECEIVED.value,
             "timestamp": datetime.utcnow(),
-            "notes": "Job created"
+            "notes": "Job created",
+            "by": actor_ref(current_user),
         }]
         tools.append(tool_dict)
 
@@ -1614,6 +1619,7 @@ async def create_repair_job(
         "source": job_data.source.value,
         "source_quote_id": job_data.source_quote_id,
         "tools": tools,
+        "created_by": actor_ref(current_user),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -1685,7 +1691,8 @@ async def convert_from_request(
             "status_history": [{
                 "status": RepairStatus.RECEIVED.value,
                 "timestamp": datetime.utcnow(),
-                "notes": f"Converted from online repair request {quote.get('request_number', quote_id)}"
+                "notes": f"Converted from online repair request {quote.get('request_number', quote_id)}",
+                "by": actor_ref(current_user),
             }]
         }
         tools.append(tool)
@@ -1732,6 +1739,7 @@ async def convert_from_request(
         "source": RepairSource.ONLINE_REQUEST.value,
         "source_quote_id": quote_id,
         "tools": tools,
+        "created_by": actor_ref(current_user),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -1936,9 +1944,17 @@ async def update_repair_job(
         raise HTTPException(status_code=404, detail="Repair job not found")
 
     update_data = job_update.model_dump(exclude_unset=True)
+    changes = diff_customer(existing, update_data)
     update_data["updated_at"] = datetime.utcnow()
 
     await db.repairs.update_one({"_id": object_id}, {"$set": update_data})
+
+    if changes:
+        await record_activity(
+            db, kind="job_edited", actor=actor_ref(current_user),
+            summary=f"Edited work order {existing.get('request_number')} details",
+            details=changes, job=existing,
+        )
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
@@ -1986,6 +2002,14 @@ async def delete_repair_job(
     if result.deleted_count == 0:
         raise HTTPException(status_code=500, detail="Failed to delete repair job")
 
+    n_tools = len(job.get("tools", []))
+    await record_activity(
+        db, kind="job_deleted", actor=actor_ref(current_user),
+        summary=f"Deleted work order {job.get('request_number')} — {customer_display(job)}, "
+                f"{n_tools} tool{'s' if n_tools != 1 else ''}",
+        details=[tool_label(t) for t in job.get("tools", [])], job=job,
+    )
+
     return None
 
 
@@ -2017,7 +2041,8 @@ async def add_tool(
     tool_dict["status_history"] = [{
         "status": RepairStatus.RECEIVED.value,
         "timestamp": datetime.utcnow(),
-        "notes": "Tool added to job"
+        "notes": "Tool added to job",
+        "by": actor_ref(current_user),
     }]
 
     await db.repairs.update_one(
@@ -2064,6 +2089,9 @@ async def update_tool(
 
     # Build update with only provided fields
     update_fields = tool_update.model_dump(exclude_unset=True)
+    # What actually changed, in words, for the activity log — computed before
+    # the parts loop below decorates the incoming parts with dates.
+    changes = diff_tool(tools[tool_index], update_fields)
 
     # Auto-set order_date and date_received when part status changes
     # Also track stock adjustments for inventory
@@ -2098,6 +2126,13 @@ async def update_tool(
     job_id_str = str(object_id)
     for lib_id, delta, reason in stock_adjustments:
         await _adjust_library_part_stock(db, lib_id, delta, reason, job_id=job_id_str, tool_id=tool_id)
+
+    if changes:
+        await record_activity(
+            db, kind="tool_edited", actor=actor_ref(current_user),
+            summary=f"Edited {tool_label(tools[tool_index])} on {job.get('request_number')}",
+            details=changes, job=job, tool=tools[tool_index],
+        )
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
@@ -2214,7 +2249,8 @@ async def update_tool_status(
     history_entry = {
         "status": status_update.status.value,
         "timestamp": now,
-        "notes": status_update.notes
+        "notes": status_update.notes,
+        "by": actor_ref(current_user),
     }
 
     set_data = {
@@ -2311,6 +2347,12 @@ async def upload_tool_photo(
         }
     )
 
+    await record_activity(
+        db, kind="photos_added", actor=actor_ref(current_user),
+        summary=f"Photo added to {tool_label(tools[tool_index])} on {job.get('request_number')}",
+        job=job, tool=tools[tool_index],
+    )
+
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
     return _build_job_response(updated_job)
@@ -2363,6 +2405,12 @@ async def delete_tool_photo(
         }
     )
 
+    await record_activity(
+        db, kind="photo_removed", actor=actor_ref(current_user),
+        summary=f"Photo removed from {tool_label(tools[tool_index])} on {job.get('request_number')}",
+        job=job, tool=tools[tool_index],
+    )
+
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
     return _build_job_response(updated_job)
@@ -2408,6 +2456,12 @@ async def remove_tool(
             "$pull": {"tools": {"tool_id": tool_id}},
             "$set": {"updated_at": datetime.utcnow()}
         }
+    )
+
+    await record_activity(
+        db, kind="tool_removed", actor=actor_ref(current_user),
+        summary=f"Removed {tool_label(tool)} from {job.get('request_number')}",
+        details=[f"Status was {tool.get('status', 'received')}"], job=job, tool=tool,
     )
 
     updated_job = await db.repairs.find_one({"_id": object_id})

@@ -161,10 +161,18 @@ class PartItem(BaseModel):
         return v
 
 
+class ActorRef(BaseModel):
+    """Who did it — snapshot of the acting user at write time."""
+    user_id: Optional[str] = None
+    name: str
+
+
 class StatusHistoryEntry(BaseModel):
     status: RepairStatus
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     notes: Optional[str] = Field(None, max_length=1000)
+    # Recorded from 2026-09 on; older entries have no actor.
+    by: Optional[ActorRef] = None
 
 
 class ToolItemCreate(BaseModel):
@@ -519,6 +527,7 @@ class RepairJobResponse(BaseModel):
     source_quote_id: Optional[str] = None
     tools: List[ToolItemResponse]
     work_order_emails_sent: Optional[List[dict]] = None
+    created_by: Optional[ActorRef] = None
     created_at: datetime
     updated_at: datetime
 

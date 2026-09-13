@@ -726,6 +726,15 @@ export const salesRepsAPI = {
 };
 
 // Workspace: Tasks API (staff or admin)
+// Day-by-day happenings across the tracker + workspace (shop-local dates,
+// inclusive) — powers the calendar's activity layer and the printed report.
+export const activityAPI = {
+  list: async ({ from, to }) => {
+    const response = await api.get('/api/activity', { params: { from, to } });
+    return response.data;
+  },
+};
+
 export const tasksAPI = {
   summary: async () => {
     const response = await api.get('/api/tasks/summary');

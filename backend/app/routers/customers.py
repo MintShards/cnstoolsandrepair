@@ -13,6 +13,7 @@ from app.models.auth import User
 from app.dependencies.auth import require_staff_or_admin
 from app.utils.helpers import convert_objectid_to_str
 from app.routers.repairs import _migrate_tool_parts, _build_job_response
+from app.services.activity_service import actor_ref, record_activity, diff_customer, customer_display
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
 logger = logging.getLogger(__name__)
@@ -173,6 +174,7 @@ async def create_customer(
     now = datetime.utcnow()
     doc = customer_data.model_dump()
     doc["email"] = email
+    doc["created_by"] = actor_ref(current_user)
     doc["created_at"] = now
     doc["updated_at"] = now
 
@@ -271,8 +273,16 @@ async def update_customer(
                 detail="Another customer with this email address already exists"
             )
 
+    changes = diff_customer(existing, update_data)
     update_data["updated_at"] = datetime.utcnow()
     await db.customers.update_one({"_id": object_id}, {"$set": update_data})
+
+    if changes:
+        await record_activity(
+            db, kind="customer_edited", actor=actor_ref(current_user),
+            summary=f"Edited customer {customer_display(existing)}",
+            details=changes, customer=existing,
+        )
 
     updated = await db.customers.find_one({"_id": object_id})
     updated = convert_objectid_to_str(updated)
@@ -309,4 +319,9 @@ async def delete_customer(
         )
 
     await db.customers.delete_one({"_id": object_id})
+    await record_activity(
+        db, kind="customer_deleted", actor=actor_ref(current_user),
+        summary=f"Deleted customer {customer_display(existing)}",
+        details=[existing.get("email")] if existing.get("email") else None, customer=existing,
+    )
     return None

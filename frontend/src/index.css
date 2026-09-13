@@ -4,11 +4,21 @@
 
 @page { margin: 10mm; size: auto; }
 
+/* Print roots only ever hold content for the moment a print dialog is open;
+   keep them out of the on-screen layout so injected markup never flashes at
+   the bottom of the page before/after the dialog. */
+@media screen {
+  #print-work-order-root, #print-guide-root { display: none; }
+}
+
 @media print {
   body > * { display: none !important; }
   #print-work-order-root { display: block !important; }
   #print-work-order-root .tool-card { break-inside: avoid; }
   #print-guide-root { display: block !important; }
+  /* Modals lock body scroll (overflow: hidden); Chrome honours that when
+     paginating and clips the printout to one page. Paper has no scrollbar. */
+  html, body { overflow: visible !important; height: auto !important; min-height: 0 !important; }
 }
 
 @layer base {
