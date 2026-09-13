@@ -522,7 +522,8 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         serial_number: t.serial_number || null,
         remarks: t.remarks || null,
         parts: (t.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
-        zoho_ref: t.zoho_ref || null,
+        zoho_quote_number: t.zoho_quote_number || null,
+        zoho_invoice_number: t.zoho_invoice_number || null,
         assigned_technician: t.assigned_technician || null,
         estimated_completion: t.estimated_completion || null,
         date_received: date_received || getTodayPacific(),
@@ -646,7 +647,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         await fetchJobs(currentPage, pageSize);
       }
       if (result.failure_count > 0) {
-        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed`);
+        // Lead with the first reason — "needs a Zoho quote number" is
+        // actionable, a bare count is not.
+        const firstError = result.results?.find((r) => !r.success)?.error;
+        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed${firstError ? ` — ${firstError}` : ''}`);
       }
     } catch (err) {
       showToast('error', getErrorMessage(err, 'Batch update failed'));

@@ -330,16 +330,32 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   };
 
   // ── STATUS UPDATE ────────────────────────────────────
+  // Zoho Books owns quotes and invoices; the backend refuses Quoted /
+  // Invoiced without the matching number (zoho_number_blocker). These
+  // modals ask for it up front, in the same step as the status change.
+  const ZOHO_NUMBER_FOR_STATUS = {
+    quoted: { field: 'zoho_quote_number', label: 'Zoho Quote #', placeholder: 'e.g. QT-000123', hint: 'From Zoho Books — required before a tool can be marked Quoted.' },
+    invoiced: { field: 'zoho_invoice_number', label: 'Zoho Invoice #', placeholder: 'e.g. INV-000123', hint: 'From Zoho Books — required before a tool can be marked Invoiced.' },
+  };
+  const zohoNumberMissing = (form) => {
+    const need = ZOHO_NUMBER_FOR_STATUS[form.status];
+    return !!need && !(form[need.field] || '').trim();
+  };
+
   const openStatusUpdate = (tool) => {
     setStatusUpdateModal(tool);
     const validNext = getValidNextStatuses(tool.status);
     // Pre-fill estimated_completion from the tool if set
     const existingDate = tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '';
-    setStatusUpdateForm({ status: validNext[0] || '', notes: '', estimated_completion: existingDate });
+    setStatusUpdateForm({
+      status: validNext[0] || '', notes: '', estimated_completion: existingDate,
+      zoho_quote_number: tool.zoho_quote_number || '',
+      zoho_invoice_number: tool.zoho_invoice_number || '',
+    });
   };
 
   const handleStatusUpdate = async () => {
-    if (!statusUpdateModal) return;
+    if (!statusUpdateModal || zohoNumberMissing(statusUpdateForm)) return;
     setUpdatingStatus(true);
     let updated;
     try {
@@ -347,6 +363,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         status: statusUpdateForm.status,
         notes: statusUpdateForm.notes || null,
         estimated_completion: statusUpdateForm.estimated_completion || null,
+        zoho_quote_number: statusUpdateForm.zoho_quote_number?.trim() || null,
+        zoho_invoice_number: statusUpdateForm.zoho_invoice_number?.trim() || null,
       };
       updated = await repairsAPI.updateToolStatus(job.id, statusUpdateModal.tool_id, payload);
     } catch (err) {
@@ -373,11 +391,15 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     if (tools.length === 0) return;
     setUpdateAllApplying(true);
     try {
+      // One Zoho quote/invoice covers the whole work order, so a number
+      // entered here applies to every selected tool.
+      const need = ZOHO_NUMBER_FOR_STATUS[updateAllForm.status];
       const items = tools.map(t => ({
         job_id: job.id,
         tool_id: t.tool_id,
         new_status: updateAllForm.status,
         notes: updateAllForm.notes || null,
+        ...(need ? { [need.field]: (updateAllForm[need.field] || '').trim() || null } : {}),
       }));
       const result = await repairsAPI.batchUpdateStatus(items);
       if (result.success_count > 0) {
@@ -389,7 +411,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         setUpdateAllSelected(new Set());
       }
       if (result.failure_count > 0) {
-        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed`);
+        const firstError = result.results?.find((r) => !r.success)?.error;
+        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed${firstError ? ` — ${firstError}` : ''}`);
       }
     } catch (err) {
       showToast('error', getErrorMessage(err, 'Failed to update tools'));
@@ -416,7 +439,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       hourly_rate: tool.hourly_rate ?? '',
       priority: tool.priority || 'standard',
       warranty: tool.warranty || false,
-      zoho_ref: tool.zoho_ref || '',
+      zoho_quote_number: tool.zoho_quote_number || '',
+      zoho_invoice_number: tool.zoho_invoice_number || '',
       assigned_technician: tool.assigned_technician || '',
       included_items: tool.included_items || [],
       rod_length_received: tool.rod_length_received ?? '',
@@ -472,7 +496,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
         parts: (toolEditForm.parts || []).filter(p => p.name?.trim()).map(({ _suggested_suppliers, ...p }) => p),
-        zoho_ref: toolEditForm.zoho_ref || null,
+        zoho_quote_number: toolEditForm.zoho_quote_number || null,
+        zoho_invoice_number: toolEditForm.zoho_invoice_number || null,
         assigned_technician: toolEditForm.assigned_technician || null,
         estimated_completion: toolEditForm.estimated_completion || null,
       };
@@ -506,7 +531,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
         parts: (addToolForm.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
-        zoho_ref: addToolForm.zoho_ref || null,
+        zoho_quote_number: addToolForm.zoho_quote_number || null,
+        zoho_invoice_number: addToolForm.zoho_invoice_number || null,
         assigned_technician: addToolForm.assigned_technician || null,
         estimated_completion: addToolForm.estimated_completion || null,
       };
@@ -836,6 +862,26 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                               <option key={s} value={s}>{REPAIR_STATUSES[s]?.label || s}</option>
                             ))}
                           </select>
+                          {ZOHO_NUMBER_FOR_STATUS[updateAllForm.status] && (() => {
+                            const need = ZOHO_NUMBER_FOR_STATUS[updateAllForm.status];
+                            const missing = zohoNumberMissing(updateAllForm);
+                            return (
+                              <input
+                                type="text"
+                                required
+                                autoComplete="off"
+                                aria-label={need.label}
+                                aria-invalid={missing}
+                                title={need.hint}
+                                placeholder={`${need.label} — required (${need.placeholder})`}
+                                value={updateAllForm[need.field] || ''}
+                                onChange={e => { const pos = e.target.selectionStart; const v = e.target.value.toUpperCase(); setUpdateAllForm(f => ({ ...f, [need.field]: v })); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                                className={`w-full sm:w-52 text-xs rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-slate-400 ${
+                                  missing ? 'border-amber-400 dark:border-amber-600' : 'border-slate-300 dark:border-slate-600'
+                                }`}
+                              />
+                            );
+                          })()}
                           <input
                             type="text"
                             placeholder="Notes (optional)"
@@ -846,7 +892,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={handleUpdateAllTools}
-                              disabled={updateAllApplying || !updateAllForm.status}
+                              disabled={updateAllApplying || !updateAllForm.status || zohoNumberMissing(updateAllForm)}
                               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-primary hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap"
                             >
                               <span className="material-symbols-outlined text-sm">{updateAllApplying ? 'refresh' : 'done_all'}</span>
@@ -1110,8 +1156,12 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                 <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
                               </div>
                               <div>
-                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Ref</span>
-                                <p className={`mt-0.5 ${tool.zoho_ref ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_ref || 'None'}</p>
+                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Quote #</span>
+                                <p className={`mt-0.5 ${tool.zoho_quote_number ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_quote_number || 'None'}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Invoice #</span>
+                                <p className={`mt-0.5 ${tool.zoho_invoice_number ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_invoice_number || 'None'}</p>
                               </div>
                             </div>
                           </div>
@@ -1335,6 +1385,31 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                     </select>
+                    {ZOHO_NUMBER_FOR_STATUS[statusUpdateForm.status] && (() => {
+                      const need = ZOHO_NUMBER_FOR_STATUS[statusUpdateForm.status];
+                      const missing = zohoNumberMissing(statusUpdateForm);
+                      return (
+                        <div className="mt-3">
+                          <label htmlFor="status-zoho-number" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                            {need.label} <span className="text-red-600 dark:text-red-400" aria-hidden="true">*</span>
+                          </label>
+                          <input
+                            id="status-zoho-number"
+                            value={statusUpdateForm[need.field] || ''}
+                            autoComplete="off"
+                            required
+                            aria-invalid={missing}
+                            aria-describedby="status-zoho-hint"
+                            onChange={(e) => { const pos = e.target.selectionStart; setStatusUpdateForm({ ...statusUpdateForm, [need.field]: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                            placeholder={need.placeholder}
+                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900/80 border rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all ${
+                              missing ? 'border-amber-400 dark:border-amber-600' : 'border-slate-300 dark:border-slate-700'
+                            }`}
+                          />
+                          <p id="status-zoho-hint" className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{need.hint}</p>
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>
@@ -1360,7 +1435,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
             </div>
             <div className="flex gap-3 px-6 pb-6">
               <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0 || zohoNumberMissing(statusUpdateForm)} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                 {updatingStatus ? 'Updating...' : 'Update Status'}
               </button>
             </div>

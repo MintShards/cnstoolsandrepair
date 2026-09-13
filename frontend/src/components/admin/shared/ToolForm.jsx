@@ -9,7 +9,7 @@ const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
   quantity: 1, remarks: '', parts: [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
   labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
-  zoho_ref: '', assigned_technician: '', estimated_completion: '',
+  zoho_quote_number: '', zoho_invoice_number: '', assigned_technician: '', estimated_completion: '',
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   camera_head_model: '', camera_head_serial: '',
   controller_model: '', controller_serial: '',
@@ -412,9 +412,11 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [toolTypes, setToolTypes] = useState([]);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  // Models seen on past jobs for this brand (generic + camera components) —
-  // merged with library models so every model field suggests both sources.
+  // Models seen on past jobs for this brand. The generic list merges with
+  // library models; the per-component lists stand alone, because only the
+  // job record knows whether a model was a controller, reel, or camera head.
   const [jobModels, setJobModels] = useState([]);
+  const [jobComponentModels, setJobComponentModels] = useState({});
   const jobModelsTimer = useRef(null);
   // Which component model field's dropdown is open (field name or null)
   const [openCompField, setOpenCompField] = useState(null);
@@ -489,12 +491,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   useEffect(() => {
     const brand = toolData.brand?.trim();
     if (jobModelsTimer.current) clearTimeout(jobModelsTimer.current);
-    if (!brand) { setJobModels([]); return undefined; }
+    if (!brand) { setJobModels([]); setJobComponentModels({}); return undefined; }
     jobModelsTimer.current = setTimeout(async () => {
       try {
         const res = await repairsAPI.usedModels(brand);
         setJobModels(res.models || []);
-      } catch { setJobModels([]); }
+        setJobComponentModels(res.components || {});
+      } catch { setJobModels([]); setJobComponentModels({}); }
     }, 400);
     return () => clearTimeout(jobModelsTimer.current);
   }, [toolData.brand]);
@@ -644,24 +647,25 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     ].map((c) => (
                       <div key={c.modelField} className="space-y-2">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{c.label}</p>
-                        {/* Same suggestion dropdown as the generic Model
-                            Number field: library models + past-job models */}
+                        {/* Suggestions come only from THIS component's field
+                            on past jobs — the library can't tell a reel model
+                            from a camera head, so it stays out of these. */}
                         <div className="relative">
                           <input value={data[c.modelField] || ''} autoComplete="off"
                             onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.modelField, e.target.value.toUpperCase()); setOpenCompField(c.modelField); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                            onFocus={() => { if (combinedModels.length > 0) setOpenCompField(c.modelField); }}
+                            onFocus={() => { if ((jobComponentModels[c.modelField] || []).length > 0) setOpenCompField(c.modelField); }}
                             onBlur={() => setTimeout(() => setOpenCompField((f) => (f === c.modelField ? null : f)), 200)}
                             placeholder="Model" className={inputCls} />
                           {openCompField === c.modelField && (() => {
                             const q = (data[c.modelField] || '').trim().toLowerCase();
-                            const opts = combinedModels.filter((m) => !q || m.name.toLowerCase().includes(q));
+                            const opts = (jobComponentModels[c.modelField] || []).filter((name) => !q || name.toLowerCase().includes(q));
                             return opts.length > 0 && (
                               <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                {opts.map((m) => (
-                                  <button key={m.id || m.name} type="button"
-                                    onMouseDown={() => { handleChange(c.modelField, m.name.toUpperCase()); setOpenCompField(null); }}
+                                {opts.map((name) => (
+                                  <button key={name} type="button"
+                                    onMouseDown={() => { handleChange(c.modelField, name.toUpperCase()); setOpenCompField(null); }}
                                     className="w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors">
-                                    <span className="text-slate-800 dark:text-slate-100">{m.name}</span>
+                                    <span className="text-slate-800 dark:text-slate-100">{name}</span>
                                   </button>
                                 ))}
                               </div>
@@ -1184,10 +1188,17 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <input type="number" step="0.01" min="0" value={data.hourly_rate || ''} onChange={(e) => handleChange('hourly_rate', e.target.value)}
                 placeholder="e.g., 95.00" className={inputCls} />
             </div>
+            {/* Zoho Books numbers — required before a tool can move to
+                Quoted / Invoiced; the status dialog also asks for them. */}
             <div>
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Reference</label>
-              <input value={data.zoho_ref || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('zoho_ref', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                placeholder="Optional" className={inputCls} />
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Quote #</label>
+              <input value={data.zoho_quote_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('zoho_quote_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                placeholder="Needed to mark Quoted" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Invoice #</label>
+              <input value={data.zoho_invoice_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('zoho_invoice_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
+                placeholder="Needed to mark Invoiced" className={inputCls} />
             </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>

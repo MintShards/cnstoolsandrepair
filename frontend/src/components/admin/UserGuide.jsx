@@ -559,7 +559,7 @@ export default function UserGuide({ onClose }) {
                     'Click Add Tool. Fill in: Tool Type, Brand, Model Number. Add Serial Number, Priority, and any notes in the Remarks field.',
                     'Click Save. The job is created with status set to Received automatically.',
                     'After you inspect the tool: open the job, change the status to Diagnosed. Add a note in Remarks describing what you found.',
-                    'Prepare a quote: change status to Quoted. Note the estimated cost in Remarks.',
+                    'Prepare a quote: create it in Zoho Books first (see the box below), then change status to Quoted. The tracker asks for the Zoho quote number (e.g. QT-000123) in that step and will not accept Quoted without it. Note the estimated cost in Remarks.',
                   ].map((step, i) => (
                     <li key={i} className="flex gap-3">
                       <span className="w-6 h-6 bg-primary text-white rounded-full text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
@@ -823,7 +823,7 @@ export default function UserGuide({ onClose }) {
                     </li>
                   ))}
                 </ol>
-                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400"><strong>Then:</strong> Come back to the Repair Tracker and update the job status to <strong>Invoiced</strong>.</p>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400"><strong>Then:</strong> Come back to the Repair Tracker and update the job status to <strong>Invoiced</strong>. The tracker asks for the Zoho invoice number (e.g. INV-000123) in that step and will not accept Invoiced without it.</p>
               </SubSection>
 
               <SubSection title="Step 5 — Mark Invoice as Paid">

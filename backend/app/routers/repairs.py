@@ -15,7 +15,7 @@ from app.models.repair import (
     ToolItemCreate, ToolItemUpdate, ToolStatusUpdate,
     ToolItem, ToolItemResponse, RepairStatus, RepairSource,
     StatusHistoryEntry, ALLOWED_TRANSITIONS, validate_status_transition,
-    hathorn_ready_blockers,
+    hathorn_ready_blockers, zoho_number_blocker, ZOHO_NUMBER_FIELDS,
     BatchStatusRequest, BatchStatusResponse, BatchStatusResult,
     WorkOrderEmailSendRequest,
 )
@@ -1433,6 +1433,21 @@ async def batch_update_tool_status(
                     ))
                     continue
 
+            # Same Zoho gate as the single-tool route. A number supplied on
+            # the item (the dialog's Update All passes one for the whole
+            # job) satisfies it; the cross-job batch on the jobs tab can't
+            # know each job's number, so those tools fail with a clear
+            # reason instead.
+            supplied_zoho = None
+            if new_status in ZOHO_NUMBER_FIELDS:
+                supplied_zoho = getattr(item, ZOHO_NUMBER_FIELDS[new_status][0])
+            blocker = zoho_number_blocker(tools[tool_index], new_status, supplied_zoho)
+            if blocker:
+                results.append(BatchStatusResult(
+                    job_id=job_id, tool_id=item.tool_id, success=False, error=blocker
+                ))
+                continue
+
             history_entry = {
                 "status": new_status,
                 "timestamp": now,
@@ -1442,6 +1457,10 @@ async def batch_update_tool_status(
                 f"tools.{tool_index}.status": new_status,
                 "updated_at": now,
             }
+            for zoho_field in ("zoho_quote_number", "zoho_invoice_number"):
+                zoho_value = getattr(item, zoho_field)
+                if zoho_value:
+                    set_data[f"tools.{tool_index}.{zoho_field}"] = zoho_value
             if item.new_status == RepairStatus.COMPLETED:
                 set_data[f"tools.{tool_index}.date_completed"] = now
 
@@ -1655,7 +1674,8 @@ async def convert_from_request(
             "hourly_rate": None,
             "priority": "standard",
             "warranty": False,
-            "zoho_ref": None,
+            "zoho_quote_number": None,
+            "zoho_invoice_number": None,
             "assigned_technician": None,
             "photos": [],
             "status": RepairStatus.RECEIVED.value,
@@ -1808,31 +1828,47 @@ async def serial_history(
 # (declared before /{job_id} so "tool-types" is never parsed as an ID)
 # ──────────────────────────────────────────────
 
+_MODEL_FIELDS = ("model_number", "controller_model", "reel_model", "camera_head_model")
+
+
 @router.get("/models")
 async def list_used_models(
     brand: Optional[str] = None,
     current_user: User = Depends(require_staff_or_admin)
 ):
-    """Distinct model identities used on past jobs — the generic
-    model_number plus the three camera component models — scoped to a
-    brand when given. The tool form merges these with parts-library
-    models, so a model typed on an old job suggests itself even if it
-    never earned a library entry."""
+    """Distinct model identities used on past jobs, bucketed by the field
+    they were recorded in — the generic model_number plus each Hathorn
+    component — scoped to a brand when given. Buckets stay separate so the
+    controller dropdown only ever suggests controllers: the parts library
+    tags models by tool type, not component, so the job record is the one
+    source that knows a reel from a camera head. `models` (generic) is
+    merged with library models by the tool form; `components` is used
+    as-is."""
     db = get_database()
     pipeline = [{"$unwind": "$tools"}]
     if brand:
         pipeline.append({"$match": {"tools.brand": {
             "$regex": f"^{re.escape(brand.strip())}$", "$options": "i"}}})
     pipeline += [
-        {"$project": {"models": [
-            "$tools.model_number", "$tools.controller_model",
-            "$tools.reel_model", "$tools.camera_head_model"]}},
-        {"$unwind": "$models"},
-        {"$match": {"models": {"$nin": [None, ""]}}},
-        {"$group": {"_id": {"$toLower": "$models"}, "name": {"$first": "$models"}}},
+        {"$project": {"entries": [
+            {"field": {"$literal": f}, "name": f"$tools.{f}"} for f in _MODEL_FIELDS
+        ]}},
+        {"$unwind": "$entries"},
+        {"$match": {"entries.name": {"$nin": [None, ""]}}},
+        {"$group": {
+            "_id": {"field": "$entries.field", "key": {"$toLower": "$entries.name"}},
+            "name": {"$first": "$entries.name"},
+        }},
     ]
-    rows = await db.repairs.aggregate(pipeline).to_list(length=None)
-    return {"models": sorted((r["name"] for r in rows), key=str.lower)}
+    buckets: dict = {f: [] for f in _MODEL_FIELDS}
+    async for row in db.repairs.aggregate(pipeline):
+        buckets[row["_id"]["field"]].append(row["name"])
+    for names in buckets.values():
+        names.sort(key=str.lower)
+    return {
+        "models": buckets["model_number"],
+        "components": {f: buckets[f] for f in _MODEL_FIELDS[1:]},
+    }
 
 
 @router.get("/tool-types")
@@ -2165,6 +2201,15 @@ async def update_tool_status(
                        + ", ".join(missing)
             )
 
+    # Quoted / Invoiced need the Zoho Books number (every brand). The number
+    # can arrive with this very request, so the check sees it too.
+    supplied_zoho = None
+    if new_status in ZOHO_NUMBER_FIELDS:
+        supplied_zoho = getattr(status_update, ZOHO_NUMBER_FIELDS[new_status][0])
+    blocker = zoho_number_blocker(tools[tool_index], new_status, supplied_zoho)
+    if blocker:
+        raise HTTPException(status_code=400, detail=blocker)
+
     now = datetime.utcnow()
     history_entry = {
         "status": status_update.status.value,
@@ -2176,6 +2221,13 @@ async def update_tool_status(
         f"tools.{tool_index}.status": status_update.status.value,
         "updated_at": now
     }
+
+    # Zoho numbers sent with the change are saved regardless of the target
+    # status — a correction can ride along with any later move.
+    for zoho_field in ("zoho_quote_number", "zoho_invoice_number"):
+        zoho_value = getattr(status_update, zoho_field)
+        if zoho_value:
+            set_data[f"tools.{tool_index}.{zoho_field}"] = zoho_value
 
     # Set date_completed if reaching completed status
     if status_update.status == RepairStatus.COMPLETED:

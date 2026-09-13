@@ -213,7 +213,8 @@ function buildBody(job, businessInfo, serviceAgreement) {
             <div class="field-label">Technician</div>
             <div>${tool.assigned_technician ? escHtml(tool.assigned_technician) : '—'}</div>
           </div>
-          <div class="field-group"><div class="field-label">Zoho Ref</div><div>${tool.zoho_ref ? escHtml(tool.zoho_ref) : '—'}</div></div>
+          <div class="field-group"><div class="field-label">Zoho Quote #</div><div>${tool.zoho_quote_number ? escHtml(tool.zoho_quote_number) : '—'}</div></div>
+          <div class="field-group"><div class="field-label">Zoho Invoice #</div><div>${tool.zoho_invoice_number ? escHtml(tool.zoho_invoice_number) : '—'}</div></div>
         </div>
 
         ${cameraHTML}

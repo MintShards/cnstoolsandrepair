@@ -301,7 +301,8 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
         date_received = tool.get("date_received")
         est_completion = tool.get("estimated_completion")
         technician = _safe(tool.get("assigned_technician"))
-        zoho_ref = _safe(tool.get("zoho_ref"))
+        zoho_quote = _safe(tool.get("zoho_quote_number"))
+        zoho_invoice = _safe(tool.get("zoho_invoice_number"))
         status = tool.get("status") or "received"
 
         # Tool card
@@ -377,15 +378,15 @@ def generate_work_order_pdf(job: dict, business_info: dict = None, service_agree
 
         pdf.set_y(card_y + card_pad + num_box + 4.5)
 
-        # Details grid: Received | Est. Completion | Technician | Zoho Ref
+        # Details grid: Received | Est. Completion | Technician | Zoho quote / invoice
         detail_y = pdf.get_y()
         dcol_w = page_w / 4
-        labels_row = ["RECEIVED", "EST. COMPLETION", "TECHNICIAN", "ZOHO REF"]
+        labels_row = ["RECEIVED", "EST. COMPLETION", "TECHNICIAN", "ZOHO QUOTE / INVOICE"]
         values_row = [
             _safe(_fmt_date(date_received)),
             _safe(_fmt_date(est_completion)),
             technician or "--",
-            zoho_ref or "--",
+            f"{zoho_quote or '--'} / {zoho_invoice or '--'}",
         ]
 
         for i, lbl in enumerate(labels_row):

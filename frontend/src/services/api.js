@@ -426,8 +426,10 @@ export const repairsAPI = {
     const response = await api.get('/api/repairs/tool-types');
     return response.data;
   },
-  // Distinct models used on past jobs (generic + camera components),
-  // optionally brand-scoped — merged with library models for suggestions
+  // Distinct models used on past jobs, optionally brand-scoped:
+  // { models: [generic model_number values], components: { controller_model,
+  //   reel_model, camera_head_model } } — each Hathorn component field
+  // suggests only its own bucket.
   usedModels: async (brand) => {
     const response = await api.get('/api/repairs/models', { params: brand ? { brand } : {} });
     return response.data;

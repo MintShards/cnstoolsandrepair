@@ -210,6 +210,8 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 
 Repairs router (`routers/repairs.py`) supports server-side pagination with filters, batch status updates, and work order generation.
 
+**Status gates** (enforced in BOTH the single and batch status routes): a Hathorn tool can't reach `ready` until the configured final checklist is ticked (`hathorn_ready_blockers`); ANY tool can't reach `quoted` without `zoho_quote_number` or `invoiced` without `zoho_invoice_number` (`zoho_number_blocker` + `ZOHO_NUMBER_FIELDS` in models/repair.py — Zoho Books owns quotes and invoices, the tracker only records their numbers, and they're different numbers). The number may be sent with the status change itself (`ToolStatusUpdate` / `BatchStatusItem` carry optional `zoho_*_number`); the WorkOrderDialog's status and Update-All modals prompt for it. The legacy per-tool `zoho_ref` was split into those two fields by `scripts/migrate_zoho_ref.py` (dry run by default, `--apply` to write).
+
 ### Work Order Number Generation (ATOMIC)
 ```python
 # Repair jobs get WO-YYYY-XXXX numbers (separate counter from REQ-YYYY-XXXX)

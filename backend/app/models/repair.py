@@ -73,6 +73,27 @@ def hathorn_ready_blockers(tool: dict, checklist: Optional[list] = None) -> list
     return [item for item in required if str(item).strip().lower() not in done]
 
 
+# Zoho Books is the system of record for quotes and invoices; the tracker
+# only records their numbers. A tool can't be called Quoted or Invoiced
+# without the matching number — every brand, every work order.
+ZOHO_NUMBER_FIELDS = {
+    "quoted": ("zoho_quote_number", "Zoho quote number", "Quoted"),
+    "invoiced": ("zoho_invoice_number", "Zoho invoice number", "Invoiced"),
+}
+
+
+def zoho_number_blocker(tool: dict, new_status: str, supplied: Optional[str] = None) -> Optional[str]:
+    """Error text if moving to `new_status` needs a Zoho number that neither
+    the tool nor the status change itself supplies; None when clear."""
+    spec = ZOHO_NUMBER_FIELDS.get(new_status)
+    if not spec:
+        return None
+    field, label, status_label = spec
+    if (supplied or "").strip() or (tool.get(field) or "").strip():
+        return None
+    return f"A {label} is required before a tool can be marked {status_label}."
+
+
 class RepairSource(str, Enum):
     ONLINE_REQUEST = "online_request"
     DROP_OFF = "drop_off"
@@ -164,7 +185,10 @@ class ToolItemCreate(BaseModel):
     hourly_rate: Optional[float] = Field(None, ge=0)
     priority: Priority = Priority.STANDARD
     warranty: bool = False
-    zoho_ref: Optional[str] = Field(None, max_length=100)
+    # Zoho Books numbers — different documents, different numbers. Required
+    # by the status gate before Quoted / Invoiced (see zoho_number_blocker).
+    zoho_quote_number: Optional[str] = Field(None, max_length=100)
+    zoho_invoice_number: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
     photos: List[str] = Field(default_factory=list)
     # Accessories that arrived with the unit (power cord, controller, patch
@@ -288,7 +312,8 @@ class ToolItemUpdate(BaseModel):
     hourly_rate: Optional[float] = Field(None, ge=0)
     priority: Optional[Priority] = None
     warranty: Optional[bool] = None
-    zoho_ref: Optional[str] = Field(None, max_length=100)
+    zoho_quote_number: Optional[str] = Field(None, max_length=100)
+    zoho_invoice_number: Optional[str] = Field(None, max_length=100)
     assigned_technician: Optional[str] = Field(None, max_length=100)
     included_items: Optional[List[str]] = Field(None, max_length=40)
     rod_length_received: Optional[float] = Field(None, ge=0, le=1000)
@@ -364,6 +389,18 @@ class ToolStatusUpdate(BaseModel):
     status: RepairStatus
     notes: Optional[str] = Field(None, max_length=1000)
     estimated_completion: Optional[datetime] = None
+    # Zoho numbers may ride along with the status change, so staff enter
+    # them in the same step they pick Quoted / Invoiced.
+    zoho_quote_number: Optional[str] = Field(None, max_length=100)
+    zoho_invoice_number: Optional[str] = Field(None, max_length=100)
+
+    @field_validator('zoho_quote_number', 'zoho_invoice_number', mode='before')
+    @classmethod
+    def clean_zoho_number(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
+            return v or None
+        return v
 
     @field_validator('estimated_completion', mode='before')
     @classmethod
@@ -397,7 +434,8 @@ class ToolItemResponse(BaseModel):
     hourly_rate: Optional[float] = None
     priority: Priority
     warranty: bool
-    zoho_ref: Optional[str] = None
+    zoho_quote_number: Optional[str] = None
+    zoho_invoice_number: Optional[str] = None
     assigned_technician: Optional[str] = None
     photos: List[str]
     included_items: List[str] = Field(default_factory=list)
@@ -496,6 +534,19 @@ class BatchStatusItem(BaseModel):
     tool_id: str
     new_status: RepairStatus
     notes: Optional[str] = Field(None, max_length=1000)
+    # Optional Zoho numbers, same semantics as ToolStatusUpdate. The dialog's
+    # Update All sends one number for every tool on the job (one Zoho quote
+    # covers the whole work order); the cross-job batch sends none.
+    zoho_quote_number: Optional[str] = Field(None, max_length=100)
+    zoho_invoice_number: Optional[str] = Field(None, max_length=100)
+
+    @field_validator('zoho_quote_number', 'zoho_invoice_number', mode='before')
+    @classmethod
+    def clean_zoho_number(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
+            return v or None
+        return v
 
 
 class BatchStatusRequest(BaseModel):
