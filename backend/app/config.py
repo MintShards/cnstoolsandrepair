@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     sourcing_from_email: str = "purchasing@cnstoolrepair.com"
     sourcing_from_name: str = "CNS Tool Repair Purchasing"
 
+    # Web Push (VAPID) — empty keys keep push off; generate with
+    # scripts/generate_vapid_keys.py and paste into .env
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_claims_email: str = "mailto:service@cnstoolrepair.com"
+
     # Environment
     environment: str = "development"
 

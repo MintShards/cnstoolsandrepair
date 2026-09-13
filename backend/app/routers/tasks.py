@@ -5,7 +5,7 @@ from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 
 from app.database import get_database
 from app.dependencies.auth import require_staff_or_admin
@@ -19,6 +19,7 @@ from app.models.task import (
     TaskUpdate,
 )
 from app.utils.helpers import convert_objectid_to_str, user_display_name
+from app.services.push_service import notification, send_push
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 logger = logging.getLogger(__name__)
@@ -405,18 +406,34 @@ async def get_task(task_id: str, current_user: User = Depends(require_staff_or_a
     return _build_task_response(doc)
 
 
+def _assignment_push(task: dict) -> dict:
+    due = f" · due {task['due_date']}" if task.get("due_date") else ""
+    wo = f" ({task['request_number']})" if task.get("request_number") else ""
+    return notification(
+        "New task for you",
+        f"{task.get('title', 'Task')}{wo}{due}",
+        "/workspace?section=my-tasks",
+        tag=f"task-{task.get('_id')}",
+    )
+
+
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
-async def create_task(data: TaskCreate, current_user: User = Depends(require_staff_or_admin)):
+async def create_task(data: TaskCreate, background_tasks: BackgroundTasks,
+                      current_user: User = Depends(require_staff_or_admin)):
     """Create a task, snapshotting the assignee name and work-order number."""
     db = get_database()
     created = await create_task_document(db, data, current_user)
     logger.info(f"Task created: '{created['title']}' by {current_user.email}")
+    # Tell the assignee — unless they gave it to themselves.
+    if created.get("assignee_id") and created["assignee_id"] != current_user.id:
+        background_tasks.add_task(send_push, db, _assignment_push(created), user_ids=[created["assignee_id"]])
     await _attach_job_context(db, [created])
     return _build_task_response(created)
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
-async def update_task(task_id: str, data: TaskUpdate, current_user: User = Depends(require_staff_or_admin)):
+async def update_task(task_id: str, data: TaskUpdate, background_tasks: BackgroundTasks,
+                      current_user: User = Depends(require_staff_or_admin)):
     """Partial update. Explicit nulls clear due_date/assignee/work-order link;
     status changes run through the completion path (recurrence-aware)."""
     db = get_database()
@@ -464,6 +481,10 @@ async def update_task(task_id: str, data: TaskUpdate, current_user: User = Depen
         )
 
     updated = await db.tasks.find_one({"_id": oid})
+    # A hand-off to someone else gets a push; reassigning to yourself doesn't.
+    new_assignee = updates.get("assignee_id")
+    if new_assignee and new_assignee != existing.get("assignee_id") and new_assignee != current_user.id:
+        background_tasks.add_task(send_push, db, _assignment_push(updated), user_ids=[new_assignee])
     await _attach_job_context(db, [updated])
     return _build_task_response(updated)
 

@@ -32,7 +32,7 @@ function badgeFor(sectionId, counts) {
  * The trailing key button (onChangePassword) is the own-password entry point
  * for staff, who can't reach /admin/settings.
  */
-export default function WorkspaceSidebar({ activeSection, counts, currentUser, onChangePassword }) {
+export default function WorkspaceSidebar({ activeSection, counts, currentUser, onAccount }) {
   return (
     // w-full matters: the layout row is items-start, so without it the aside
     // shrink-wraps on phones and the flex-1 pills collapse to minimum width.
@@ -103,13 +103,13 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
             );
           })}
           <button
-            onClick={onChangePassword}
-            title="Change my password"
+            onClick={onAccount}
+            title="My account — notifications and password"
             className="flex-1 md:flex-none min-w-0 flex flex-col sm:flex-row items-center md:justify-start justify-center gap-0.5 sm:gap-2 md:gap-3 px-1 sm:px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 md:mt-1 md:border-t md:border-slate-200 md:dark:border-slate-800 md:rounded-t-none md:pt-3"
           >
-            <span className="material-symbols-outlined text-xl">key</span>
-            <span className="sm:hidden text-[10px] tracking-tight leading-tight truncate max-w-full">Password</span>
-            <span className="hidden sm:block min-w-0 truncate md:flex-1 text-left leading-tight whitespace-nowrap">Password</span>
+            <span className="material-symbols-outlined text-xl">manage_accounts</span>
+            <span className="sm:hidden text-[10px] tracking-tight leading-tight truncate max-w-full">Account</span>
+            <span className="hidden sm:block min-w-0 truncate md:flex-1 text-left leading-tight whitespace-nowrap">Account</span>
           </button>
         </nav>
       </div>

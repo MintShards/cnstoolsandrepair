@@ -33,6 +33,7 @@ from app.routers import products as products_router
 from app.routers import product_quotes as product_quotes_router
 from app.routers import products_content
 from app.routers import activity as activity_router
+from app.routers import push as push_router
 from app.logging_config import setup_logging
 
 setup_logging()
@@ -179,6 +180,7 @@ app.include_router(products_router.router)
 app.include_router(product_quotes_router.router)
 app.include_router(products_content.router)
 app.include_router(activity_router.router)
+app.include_router(push_router.router)
 
 
 @app.get("/api/csrf-token")

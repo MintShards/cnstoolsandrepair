@@ -726,6 +726,15 @@ export const salesRepsAPI = {
 };
 
 // Workspace: Tasks API (staff or admin)
+// Web Push for staff devices (see utils/push.js).
+export const pushAPI = {
+  publicKey: async () => (await api.get('/api/push/public-key')).data,
+  me: async () => (await api.get('/api/push/me')).data,
+  subscribe: async (subscription) => (await api.post('/api/push/subscribe', subscription)).data,
+  unsubscribe: async (endpoint) => (await api.delete('/api/push/subscribe', { data: { endpoint } })).data,
+  test: async () => (await api.post('/api/push/test')).data,
+};
+
 // Day-by-day happenings across the tracker + workspace (shop-local dates,
 // inclusive) — powers the calendar's activity layer and the printed report.
 export const activityAPI = {

@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Request, Depends
 from typing import List
 from bson import ObjectId
 from datetime import datetime, timedelta
@@ -9,6 +9,7 @@ from app.database import get_database, get_next_request_number
 from app.models.quote import QuoteCreate, QuoteResponse, Quote, ToolEntry
 from app.services.file_service import save_upload_file, delete_file
 from app.services.email_service import send_quote_notification
+from app.services.push_service import notification, send_push
 from app.utils.helpers import convert_objectid_to_str
 from app.dependencies.auth import require_staff_or_admin
 from app.logging_config import log_quote_created, log_quote_deleted, log_email_notification
@@ -38,6 +39,7 @@ def clean_expired_idempotency_keys():
 @limiter.limit("5/hour")
 async def create_quote(
     request: Request,
+    background_tasks: BackgroundTasks,
     company_name: str | None = Form(None),
     first_name: str = Form(...),
     last_name: str = Form(...),
@@ -142,6 +144,19 @@ async def create_quote(
 
     # Add email_sent status to response
     created_quote["email_sent"] = email_sent
+
+    # Staff phones: a new request landed. Runs after the response is sent.
+    who = (company_name or "").strip() or f"{first_name} {last_name}".strip()
+    n_tools = len(tool_entries)
+    background_tasks.add_task(
+        send_push, db,
+        notification(
+            "New online repair request",
+            f"{request_number} from {who} — {n_tools} tool{'s' if n_tools != 1 else ''}",
+            "/admin/repair-tracker?tab=requests",
+            tag=f"request-{request_number}",
+        ),
+    )
 
     response = QuoteResponse(**created_quote)
 

@@ -6,12 +6,14 @@ import ThemeToggle from '../../components/layout/ThemeToggle';
 import { ToastProvider } from '../../components/admin/shared/ToastProvider';
 import WorkspaceSidebar from '../../components/workspace/WorkspaceSidebar';
 import { WORKSPACE_SECTION_IDS } from '../../constants/workspace';
+import { useWorkspacePwa } from '../../utils/push';
 
 // Sections load on first visit so opening the hub doesn't download everything
 const TasksSection = lazy(() => import('../../components/workspace/TasksSection'));
 const TaskCalendar = lazy(() => import('../../components/workspace/TaskCalendar'));
 const FeedSection = lazy(() => import('../../components/workspace/FeedSection'));
 const ChangePasswordModal = lazy(() => import('../../components/workspace/ChangePasswordModal'));
+const AccountModal = lazy(() => import('../../components/workspace/AccountModal'));
 
 function SectionLoading() {
   return (
@@ -51,6 +53,9 @@ export default function Workspace() {
   // Bumped when the browser tab regains focus; sections refetch on change.
   const [focusTick, setFocusTick] = useState(0);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  // Installable app + service worker for push while the Workspace is open.
+  useWorkspacePwa();
 
   const refreshCounts = useCallback(async () => {
     try {
@@ -187,7 +192,7 @@ export default function Workspace() {
               activeSection={activeSection}
               counts={counts}
               currentUser={currentUser}
-              onChangePassword={() => setShowChangePassword(true)}
+              onAccount={() => setShowAccount(true)}
             />
             <main className="flex-1 min-w-0 w-full">
               <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-6 shadow-xl shadow-black/5 dark:shadow-black/20 animate-fadeInScale">
@@ -200,6 +205,13 @@ export default function Workspace() {
                   )}
                   {activeSection === 'calendar' && <TaskCalendar {...sectionProps} />}
                   {activeSection === 'feed' && <FeedSection {...sectionProps} />}
+                  {showAccount && (
+                    <AccountModal
+                      currentUser={currentUser}
+                      onChangePassword={() => { setShowAccount(false); setShowChangePassword(true); }}
+                      onClose={() => setShowAccount(false)}
+                    />
+                  )}
                   {showChangePassword && (
                     <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
                   )}

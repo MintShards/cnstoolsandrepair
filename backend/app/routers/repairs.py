@@ -3,7 +3,7 @@ import logging
 import re
 import uuid
 from collections import defaultdict
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Query, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Query, Response
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
@@ -26,6 +26,7 @@ from app.services.work_order_email_service import send_work_order_email
 from app.services.activity_service import (
     actor_ref, record_activity, diff_tool, diff_customer, tool_label, customer_display,
 )
+from app.services.push_service import notification, send_push
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
@@ -1366,6 +1367,7 @@ async def list_repair_jobs(
 @router.post("/batch-status", response_model=BatchStatusResponse)
 async def batch_update_tool_status(
     batch: BatchStatusRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_staff_or_admin)
 ):
     """Batch update status for multiple tools across one or more repair jobs."""
@@ -1373,6 +1375,9 @@ async def batch_update_tool_status(
 
     results: list[BatchStatusResult] = []
     now = datetime.utcnow()
+    # Tools that reach `ready` in this batch, for ONE summary push afterwards
+    # rather than a burst per tool.
+    ready_pushes: list[tuple[str, str]] = []  # (job_id, "label on WO — customer")
     # One read for the whole batch — the Ready gate below checks against it.
     final_checklist = await _configured_final_checklist(db)
 
@@ -1502,6 +1507,8 @@ async def batch_update_tool_status(
                         db, lib_id, delta, "auto_installed_ready",
                         job_id=job_id_str, tool_id=item.tool_id
                     )
+                if item.new_status == RepairStatus.READY:
+                    ready_pushes.append((job_id_str, f"{tool_label(tools[tool_index])} on {job.get('request_number')} — {customer_display(job)}"))
                 results.append(BatchStatusResult(
                     job_id=job_id, tool_id=item.tool_id,
                     success=True, new_status=new_status
@@ -1512,6 +1519,20 @@ async def batch_update_tool_status(
                     job_id=job_id, tool_id=item.tool_id,
                     success=False, error="Database error"
                 ))
+
+    if ready_pushes:
+        first_job, first_line = ready_pushes[0]
+        extra = len(ready_pushes) - 1
+        background_tasks.add_task(
+            send_push, db,
+            notification(
+                "Ready for pickup" if not extra else f"{len(ready_pushes)} tools ready for pickup",
+                first_line + (f" (+{extra} more)" if extra else ""),
+                f"/admin/repair-tracker?tab=jobs&job={first_job}" if not extra else "/admin/repair-tracker?tab=jobs&status=ready",
+                tag="ready-batch",
+            ),
+            exclude_user_id=current_user.id,
+        )
 
     success_count = sum(1 for r in results if r.success)
     failure_count = len(results) - success_count
@@ -2196,6 +2217,7 @@ async def update_tool_status(
     job_id: str,
     tool_id: str,
     status_update: ToolStatusUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_staff_or_admin)
 ):
     """Update a tool's repair status and append to status history"""
@@ -2299,6 +2321,19 @@ async def update_tool_status(
     for lib_id, delta in ready_stock_adjustments:
         await _adjust_library_part_stock(
             db, lib_id, delta, "auto_installed_ready", job_id=job_id_str, tool_id=tool_id
+        )
+
+    # Everyone else's phone hears about a tool reaching the pickup shelf.
+    if status_update.status == RepairStatus.READY:
+        background_tasks.add_task(
+            send_push, db,
+            notification(
+                "Ready for pickup",
+                f"{tool_label(tools[tool_index])} on {job.get('request_number')} — {customer_display(job)}",
+                f"/admin/repair-tracker?tab=jobs&job={job_id_str}",
+                tag=f"ready-{job_id_str}",
+            ),
+            exclude_user_id=current_user.id,
         )
 
     updated_job = await db.repairs.find_one({"_id": object_id})
