@@ -25,14 +25,16 @@ export function RepairStatusMini({ status }) {
 export default function JobContextLine({ job, className = '' }) {
   if (!job || (!job.company && !job.tool)) return null;
   return (
-    <div className={`flex items-center gap-1.5 min-w-0 ${className}`}>
+    // Wraps: a multi-tool job can carry three status pills, which on a phone
+    // card would otherwise squeeze the customer/tool text to nothing.
+    <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0 ${className}`}>
       <span className="material-symbols-outlined text-sm text-slate-400 dark:text-slate-500 flex-shrink-0" aria-hidden="true">storefront</span>
-      <span className="min-w-0 truncate text-xs text-slate-500 dark:text-slate-400">
+      <span className="min-w-[8rem] flex-1 truncate text-xs text-slate-500 dark:text-slate-400">
         {job.company && <span className="font-bold text-slate-600 dark:text-slate-300">{job.company}</span>}
         {job.company && job.tool && ' · '}
         {job.tool}
       </span>
-      <span className="flex items-center gap-1 flex-shrink-0">
+      <span className="flex flex-wrap items-center gap-1">
         {(job.statuses || []).map((s) => <RepairStatusMini key={s} status={s} />)}
       </span>
     </div>

@@ -50,71 +50,65 @@ function AgePill({ days, stuck }) {
 function QueueRow({ item, verb, onAssign }) {
   const priorityCls = PRIORITY_BADGE[item.priority];
   return (
-    // Phones get two lines (chips + signals on top, the job's identity
-    // full-width below) — a single line at 375px left ~50px for the company
-    // name, which is the one thing the row exists to show.
-    <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-2 gap-y-1 px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60">
-      <WorkOrderChip repairId={item.job_id} requestNumber={item.request_number} />
-      {/* truncate lives on this block parent — putting it on inline children
-          silently stops clipping (overflow doesn't apply to display:inline). */}
-      <span
-        className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm truncate"
-        title={item.tools && item.tools.length > 1 ? item.tools.join(' · ') : undefined}
-      >
-        <span className="font-bold text-slate-900 dark:text-white">{item.company}</span>
-        <span className="text-slate-500 dark:text-slate-400 ml-1.5">{item.tool}</span>
-      </span>
-      {item.status === 'invoiced' && (
-        <span title="Invoice already sent — collect payment at pickup">
-          <RepairStatusMini status="invoiced" />
+    // Phones get two deliberate lines: the chip and the two action buttons
+    // on top, the job's identity and its signals full-width below (the
+    // `contents` wrapper dissolves on sm+ so it's one row again). Letting
+    // flex-wrap decide split the two buttons across lines on 360px phones.
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-2 gap-y-1.5 px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60">
+      <WorkOrderChip repairId={item.job_id} requestNumber={item.request_number} className="min-h-[44px] sm:min-h-0" />
+      <span className="order-last w-full sm:contents flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+        {/* truncate lives on this block parent — putting it on inline children
+            silently stops clipping (overflow doesn't apply to display:inline). */}
+        <span
+          className="min-w-0 flex-1 text-sm truncate"
+          title={item.tools && item.tools.length > 1 ? item.tools.join(' · ') : undefined}
+        >
+          <span className="font-bold text-slate-900 dark:text-white">{item.company}</span>
+          <span className="text-slate-500 dark:text-slate-400 ml-1.5">{item.tool}</span>
         </span>
-      )}
-      {priorityCls && (
-        <>
-          <span
-            className={`sm:hidden w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.priority === 'urgent' ? 'bg-red-500' : 'bg-orange-400'}`}
-            title={`${item.priority} priority`}
-          />
-          <span className={`hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black uppercase border ${priorityCls}`}>
+        {item.status === 'invoiced' && (
+          <span title="Invoice already sent — collect payment at pickup">
+            <RepairStatusMini status="invoiced" />
+          </span>
+        )}
+        {/* The word, not a coloured dot: touch can't read a title tooltip and
+            red vs orange at 10px doesn't tell rush from urgent. */}
+        {priorityCls && (
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black uppercase border ${priorityCls}`}>
             {item.priority}
           </span>
-        </>
-      )}
-      {item.parts_overdue > 0 && (
-        <>
+        )}
+        {item.parts_overdue > 0 && (
           <span
-            className="sm:hidden material-symbols-outlined text-base text-red-500 flex-shrink-0"
-            title={`${item.parts_overdue} part${item.parts_overdue === 1 ? '' : 's'} past the ETA`}
-          >
-            local_shipping
-          </span>
-          <span
-            className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[11px] font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 whitespace-nowrap"
+            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[11px] font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 whitespace-nowrap"
             title={`${item.parts_overdue} part${item.parts_overdue === 1 ? '' : 's'} past the ETA`}
           >
             <span className="material-symbols-outlined text-xs">local_shipping</span>
             {item.parts_overdue} late
           </span>
-        </>
-      )}
-      <AgePill days={item.days_in_status} stuck={item.stuck} />
-      {item.phone && (
-        <a
-          href={telHref(item.phone)}
-          title={`Call ${item.contact || item.company} — ${item.phone}`}
-          className="inline-flex items-center px-2.5 py-2 rounded-lg text-xs font-bold bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 border border-green-300 dark:border-green-800/40 text-green-700 dark:text-green-400 transition-colors flex-shrink-0 ml-auto sm:ml-0"
+        )}
+        <AgePill days={item.days_in_status} stuck={item.stuck} />
+      </span>
+      <span className="ml-auto sm:ml-0 flex items-center gap-3 sm:gap-2 flex-shrink-0">
+        {item.phone && (
+          <a
+            href={telHref(item.phone)}
+            title={`Call ${item.contact || item.company} — ${item.phone}`}
+            className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 px-2.5 py-2 rounded-lg text-xs font-bold bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 border border-green-300 dark:border-green-800/40 text-green-700 dark:text-green-400 transition-colors"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">call</span>
+            <span className="sr-only">Call {item.contact || item.company}</span>
+          </a>
+        )}
+        <button
+          onClick={() => onAssign(item, verb)}
+          title="Assign this as a task to someone"
+          aria-label="Assign as a task"
+          className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 px-2.5 py-2 rounded-lg text-xs font-bold bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange transition-colors"
         >
-          <span className="material-symbols-outlined text-base" aria-hidden="true">call</span>
-          <span className="sr-only">Call {item.contact || item.company}</span>
-        </a>
-      )}
-      <button
-        onClick={() => onAssign(item, verb)}
-        title="Assign this as a task to someone"
-        className="inline-flex items-center px-2.5 py-2 rounded-lg text-xs font-bold bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange transition-colors flex-shrink-0 ml-auto sm:ml-0"
-      >
-        <span className="material-symbols-outlined text-base">assignment_ind</span>
-      </button>
+          <span className="material-symbols-outlined text-base" aria-hidden="true">assignment_ind</span>
+        </button>
+      </span>
     </div>
   );
 }
@@ -124,7 +118,8 @@ function FollowUpRow({ item }) {
   return (
     <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-2 gap-y-1 px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60">
       <span className="material-symbols-outlined text-base text-accent-orange flex-shrink-0">door_front</span>
-      <span className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm truncate">
+      {/* Phones wrap the note (it was clipping mid-word); sm+ truncates. */}
+      <span className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm break-words sm:truncate">
         <span className="font-bold text-slate-900 dark:text-white">{item.business_name}</span>
         {item.follow_up_note && (
           <span className="text-slate-500 dark:text-slate-400 ml-1.5">{item.follow_up_note}</span>
@@ -194,16 +189,16 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
       {/* Panel header */}
       <button
         onClick={toggleOpen}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left"
+        className="w-full flex flex-wrap items-center gap-2 px-4 py-3 text-left"
         title={open ? 'Collapse' : 'Expand'}
       >
         <span className="material-symbols-outlined text-xl text-accent-orange">priority_high</span>
-        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Needs Attention</span>
+        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap">Needs Attention</span>
         {data.total > 0 && (
           <span className="text-xs font-black px-2 py-0.5 rounded-full bg-primary text-white leading-none">{data.total}</span>
         )}
         {data.stuck_count > 0 && (
-          <span className="inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 leading-none">
+          <span className="inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 leading-none whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             {data.stuck_count} stuck
           </span>
@@ -241,7 +236,7 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
                       {bucket.count > ROWS_SHOWN && (
                         <Link
                           to="/admin/repair-tracker?tab=jobs"
-                          className="block px-3 py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
+                          className="flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
                         >
                           +{bucket.count - ROWS_SHOWN} more — open the Repair Tracker →
                         </Link>
@@ -264,7 +259,7 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
                     ))}
                     <Link
                       to="/sales/dashboard?tab=follow-ups"
-                      className="block px-3 py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
+                      className="flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
                     >
                       Open Route Management follow-ups →
                     </Link>

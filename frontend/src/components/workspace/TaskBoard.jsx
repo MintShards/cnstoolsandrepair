@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { TASK_STATUS_LIST, TASK_PRIORITY_RANK } from '../../constants/workspace';
 import TaskCard from './TaskCard';
@@ -22,6 +22,10 @@ function DraggableCard({ task, children }) {
   return (
     <div
       ref={setNodeRef}
+      // select-none: a long-press on iOS must lift the card, not open the
+      // text-selection magnifier; touch-manipulation drops double-tap zoom.
+      // Not touch-none — that would stop the board scrolling over a card.
+      className="select-none touch-manipulation"
       style={{
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.65 : undefined,
@@ -79,9 +83,14 @@ function BoardColumn({ status, tasks, onOpen, onClaim, claimingId, doneNote, emp
  * spawning the next occurrence of a recurring task.
  */
 export default function TaskBoard({ tasks, onMove, onOpen, onClaim, claimingId }) {
-  // A small movement threshold keeps plain clicks opening the detail modal
-  // instead of starting a drag.
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // Mouse: a small movement threshold keeps plain clicks opening the detail
+  // modal instead of starting a drag. Touch: a pointer sensor loses to page
+  // scrolling (the browser fires pointercancel), so phones lift a card with
+  // a long-press — a quick swipe still scrolls the board.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
   // The browser still fires a click on the card after a drag ends; without
   // this guard every drop would also pop the detail modal.
   const justDraggedRef = useRef(false);

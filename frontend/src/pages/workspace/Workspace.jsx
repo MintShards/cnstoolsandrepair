@@ -146,9 +146,12 @@ export default function Workspace() {
               </div>
               {/* Right: actions */}
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                {/* Icon-only below sm: hold 44px targets (Logout sits 6px
+                    from its neighbours) and keep names for assistive tech. */}
                 <Link
                   to="/admin/repair-tracker"
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-primary dark:text-blue-400 rounded-xl transition-all text-sm font-bold"
+                  aria-label="Repair Tracker"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 min-w-[44px] min-h-[44px] px-2.5 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-primary dark:text-blue-400 rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">build_circle</span>
                   <span className="hidden sm:inline">Repair Tracker</span>
@@ -156,14 +159,16 @@ export default function Workspace() {
                 <ThemeToggle />
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/30 hover:border-red-300 dark:hover:border-red-700/50 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all text-sm font-bold"
+                  aria-label="Logout"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 min-w-[44px] min-h-[44px] px-2.5 sm:px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800/30 hover:border-red-300 dark:hover:border-red-700/50 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">logout</span>
                   <span className="hidden sm:inline">Logout</span>
                 </button>
                 <Link
                   to="/"
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
+                  aria-label="Back to website"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 min-w-[44px] min-h-[44px] px-2.5 sm:px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all text-sm font-bold"
                 >
                   <span className="material-symbols-outlined text-base">arrow_back</span>
                   <span className="hidden sm:inline">Back to Website</span>

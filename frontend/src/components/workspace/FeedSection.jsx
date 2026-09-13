@@ -190,9 +190,11 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
         title="Shop Feed"
         subtitle="What's happening — posts, calls, and heads-ups for the whole shop"
         action={(
-          <button onClick={() => setShowLogCall(true)} className={BTN_PRIMARY} title="Log a customer call">
+          // Full-width on its own row under the title on phones (w-full
+          // wraps it off the title line), beside the title from sm up.
+          <button onClick={() => setShowLogCall(true)} className={`${BTN_PRIMARY} w-full sm:w-auto`} title="Log a customer call">
             <span className="material-symbols-outlined text-base">phone_in_talk</span>
-            <span className="hidden sm:inline">Log Call</span>
+            Log Call
           </button>
         )}
       />
@@ -223,15 +225,18 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
             maxLength={5000}
             rows={2}
             placeholder="Share something with the shop... (Ctrl+Enter to post)"
-            className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary transition-colors resize-none"
+            className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary transition-colors resize-none"
           />
         </div>
-        <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+        {/* Phones: a 2-up grid — Important | Link WO on one row, Post full
+            width beneath — so nothing wraps ragged; sm+ is the single row
+            with Post pushed right by the spacer. */}
+        <div className="mt-2.5 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:flex-wrap">
           <button
             type="button"
             onClick={() => setImportant((v) => !v)}
             title="Flag as important"
-            className={`inline-flex items-center gap-1 px-2.5 py-2.5 rounded-lg text-xs font-bold border transition-all ${
+            className={`inline-flex items-center justify-center gap-1 px-2.5 py-2.5 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-bold border transition-all ${
               important
                 ? 'bg-red-50 dark:bg-red-900/20 border-red-400 text-red-600 dark:text-red-400'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-red-300 hover:text-red-500'
@@ -244,7 +249,7 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
             type="button"
             onClick={() => setShowWorkOrderPicker((v) => !v)}
             title="Link a work order"
-            className={`inline-flex items-center gap-1 px-2.5 py-2.5 rounded-lg text-xs font-bold border transition-all ${
+            className={`inline-flex items-center justify-center gap-1 px-2.5 py-2.5 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-bold border transition-all ${
               workOrder
                 ? 'bg-primary/10 border-primary/40 text-primary dark:text-blue-400'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-primary/40 hover:text-primary'
@@ -253,11 +258,11 @@ export default function FeedSection({ currentUser, staff, refreshCounts, focusTi
             <span className="material-symbols-outlined text-sm">build_circle</span>
             {workOrder ? workOrder.request_number : 'Link WO'}
           </button>
-          <span className="flex-1" />
+          <span className="hidden sm:block flex-1" />
           <button
             type="submit"
             disabled={posting || !body.trim()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-blue-500 text-white rounded-xl text-sm font-black uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 text-white rounded-xl text-sm font-black uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className={`material-symbols-outlined text-base ${posting ? 'animate-spin' : ''}`}>
               {posting ? 'progress_activity' : 'send'}

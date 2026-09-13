@@ -110,11 +110,12 @@ export default function TaskList({
                         <span className="text-slate-400 dark:text-slate-600">—</span>
                       )}
                     </td>
-                    {/* No width cap at base — the title is the row's identity
-                        and phones have only this cell plus Actions, so it can
-                        take the remainder (the 160px cap strangled titles to
-                        "Order 3/8 NPT fit…" beside empty space). */}
-                    <td className="py-3 px-2 sm:px-3 lg:px-4 sm:max-w-[280px]">
+                    {/* No fixed cap at base — `max-w-0 w-full` lets the cell take
+                        whatever is left after the checkbox and Actions columns
+                        without ever pushing them off-screen (a 160px cap
+                        strangled titles; no cap let the nowrap WO chip widen
+                        the column past the phone and scroll Claim/Done away). */}
+                    <td className="py-3 px-2 sm:px-3 lg:px-4 max-w-0 w-full sm:max-w-[280px] sm:w-auto">
                       {task.due_date && (
                         <div className={`sm:hidden text-xs font-bold whitespace-nowrap ${overdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                           {formatYmd(task.due_date)}
@@ -131,7 +132,7 @@ export default function TaskList({
                       </div>
                       {/* Compact meta line, tracker-style: everything the
                           hidden columns carry, folded under the title. */}
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 mt-0.5">
                         <span className="sm:hidden inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 flex-shrink-0 whitespace-nowrap">
                           <span className={`w-2 h-2 rounded-full ${status.dot}`} />
                           {status.label}
@@ -184,13 +185,14 @@ export default function TaskList({
                       )}
                     </td>
                     <td className="py-3 px-2 sm:px-3 lg:px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="inline-flex items-center gap-1.5 sm:gap-2">
+                      {/* Icon-only until xl, so hold a 44px square target on touch widths */}
+                      <div className="inline-flex items-center gap-2">
                         {!task.assignee_id && !done && (
                           <button
                             onClick={() => onClaim(task)}
                             disabled={claimingId === task.id}
                             title="Assign this task to yourself"
-                            className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 xl:py-1.5 bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                            className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-2 xl:py-1.5 min-w-[44px] min-h-[44px] xl:min-w-0 xl:min-h-0 bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                           >
                             <span className={`material-symbols-outlined text-base ${claimingId === task.id ? 'animate-spin' : ''}`}>
                               {claimingId === task.id ? 'progress_activity' : 'front_hand'}
@@ -203,7 +205,7 @@ export default function TaskList({
                             onClick={() => onComplete(task)}
                             disabled={completingId === task.id}
                             title="Mark this task done"
-                            className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 xl:py-1.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-green-100 dark:hover:bg-green-900/30 border border-slate-300 dark:border-slate-600/50 hover:border-green-400 text-slate-600 dark:text-slate-300 hover:text-green-700 dark:hover:text-green-400 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                            className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-2 xl:py-1.5 min-w-[44px] min-h-[44px] xl:min-w-0 xl:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-green-100 dark:hover:bg-green-900/30 border border-slate-300 dark:border-slate-600/50 hover:border-green-400 text-slate-600 dark:text-slate-300 hover:text-green-700 dark:hover:text-green-400 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                           >
                             <span className={`material-symbols-outlined text-base ${completingId === task.id ? 'animate-spin' : ''}`}>
                               {completingId === task.id ? 'progress_activity' : 'check'}

@@ -5,7 +5,7 @@ import { apiErrorMessage } from '../../utils/apiError';
 import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import { getTodayPacific, formatYmd } from '../../utils/dateFormat';
-import { openPrintActivityReport, rangeLabel } from './PrintActivityReport';
+import { openPrintActivityReport, openReportTab, rangeLabel, isMobile } from './PrintActivityReport';
 
 // Plain calendar-day math on YYYY-MM-DD strings; the anchor is the shop's
 // "today" so the presets agree with the calendar grid and the backend.
@@ -46,7 +46,7 @@ const PRESETS = [
 // rows is hundreds of pages; the summary + month table is the useful part.
 const LOG_DEFAULT_MAX_DAYS = 62;
 
-const inputCls = 'w-full px-3 py-2 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all';
+const inputCls = 'w-full px-3 py-2 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-base sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all';
 
 /**
  * Pick a period (day / week / month / year / custom) and print the activity
@@ -101,15 +101,23 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
 
   const handlePrint = async () => {
     if (!rangeValid || busy) return;
+    // On phones the tab must be opened inside the tap, before any await —
+    // see openReportTab. It is filled in once the data lands.
+    const win = isMobile() ? openReportTab() : null;
+    if (isMobile() && !win) {
+      showToast('error', 'Your browser blocked the report tab. Allow pop-ups for this site and try again.');
+      return;
+    }
     setBusy(true);
     try {
       const data = loaded && loaded.from === from && loaded.to === to ? loaded.data : await load();
       // Resolves when the print dialog closes (printed or cancelled) — the
       // job is done either way, so the dialog gets out of the way itself.
-      await openPrintActivityReport({ data, includeLog, generatedBy: currentUser?.name });
+      await openPrintActivityReport({ data, includeLog, generatedBy: currentUser?.name, win });
       onClose();
       return;
     } catch (err) {
+      win?.close();
       showToast('error', apiErrorMessage(err, 'Failed to load the activity for that period.'));
     } finally {
       setBusy(false);
@@ -199,12 +207,14 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
             </span>
           </label>
 
-          <div className="flex gap-2 pt-1">
+          {/* Phones stack the pair (Print last = thumb-nearest); sm+ is the
+              side-by-side row. Both hold 44px on touch widths. */}
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
             <button
               type="button"
               onClick={handlePreview}
               disabled={busy || !rangeValid}
-              className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold rounded-xl transition-colors text-sm disabled:opacity-50"
+              className="w-full sm:w-auto min-h-11 sm:min-h-0 px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold rounded-xl transition-colors text-sm disabled:opacity-50"
             >
               {busy && !loaded ? 'Loading…' : 'Preview counts'}
             </button>
@@ -212,7 +222,7 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
               type="button"
               onClick={handlePrint}
               disabled={busy || !rangeValid}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-blue-500 text-white font-black rounded-xl transition-colors text-sm uppercase disabled:opacity-50"
+              className="w-full sm:w-auto sm:flex-1 min-h-11 sm:min-h-0 inline-flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-blue-500 text-white font-black rounded-xl transition-colors text-sm uppercase disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-base" aria-hidden="true">print</span>
               {busy ? 'Opening print…' : 'Print report'}

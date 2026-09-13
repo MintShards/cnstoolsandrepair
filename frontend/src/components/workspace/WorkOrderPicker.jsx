@@ -55,7 +55,8 @@ export default function WorkOrderPicker({ value, onChange, label = 'Link a Work 
             type="button"
             onClick={() => onChange(null)}
             title="Remove work order link"
-            className="w-9 h-9 -my-1.5 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
+            aria-label="Remove work order link"
+            className="w-11 h-11 -my-2.5 -mr-1 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
           >
             <span className="material-symbols-outlined text-base">close</span>
           </button>

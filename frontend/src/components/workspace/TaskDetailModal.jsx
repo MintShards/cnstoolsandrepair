@@ -70,10 +70,13 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
   };
 
   return (
-    // Backdrop tap closes — on phones this modal has no Cancel button and
-    // Escape doesn't exist, so the X must not be the only way out. The
-    // currentTarget check keeps clicks inside the panel (and the nested
-    // delete-confirm overlay) from closing it.
+    <>
+    {/* Backdrop tap closes — on phones this modal has no Cancel button and
+        Escape doesn't exist, so the X must not be the only way out. The
+        currentTarget check keeps clicks inside the panel from closing it.
+        The delete confirm is a SIBLING, not a child: backdrop-blur makes this
+        div the containing block for fixed descendants, which anchored the
+        confirm to the scrolled content and put it off-screen on long tasks. */}
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto"
       onClick={(e) => { if (e.target === e.currentTarget && !confirmingDelete) onClose(); }}
@@ -111,7 +114,7 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
                 type="button"
                 disabled={busy}
                 onClick={() => setStatus(s.value)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 transition-all font-bold text-[11px] sm:text-xs uppercase whitespace-nowrap disabled:opacity-60 ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-3 min-h-11 rounded-xl border-2 transition-all font-bold text-[11px] sm:text-xs uppercase whitespace-nowrap disabled:opacity-60 ${
                   task.status === s.value
                     ? 'border-primary bg-primary/5 text-slate-900 dark:text-white'
                     : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
@@ -141,7 +144,7 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
             <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 px-3.5 py-2.5 flex items-center gap-3">
               <span className="material-symbols-outlined text-primary dark:text-blue-400" aria-hidden="true">build_circle</span>
               <div className="min-w-0 flex-1 text-sm">
-                <p className="font-bold text-slate-900 dark:text-white truncate">
+                <p className="font-bold text-slate-900 dark:text-white line-clamp-2 break-words">
                   {task.job.company}
                   {task.job.tool && <span className="font-medium text-slate-500 dark:text-slate-400"> · {task.job.tool}</span>}
                 </p>
@@ -176,7 +179,7 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
                 <button
                   onClick={handleClaim}
                   disabled={busy}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-black uppercase bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange transition-colors disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-xs">front_hand</span>
                   Claim it
@@ -235,13 +238,14 @@ export default function TaskDetailModal({ task, onEdit, onChanged, onClose }) {
         </div>
       </div>
 
-      {confirmingDelete && (
-        <ConfirmModal
-          message={`Delete "${task.title}"? This cannot be undone.`}
-          onConfirm={handleDelete}
-          onCancel={() => setConfirmingDelete(false)}
-        />
-      )}
     </div>
+    {confirmingDelete && (
+      <ConfirmModal
+        message={`Delete "${task.title}"? This cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
+    )}
+    </>
   );
 }

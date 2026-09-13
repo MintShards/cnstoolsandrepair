@@ -11,8 +11,20 @@ const STATUS_LABELS = {
   beyond_economical_repair: 'Beyond Economical Repair', abandoned: 'Abandoned', closed: 'Closed',
 };
 
-function isMobile() {
+export function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+// Phones get the report in a new tab, and Safari's pop-up blocker only allows
+// window.open inside the tap itself — not after the data fetch resolves. Open
+// the tab first with a placeholder; openPrintActivityReport fills it later.
+// Returns null when the browser blocked it so the caller can say so.
+export function openReportTab() {
+  const win = window.open('', '_blank');
+  if (!win) return null;
+  win.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Activity Report</title></head><body style="font-family:\'Segoe UI\',Arial,sans-serif;padding:24px;color:#333">Preparing the activity report…</body></html>');
+  win.document.close();
+  return win;
 }
 
 function escHtml(str) {
@@ -225,14 +237,18 @@ function buildFullHTML(opts) {
  * dismiss its own dialog at the right moment.
  */
 export function openPrintActivityReport(opts) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (isMobile()) {
-      const win = window.open('', '_blank');
-      if (win) {
-        win.document.write(buildFullHTML(opts));
-        win.document.close();
-        win.focus();
+      // Prefer a tab the caller opened inside the tap (see openReportTab).
+      const win = opts.win || window.open('', '_blank');
+      if (!win) {
+        reject(new Error('The browser blocked the report tab. Allow pop-ups for this site and try again.'));
+        return;
       }
+      win.document.open();
+      win.document.write(buildFullHTML(opts));
+      win.document.close();
+      win.focus();
       resolve();
       return;
     }

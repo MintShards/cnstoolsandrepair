@@ -232,16 +232,17 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
         title={mine ? 'My Tasks' : 'All Tasks'}
         subtitle={mine ? 'Everything assigned to you' : 'The whole shop’s to-do list'}
         action={(
-          // Tracker-style: labels hide below sm so both actions sit beside
-          // the title as compact icon buttons instead of stacked full-width.
-          <div className="flex flex-row gap-2">
-            <button onClick={() => setShowLogCall(true)} className={BTN_NEUTRAL} title="Log a customer call">
+          // Phones: the pair takes its own full-width row under the title,
+          // split evenly with labels showing — the same header shape as the
+          // Calendar and Feed. sm+ keeps them beside the title.
+          <div className="flex w-full gap-2 sm:w-auto">
+            <button onClick={() => setShowLogCall(true)} className={`${BTN_NEUTRAL} flex-1 sm:flex-none`} title="Log a customer call">
               <span className="material-symbols-outlined text-base">phone_in_talk</span>
-              <span className="hidden sm:inline">Log Call</span>
+              Log Call
             </button>
-            <button onClick={openCreate} className={BTN_PRIMARY} title="New task">
+            <button onClick={openCreate} className={`${BTN_PRIMARY} flex-1 sm:flex-none`} title="New task">
               <span className="material-symbols-outlined text-base">add</span>
-              <span className="hidden sm:inline">New Task</span>
+              New Task
             </button>
           </div>
         )}
@@ -296,8 +297,11 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
           </select>
         )}
 
+        {/* sm+: lives in the filter row. Phones get the sticky copy under the
+            table instead, so it stays on screen while rows below the fold
+            are ticked. */}
         {view === 'list' && batchSelected.size > 0 && (
-          <button onClick={handleBatchComplete} disabled={batchBusy} className={`${BTN_PRIMARY} disabled:opacity-50 col-span-2`}>
+          <button onClick={handleBatchComplete} disabled={batchBusy} className={`${BTN_PRIMARY} disabled:opacity-50 hidden sm:inline-flex`}>
             <span className={`material-symbols-outlined text-base ${batchBusy ? 'animate-spin' : ''}`}>
               {batchBusy ? 'progress_activity' : 'done_all'}
             </span>
@@ -342,6 +346,18 @@ export default function TasksSection({ scope, currentUser, staff, refreshCounts,
           onClaim={handleClaim}
           onOpen={setDetailTask}
         />
+      )}
+      {/* Phone: sticky under the table (not fixed) so it never covers the
+          pagination bar — it settles into flow once the table's end scrolls up. */}
+      {view === 'list' && batchSelected.size > 0 && (
+        <div className="sm:hidden sticky bottom-0 z-20 mt-3 py-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700/60">
+          <button onClick={handleBatchComplete} disabled={batchBusy} className={`${BTN_PRIMARY} disabled:opacity-50 w-full py-3`}>
+            <span className={`material-symbols-outlined text-base ${batchBusy ? 'animate-spin' : ''}`}>
+              {batchBusy ? 'progress_activity' : 'done_all'}
+            </span>
+            Complete selected ({batchSelected.size})
+          </button>
+        </div>
       )}
 
       {/* The shop-wide "what needs doing" queues sit BELOW the task list —

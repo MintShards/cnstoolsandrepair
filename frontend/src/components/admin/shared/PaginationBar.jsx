@@ -81,7 +81,8 @@ export default function PaginationBar({
           onPageSizeChange(parseInt(e.target.value));
           onPageChange(1);
         }}
-        className="px-2 py-2.5 md:py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-lg text-slate-700 dark:text-white text-xs focus:outline-none focus:border-primary transition-all"
+        // 16px below md so iOS doesn't zoom the page when the select opens.
+        className="px-2 py-2.5 md:py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-lg text-slate-700 dark:text-white text-base md:text-xs focus:outline-none focus:border-primary transition-all"
       >
         {pageSizeOptions.map((n) => (
           <option key={n} value={n}>{n}</option>
@@ -94,13 +95,13 @@ export default function PaginationBar({
     <div ref={rootRef} className="border-t border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/30">
       {/* ── Phone layout (< md): single compact row (44px touch targets) ── */}
       <div className="flex md:hidden items-center justify-between gap-2 px-3 py-2.5">
-        {prevBtn('w-11 h-11')}
-        <div className="flex items-center gap-2 flex-1 justify-center">
+        {prevBtn('w-11 h-11 flex-shrink-0')}
+        <div className="flex items-center gap-2 flex-1 justify-center min-w-0">
           <span className="text-xs text-slate-500 whitespace-nowrap">
             Page <span className="font-bold text-slate-700 dark:text-slate-300">{currentPage}</span> of <span className="font-bold text-slate-700 dark:text-slate-300">{totalPages}</span>
           </span>
         </div>
-        {nextBtn('w-11 h-11')}
+        {nextBtn('w-11 h-11 flex-shrink-0')}
         {perPageSelect}
       </div>
 

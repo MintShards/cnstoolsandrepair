@@ -352,6 +352,7 @@ node scripts/optimize-images.js  # Generates WebP + JPG (<400KB, 80% quality)
 - **Backgrounds**: Alternating `bg-white`/`bg-slate-100` (light), `bg-slate-900`/`bg-slate-950` (dark)
 - **Typography**: `font-black` headings, `uppercase` emphasis
 - **Section headers**: Orange label (`text-accent-orange text-xs uppercase tracking-[0.25em]`) + large heading
+- **Phone-first (Workspace is used mostly on phones)**: tap targets ≥ 44px below `sm` via `min-h-[44px] sm:min-h-0` / `min-w-[44px] sm:min-w-0` (never a layout blow-up); form controls `text-base sm:text-sm` (iOS zooms the page on focus under 16px — `formStyles.INPUT_CLS`, `ui.FILTER_INPUT`); header action clusters take their own full-width row under the title on phones and dissolve back beside it with `sm:contents`; modals size with `dvh`, not `vh`. Cascade trap: Tailwind emits `.w-11`/`.h-11` BEFORE `.w-9`/`.h-9`, so appending `w-11` to `ICON_BTN` (which has `w-9`) does nothing — grow icon buttons with `min-w-11 min-h-11` instead.
 
 ## Troubleshooting
 

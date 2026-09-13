@@ -55,9 +55,16 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
           {WORKSPACE_SECTIONS.map((section) => {
             const active = activeSection === section.id;
             const { count, alert, alertTitle } = badgeFor(section.id, counts);
+            const hasCount = count != null && count > 0;
+            const showAlert = alert && !active;
             const badgeCls = active
               ? 'bg-white/20 text-white'
               : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+            // Phones stack the count badge and the alert dot on the same icon
+            // corner, so fold the alert into the badge colour instead of
+            // painting the dot over the digit; the dot alone only appears when
+            // there is nothing to count.
+            const phoneBadgeCls = showAlert ? 'bg-red-500 text-white' : badgeCls;
             return (
               <Link
                 key={section.id}
@@ -70,12 +77,15 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
               >
                 <div className="relative flex items-center justify-center">
                   <span className="material-symbols-outlined text-xl">{section.icon}</span>
-                  {count != null && count > 0 && (
-                    <span className={`sm:hidden absolute -top-1.5 -right-2.5 text-[10px] font-black px-1 py-0 rounded-full min-w-[16px] text-center leading-tight ${badgeCls}`}>
+                  {hasCount && (
+                    <span
+                      className={`sm:hidden absolute -top-1.5 -right-2.5 text-[10px] font-black px-1 py-0 rounded-full min-w-[16px] text-center leading-tight ${phoneBadgeCls}`}
+                      title={showAlert ? alertTitle : undefined}
+                    >
                       {count}
                     </span>
                   )}
-                  {alert && !active && (
+                  {showAlert && !hasCount && (
                     <span className="sm:hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title={alertTitle} />
                   )}
                 </div>

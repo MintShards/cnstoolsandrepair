@@ -57,8 +57,12 @@ function Toast({ toast, onDismiss }) {
           </div>
         </div>
         <button
+          type="button"
+          aria-label="Dismiss"
           onClick={() => onDismiss(toast.id)}
-          className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0 mt-0.5"
+          // 44px square in the toast's corner; the negative margins cancel the
+          // row's py-3 pr-3 so the toast doesn't grow and the icon stays put.
+          className="flex-shrink-0 w-11 h-11 -my-3 -mr-3 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
         >
           <span className="material-symbols-outlined text-base">close</span>
         </button>

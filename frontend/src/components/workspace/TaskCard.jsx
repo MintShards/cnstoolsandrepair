@@ -73,7 +73,7 @@ export default function TaskCard({ task, onOpen, onClaim, claimingId }) {
             onClick={(e) => { e.stopPropagation(); onClaim(task); }}
             disabled={claiming}
             title="Assign this task to yourself"
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black uppercase bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-2 py-1 min-h-[44px] sm:min-h-0 rounded-lg text-[11px] font-black uppercase bg-accent-orange/10 hover:bg-accent-orange/20 border border-accent-orange/40 text-accent-orange transition-colors disabled:opacity-50"
           >
             <span className={`material-symbols-outlined text-xs ${claiming ? 'animate-spin' : ''}`}>
               {claiming ? 'progress_activity' : 'front_hand'}

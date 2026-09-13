@@ -3,7 +3,7 @@ import { tasksAPI, activityAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import TabHeader from '../sales/TabHeader';
-import { BTN_NEUTRAL, ICON_BTN } from '../sales/ui';
+import { BTN_NEUTRAL, BTN_PRIMARY, ICON_BTN } from '../sales/ui';
 import { TASK_PRIORITIES } from '../../constants/workspace';
 import { ACTIVITY_GROUPS, ACTIVITY_GROUP_ORDER, activityKind, countByGroup } from '../../constants/activity';
 import { getTodayPacific, formatYmd } from '../../utils/dateFormat';
@@ -18,6 +18,10 @@ import ActivityReportModal from './ActivityReportModal';
 const POLL_MS = 60000;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_CHIPS = 3;
+// Below Tailwind's `sm` (640px) a cell is ~35-45px wide — too narrow for
+// separate chip / "+N more" targets — so a tap on the cell opens the day's
+// list instead, and that list carries the Add-task button.
+const isPhone = () => window.matchMedia('(max-width: 639px)').matches;
 
 // 42 cells (6 weeks) starting on the Sunday on/before the 1st — plain local
 // Date math over calendar days; no timezones can shift anything.
@@ -55,7 +59,7 @@ function TaskChip({ task, onClick }) {
  * happenings (who did what, oldest first). Opened from a cell's "+N more"
  * or its activity chips.
  */
-function DayModal({ ymd, tasks, activity, onOpenTask, onClose }) {
+function DayModal({ ymd, tasks, activity, onOpenTask, onAddTask, onClose }) {
   useEscapeClose(onClose);
   useBodyScrollLock(true);
   return (
@@ -68,11 +72,14 @@ function DayModal({ ymd, tasks, activity, onOpenTask, onClose }) {
               {tasks.length} task{tasks.length === 1 ? '' : 's'} due · {activity.length} happening{activity.length === 1 ? '' : 's'}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" aria-label="Close">
+          <button onClick={onClose} className="w-11 h-11 -m-2 inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" aria-label="Close">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="p-4 space-y-5 max-h-[70vh] overflow-y-auto">
+        {/* dvh, not vh: iOS reports the large viewport for vh, so a 70vh box
+            plus the pt-10 offset and header ran off short phones and left the
+            list's tail scrolling below the fold. */}
+        <div className="p-4 space-y-5 max-h-[calc(100dvh-11rem)] overflow-y-auto">
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Tasks due</h3>
             {tasks.length === 0 ? (
@@ -99,6 +106,14 @@ function DayModal({ ymd, tasks, activity, onOpenTask, onClose }) {
                 ))}
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => onAddTask(ymd)}
+              className={`${BTN_PRIMARY} w-full mt-3 min-h-11`}
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden="true">add_task</span>
+              Add task
+            </button>
           </section>
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">What happened</h3>
@@ -242,44 +257,50 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
         title="Calendar"
         subtitle="Tasks by due date and what happened each day — click a day to add a task"
         action={(
-          // flex-wrap: at 360px-class phones the widest month label leaves no
-          // slack; wrapping beats forcing horizontal page scroll.
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              onClick={() => setReportOpen(true)}
-              className={BTN_NEUTRAL}
-              title="Print an activity report for a day, week, month or year"
-            >
-              <span className="material-symbols-outlined text-base">print</span>
-              <span className="hidden sm:inline">Report</span>
-            </button>
-            <button
-              onClick={() => setShowActivity((v) => { localStorage.setItem('ws_calendar_activity', v ? '0' : '1'); return !v; })}
-              className={`${BTN_NEUTRAL} ${showActivity ? '' : 'opacity-60'}`}
-              title={showActivity ? 'Hide daily activity counts' : 'Show daily activity counts'}
-              aria-pressed={showActivity}
-            >
-              <span className="material-symbols-outlined text-base">history</span>
-              <span className="hidden sm:inline">Activity</span>
-            </button>
-            <button
-              onClick={() => setShowDone((v) => !v)}
-              className={`${BTN_NEUTRAL} ${showDone ? '' : 'opacity-60'}`}
-              title={showDone ? 'Hide completed tasks' : 'Show completed tasks'}
-            >
-              <span className="material-symbols-outlined text-base">{showDone ? 'visibility' : 'visibility_off'}</span>
-              <span className="hidden sm:inline">Done</span>
-            </button>
-            <button onClick={goToday} className={BTN_NEUTRAL}>Today</button>
-            <button onClick={() => shiftMonth(-1)} className={ICON_BTN} aria-label="Previous month">
-              <span className="material-symbols-outlined text-base">chevron_left</span>
-            </button>
-            <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap sm:min-w-[130px] text-center">
-              {monthLabel}
-            </span>
-            <button onClick={() => shiftMonth(1)} className={ICON_BTN} aria-label="Next month">
-              <span className="material-symbols-outlined text-base">chevron_right</span>
-            </button>
+          // Phones get two aligned full-width rows under the title: the three
+          // toggles split evenly, then the month navigation with the label
+          // centred between its arrows. From sm up `contents` dissolves the
+          // rows back into the single beside-the-title toolbar.
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <div className="flex gap-2 sm:contents">
+              <button
+                onClick={() => setReportOpen(true)}
+                className={`${BTN_NEUTRAL} flex-1 sm:flex-none min-h-11 sm:min-h-0`}
+                title="Print an activity report for a day, week, month or year"
+              >
+                <span className="material-symbols-outlined text-base">print</span>
+                Report
+              </button>
+              <button
+                onClick={() => setShowActivity((v) => { localStorage.setItem('ws_calendar_activity', v ? '0' : '1'); return !v; })}
+                className={`${BTN_NEUTRAL} flex-1 sm:flex-none min-h-11 sm:min-h-0 ${showActivity ? '' : 'opacity-60'}`}
+                title={showActivity ? 'Hide daily activity counts' : 'Show daily activity counts'}
+                aria-pressed={showActivity}
+              >
+                <span className="material-symbols-outlined text-base">history</span>
+                Activity
+              </button>
+              <button
+                onClick={() => setShowDone((v) => !v)}
+                className={`${BTN_NEUTRAL} flex-1 sm:flex-none min-h-11 sm:min-h-0 ${showDone ? '' : 'opacity-60'}`}
+                title={showDone ? 'Hide completed tasks' : 'Show completed tasks'}
+              >
+                <span className="material-symbols-outlined text-base">{showDone ? 'visibility' : 'visibility_off'}</span>
+                Done
+              </button>
+            </div>
+            <div className="flex items-center gap-2 sm:contents">
+              <button onClick={goToday} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0`}>Today</button>
+              <button onClick={() => shiftMonth(-1)} className={`${ICON_BTN} min-w-11 min-h-11 sm:min-w-0 sm:min-h-0`} aria-label="Previous month">
+                <span className="material-symbols-outlined text-base">chevron_left</span>
+              </button>
+              <span className="flex-1 sm:flex-none text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap sm:min-w-[130px] text-center">
+                {monthLabel}
+              </span>
+              <button onClick={() => shiftMonth(1)} className={`${ICON_BTN} min-w-11 min-h-11 sm:min-w-0 sm:min-h-0`} aria-label="Next month">
+                <span className="material-symbols-outlined text-base">chevron_right</span>
+              </button>
+            </div>
           </div>
         )}
       />
@@ -308,7 +329,7 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
               return (
                 <div
                   key={cell.ymd}
-                  onClick={() => setCreateForDate(cell.ymd)}
+                  onClick={() => (isPhone() ? setDayModal(cell.ymd) : setCreateForDate(cell.ymd))}
                   title={`Add a task due ${formatYmd(cell.ymd)}`}
                   className={`min-h-[92px] sm:min-h-[110px] p-1 sm:p-1.5 border-b border-r border-slate-200 dark:border-slate-700/60 [&:nth-child(7n)]:border-r-0 cursor-pointer transition-colors group ${
                     cell.inMonth
@@ -330,7 +351,7 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
                       add
                     </span>
                   </div>
-                  <div className="mt-1 space-y-1">
+                  <div className="hidden sm:block mt-1 space-y-1">
                     {dayTasks.slice(0, MAX_CHIPS).map((task) => (
                       <TaskChip key={task.id} task={task} onClick={setDetailTask} />
                     ))}
@@ -343,6 +364,28 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
                       </button>
                     )}
                   </div>
+                  {/* Phones: a ~44px column leaves ~11px for a chip title, so
+                      collapse the day's tasks into one tall tap target
+                      (priority dots + count) that opens the day's list. */}
+                  {dayTasks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDayModal(cell.ymd); }}
+                      aria-label={`${dayTasks.length} task${dayTasks.length === 1 ? '' : 's'} due — open the day`}
+                      className="sm:hidden mt-1 w-full min-h-[44px] flex flex-wrap content-start items-center gap-1 rounded-md text-left"
+                    >
+                      {dayTasks.slice(0, 4).map((task) => {
+                        const p = TASK_PRIORITIES[task.priority] || TASK_PRIORITIES.normal;
+                        return (
+                          <span
+                            key={task.id}
+                            className={`w-2 h-2 rounded-full flex-shrink-0 ${p.dot} ${task.status === 'done' ? 'opacity-40' : ''}`}
+                          />
+                        );
+                      })}
+                      <span className="text-xs font-black text-slate-700 dark:text-slate-300">{dayTasks.length}</span>
+                    </button>
+                  )}
                   {/* Activity chips: one per group with its count. Click opens
                       the day's log; the task-add click on the cell is stopped. */}
                   {showActivity && dayActivity.length > 0 && (
@@ -402,6 +445,7 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
           tasks={byDate[dayModal] || []}
           activity={activityByDay[dayModal] || []}
           onOpenTask={(task) => { setDayModal(null); setDetailTask(task); }}
+          onAddTask={(day) => { setDayModal(null); setCreateForDate(day); }}
           onClose={() => setDayModal(null)}
         />
       )}
