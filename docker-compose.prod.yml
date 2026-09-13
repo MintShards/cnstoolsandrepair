@@ -28,6 +28,10 @@ services:
       - SOURCING_FROM_EMAIL=${SOURCING_FROM_EMAIL:-purchasing@cnstoolrepair.com}
       - SOURCING_FROM_NAME=${SOURCING_FROM_NAME:-Purchasing | CNS Tool Repair}
       - EMAIL_LOGO_URL=${EMAIL_LOGO_URL}
+      # Web Push (VAPID) — generate with `docker exec cns-backend-prod python scripts/generate_vapid_keys.py`
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_CLAIMS_EMAIL=${VAPID_CLAIMS_EMAIL:-mailto:service@cnstoolrepair.com}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/settings/health"]
