@@ -213,7 +213,9 @@ export const syncPartsToLibrary = async (tools) => {
 // ── TOOL FORM (reusable for new job form and add tool modal) ──
 // wizardStep: 2 = Tool Identification + Photos, 3 = Job Details + Parts, 4 = Labour & Scheduling
 // Omit wizardStep (or isNewJobForm=false) to render all sections (add tool modal / edit mode)
-export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId }) {
+// fieldErrors: keys from utils/toolValidation.toolProblems() the host wants
+// highlighted (red border + message) after a failed submit/next attempt.
+export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId, fieldErrors = [] }) {
   // Configurable camera-intake lists; the shared fetch resolves once per
   // page load, so many ToolForm instances don't stack requests.
   const [intakeConfig, setIntakeConfig] = useState(CAMERA_INTAKE_DEFAULTS);
@@ -532,6 +534,16 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const data = toolData;
 
   const inputCls = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
+  // Highlight for a field the host flagged as missing. The red border
+  // clears on its own once the host's derived fieldErrors no longer list it.
+  const hasErr = (key) => fieldErrors.includes(key);
+  const errCls = (key) => (hasErr(key) ? ' !border-red-500 dark:!border-red-500 ring-2 ring-red-500/30' : '');
+  const errMsg = (key, text) => (hasErr(key) ? (
+    <p className="mt-1 flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
+      <span className="material-symbols-outlined text-sm" aria-hidden="true">error</span>
+      {text}
+    </p>
+  ) : null);
   const sectionHdr = "text-sm text-slate-500 uppercase tracking-wide font-bold mb-4 pb-2 border-b border-slate-300 dark:border-slate-700";
 
   // Which sections to show: no wizardStep (or non-wizard) = show all
@@ -550,7 +562,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 onChange={(e) => { const pos = e.target.selectionStart; handleChange('brand', e.target.value.toUpperCase()); setShowBrandDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 onFocus={() => setShowBrandDropdown(true)}
                 onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
-                placeholder="e.g., Ingersoll Rand" className={inputCls} />
+                aria-invalid={hasErr('brand')}
+                placeholder="e.g., Ingersoll Rand" className={inputCls + errCls('brand')} />
+              {errMsg('brand', 'Brand is required')}
               {showBrandDropdown && filteredBrands.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredBrands.map(b => (
@@ -575,7 +589,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 onChange={(e) => { const pos = e.target.selectionStart; handleChange('model_number', e.target.value.toUpperCase()); setShowModelDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 onFocus={() => { if (combinedModels.length > 0) setShowModelDropdown(true); }}
                 onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
-                placeholder="e.g., 2135TIMAX" className={inputCls} />
+                aria-invalid={hasErr('model_number')}
+                placeholder="e.g., 2135TIMAX" className={inputCls + errCls('model_number')} />
+              {errMsg('model_number', 'Model Number is required')}
               {showModelDropdown && filteredModels.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredModels.map(m => (
@@ -602,7 +618,8 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 onChange={(e) => { const pos = e.target.selectionStart; handleChange('tool_type', e.target.value.toUpperCase()); setShowTypeDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
                 onFocus={() => { if (toolTypes.length > 0) setShowTypeDropdown(true); }}
                 onBlur={() => setTimeout(() => setShowTypeDropdown(false), 200)}
-                placeholder="e.g., Impact Wrench" className={inputCls} />
+                aria-invalid={hasErr('tool_type')}
+                placeholder="e.g., Impact Wrench" className={inputCls + errCls('tool_type')} />
               {showTypeDropdown && filteredTypes.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredTypes.map(t => (
@@ -615,6 +632,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   ))}
                 </div>
               )}
+              {errMsg('tool_type', 'Tool Type is required')}
             </div>
             {/* For Hathorn the three component serials in the panel below
                 replace this — one generic serial can't identify a
@@ -629,7 +647,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
 
             {/* Hathorn camera intake — only when the brand says so */}
             {isHathorn && (
-              <div className="md:col-span-2 p-4 bg-blue-50/60 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/40 rounded-lg space-y-4">
+              <div className={`md:col-span-2 p-4 bg-blue-50/60 dark:bg-blue-900/10 border rounded-lg space-y-4 ${
+                hasErr('hathorn_identity') ? 'border-red-500 dark:border-red-500 ring-2 ring-red-500/30' : 'border-blue-200 dark:border-blue-800/40'
+              }`}>
                 <p className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400">
                   Hathorn Camera Intake
                 </p>
@@ -678,9 +698,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                    Fill only the components that arrived — at least one model or serial is required
-                  </p>
+                  {hasErr('hathorn_identity') ? (
+                    errMsg('hathorn_identity', 'Enter at least one component model or serial (camera head, controller, or reel)')
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                      Fill only the components that arrived — at least one model or serial is required
+                    </p>
+                  )}
                 </div>
 
                 <ChecklistDropdown

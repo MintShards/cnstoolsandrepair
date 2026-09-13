@@ -10,6 +10,7 @@ import PaginationBar from '../shared/PaginationBar';
 import { formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { useSettings } from '../../../contexts/SettingsContext';
 import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from '../shared/ToolForm';
+import { toolProblems, describeToolProblems, scrollToFirstProblem } from '../../../utils/toolValidation';
 import WorkOrderDialog from '../shared/WorkOrderDialog';
 
 const getErrorMessage = (err, fallback) => {
@@ -115,6 +116,11 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   // Two-step job creation: step 1 = customer, step 2 = tools
   const [newJobStep, setNewJobStep] = useState(1);
+  // Once "Next" has been refused on the tool step, the missing fields stay
+  // highlighted (derived live from the form, so they clear as they're filled)
+  // until the wizard reopens or the step passes.
+  const [toolStepAttempted, setToolStepAttempted] = useState(false);
+  useEffect(() => { if (showNewJobForm) setToolStepAttempted(false); }, [showNewJobForm]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerResults, setCustomerResults] = useState([]);
   const [customerSearching, setCustomerSearching] = useState(false);
@@ -1717,7 +1723,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                           )}
                         </div>
                         <div className="p-4">
-                          <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={2} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} />
+                          <ToolForm toolData={tool} onChange={(updated) => handleNewJobToolChange(idx, null, null, updated)} isNewJobForm wizardStep={2} idx={idx} newJobForm={newJobForm} setNewJobForm={setNewJobForm} fieldErrors={toolStepAttempted ? toolProblems(tool) : []} />
                         </div>
                       </div>
                     ))}
@@ -1731,24 +1737,18 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   <button
                     type="button"
                     onClick={() => {
-                      // Hathorn units carry identity on their components (any
-                      // mix can arrive alone), so the generic model number is
-                      // waived when at least one component field is filled.
-                      const hasComponent = (t) => [
-                        t.camera_head_model, t.camera_head_serial,
-                        t.controller_model, t.controller_serial,
-                        t.reel_model, t.reel_serial,
-                      ].some((v) => v?.trim());
-                      const badTool = newJobForm.tools.find(t =>
-                        !t.tool_type?.trim() || !t.brand?.trim() ||
-                        (/hathorn/i.test(t.brand || '') ? !hasComponent(t) : !t.model_number?.trim())
-                      );
-                      if (badTool) {
-                        showToast('error', /hathorn/i.test(badTool.brand || '')
-                          ? 'Each Hathorn tool needs at least one component model or serial (camera head, controller, or reel)'
-                          : 'Tool type, brand, and model number are required for each tool');
+                      // Name the exact missing fields (and light them up in
+                      // the form) — a Hathorn tool with a blank Tool Type
+                      // used to get the component-identity message instead.
+                      const badIdx = newJobForm.tools.findIndex((t) => toolProblems(t).length > 0);
+                      if (badIdx !== -1) {
+                        setToolStepAttempted(true);
+                        scrollToFirstProblem();
+                        const label = newJobForm.tools.length > 1 ? `Tool ${badIdx + 1}` : null;
+                        showToast('error', describeToolProblems(toolProblems(newJobForm.tools[badIdx]), label));
                         return;
                       }
+                      setToolStepAttempted(false);
                       setNewJobStep(3);
                     }}
                     className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"

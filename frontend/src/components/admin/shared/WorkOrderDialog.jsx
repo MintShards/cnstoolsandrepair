@@ -12,6 +12,7 @@ import { openPrintToolTag } from '../PrintToolTag';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 import useBodyScrollLock from '../../../utils/useBodyScrollLock';
+import { toolProblems, describeToolProblems, scrollToFirstProblem } from '../../../utils/toolValidation';
 import { useSettings } from '../../../contexts/SettingsContext';
 import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from './ToolForm';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
@@ -118,6 +119,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   }, [job?.id, job?.tools?.length]);
   const [toolEditForm, setToolEditForm] = useState(null);
   const [savingToolEdit, setSavingToolEdit] = useState(false);
+  // After a refused save in the add/edit tool modal, the missing fields stay
+  // highlighted (derived live, so they clear as they're filled) until the
+  // modal closes or reopens. Keyed on open/closed, not the form object —
+  // that changes on every keystroke.
+  const [toolModalAttempted, setToolModalAttempted] = useState(false);
+  const toolModalOpen = !!addToolForm || !!editingToolId;
+  useEffect(() => { setToolModalAttempted(false); }, [toolModalOpen, editingToolId]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(null); // toolId
   const [retailPriceMap, setRetailPriceMap] = useState({}); // { tool_id: price | null }
@@ -485,6 +493,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
 
   const handleSaveToolEdit = async () => {
     if (!editingToolId || !toolEditForm) return;
+    const problems = toolProblems(toolEditForm);
+    if (problems.length) {
+      setToolModalAttempted(true);
+      scrollToFirstProblem();
+      showToast('error', describeToolProblems(problems));
+      return;
+    }
     setSavingToolEdit(true);
     let updated;
     try {
@@ -520,6 +535,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   // ── ADD TOOL TO EXISTING JOB ─────────────────────────
   const handleAddTool = async () => {
     if (!addToolForm) return;
+    const problems = toolProblems(addToolForm);
+    if (problems.length) {
+      setToolModalAttempted(true);
+      scrollToFirstProblem();
+      showToast('error', describeToolProblems(problems));
+      return;
+    }
     setAddingTool(true);
     let updated;
     try {
@@ -1470,7 +1492,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              <ToolForm toolData={formData} onChange={setFormData} currentJobId={job.id} />
+              <ToolForm toolData={formData} onChange={setFormData} currentJobId={job.id} fieldErrors={toolModalAttempted ? toolProblems(formData) : []} />
               <div className="flex gap-3 mt-6">
                 <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
