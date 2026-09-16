@@ -180,6 +180,10 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
                   [summary.transitions?.ready || 0, 'Ready'],
                   [summary.transitions?.completed || 0, 'Completed'],
                   [loaded.data.events.length, 'All events'],
+                  // Cash Flow counts arrive for admins only (the API omits the keys otherwise).
+                  ...(summary.bills_logged != null
+                    ? [[summary.bills_logged, 'Bills logged'], [summary.bills_paid, 'Bills paid'], [summary.payments_received, 'Payments in']]
+                    : []),
                 ].map(([n, label]) => (
                   <div key={label}>
                     <div className="text-lg font-black text-slate-900 dark:text-white leading-tight">{n}</div>

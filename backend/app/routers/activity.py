@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.database import get_database
 from app.dependencies.auth import require_staff_or_admin
 from app.models.auth import User
+from app.models.bill import BILL_CATEGORY_LABELS, BILL_STATUS_LABELS
 from app.services.activity_service import customer_display, tool_label
 
 router = APIRouter(prefix="/api/activity", tags=["activity"])
@@ -59,7 +60,8 @@ def _actor(value) -> dict | None:
 
 
 def _event(kind: str, ts: datetime, summary: str, *, actor=None, request_number=None,
-           job_id=None, tool=None, details=None, status=None, task_id=None) -> dict:
+           job_id=None, tool=None, details=None, status=None, task_id=None,
+           bill_id=None, bill_number=None, payment_id=None, payment_number=None) -> dict:
     local = _local(ts)
     return {
         "kind": kind,
@@ -74,6 +76,10 @@ def _event(kind: str, ts: datetime, summary: str, *, actor=None, request_number=
         "tool": tool,
         "status": status,
         "task_id": task_id,
+        "bill_id": bill_id,
+        "bill_number": bill_number,
+        "payment_id": payment_id,
+        "payment_number": payment_number,
     }
 
 
@@ -106,6 +112,9 @@ async def list_activity(
     transitions: Counter = Counter()
     tools_received = 0
     turnaround_days: list[int] = []
+    # Bills (suppliers, amounts) are admin-only everywhere, the timeline included.
+    is_admin = current_user.role == "admin"
+    bills_paid = 0
 
     # ── Repairs: job creation, tool arrivals, status changes, emails ──
     projection = {
@@ -202,6 +211,88 @@ async def list_activity(
                 task_id=str(task["_id"]),
             ))
 
+    # ── Bills: logged / paid / other status moves (admin only). Derived from
+    # the bill's own actor-stamped history — never written to activity_log,
+    # so undo and re-pay can't drift, and a deleted bill's events go with it. ──
+    if is_admin:
+        async for bill in db.bills.find(
+            {"$or": [{"created_at": rng}, {"status_history.timestamp": rng}]},
+            {"bill_number": 1, "supplier_name": 1, "category": 1, "created_by": 1,
+             "status_history": 1, "lines.request_number": 1, "lines.repair_id": 1},
+        ):
+            bn = bill.get("bill_number")
+            bill_id = str(bill["_id"])
+            supplier = bill.get("supplier_name") or "—"
+            category = BILL_CATEGORY_LABELS.get(bill.get("category"), bill.get("category") or "")
+            lines = bill.get("lines") or []
+            wo_numbers = sorted({ln.get("request_number") for ln in lines if ln.get("request_number")})
+            wo_ids = {ln.get("repair_id") for ln in lines if ln.get("repair_id")}
+            # The event's work-order slot is singular: only fill it when the
+            # bill links exactly one job.
+            single_rn = wo_numbers[0] if len(wo_numbers) == 1 else None
+            single_id = next(iter(wo_ids)) if len(wo_ids) == 1 else None
+            logged_details = []
+            if lines:
+                logged_details.append(f"{len(lines)} line{'s' if len(lines) != 1 else ''}")
+            if wo_numbers:
+                logged_details.append(
+                    f"Work order{'s' if len(wo_numbers) != 1 else ''}: {', '.join(wo_numbers)}")
+
+            hist = sorted((bill.get("status_history") or []),
+                          key=lambda e: e.get("timestamp") or datetime.min)
+            for i, entry in enumerate(hist):
+                ts = entry.get("timestamp")
+                if not _ts_in(ts, start, end):
+                    continue
+                new_status = entry.get("status")
+                note_details = [entry.get("notes")] if entry.get("notes") else None
+                if i == 0:
+                    on_the_spot = new_status == "paid"
+                    if on_the_spot:
+                        bills_paid += 1
+                    events.append(_event(
+                        "bill_logged", ts,
+                        f"Bill {bn} logged{' (paid on the spot)' if on_the_spot else ''} — {supplier} · {category}",
+                        actor=entry.get("by") or bill.get("created_by"),
+                        request_number=single_rn, job_id=single_id, details=logged_details,
+                        status=new_status, bill_id=bill_id, bill_number=bn,
+                    ))
+                    continue
+                prev_status = hist[i - 1].get("status")
+                if new_status == "paid":
+                    bills_paid += 1
+                    events.append(_event(
+                        "bill_paid", ts, f"Bill {bn} paid — {supplier}",
+                        actor=entry.get("by"), request_number=single_rn, job_id=single_id,
+                        details=note_details, status=new_status, bill_id=bill_id, bill_number=bn,
+                    ))
+                else:
+                    events.append(_event(
+                        "bill_status_changed", ts,
+                        f"Bill {bn} ({supplier}): {BILL_STATUS_LABELS.get(prev_status, prev_status)} → {BILL_STATUS_LABELS.get(new_status, new_status)}",
+                        actor=entry.get("by"), request_number=single_rn, job_id=single_id,
+                        details=note_details, status=new_status, bill_id=bill_id, bill_number=bn,
+                    ))
+
+    # ── Payments received (money in, admin only). The record IS the event. ──
+    if is_admin:
+        async for pay in db.payments.find(
+            {"created_at": rng},
+            {"payment_number": 1, "customer_name": 1, "request_number": 1, "repair_id": 1,
+             "zoho_invoice_number": 1, "received_date": 1, "created_at": 1, "created_by": 1},
+        ):
+            pn = pay.get("payment_number")
+            rn = pay.get("request_number")
+            pay_details = [f"Received {pay.get('received_date')}"] if pay.get("received_date") else []
+            if pay.get("zoho_invoice_number"):
+                pay_details.append(f"Zoho invoice {pay['zoho_invoice_number']}")
+            events.append(_event(
+                "payment_received", pay["created_at"],
+                f"Payment {pn} received — {pay.get('customer_name') or '—'}{f' · {rn}' if rn else ''}",
+                actor=pay.get("created_by"), request_number=rn, job_id=pay.get("repair_id"),
+                details=pay_details, payment_id=str(pay["_id"]), payment_number=pn,
+            ))
+
     # ── Customers created ──
     async for cust in db.customers.find({"created_at": rng},
                                         {"company_name": 1, "first_name": 1, "last_name": 1,
@@ -224,10 +315,15 @@ async def list_activity(
 
     # ── Activity log: edits, deletions, photos ──
     async for row in db.activity_log.find({"ts": rng}).sort("ts", 1):
+        kind = row.get("kind", "other")
+        if (kind.startswith("bill_") or kind.startswith("payment_")) and not is_admin:
+            continue
         events.append(_event(
-            row.get("kind", "other"), row["ts"], row.get("summary", ""),
+            kind, row["ts"], row.get("summary", ""),
             actor=row.get("actor"), request_number=row.get("request_number"),
             job_id=row.get("job_id"), tool=row.get("tool_label"), details=row.get("details"),
+            bill_id=row.get("bill_id"), bill_number=row.get("bill_number"),
+            payment_id=row.get("payment_id"), payment_number=row.get("payment_number"),
         ))
 
     events.sort(key=lambda e: e["ts"])
@@ -255,8 +351,10 @@ async def list_activity(
         "transitions": {s: transitions.get(s, 0) for s in STATUS_LABELS},
         "tasks_created": kinds.get("task_created", 0),
         "tasks_completed": kinds.get("task_completed", 0),
-        "edits": sum(kinds.get(k, 0) for k in ("tool_edited", "job_edited", "customer_edited")),
-        "deletions": sum(kinds.get(k, 0) for k in ("job_deleted", "tool_removed", "customer_deleted")),
+        "edits": sum(kinds.get(k, 0) for k in ("tool_edited", "job_edited", "customer_edited",
+                                               "bill_edited", "payment_edited")),
+        "deletions": sum(kinds.get(k, 0) for k in ("job_deleted", "tool_removed", "customer_deleted",
+                                                   "bill_deleted", "payment_deleted")),
         "emails_sent": kinds.get("wo_email_sent", 0),
         "avg_turnaround_days": (round(sum(turnaround_days) / len(turnaround_days), 1)
                                 if turnaround_days else None),
@@ -264,6 +362,12 @@ async def list_activity(
         "open_total": sum(open_by_status.values()),
         "kinds": dict(kinds),
     }
+    if is_admin:
+        # Only admins get the bill cards, so a technician's report never
+        # shows an empty "Bills" section.
+        summary["bills_logged"] = kinds.get("bill_logged", 0)
+        summary["bills_paid"] = bills_paid
+        summary["payments_received"] = kinds.get("payment_received", 0)
 
     # Month-by-month breakdown for long ranges (the year report prints this
     # instead of a thousand lines).

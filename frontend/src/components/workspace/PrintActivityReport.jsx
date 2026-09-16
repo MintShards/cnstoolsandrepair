@@ -117,6 +117,7 @@ function buildSummary(summary) {
         ${card(t.completed || 0, 'Completed')}
         ${card(summary.tasks_completed, 'Tasks completed')}
         ${card(summary.avg_turnaround_days != null ? `${summary.avg_turnaround_days}d` : '—', 'Avg. turnaround to ready')}
+        ${summary.bills_logged != null ? card(summary.bills_logged, 'Bills logged') + card(summary.bills_paid, 'Bills paid') + card(summary.payments_received, 'Payments received') : ''}
       </div>
     </div>
     <div class="section">

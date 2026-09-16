@@ -323,6 +323,53 @@ async def create_workspace_indexes():
     print("  ✅ Workspace indexes created!")
 
 
+async def create_bills_indexes():
+    """Indexes for the Workspace Bills section (supplier bills & receipts)"""
+    print("\n📌 Creating BILLS indexes...")
+    db = get_database()
+
+    # The counter alone doesn't guarantee uniqueness across restores.
+    print("  Creating index: bills.bill_number (unique)...")
+    await ensure_index(db.bills, "bill_number", unique=True, name="bills_number_unique_idx")
+
+    # Unpaid / overdue / due-soon filters and the default due-date sort.
+    print("  Creating index: bills (status, due_date)...")
+    await ensure_index(db.bills, [("status", 1), ("due_date", 1)], name="bills_status_due_idx")
+
+    # Month filter and "this month" totals run on the bill date.
+    print("  Creating index: bills.bill_date...")
+    await ensure_index(db.bills, "bill_date", name="bills_bill_date_idx")
+
+    print("  Creating index: bills.supplier_id...")
+    await ensure_index(db.bills, "supplier_id", name="bills_supplier_idx")
+
+    # Bills linked to a work order (multikey over the lines array).
+    print("  Creating index: bills.lines.repair_id...")
+    await ensure_index(db.bills, "lines.repair_id", name="bills_lines_repair_idx")
+
+    print("  Creating index: bills.created_at desc...")
+    await ensure_index(db.bills, [("created_at", -1)], name="bills_created_idx")
+
+    # The activity tracker reads bills whose history moved inside a date range.
+    print("  Creating index: bills.status_history.timestamp...")
+    await ensure_index(db.bills, "status_history.timestamp", name="bills_history_ts_idx")
+
+    # Money in: customer payments (Cash Flow → In).
+    print("  Creating index: payments.payment_number (unique)...")
+    await ensure_index(db.payments, "payment_number", unique=True, name="payments_number_unique_idx")
+
+    print("  Creating index: payments.received_date desc...")
+    await ensure_index(db.payments, [("received_date", -1)], name="payments_received_idx")
+
+    print("  Creating index: payments.repair_id...")
+    await ensure_index(db.payments, "repair_id", name="payments_repair_idx")
+
+    print("  Creating index: payments.created_at desc...")
+    await ensure_index(db.payments, [("created_at", -1)], name="payments_created_idx")
+
+    print("  ✅ Bills + payments indexes created!")
+
+
 async def create_all_indexes():
     """Create every index the app needs, on whatever database .env points to."""
     from app.config import settings
@@ -339,6 +386,7 @@ async def create_all_indexes():
         await create_customers_indexes()
         await create_route_management_indexes()
         await create_workspace_indexes()
+        await create_bills_indexes()
 
         print("\n" + "=" * 60)
         print("✅ ALL INDEXES CREATED SUCCESSFULLY!")
@@ -369,7 +417,9 @@ async def verify_indexes():
         ("visits", "📝"),
         ("saved_routes", "🔖"),
         ("tasks", "✅"),
-        ("messages", "💬")
+        ("messages", "💬"),
+        ("bills", "🧾"),
+        ("payments", "💵")
     ]
 
     total_indexes = 0

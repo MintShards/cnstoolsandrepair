@@ -1,10 +1,17 @@
 import { Link } from 'react-router-dom';
-import { WORKSPACE_SECTIONS } from '../../constants/workspace';
+import { sectionsForRole } from '../../constants/workspace';
 import StaffAvatar from './StaffAvatar';
 
 // Badge + attention-dot rules per section, driven by the shared counts poll.
 function badgeFor(sectionId, counts) {
   switch (sectionId) {
+    case 'cash-flow':
+      // Unpaid bills count; the dot only fires once something is past due.
+      return {
+        count: counts.billsUnpaid,
+        alert: (counts.billsOverdue || 0) > 0,
+        alertTitle: `${counts.billsOverdue} bill${counts.billsOverdue === 1 ? '' : 's'} overdue`,
+      };
     case 'my-tasks':
       return { count: counts.myOpen, alert: counts.myOverdue > 0, alertTitle: 'You have overdue tasks' };
     case 'all-tasks':
@@ -47,12 +54,13 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
             </div>
           </div>
         )}
-        {/* Below sm this copies the Repair Tracker's tab treatment: stacked
+        {/* Below md this copies the Repair Tracker's tab treatment: stacked
             icon-over-tiny-label, with the count badge and alert dot floating
-            on the icon's corner. sm..md keeps the inline pill row; md+ is the
-            desktop rail. */}
+            on the icon's corner. (The inline pill row that used to run from
+            sm to md truncated five labels to single letters at 640–767px.)
+            md+ is the desktop rail. */}
         <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible">
-          {WORKSPACE_SECTIONS.map((section) => {
+          {sectionsForRole(currentUser?.role).map((section) => {
             const active = activeSection === section.id;
             const { count, alert, alertTitle } = badgeFor(section.id, counts);
             const hasCount = count != null && count > 0;
@@ -69,7 +77,7 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
               <Link
                 key={section.id}
                 to={`/workspace?section=${section.id}`}
-                className={`flex-1 md:flex-none min-w-0 flex flex-col sm:flex-row items-center md:justify-start justify-center gap-0.5 sm:gap-2 md:gap-3 px-1 sm:px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0 ${
+                className={`flex-1 md:flex-none min-w-0 flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 px-1 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0 ${
                   active
                     ? 'bg-primary text-white shadow-md shadow-primary/25'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -79,25 +87,25 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
                   <span className="material-symbols-outlined text-xl">{section.icon}</span>
                   {hasCount && (
                     <span
-                      className={`sm:hidden absolute -top-1.5 -right-2.5 text-[10px] font-black px-1 py-0 rounded-full min-w-[16px] text-center leading-tight ${phoneBadgeCls}`}
+                      className={`md:hidden absolute -top-1.5 -right-2.5 text-[10px] font-black px-1 py-0 rounded-full min-w-[16px] text-center leading-tight ${phoneBadgeCls}`}
                       title={showAlert ? alertTitle : undefined}
                     >
                       {count}
                     </span>
                   )}
                   {showAlert && !hasCount && (
-                    <span className="sm:hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title={alertTitle} />
+                    <span className="md:hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title={alertTitle} />
                   )}
                 </div>
-                <span className="sm:hidden text-[10px] tracking-tight leading-tight truncate max-w-full">{section.shortLabel || section.label}</span>
-                <span className="hidden sm:block min-w-0 truncate md:flex-1 text-left leading-tight whitespace-nowrap">{section.label}</span>
+                <span className="md:hidden text-[10px] tracking-tight leading-tight truncate max-w-full">{section.shortLabel || section.label}</span>
+                <span className="hidden md:block min-w-0 truncate md:flex-1 text-left leading-tight whitespace-nowrap">{section.label}</span>
                 {count != null && count > 0 && (
-                  <span className={`hidden sm:inline text-xs font-black px-2 py-0.5 rounded-full min-w-[22px] text-center leading-none ${badgeCls}`}>
+                  <span className={`hidden md:inline text-xs font-black px-2 py-0.5 rounded-full min-w-[22px] text-center leading-none ${badgeCls}`}>
                     {count}
                   </span>
                 )}
                 {alert && !active && (
-                  <span className="hidden sm:flex w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" title={alertTitle} />
+                  <span className="hidden md:flex w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" title={alertTitle} />
                 )}
               </Link>
             );
@@ -105,11 +113,11 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
           <button
             onClick={onAccount}
             title="My account — notifications and password"
-            className="flex-1 md:flex-none min-w-0 flex flex-col sm:flex-row items-center md:justify-start justify-center gap-0.5 sm:gap-2 md:gap-3 px-1 sm:px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 md:mt-1 md:border-t md:border-slate-200 md:dark:border-slate-800 md:rounded-t-none md:pt-3"
+            className="flex-1 md:flex-none min-w-0 flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 px-1 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 md:mt-1 md:border-t md:border-slate-200 md:dark:border-slate-800 md:rounded-t-none md:pt-3"
           >
             <span className="material-symbols-outlined text-xl">manage_accounts</span>
-            <span className="sm:hidden text-[10px] tracking-tight leading-tight truncate max-w-full">Account</span>
-            <span className="hidden sm:block min-w-0 truncate md:flex-1 text-left leading-tight whitespace-nowrap">Account</span>
+            <span className="md:hidden text-[10px] tracking-tight leading-tight truncate max-w-full">Account</span>
+            <span className="hidden md:block min-w-0 truncate md:flex-1 text-left leading-tight whitespace-nowrap">Account</span>
           </button>
         </nav>
       </div>

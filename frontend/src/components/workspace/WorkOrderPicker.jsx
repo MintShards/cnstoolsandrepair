@@ -90,7 +90,14 @@ export default function WorkOrderPicker({ value, onChange, label = 'Link a Work 
               <button
                 type="button"
                 onClick={() => {
-                  onChange({ repair_id: job.id, request_number: job.request_number });
+                  // `customer` rides along for forms that can prefill from
+                  // the job (a payment's customer name); the link itself is
+                  // still just repair_id + request_number.
+                  onChange({
+                    repair_id: job.id,
+                    request_number: job.request_number,
+                    customer: job.company_name || `${job.first_name || ''} ${job.last_name || ''}`.trim() || '',
+                  });
                   setQuery('');
                   setOpen(false);
                 }}

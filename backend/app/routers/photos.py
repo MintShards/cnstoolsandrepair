@@ -11,6 +11,24 @@ router = APIRouter(prefix="/api/photos", tags=["photos"])
 logger = logging.getLogger(__name__)
 
 
+def stored_file_redirect(src: str) -> RedirectResponse:
+    """302 a stored file string (Spaces URL or dev filename) to something the
+    browser can fetch. Shared by the staff photo viewer below and the
+    admin-only bill attachment viewer in routers/bills.py, so both keep the
+    same rules: presigned URLs in Spaces mode, the /uploads mount locally,
+    and nothing path-shaped ever reaches the filesystem."""
+    if settings.use_spaces:
+        key = spaces_key_from_url(src)
+        if not key:
+            raise HTTPException(status_code=400, detail="Not a stored photo URL")
+        return RedirectResponse(url=generate_presigned_photo_url(src), status_code=302)
+
+    # Local mode: src is a bare uuid filename. Refuse anything path-shaped.
+    if "/" in src or "\\" in src or ".." in src:
+        raise HTTPException(status_code=400, detail="Invalid photo filename")
+    return RedirectResponse(url=f"/uploads/{src}", status_code=302)
+
+
 @router.get("/view", dependencies=[Depends(require_staff_or_admin)])
 async def view_photo(src: str = Query(..., max_length=1000)):
     """Redirect a stored photo string to something the browser can fetch.
@@ -24,13 +42,4 @@ async def view_photo(src: str = Query(..., max_length=1000)):
     Dev (USE_SPACES=false) stores bare filenames: those redirect to the
     local /uploads static mount, so one frontend code path serves both.
     """
-    if settings.use_spaces:
-        key = spaces_key_from_url(src)
-        if not key:
-            raise HTTPException(status_code=400, detail="Not a stored photo URL")
-        return RedirectResponse(url=generate_presigned_photo_url(src), status_code=302)
-
-    # Local mode: src is a bare uuid filename. Refuse anything path-shaped.
-    if "/" in src or "\\" in src or ".." in src:
-        raise HTTPException(status_code=400, detail="Invalid photo filename")
-    return RedirectResponse(url=f"/uploads/{src}", status_code=302)
+    return stored_file_redirect(src)

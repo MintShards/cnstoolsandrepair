@@ -779,6 +779,78 @@ export const tasksAPI = {
   },
 };
 
+// Workspace: Bills API (admin only — supplier bills and receipts)
+export const billsAPI = {
+  summary: async () => {
+    const response = await api.get('/api/bills/summary');
+    return response.data;
+  },
+  list: async (params = {}) => {
+    const response = await api.get('/api/bills/', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { bills: response.data, total };
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/bills/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/bills/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/bills/${id}`, data);
+    return response.data;
+  },
+  remove: async (id) => {
+    await api.delete(`/api/bills/${id}`);
+  },
+  setStatus: async (id, data) => {
+    const response = await api.patch(`/api/bills/${id}/status`, data);
+    return response.data;
+  },
+  uploadAttachment: async (id, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/api/bills/${id}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  deleteAttachment: async (id, url) => {
+    const response = await api.delete(`/api/bills/${id}/attachments`, { params: { url } });
+    return response.data;
+  },
+};
+
+// Workspace: Payments API (admin only — money in, customer payments on Zoho invoices)
+export const paymentsAPI = {
+  summary: async () => {
+    const response = await api.get('/api/payments/summary');
+    return response.data;
+  },
+  list: async (params = {}) => {
+    const response = await api.get('/api/payments/', { params });
+    const total = parseInt(response.headers['x-total-count'] ?? response.data.length, 10);
+    return { payments: response.data, total };
+  },
+  get: async (id) => {
+    const response = await api.get(`/api/payments/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/payments/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/payments/${id}`, data);
+    return response.data;
+  },
+  remove: async (id) => {
+    await api.delete(`/api/payments/${id}`);
+  },
+};
+
 // Workspace: Feed messages API (staff or admin)
 export const messagesAPI = {
   summary: async () => {

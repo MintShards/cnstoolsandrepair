@@ -5,6 +5,7 @@ import { useToast } from '../admin/shared/ToastProvider';
 import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import { formatYmd } from '../../utils/dateFormat';
 import { telHref } from '../../utils/links';
+import { formatMoney } from '../../utils/money';
 import WorkOrderChip from './WorkOrderChip';
 import { RepairStatusMini } from './JobContextLine';
 import TaskFormModal from './TaskFormModal';
@@ -136,6 +137,30 @@ function FollowUpRow({ item }) {
   );
 }
 
+/** Unpaid supplier bill that is overdue or due this week (admins only). */
+function BillDueRow({ item }) {
+  const overdue = item.days_overdue > 0;
+  return (
+    <Link
+      to={`/workspace?section=cash-flow&bill=${item.bill_id}`}
+      title="Open in Cash Flow"
+      className="flex flex-wrap sm:flex-nowrap items-center gap-x-2 gap-y-1 px-3 py-2 min-h-[44px] sm:min-h-0 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 hover:border-primary/50 transition-colors"
+    >
+      <span className="material-symbols-outlined text-base text-violet-500 flex-shrink-0">receipt_long</span>
+      <span className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm truncate">
+        <span className="font-bold text-slate-900 dark:text-white">{item.supplier_name}</span>
+        <span className="text-slate-500 dark:text-slate-400 ml-1.5 font-mono text-xs">{item.bill_number}</span>
+        {item.vendor_invoice_number && <span className="text-slate-500 dark:text-slate-400 ml-1.5 text-xs">· {item.vendor_invoice_number}</span>}
+      </span>
+      <span className="text-xs font-black text-slate-900 dark:text-white whitespace-nowrap">{formatMoney(item.total, item.currency)}</span>
+      <span className={`text-xs font-bold whitespace-nowrap ${overdue ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+        {formatYmd(item.due_date)}
+        {overdue && ` · ${item.days_overdue}d late`}
+      </span>
+    </Link>
+  );
+}
+
 /**
  * "Needs Attention" — the shop's live to-do queues, rendered above All Tasks.
  * Everything here is DERIVED from the Repair Tracker's tool statuses and the
@@ -181,6 +206,8 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
   if (!data) return null;
 
   const followups = data.queues.followups_due;
+  // Only admins get a non-empty bucket; older backends have no key at all.
+  const billsDue = data.queues.bills_due || { count: 0, items: [] };
   const nonEmpty = QUEUES.filter((q) => data.queues[q.key]?.count > 0);
   const allClear = data.total === 0 && data.stuck_count === 0;
 
@@ -262,6 +289,27 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
                       className="flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
                     >
                       Open Route Management follow-ups →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {billsDue.count > 0 && (
+                <div>
+                  <p className="flex items-center gap-1.5 px-1 pb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <span className="material-symbols-outlined text-sm">receipt_long</span>
+                    Bills due — overdue or within a week
+                    <span className="font-black">({billsDue.count})</span>
+                  </p>
+                  <div className="space-y-1.5">
+                    {(billsDue.items || []).slice(0, ROWS_SHOWN).map((item) => (
+                      <BillDueRow key={item.bill_id} item={item} />
+                    ))}
+                    <Link
+                      to="/workspace?section=cash-flow&view=out"
+                      className="flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
+                    >
+                      {billsDue.count > ROWS_SHOWN ? `+${billsDue.count - ROWS_SHOWN} more — ` : ''}Open Cash Flow →
                     </Link>
                   </div>
                 </div>

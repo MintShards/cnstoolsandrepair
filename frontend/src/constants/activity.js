@@ -22,6 +22,13 @@ export const ACTIVITY_GROUPS = {
     icon: 'edit_note',
     chip: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
   },
+  // Cash Flow events only ever reach admins (the API filters them), so this
+  // group simply never appears for anyone else.
+  money: {
+    label: 'Cash flow',
+    icon: 'account_balance_wallet',
+    chip: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300',
+  },
 };
 
 export const ACTIVITY_KINDS = {
@@ -41,9 +48,17 @@ export const ACTIVITY_KINDS = {
   photos_added:     { label: 'Photos added',        icon: 'add_a_photo',   group: 'edits' },
   photo_removed:    { label: 'Photo removed',       icon: 'hide_image',    group: 'edits' },
   wo_email_sent:    { label: 'Work order emailed',  icon: 'outgoing_mail', group: 'edits' },
+  bill_logged:         { label: 'Bill logged',          icon: 'receipt_long', group: 'money' },
+  bill_paid:           { label: 'Bill paid',            icon: 'price_check',  group: 'money' },
+  bill_status_changed: { label: 'Bill status change',   icon: 'sync_alt',     group: 'money' },
+  bill_edited:         { label: 'Bill edited',          icon: 'edit_note',    group: 'money' },
+  bill_deleted:        { label: 'Bill deleted',         icon: 'delete',       group: 'money' },
+  payment_received:    { label: 'Payment received',     icon: 'payments',     group: 'money' },
+  payment_edited:      { label: 'Payment edited',       icon: 'edit_note',    group: 'money' },
+  payment_deleted:     { label: 'Payment deleted',      icon: 'delete',       group: 'money' },
 };
 
-export const ACTIVITY_GROUP_ORDER = ['received', 'status', 'tasks', 'edits'];
+export const ACTIVITY_GROUP_ORDER = ['received', 'status', 'tasks', 'edits', 'money'];
 
 export function activityKind(kind) {
   return ACTIVITY_KINDS[kind] || { label: kind, icon: 'info', group: 'edits' };

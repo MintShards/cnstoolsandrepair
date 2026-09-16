@@ -127,7 +127,7 @@ async def validate_image_file(contents: bytes, file_ext: str) -> bool:
 # BC PIPA s.34) — they upload private and are viewed through short-lived
 # presigned URLs. Everything else in the bucket (gallery, products, brands,
 # hero, parts_library, email-templates) is meant to be public and stays so.
-PRIVATE_FOLDERS = ("quotes", "repairs")
+PRIVATE_FOLDERS = ("quotes", "repairs", "bills")
 
 # The stored value stays the same plain bucket URL either way — deletion
 # and the frontend's exact-match photo identifiers depend on that shape.

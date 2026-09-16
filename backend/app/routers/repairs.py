@@ -979,12 +979,40 @@ async def get_attention_queues(
                 "interest_level": visit.interest_level,
             })
 
+    # Cash Flow: unpaid supplier bills that are overdue or due within a week.
+    # Admin only, like the Cash Flow section itself — nobody else sees
+    # suppliers or amounts, so the bucket simply stays empty for them.
+    bills_due_count = 0
+    bill_items: list = []
+    if current_user.role == "admin":
+        due_limit = datetime.fromordinal(today_pacific.toordinal() + 7).strftime("%Y-%m-%d")
+        bills_query = {"status": "unpaid", "due_date": {"$ne": None, "$lte": due_limit}}
+        bills_due_count = await db.bills.count_documents(bills_query)
+        if include_items and bills_due_count:
+            cursor = (db.bills.find(bills_query, {"bill_number": 1, "supplier_name": 1,
+                                                  "vendor_invoice_number": 1, "total": 1,
+                                                  "currency": 1, "due_date": 1})
+                      .sort([("due_date", 1), ("_id", 1)])
+                      .limit(_ATTENTION_ITEM_CAP))
+            async for bill in cursor:
+                due = datetime.strptime(bill["due_date"], "%Y-%m-%d").date()
+                bill_items.append({
+                    "bill_id": str(bill["_id"]),
+                    "bill_number": bill.get("bill_number"),
+                    "supplier_name": bill.get("supplier_name") or "—",
+                    "vendor_invoice_number": bill.get("vendor_invoice_number"),
+                    "total": bill.get("total"),
+                    "currency": bill.get("currency") or "CAD",
+                    "due_date": bill["due_date"],
+                    "days_overdue": max(0, (today_pacific - due).days),
+                })
+
     for items in queues.values():
         items.sort(key=lambda i: i["days_in_status"], reverse=True)
 
     # Every work order appears in exactly one queue now, so total is a
     # straight sum with no double counting.
-    total = sum(len(items) for items in queues.values()) + followups_count
+    total = sum(len(items) for items in queues.values()) + followups_count + bills_due_count
 
     def _bucket(items, count=None):
         out = {"count": count if count is not None else len(items)}
@@ -1003,6 +1031,7 @@ async def get_attention_queues(
             "stuck": _bucket(queues["stuck"]),
             "needs_diagnosis": _bucket(queues["needs_diagnosis"]),
             "followups_due": _bucket(followup_items, count=followups_count),
+            "bills_due": _bucket(bill_items, count=bills_due_count),
         },
     }
 

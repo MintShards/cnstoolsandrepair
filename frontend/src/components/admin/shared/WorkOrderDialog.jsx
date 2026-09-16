@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { repairsAPI, customersAPI, partsLibraryAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, partsLibraryAPI, suppliersAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
+import useCurrentUser from '../../../utils/useCurrentUser';
+import WorkOrderMoney from './WorkOrderMoney';
+import BillFormModal from '../../workspace/BillFormModal';
+import PaymentFormModal from '../../workspace/PaymentFormModal';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
   getValidNextStatuses,
@@ -79,6 +83,58 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [addingTool, setAddingTool] = useState(false);
   const [editingToolId, setEditingToolId] = useState(null);
   const navigate = useNavigate();
+
+  // Cash Flow hooks (admin only): the job's money block, and logging a bill
+  // or a payment prefilled from this work order. Bills seed their lines from
+  // the parts that have actually arrived (received / installed).
+  const { isAdmin } = useCurrentUser();
+  const [billSeed, setBillSeed] = useState(null);
+  const [paymentSeed, setPaymentSeed] = useState(null);
+  const [moneyTick, setMoneyTick] = useState(0);
+  const [suppliers, setSuppliers] = useState([]);
+  const loadSuppliers = async () => {
+    try {
+      const list = await suppliersAPI.getAll();
+      setSuppliers(list);
+      return list;
+    } catch {
+      return [];
+    }
+  };
+  const receivedParts = (tool) => (tool.parts || [])
+    .filter((p) => p.name?.trim() && ['received', 'installed'].includes(p.status));
+  const openBillFor = async (tool) => {
+    const list = suppliers.length ? suppliers : await loadSuppliers();
+    const parts = tool ? receivedParts(tool) : (job.tools || []).flatMap(receivedParts);
+    // The most-named supplier on those parts becomes the bill's supplier —
+    // linked to the directory when the name matches, a one-off vendor otherwise.
+    const tally = {};
+    parts.forEach((p) => { const n = (p.supplier || '').trim(); if (n) tally[n] = (tally[n] || 0) + 1; });
+    const topName = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0] || '';
+    const match = topName ? list.find((s) => s.name.toLowerCase() === topName.toLowerCase()) : null;
+    setBillSeed({
+      supplier: !topName ? null : (match
+        ? { supplier_id: match.id, supplier_name: match.name }
+        : { supplier_id: null, supplier_name: topName }),
+      category: 'parts',
+      lines: parts.map((p) => ({
+        description: p.name.trim(),
+        part_number: p.part_number || '',
+        quantity: p.quantity || 1,
+        unit_price: (p.price != null && p.price !== '') ? Number(p.price) : null,
+        repair_id: job.id,
+        request_number: job.request_number,
+      })),
+    });
+  };
+  const openPaymentFor = () => {
+    const cust = jobCustomer || job;
+    setPaymentSeed({
+      workOrder: { repair_id: job.id, request_number: job.request_number },
+      customer_name: cust.company_name || `${cust.first_name || ''} ${cust.last_name || ''}`.trim(),
+      zoho_invoice_number: (job.tools || []).map((t) => t.zoho_invoice_number).find(Boolean) || '',
+    });
+  };
 
   // Returning-unit badges: for each tool with serials, has this exact unit
   // (or one of its Hathorn components) been on the bench before? Clicking
@@ -771,6 +827,16 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 )}
               </div>
 
+              {/* Money on this job — admin only, live from Cash Flow */}
+              {isAdmin && (
+                <WorkOrderMoney
+                  job={job}
+                  refreshTick={moneyTick}
+                  onLogBill={() => openBillFor(null)}
+                  onLogPayment={openPaymentFor}
+                />
+              )}
+
               {/* Tools */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -1189,7 +1255,21 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           </div>
                           {/* Right column — Parts (wider) */}
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
-                            <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
+                              {/* Admin shortcut into Cash Flow: the received parts become the bill's lines. */}
+                              {isAdmin && receivedParts(tool).length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => openBillFor(tool)}
+                                  title="Log the supplier bill for this tool's received parts"
+                                  className="inline-flex items-center gap-1 px-2 py-1 -my-1 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-bold text-primary dark:text-blue-400 hover:bg-primary/10 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined" style={{fontSize:'14px'}}>receipt_long</span>
+                                  Log bill
+                                </button>
+                              )}
+                            </div>
                             {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                               <div className="mt-2 space-y-2">
                                 {tool.parts.map((p, realPi) => p.name?.trim() ? (
@@ -1608,6 +1688,27 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
             const emailRecord = { sent_at: new Date().toISOString(), sent_to: sentTo, success: true };
             onJobUpdated({ ...job, work_order_emails_sent: [...(job.work_order_emails_sent || []), emailRecord] });
           }}
+        />
+      )}
+
+      {/* Cash Flow forms, prefilled from this work order (admin only) */}
+      {billSeed && (
+        <BillFormModal
+          bill={null}
+          defaults={billSeed}
+          suppliers={suppliers}
+          onSuppliersChange={loadSuppliers}
+          onSaved={() => { setBillSeed(null); setMoneyTick((t) => t + 1); }}
+          onClose={() => setBillSeed(null)}
+        />
+      )}
+      {paymentSeed && (
+        <PaymentFormModal
+          payment={null}
+          defaults={paymentSeed}
+          onSaved={() => { setPaymentSeed(null); setMoneyTick((t) => t + 1); }}
+          onDeleted={() => setPaymentSeed(null)}
+          onClose={() => setPaymentSeed(null)}
         />
       )}
     </>

@@ -57,9 +57,22 @@ export const WORKSPACE_SECTIONS = [
   { id: 'all-tasks', label: 'All Tasks', shortLabel: 'All Tasks', icon: 'list_alt' },
   { id: 'calendar',  label: 'Calendar',  shortLabel: 'Calendar', icon: 'calendar_month' },
   { id: 'feed',      label: 'Shop Feed', shortLabel: 'Feed', icon: 'forum' },
+  // Money in and out: supplier bills (out) and customer payments (in).
+  // Admin-only: amounts and suppliers are not for the whole shop, and every
+  // /api/bills and /api/payments route refuses other roles anyway.
+  { id: 'cash-flow', label: 'Cash Flow', shortLabel: 'Cash Flow', icon: 'account_balance_wallet', adminOnly: true },
 ];
 
 export const WORKSPACE_SECTION_IDS = WORKSPACE_SECTIONS.map((s) => s.id);
+
+/** The sections a role may open — the one place the admin-only rule lives. */
+export function sectionsForRole(role) {
+  return WORKSPACE_SECTIONS.filter((s) => !s.adminOnly || role === 'admin');
+}
+
+export function sectionIdsForRole(role) {
+  return sectionsForRole(role).map((s) => s.id);
+}
 
 // Deterministic avatar backgrounds — picked by user-id hash so each person
 // keeps their colour everywhere without storing anything.

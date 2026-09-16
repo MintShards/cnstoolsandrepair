@@ -36,6 +36,22 @@ CUSTOMER_FIELD_LABELS = {
     "customer_notes": "Notes", "source": "Source",
 }
 
+BILL_FIELD_LABELS = {
+    "supplier_name": "Supplier", "vendor_invoice_number": "Supplier invoice #",
+    "category": "Category", "bill_date": "Bill date", "due_date": "Due date",
+    "paid_date": "Paid date", "payment_method": "Payment method",
+    "payment_reference": "Payment reference", "subtotal": "Subtotal", "gst": "GST",
+    "pst": "PST", "total": "Total", "currency": "Currency",
+    "zoho_bill_number": "Zoho bill #", "notes": "Notes", "lines": "Lines",
+}
+
+PAYMENT_FIELD_LABELS = {
+    "customer_name": "Customer", "request_number": "Work order",
+    "zoho_invoice_number": "Zoho invoice #", "amount": "Amount", "currency": "Currency",
+    "received_date": "Received", "payment_method": "Payment method",
+    "payment_reference": "Payment reference", "notes": "Notes",
+}
+
 
 def actor_ref(user) -> dict:
     """Snapshot of the acting user for history entries and the activity log."""
@@ -142,9 +158,18 @@ def diff_customer(old: dict, new_fields: dict) -> list:
     return diff_fields(old, new_fields, CUSTOMER_FIELD_LABELS)
 
 
+def diff_bill(old: dict, new_fields: dict) -> list:
+    return diff_fields(old, new_fields, BILL_FIELD_LABELS)
+
+
+def diff_payment(old: dict, new_fields: dict) -> list:
+    return diff_fields(old, new_fields, PAYMENT_FIELD_LABELS)
+
+
 async def record_activity(db, *, kind: str, actor: Optional[dict], summary: str,
                           details: Optional[list] = None, job: Optional[dict] = None,
-                          tool: Optional[dict] = None, customer: Optional[dict] = None) -> None:
+                          tool: Optional[dict] = None, customer: Optional[dict] = None,
+                          bill: Optional[dict] = None, payment: Optional[dict] = None) -> None:
     """Best effort: an activity write must never fail the request it describes."""
     doc = {
         "ts": datetime.utcnow(),
@@ -158,6 +183,10 @@ async def record_activity(db, *, kind: str, actor: Optional[dict], summary: str,
         "tool_label": tool_label(tool) if tool else None,
         "customer_id": str(customer["_id"]) if customer is not None and customer.get("_id") is not None else None,
         "customer_name": customer_display(customer) if customer else None,
+        "bill_id": str(bill["_id"]) if bill is not None and bill.get("_id") is not None else None,
+        "bill_number": bill.get("bill_number") if bill else None,
+        "payment_id": str(payment["_id"]) if payment is not None and payment.get("_id") is not None else None,
+        "payment_number": payment.get("payment_number") if payment else None,
     }
     try:
         await db.activity_log.insert_one(doc)

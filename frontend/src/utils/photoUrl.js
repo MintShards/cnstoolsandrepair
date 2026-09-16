@@ -6,3 +6,9 @@
 // brand logos) do NOT go through here.
 export const customerPhotoUrl = (photo) =>
   `/api/photos/view?src=${encodeURIComponent(photo)}`;
+
+// Bill attachments (supplier receipts) are admin-only, so they go through the
+// bill-scoped viewer instead of the staff-wide photo endpoint. Same 302-to-
+// presigned mechanics; the route also checks the file belongs to that bill.
+export const billAttachmentUrl = (billId, url) =>
+  `/api/bills/${billId}/attachments/view?url=${encodeURIComponent(url)}`;

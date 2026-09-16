@@ -89,6 +89,62 @@ async def get_next_work_order_number(year: int = None) -> str:
     return f"WO-{year}-{seq:04d}"
 
 
+async def get_next_bill_number(year: int = None) -> str:
+    """
+    Generate next supplier-bill number in format BILL-YYYY-XXXX
+    Used by the Workspace Bills section. Separate counter from REQ / WO / PQ.
+
+    Args:
+        year: Year for the bill (defaults to current year)
+
+    Returns:
+        Bill number string like "BILL-2026-0001"
+    """
+    if year is None:
+        year = datetime.utcnow().year
+
+    db = get_database()
+    counter_id = f"bill_{year}"
+
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+
+    seq = result["seq"]
+    return f"BILL-{year}-{seq:04d}"
+
+
+async def get_next_payment_number(year: int = None) -> str:
+    """
+    Generate next customer-payment number in format PAY-YYYY-XXXX
+    Used by the Workspace Cash Flow section (money in). Separate counter.
+
+    Args:
+        year: Year for the payment (defaults to current year)
+
+    Returns:
+        Payment number string like "PAY-2026-0001"
+    """
+    if year is None:
+        year = datetime.utcnow().year
+
+    db = get_database()
+    counter_id = f"payment_{year}"
+
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+
+    seq = result["seq"]
+    return f"PAY-{year}-{seq:04d}"
+
+
 async def get_next_product_quote_number(year: int = None) -> str:
     """
     Generate next product quote number in format PQ-YYYY-XXXX

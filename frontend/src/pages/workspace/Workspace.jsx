@@ -1,17 +1,18 @@
 import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { authAPI, tasksAPI, messagesAPI, staffAPI, repairsAPI } from '../../services/api';
+import { authAPI, tasksAPI, messagesAPI, staffAPI, repairsAPI, billsAPI } from '../../services/api';
 import usePollWhileVisible from '../../utils/usePollWhileVisible';
 import ThemeToggle from '../../components/layout/ThemeToggle';
 import { ToastProvider } from '../../components/admin/shared/ToastProvider';
 import WorkspaceSidebar from '../../components/workspace/WorkspaceSidebar';
-import { WORKSPACE_SECTION_IDS } from '../../constants/workspace';
+import { WORKSPACE_SECTIONS, WORKSPACE_SECTION_IDS } from '../../constants/workspace';
 import { useWorkspacePwa } from '../../utils/push';
 
 // Sections load on first visit so opening the hub doesn't download everything
 const TasksSection = lazy(() => import('../../components/workspace/TasksSection'));
 const TaskCalendar = lazy(() => import('../../components/workspace/TaskCalendar'));
 const FeedSection = lazy(() => import('../../components/workspace/FeedSection'));
+const CashFlowSection = lazy(() => import('../../components/workspace/CashFlowSection'));
 const ChangePasswordModal = lazy(() => import('../../components/workspace/ChangePasswordModal'));
 const AccountModal = lazy(() => import('../../components/workspace/AccountModal'));
 
@@ -42,13 +43,20 @@ export default function Workspace() {
   // link — open-in-new-tab and back/forward work, same as the tracker.
   const [searchParams] = useSearchParams();
   const sectionParam = searchParams.get('section');
-  const activeSection = WORKSPACE_SECTION_IDS.includes(sectionParam) ? sectionParam : 'my-tasks';
-
   const [currentUser, setCurrentUser] = useState(null);
+  const isAdmin = currentUser?.role === 'admin';
+  // Admin-only sections wait for the role instead of guessing: null renders
+  // the spinner until getMe() answers, and a non-admin deep link lands on
+  // My Tasks (the API refuses them anyway; this just avoids a broken screen).
+  const requested = WORKSPACE_SECTION_IDS.includes(sectionParam) ? sectionParam : 'my-tasks';
+  const requestedAdminOnly = Boolean(WORKSPACE_SECTIONS.find((s) => s.id === requested)?.adminOnly);
+  let activeSection = requested;
+  if (requestedAdminOnly) activeSection = currentUser ? (isAdmin ? requested : 'my-tasks') : null;
+
   const [staff, setStaff] = useState([]);
   const [counts, setCounts] = useState({
     myOpen: null, myOverdue: 0, dueToday: null, allOpen: null, unread: null,
-    attention: null, stuck: 0,
+    attention: null, stuck: 0, billsUnpaid: null, billsOverdue: 0,
   });
   // Bumped when the browser tab regains focus; sections refetch on change.
   const [focusTick, setFocusTick] = useState(0);
@@ -59,11 +67,13 @@ export default function Workspace() {
 
   const refreshCounts = useCallback(async () => {
     try {
-      const [taskSummary, messageSummary, attention] = await Promise.all([
+      const [taskSummary, messageSummary, attention, bills] = await Promise.all([
         tasksAPI.summary(),
         messagesAPI.summary(),
         // Counts only — the All Tasks panel fetches its own item lists.
         repairsAPI.attention().catch(() => null),
+        // Cash Flow badge: admin only, and never worth failing the others.
+        isAdmin ? billsAPI.summary().catch(() => null) : Promise.resolve(null),
       ]);
       setCounts({
         myOpen: taskSummary.my_open,
@@ -73,11 +83,13 @@ export default function Workspace() {
         unread: messageSummary.unread,
         attention: attention ? attention.total : null,
         stuck: attention ? attention.stuck_count : 0,
+        billsUnpaid: bills ? bills.unpaid_count : null,
+        billsOverdue: bills ? bills.overdue_count : 0,
       });
     } catch {
       // Silently fail — counts are non-critical
     }
-  }, []);
+  }, [isAdmin]);
 
   const loadStaff = useCallback(async () => {
     try {
@@ -95,8 +107,13 @@ export default function Workspace() {
       });
     }).catch(() => {});
     loadStaff();
+  }, [loadStaff]);
+
+  // Separate effect: refreshCounts changes identity once the role is known
+  // (admins add the bills summary), and that must not re-run getMe().
+  useEffect(() => {
     refreshCounts();
-  }, [refreshCounts, loadStaff]);
+  }, [refreshCounts]);
 
   usePollWhileVisible(refreshCounts, 60000);
 
@@ -146,7 +163,9 @@ export default function Workspace() {
                   <h1 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight truncate">
                     Workspace
                   </h1>
-                  <p className="text-xs text-slate-500 hidden sm:block leading-tight">Tasks, Shop Feed &amp; Calendar</p>
+                  {/* lg only: between sm and lg the action buttons squeeze the
+                      title block until this line wraps word-by-word. */}
+                  <p className="text-xs text-slate-500 hidden lg:block leading-tight whitespace-nowrap">Tasks, Shop Feed &amp; Calendar</p>
                 </div>
               </div>
               {/* Right: actions */}
@@ -205,6 +224,8 @@ export default function Workspace() {
                   )}
                   {activeSection === 'calendar' && <TaskCalendar {...sectionProps} />}
                   {activeSection === 'feed' && <FeedSection {...sectionProps} />}
+                  {activeSection === 'cash-flow' && <CashFlowSection {...sectionProps} />}
+                  {activeSection === null && <SectionLoading />}
                   {showAccount && (
                     <AccountModal
                       currentUser={currentUser}
