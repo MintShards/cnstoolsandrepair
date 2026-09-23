@@ -558,7 +558,7 @@ export default function UserGuide({ onClose }) {
                     'Set Source to "Drop-off". Confirm the customer\'s information looks correct.',
                     'Click Add Tool. Fill in: Tool Type, Brand, Model Number. Add Serial Number, Priority, and any notes in the Remarks field.',
                     'Click Save. The job is created with status set to Received automatically.',
-                    'After you inspect the tool: open the job, change the status to Diagnosed. Add a note in Remarks describing what you found.',
+                    'After you inspect the tool: open the job, change the status to Diagnosed. Add what you found as a numbered Diagnosis on the tool, and the Solution once it is done.',
                     'Prepare a quote: create it in Zoho Books first (see the box below), then change status to Quoted. The tracker asks for the Zoho quote number (e.g. QT-000123) in that step and will not accept Quoted without it. Note the estimated cost in Remarks.',
                   ].map((step, i) => (
                     <li key={i} className="flex gap-3">
@@ -1023,7 +1023,7 @@ export default function UserGuide({ onClose }) {
                   {[
                     'Open the repair job.',
                     'Change the status to Declined.',
-                    'If the customer wants to discuss a lower price: change the status back to Diagnosed, update your remarks, then re-quote.',
+                    'If the customer wants to discuss a lower price: change the status back to Diagnosed, update the diagnosis, then re-quote.',
                     'If the job is completely finished: change the status to Closed to file it away.',
                   ]}
                 </HowTo>
@@ -1228,7 +1228,8 @@ export default function UserGuide({ onClose }) {
                   { term: 'Pending (repair request)', def: 'A repair request that arrived from the website and has not been reviewed yet.' },
                   { term: 'Pop-up window', def: 'A small window that appears on top of the page when you click a button like "New Customer" or "Add Part". Fill it in and click Save or Close.' },
                   { term: 'Priority', def: 'How urgent a job is: Standard (normal), Rush (2–3 days), or Urgent (same/next day).' },
-                  { term: 'Remarks', def: 'A text field on a tool where technicians write notes about the problem, diagnosis, or any special instructions.' },
+                  { term: 'Reported problem', def: "The customer's own description of what is wrong with a tool. Online requests fill it in automatically." },
+                  { term: 'Diagnosis & solution', def: 'The numbered findings on a tool: what the technician diagnosed and, once done, what fixed it. Printed on the work order and the tool tag.' },
                   { term: 'Repair Request', def: 'A message sent by a customer through the public website form at /repair-request. Appears in the Repair Requests tab.' },
                   { term: 'Request Number', def: 'A unique ID for each repair job, in the format REQ-2026-0001. Use this number when talking to customers about their job.' },
                   { term: 'Session', def: 'The period of time you are logged in. Lasts 8 hours, then you are automatically signed out.' },

@@ -87,6 +87,18 @@ async def get_current_user(
     return User(**user_doc)
 
 
+async def get_optional_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[User]:
+    """The signed-in user when a valid token is present, else None. For public
+    routes that show more to an admin; never raises."""
+    try:
+        return await get_current_user(request, credentials)
+    except HTTPException:
+        return None
+
+
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """
     Dependency to require admin role.

@@ -249,6 +249,15 @@ class BusinessSettingsUpdate(BaseModel):
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
     stale_days: int = Field(default=3, ge=1, le=30, alias="staleDays")  # Configurable stale threshold
     default_markup_percentage: float = Field(default=30.0, ge=0, le=500, alias="defaultMarkupPercentage")  # Default parts markup %
+    # What an hour of technician time costs the shop (wages + burden). Job
+    # accounting multiplies it by each tool's labour hours unless the tool
+    # carries its own labour_cost_rate. None = labour cost not tracked.
+    labour_cost_rate: Optional[float] = Field(default=None, ge=0, le=1000, alias="labourCostRate")
+    # Sales tax the shop charges on repair invoices (BC: GST 5 %, PST 7 %).
+    # Job accounting adds them to pre-tax revenue to get the invoice total
+    # that customer payments are measured against.
+    gst_rate: float = Field(default=5.0, ge=0, le=100, alias="gstRate")
+    pst_rate: float = Field(default=7.0, ge=0, le=100, alias="pstRate")
     sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
     work_order_email_template: Optional[WorkOrderEmailTemplateModel] = Field(default_factory=WorkOrderEmailTemplateModel, alias="workOrderEmailTemplate")
 
@@ -329,6 +338,9 @@ class BusinessSettingsResponse(BaseModel):
     social_media: List[SocialMediaItemModel] = Field(default_factory=list, alias="socialMedia")  # New array field
     stale_days: int = Field(default=3, alias="staleDays")
     default_markup_percentage: float = Field(default=30.0, alias="defaultMarkupPercentage")
+    labour_cost_rate: Optional[float] = Field(default=None, alias="labourCostRate")
+    gst_rate: float = Field(default=5.0, alias="gstRate")
+    pst_rate: float = Field(default=7.0, alias="pstRate")
     sourcing_email_template: Optional[SourcingEmailTemplateModel] = Field(default_factory=SourcingEmailTemplateModel, alias="sourcingEmailTemplate")
     work_order_email_template: Optional[WorkOrderEmailTemplateModel] = Field(default_factory=WorkOrderEmailTemplateModel, alias="workOrderEmailTemplate")
 

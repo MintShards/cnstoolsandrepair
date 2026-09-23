@@ -126,11 +126,13 @@ export default function PaymentFormModal({ payment, defaults, onSaved, onDeleted
           <div>
             <div className="flex items-center justify-between gap-3 mb-1.5">
               <label htmlFor={fid('amount')} className={`${LABEL_CLS} mb-0`}>Amount received *</label>
-              <div className="flex gap-1" role="group" aria-label="Currency">
-                {CURRENCIES.map((c) => (
-                  <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c} className={pillCls(currency === c, { compact: true })}>{c}</button>
-                ))}
-              </div>
+              {CURRENCIES.length > 1 && (
+                <div className="flex gap-1" role="group" aria-label="Currency">
+                  {CURRENCIES.map((c) => (
+                    <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c} className={pillCls(currency === c, { compact: true })}>{c}</button>
+                  ))}
+                </div>
+              )}
             </div>
             <input id={fid('amount')} type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" required autoFocus={!editing} className={AMOUNT_INPUT_CLS} />
           </div>

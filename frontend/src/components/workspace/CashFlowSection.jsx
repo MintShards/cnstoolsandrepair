@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { billsAPI, paymentsAPI } from '../../services/api';
 import TabHeader from '../sales/TabHeader';
 import { BTN_PRIMARY } from '../sales/ui';
-import { formatMoney, totalsByCurrency, round2 } from '../../utils/money';
+import { formatMoney, round2 } from '../../utils/money';
 import BillsView from './BillsView';
 import PaymentsView from './PaymentsView';
 
@@ -18,28 +18,15 @@ function monthLabel(ym) {
   return new Date(+y, +m - 1, 1).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
 }
 
+// The API returns per-currency maps; the shop works in CAD only, so the
+// tiles read the CAD figure and nothing else.
 function netByCurrency(inTotals, outTotals) {
-  const currencies = new Set([...Object.keys(inTotals || {}), ...Object.keys(outTotals || {})]);
-  const net = {};
-  for (const c of currencies) net[c] = round2((inTotals?.[c] || 0) - (outTotals?.[c] || 0));
-  return net;
+  return { CAD: round2((inTotals?.CAD || 0) - (outTotals?.CAD || 0)) };
 }
 
-/** The CAD figure large, any USD line small underneath — never a mixed sum. */
 function MoneyStack({ totals, loaded, tone = '' }) {
   if (!loaded) return <span className="text-slate-400">—</span>;
-  const parts = totalsByCurrency(totals);
-  if (parts.length === 0) return <span className={tone}>{formatMoney(0)}</span>;
-  return (
-    <>
-      <span className={tone}>{formatMoney(parts[0].amount, parts[0].currency)}</span>
-      {parts.slice(1).map((p) => (
-        <span key={p.currency} className="block text-xs font-bold text-slate-500 dark:text-slate-400">
-          {p.amount < 0 ? '−' : '+'} {formatMoney(Math.abs(p.amount), p.currency)}
-        </span>
-      ))}
-    </>
-  );
+  return <span className={tone}>{formatMoney(totals?.CAD ?? 0)}</span>;
 }
 
 /**

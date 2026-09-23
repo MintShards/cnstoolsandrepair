@@ -39,7 +39,7 @@ from app.models.bill import (
 )
 from app.routers.photos import stored_file_redirect
 from app.routers.tasks import _pacific_today_ymd, _resolve_repair
-from app.services.activity_service import actor_ref, diff_bill, record_activity
+from app.services.activity_service import actor_ref, diff_bill, record_activity, tool_label
 from app.services.file_service import delete_file, save_upload_file
 from app.utils.helpers import convert_objectid_to_str
 
@@ -119,10 +119,11 @@ async def _resolve_supplier(db, supplier_id: Optional[str], supplier_name: Optio
 
 
 async def _prepare_lines(db, lines: List[BillLine]) -> list:
-    """Snapshot request numbers for linked work orders and compute line totals
-    server-side — neither is ever trusted from the client."""
+    """Snapshot request numbers (and tool labels) for linked work orders and
+    compute line totals server-side — none of it is trusted from the client."""
     out = []
     resolved: dict = {}
+    tools_by_job: dict = {}
     for line in lines:
         d = line.model_dump()
         rid = d.get("repair_id")
@@ -133,6 +134,21 @@ async def _prepare_lines(db, lines: List[BillLine]) -> list:
         else:
             d["repair_id"] = None
             d["request_number"] = None
+        # A tool link only means something on a linked work order, and the
+        # tool has to be on that job — this is what per-tool profit hangs on.
+        tid = d.get("tool_id") if d["repair_id"] else None
+        if tid:
+            if rid not in tools_by_job:
+                job = await db.repairs.find_one({"_id": ObjectId(rid)}, {"tools": 1})
+                tools_by_job[rid] = {t.get("tool_id"): tool_label(t) for t in (job or {}).get("tools", [])}
+            if tid not in tools_by_job[rid]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"That tool is not on work order {d['request_number']}",
+                )
+            d["tool_id"], d["tool_label"] = tid, tools_by_job[rid][tid]
+        else:
+            d["tool_id"], d["tool_label"] = None, None
         unit = d.get("unit_price")
         d["line_total"] = round((d.get("quantity") or 1) * unit, 2) if unit is not None else None
         out.append(d)

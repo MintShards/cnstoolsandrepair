@@ -54,7 +54,21 @@ export const PAYMENT_METHODS = {
 export const PAYMENT_METHOD_LIST = Object.entries(PAYMENT_METHODS)
   .map(([value, label]) => ({ value, label }));
 
-export const CURRENCIES = ['CAD', 'USD'];
+// CAD only for now. The backend still accepts USD, and the forms grow a
+// currency toggle again the moment a second entry is added here.
+export const CURRENCIES = ['CAD'];
+
+// What a bill line paid for: 'part' feeds a work order's parts cost, the
+// rest are its additional expenses (freight, sublet machining, anything else).
+export const BILL_LINE_KINDS = {
+  part: 'Part',
+  shipping: 'Shipping & freight',
+  outsourced: 'Outsourced work',
+  other: 'Other',
+};
+
+export const BILL_LINE_KIND_LIST = Object.entries(BILL_LINE_KINDS)
+  .map(([value, label]) => ({ value, label }));
 
 // BC sales taxes, for the "Calculate from subtotal" helper only — the bill
 // keeps whatever the supplier actually charged.

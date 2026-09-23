@@ -21,6 +21,14 @@ BillCreateStatus = Literal["unpaid", "paid"]
 BillCategory = Literal["parts", "consumables", "tools_equipment", "services", "other"]
 PaymentMethod = Literal["card", "e_transfer", "cheque", "cash", "account"]
 Currency = Literal["CAD", "USD"]
+# What a bill line paid for. "part" feeds a work order's parts cost; the rest
+# are its additional expenses (freight, sublet machining, anything else).
+BillLineKind = Literal["part", "shipping", "outsourced", "other"]
+
+BILL_LINE_KIND_LABELS = {
+    "part": "Part", "shipping": "Shipping & freight",
+    "outsourced": "Outsourced work", "other": "Other",
+}
 
 BILL_STATUS_LABELS = {
     "unpaid": "Unpaid", "paid": "Paid", "disputed": "Disputed", "void": "Void",
@@ -78,10 +86,20 @@ class BillLine(BaseModel):
     line_total: Optional[float] = None
     repair_id: Optional[str] = None
     request_number: Optional[str] = None  # snapshot, set by the router
+    kind: BillLineKind = "part"
+    # Which tool on that work order the line was for; None = shared by the
+    # whole job. tool_label is a snapshot set by the router.
+    tool_id: Optional[str] = None
+    tool_label: Optional[str] = None
 
-    @field_validator("description", "part_number", "repair_id", "request_number", mode="before")
+    @field_validator("description", "part_number", "repair_id", "request_number",
+                     "tool_id", "tool_label", mode="before")
     def strip_andblank_to_none(cls, v):
         return blank_to_none(v)
+
+    @field_validator("kind", mode="before")
+    def default_kind(cls, v):
+        return blank_to_none(v) or "part"
 
     @field_validator("unit_price", "line_total", mode="before")
     def money(cls, v):

@@ -289,6 +289,77 @@ export default function RepairTrackerTab() {
               <span className="text-xs text-slate-400">%</span>
             </div>
           </div>
+          {/* Job accounting: what an hour of technician time costs the shop.
+              Saved on blur (a decimal rate mid-typing shouldn't hit the API). */}
+          <div className="flex items-center gap-3 flex-1 p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+            <span className="material-symbols-outlined text-sky-400 text-xl flex-shrink-0">engineering</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white">Labour Cost Per Hour</p>
+              <p className="text-[11px] text-slate-400">What technician time costs the shop (wages and burden). Job accounting multiplies it by each tool’s labour hours; a tool can carry its own rate.</p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className="text-xs text-slate-400">$</span>
+              <input
+                type="number" min="0" max="1000" step="0.5"
+                key={settings?.labourCostRate ?? 'unset'}
+                defaultValue={settings?.labourCostRate ?? ''}
+                placeholder="0"
+                onBlur={async (e) => {
+                  const raw = e.target.value.trim();
+                  const val = raw === '' ? null : Math.max(0, Math.min(1000, parseFloat(raw) || 0));
+                  if ((settings?.labourCostRate ?? null) === val) return;
+                  setSavingSettings(true);
+                  try {
+                    await settingsAPI.update({ ...settings, labourCostRate: val });
+                    await refreshSettings();
+                  } catch { showNotification('Failed to save setting.', 'error'); }
+                  finally { setSavingSettings(false); }
+                }}
+                disabled={savingSettings}
+                className="w-20 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-sm text-white text-center focus:border-primary focus:outline-none"
+              />
+              <span className="text-xs text-slate-400">/h</span>
+            </div>
+          </div>
+        </div>
+        {/* Sales tax on repair invoices. Job accounting adds it to pre-tax
+            revenue to get the invoice total that customer payments are
+            measured against; a tool can be marked PST or tax exempt in its
+            edit form. Saved on blur like the labour rate. */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {[
+            { key: 'gstRate', label: 'GST Rate', fallback: 5, hint: 'Federal sales tax on every repair invoice.' },
+            { key: 'pstRate', label: 'PST Rate', fallback: 7, hint: 'BC sales tax on parts and repair labour. Tools for PST-exempt customers are marked in their edit form.' },
+          ].map(({ key, label, fallback, hint }) => (
+            <div key={key} className="flex items-center gap-3 flex-1 p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+              <span className="material-symbols-outlined text-violet-400 text-xl flex-shrink-0">percent</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white">{label}</p>
+                <p className="text-[11px] text-slate-400">{hint}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <input
+                  type="number" min="0" max="100" step="0.5"
+                  key={settings?.[key] ?? 'unset'}
+                  defaultValue={settings?.[key] ?? fallback}
+                  onBlur={async (e) => {
+                    const raw = e.target.value.trim();
+                    const val = raw === '' ? fallback : Math.max(0, Math.min(100, parseFloat(raw) || 0));
+                    if ((settings?.[key] ?? fallback) === val) return;
+                    setSavingSettings(true);
+                    try {
+                      await settingsAPI.update({ ...settings, [key]: val });
+                      await refreshSettings();
+                    } catch { showNotification('Failed to save setting.', 'error'); }
+                    finally { setSavingSettings(false); }
+                  }}
+                  disabled={savingSettings}
+                  className="w-16 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-sm text-white text-center focus:border-primary focus:outline-none"
+                />
+                <span className="text-xs text-slate-400">%</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
@@ -10,7 +12,8 @@ from app.models.settings import (
     WorkOrderEmailTemplateModel,
 )
 from app.utils.helpers import convert_objectid_to_str
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import require_admin, get_optional_user
+from app.models.auth import User
 
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -94,6 +97,9 @@ DEFAULT_SETTINGS = {
     },
     "staleDays": 3,
     "defaultMarkupPercentage": 30.0,
+    "labourCostRate": None,
+    "gstRate": 5.0,
+    "pstRate": 7.0,
     "sourcingEmailTemplate": {
         "defaultSubject": "Parts Pricing Request - CNS Tool Repair",
         "greeting": "Hi",
@@ -126,8 +132,20 @@ DEFAULT_SETTINGS = {
 }
 
 
+# The settings are public (the website reads them), but what an hour of
+# technician time costs the shop is not: only an admin gets that figure.
+# Everyone else sees it as null, and the frontend refetches after login.
+ADMIN_ONLY_KEYS = ("labourCostRate", "labour_cost_rate")
+
+
+def _for_viewer(settings: dict, viewer: Optional[User]) -> dict:
+    if viewer is not None and viewer.role == "admin":
+        return settings
+    return {k: v for k, v in settings.items() if k not in ADMIN_ONLY_KEYS}
+
+
 @router.get("/", response_model=BusinessSettingsResponse)
-async def get_settings():
+async def get_settings(viewer: Optional[User] = Depends(get_optional_user)):
     """
     Public endpoint to fetch current business settings.
     Returns default settings if none exist in database.
@@ -137,10 +155,10 @@ async def get_settings():
     settings = await db.business_settings.find_one({"active": True})
 
     if not settings:
-        return BusinessSettingsResponse(**DEFAULT_SETTINGS)
+        return BusinessSettingsResponse(**_for_viewer(DEFAULT_SETTINGS, viewer))
 
     settings = convert_objectid_to_str(settings)
-    return BusinessSettingsResponse(**settings)
+    return BusinessSettingsResponse(**_for_viewer(settings, viewer))
 
 
 @router.put("/", response_model=BusinessSettingsResponse, dependencies=[Depends(require_admin)])

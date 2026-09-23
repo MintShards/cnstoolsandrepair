@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { repairsAPI, customersAPI, partsLibraryAPI, suppliersAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, partsLibraryAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import useCurrentUser from '../../../utils/useCurrentUser';
 import WorkOrderMoney from './WorkOrderMoney';
-import BillFormModal from '../../workspace/BillFormModal';
+import ToolSubtotal from './ToolSubtotal';
+import useJobMoney from '../../../utils/useJobMoney';
+import { jobAccounting, toolCharges, excludedReason, TAX_STATUSES } from '../../../utils/jobAccounting';
+import AddExpenseModal from './AddExpenseModal';
+import AddExtraChargeModal from './AddExtraChargeModal';
+import ToolExtraCharges from './ToolExtraCharges';
 import PaymentFormModal from '../../workspace/PaymentFormModal';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
@@ -84,61 +89,39 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [editingToolId, setEditingToolId] = useState(null);
   const navigate = useNavigate();
 
-  // Cash Flow hooks (admin only): the job's money block, and logging a bill
-  // or a payment prefilled from this work order. Bills seed their lines from
-  // the parts a supplier bill can exist for (ordered / received / installed).
+  // Job accounting (admin only): the block at the top, each tool's subtotal,
+  // and the two things logged from here — an additional expense on the job
+  // (saved as a Cash Flow bill) and a customer payment. Supplier bills for
+  // parts are logged in the Workspace's Cash Flow section, where each line
+  // points at its work order and tool.
   const { isAdmin } = useCurrentUser();
-  const [billSeed, setBillSeed] = useState(null);
-  const [paymentSeed, setPaymentSeed] = useState(null);
-  const [moneyTick, setMoneyTick] = useState(0);
-  const [suppliers, setSuppliers] = useState([]);
-  const loadSuppliers = async () => {
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  // null = closed; '' = open with no tool preselected; a tool_id = that tool.
+  const [chargeFor, setChargeFor] = useState(null);
+  // Extra charges live on the tool: removing one is a tool update.
+  const removeExtraCharge = async (toolId, index) => {
+    const tool = (job.tools || []).find((t) => t.tool_id === toolId);
+    if (!tool) return;
     try {
-      const list = await suppliersAPI.getAll();
-      setSuppliers(list);
-      return list;
-    } catch {
-      return [];
+      const updated = await repairsAPI.updateTool(job.id, toolId, {
+        extra_charges: (tool.extra_charges || [])
+          .filter((_, i) => i !== index)
+          .map((c) => ({ description: c.description, amount: c.amount })),
+      });
+      onJobUpdated(updated);
+      showToast('success', 'Extra charge removed');
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to remove the charge'));
     }
   };
-  // Ordered online, the invoice arrives with the order; received or installed,
-  // it came with the parts. Shop stock (in_stock) was paid for long ago.
-  const billableParts = (tool) => (tool.parts || [])
-    .filter((p) => p.name?.trim() && ['ordered', 'received', 'installed'].includes(p.status));
-  const openBillFor = async (tool) => {
-    const list = suppliers.length ? suppliers : await loadSuppliers();
-    const all = tool ? billableParts(tool) : (job.tools || []).flatMap(billableParts);
-    // A bill comes from one supplier: the most-named one on those parts
-    // becomes the bill's supplier — linked to the directory when the name
-    // matches, a one-off otherwise — and only its parts (plus any with no
-    // supplier named) become lines.
-    const tally = {};
-    all.forEach((p) => { const n = (p.supplier || '').trim(); if (n) tally[n] = (tally[n] || 0) + 1; });
-    const topName = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0] || '';
-    const match = topName ? list.find((s) => s.name.toLowerCase() === topName.toLowerCase()) : null;
-    const parts = topName
-      ? all.filter((p) => { const n = (p.supplier || '').trim().toLowerCase(); return !n || n === topName.toLowerCase(); })
-      : all;
-    const link = { repair_id: job.id, request_number: job.request_number };
-    setBillSeed({
-      supplier: !topName ? null : (match
-        ? { supplier_id: match.id, supplier_name: match.name }
-        : { supplier_id: null, supplier_name: topName }),
-      category: 'parts',
-      // Prices stay blank on purpose: the tracker's part price is what the
-      // customer is charged, not what the supplier billed. With no parts to
-      // list, one linked line still ties the bill to this work order.
-      lines: parts.length
-        ? parts.map((p) => ({
-            description: p.name.trim(),
-            part_number: p.part_number || '',
-            quantity: p.quantity || 1,
-            unit_price: null,
-            ...link,
-          }))
-        : [{ description: `Parts for ${job.request_number}`, quantity: 1, unit_price: null, ...link }],
-    });
-  };
+  const [paymentSeed, setPaymentSeed] = useState(null);
+  const [moneyTick, setMoneyTick] = useState(0);
+  // One fetch of the job's bills and payments (admins only), feeding the
+  // accounting block and each tool's subtotal.
+  const money = useJobMoney(job.id, isAdmin, moneyTick);
+  const acct = isAdmin && money.loaded
+    ? jobAccounting(job, money.bills, money.payments, { labourCostRate: settings?.labourCostRate, gstRate: settings?.gstRate, pstRate: settings?.pstRate })
+    : null;
   const openPaymentFor = () => {
     const cust = jobCustomer || job;
     setPaymentSeed({
@@ -312,12 +295,12 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       if (updateAllOpen && !updateAllApplying) { setUpdateAllOpen(false); return; }
       if (editingJob) { setEditingJob(false); return; }
       if (emailOpen) return; // email modal manages its own closing
-      if (billSeed || paymentSeed) return; // Cash Flow forms close themselves (useEscapeClose)
+      if (paymentSeed || expenseOpen || chargeFor !== null) return; // those modals close themselves (useEscapeClose)
       onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, billSeed, paymentSeed, onClose]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
   const now = new Date();
@@ -511,9 +494,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       serial_number: (tool.serial_number || '').toUpperCase(),
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
+      diagnostics: (tool.diagnostics || []).map((d) => ({ diagnosis: d.diagnosis || '', solution: d.solution || '' })),
       parts,
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
+      extra_charges: (tool.extra_charges || []).map((c) => ({ description: c.description || '', amount: c.amount ?? '' })),
+      invoiced_amount: tool.invoiced_amount ?? '',
+      labour_cost_rate: tool.labour_cost_rate ?? '',
+      tax_status: tool.tax_status || 'taxable',
       priority: tool.priority || 'standard',
       warranty: tool.warranty || false,
       zoho_quote_number: tool.zoho_quote_number || '',
@@ -577,8 +565,12 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         quantity: parseInt(toolEditForm.quantity) || 1,
         labour_hours: toolEditForm.labour_hours ? parseFloat(toolEditForm.labour_hours) : null,
         hourly_rate: toolEditForm.hourly_rate ? parseFloat(toolEditForm.hourly_rate) : null,
+        extra_charges: (toolEditForm.extra_charges || []).filter((c) => c.description?.trim()).map((c) => ({ description: c.description.trim(), amount: parseFloat(c.amount) || 0 })),
+        invoiced_amount: toolEditForm.invoiced_amount !== '' && toolEditForm.invoiced_amount != null ? parseFloat(toolEditForm.invoiced_amount) : null,
+        labour_cost_rate: toolEditForm.labour_cost_rate !== '' && toolEditForm.labour_cost_rate != null ? parseFloat(toolEditForm.labour_cost_rate) : null,
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
+        diagnostics: (toolEditForm.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null })),
         parts: (toolEditForm.parts || []).filter(p => p.name?.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_quote_number: toolEditForm.zoho_quote_number || null,
         zoho_invoice_number: toolEditForm.zoho_invoice_number || null,
@@ -619,8 +611,12 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         quantity: parseInt(addToolForm.quantity) || 1,
         labour_hours: addToolForm.labour_hours ? parseFloat(addToolForm.labour_hours) : null,
         hourly_rate: addToolForm.hourly_rate ? parseFloat(addToolForm.hourly_rate) : null,
+        extra_charges: (addToolForm.extra_charges || []).filter((c) => c.description?.trim()).map((c) => ({ description: c.description.trim(), amount: parseFloat(c.amount) || 0 })),
+        invoiced_amount: addToolForm.invoiced_amount !== '' && addToolForm.invoiced_amount != null ? parseFloat(addToolForm.invoiced_amount) : null,
+        labour_cost_rate: addToolForm.labour_cost_rate !== '' && addToolForm.labour_cost_rate != null ? parseFloat(addToolForm.labour_cost_rate) : null,
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
+        diagnostics: (addToolForm.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null })),
         parts: (addToolForm.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_quote_number: addToolForm.zoho_quote_number || null,
         zoho_invoice_number: addToolForm.zoho_invoice_number || null,
@@ -840,12 +836,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 )}
               </div>
 
-              {/* Money on this job — admin only, live from Cash Flow */}
+              {/* Job accounting — admin only: tool charges + Cash Flow */}
               {isAdmin && (
                 <WorkOrderMoney
-                  job={job}
-                  refreshTick={moneyTick}
-                  onLogBill={() => openBillFor(null)}
+                  money={money}
+                  acct={acct}
+                  onAddCharge={() => setChargeFor('')}
+                  onAddExpense={() => setExpenseOpen(true)}
                   onLogPayment={openPaymentFor}
                 />
               )}
@@ -1229,16 +1226,38 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                       {/* Tool Details — 2-column grid: left (Remarks + Labour/Tech/Zoho), right (Parts wider) */}
                       <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-700/60">
                         <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 text-sm">
-                          {/* Left column — Remarks stacked above Labour/Tech/Zoho */}
+                          {/* Left column — the customer's reported problem, the numbered
+                              diagnosis & solution, then labour / technician / Zoho. */}
                           <div className="space-y-4">
-                            {/* Remarks */}
                             <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Remarks</span>
-                              <p className={`mt-1 leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'No remarks'}</p>
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Reported problem</span>
+                              <p className={`mt-1 leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'Nothing recorded'}</p>
                             </div>
-                            {/* Labour / Technician / Zoho */}
-                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40 space-y-2.5">
-                              <div>
+                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
+                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>
+                                Diagnosis &amp; solution{tool.diagnostics?.length > 0 && ` (${tool.diagnostics.length})`}
+                              </span>
+                              {tool.diagnostics?.length > 0 ? (
+                                <ol className="mt-1.5 space-y-2">
+                                  {tool.diagnostics.map((d, i) => (
+                                    <li key={i} className="flex gap-2">
+                                      <span className="flex-shrink-0 w-5 h-5 mt-px rounded-full bg-slate-200 dark:bg-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center">{i + 1}</span>
+                                      <span className="min-w-0">
+                                        <span className="block text-slate-800 dark:text-slate-100 font-medium leading-snug">{d.diagnosis}</span>
+                                        <span className={`block text-xs leading-snug mt-0.5 ${d.solution ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-600 italic'}`}>
+                                          {d.solution ? `Solution: ${d.solution}` : 'No solution yet'}
+                                        </span>
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              ) : (
+                                <p className="mt-1 text-slate-400 dark:text-slate-600 italic">No diagnosis yet</p>
+                              )}
+                            </div>
+                            {/* Labour / Technician / Zoho — two columns so the card stays short */}
+                            <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                              <div className="min-w-0">
                                 <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Labour</span>
                                 <p className={`mt-0.5 ${tool.labour_hours || tool.hourly_rate ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>
                                   {tool.labour_hours || tool.hourly_rate ? (
@@ -1252,17 +1271,21 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                   ) : 'Not set'}
                                 </p>
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Technician</span>
-                                <p className={`mt-0.5 ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.assigned_technician || 'Unassigned'}</p>
+                                <p className={`mt-0.5 truncate ${tool.assigned_technician ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`} title={tool.assigned_technician || undefined}>{tool.assigned_technician || 'Unassigned'}</p>
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Quote #</span>
-                                <p className={`mt-0.5 ${tool.zoho_quote_number ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_quote_number || 'None'}</p>
+                                <p className={`mt-0.5 truncate ${tool.zoho_quote_number ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`} title={tool.zoho_quote_number || undefined}>{tool.zoho_quote_number || 'None'}</p>
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Zoho Invoice #</span>
-                                <p className={`mt-0.5 ${tool.zoho_invoice_number ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.zoho_invoice_number || 'None'}</p>
+                                <p className={`mt-0.5 truncate ${tool.zoho_invoice_number ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`} title={tool.zoho_invoice_number || undefined}>{tool.zoho_invoice_number || 'None'}</p>
+                                {/* Only worth a line when it is not the usual GST + PST. */}
+                                {tool.tax_status && tool.tax_status !== 'taxable' && (
+                                  <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400 truncate">{TAX_STATUSES[tool.tax_status] || tool.tax_status}</p>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1270,18 +1293,6 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
-                              {/* Admin shortcut into Cash Flow: the ordered/received parts become the bill's lines. */}
-                              {isAdmin && billableParts(tool).length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => openBillFor(tool)}
-                                  title="Log the supplier bill for this tool's parts"
-                                  className="inline-flex items-center gap-1 px-2 py-1 -my-1 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-bold text-primary dark:text-blue-400 hover:bg-primary/10 transition-colors"
-                                >
-                                  <span className="material-symbols-outlined" style={{fontSize:'14px'}}>receipt_long</span>
-                                  Log bill
-                                </button>
-                              )}
                             </div>
                             {tool.parts && tool.parts.filter(p => p.name?.trim()).length > 0 ? (
                               <div className="mt-2 space-y-2">
@@ -1352,20 +1363,22 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                     )}
                                   </div>
                                 ) : null)}
-                                {(() => {
-                                  const total = tool.parts.filter(p => p.name?.trim() && (p.price != null && p.price !== '')).reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
-                                  return total > 0 ? (
-                                    <div className="flex justify-end pt-1.5 border-t border-slate-200 dark:border-slate-700/40">
-                                      <span className="text-sm text-slate-500">Parts total: <span className="text-base font-bold text-slate-900 dark:text-white">${total.toFixed(2)}</span></span>
-                                    </div>
-                                  ) : null;
-                                })()}
                               </div>
                             ) : (
                               <p className="mt-1 text-slate-400 dark:text-slate-600 italic">No parts</p>
                             )}
+                            {/* Extra charges sit with the parts: both are what the customer pays for this tool. */}
+                            <ToolExtraCharges tool={tool} onAdd={() => setChargeFor(tool.tool_id)} onRemove={removeExtraCharge} />
                           </div>
                         </div>
+                        {/* This tool's own statement: charges for everyone, cost and profit for admins. */}
+                        <ToolSubtotal
+                          index={idx + 1}
+                          charges={toolCharges(tool)}
+                          acct={acct ? (acct.tools.find((x) => x.tool_id === tool.tool_id) || null) : null}
+                          isAdmin={isAdmin}
+                          excludedReason={excludedReason(tool)}
+                        />
                       </div>
 
                       {/* Photos */}
@@ -1585,7 +1598,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              <ToolForm toolData={formData} onChange={setFormData} currentJobId={job.id} fieldErrors={toolModalAttempted ? toolProblems(formData) : []} />
+              <ToolForm
+                toolData={formData}
+                onChange={setFormData}
+                currentJobId={job.id}
+                fieldErrors={toolModalAttempted ? toolProblems(formData) : []}
+                showCost={isAdmin}
+                costLines={isEdit && acct ? (acct.tools.find((x) => x.tool_id === editingToolId)?.cost.lines || []) : null}
+              />
               <div className="flex gap-3 mt-6">
                 <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
@@ -1704,15 +1724,23 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         />
       )}
 
-      {/* Cash Flow forms, prefilled from this work order (admin only) */}
-      {billSeed && (
-        <BillFormModal
-          bill={null}
-          defaults={billSeed}
-          suppliers={suppliers}
-          onSuppliersChange={loadSuppliers}
-          onSaved={() => { setBillSeed(null); setMoneyTick((t) => t + 1); }}
-          onClose={() => setBillSeed(null)}
+      {/* Job accounting forms (admin only): an additional expense on this job
+          (a Cash Flow bill linked here), or a customer payment prefilled from
+          this work order. Parts bills are logged in the Workspace's Cash Flow
+          section, not from here. */}
+      {expenseOpen && (
+        <AddExpenseModal
+          job={job}
+          onSaved={() => { setExpenseOpen(false); setMoneyTick((t) => t + 1); }}
+          onClose={() => setExpenseOpen(false)}
+        />
+      )}
+      {chargeFor !== null && (
+        <AddExtraChargeModal
+          job={job}
+          defaultToolId={chargeFor || undefined}
+          onSaved={(updated) => { setChargeFor(null); onJobUpdated(updated); }}
+          onClose={() => setChargeFor(null)}
         />
       )}
       {paymentSeed && (

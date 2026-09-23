@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { settingsAPI } from '../services/api';
+import { settingsAPI, AUTH_CHANGED_EVENT } from '../services/api';
 import { BUSINESS_INFO } from '../config/business';
 
 const SettingsContext = createContext();
@@ -17,9 +17,14 @@ export function SettingsProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch settings on mount
+  // Fetch settings on mount, and again whenever someone logs in or out: the
+  // API hides admin-only figures (the labour cost rate) from everyone else,
+  // so an admin's copy must be refetched after login, or a later settings
+  // save would write the blank back.
   useEffect(() => {
     loadSettings();
+    window.addEventListener(AUTH_CHANGED_EVENT, loadSettings);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, loadSettings);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

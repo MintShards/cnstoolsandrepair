@@ -69,7 +69,12 @@ function getStyles(prefix) {
     ${p}.badge.priority-urgent { background: #000; color: #fff; border-color: #000; }
     ${p}.badge.warranty { background: #fff; color: #000; border-color: #000; }
     ${p}.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
-    ${p}.remarks { margin-bottom: 8px; line-height: 1.5; font-size: 11px; }
+    ${p}.notes-block { margin-bottom: 8px; padding: 6px 10px; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 4px; }
+    ${p}.notes-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 2px; }
+    ${p}.notes-text { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+    ${p}.diag-list { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.5; }
+    ${p}.diag-list li { margin-bottom: 2px; }
+    ${p}.diag-solution { color: #374151; }
     ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
     ${p}.camera-line { font-size: 11px; line-height: 1.5; }
     ${p}.camera-label { display: inline-block; margin-right: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
@@ -179,6 +184,21 @@ function buildBody(job, businessInfo, serviceAgreement) {
       </div>
     ` : '';
 
+    // What the customer reported and what the tech found / did — numbered,
+    // the solution beside its diagnosis once it exists.
+    const reported = (tool.remarks || '').trim();
+    const diagnostics = (tool.diagnostics || []).filter(d => d?.diagnosis?.trim());
+    const notesHTML = (reported || diagnostics.length) ? `
+      <div class="notes-block">
+        ${reported ? `<div class="notes-label">Reported problem</div><div class="notes-text">${escHtml(reported)}</div>` : ''}
+        ${diagnostics.length ? `
+          <div class="notes-label"${reported ? ' style="margin-top:6px;"' : ''}>Diagnosis &amp; solution</div>
+          <ol class="diag-list">
+            ${diagnostics.map(d => `<li>${escHtml(d.diagnosis)}${d.solution ? ` <span class="diag-solution">— ${escHtml(d.solution)}</span>` : ''}</li>`).join('')}
+          </ol>` : ''}
+      </div>
+    ` : '';
+
     const partsTotal = filteredParts.filter(p => p.price != null && p.price !== '').reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
     const partsTotalRow = filteredParts.length > 0 && partsTotal > 0 ? `
       <tr style="border-top:2px solid #e2e8f0;font-weight:700;">
@@ -217,6 +237,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
           <div class="field-group"><div class="field-label">Zoho Invoice #</div><div>${tool.zoho_invoice_number ? escHtml(tool.zoho_invoice_number) : '—'}</div></div>
         </div>
 
+        ${notesHTML}
         ${cameraHTML}
 
         ${partsRows ? `

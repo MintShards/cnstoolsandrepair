@@ -1,7 +1,9 @@
 import { formatDateShortPacific } from '../../utils/dateFormat';
 
-// Letter suffix for multi-tool jobs: 0 → A, 1 → B, etc.
-const TOOL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+// Tool suffix for the tag ID: the tool's position on the work order as two
+// digits, so WO-2026-0103-01 and -02 sort and read the same way the tools
+// are numbered on the work order itself.
+const toolSuffix = (toolIndex) => String(toolIndex + 1).padStart(2, '0');
 
 function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -26,8 +28,7 @@ const STATUS_LABELS = {
 };
 
 function buildTagHTML(job, toolItem, toolIndex) {
-  const toolLetter = TOOL_LETTERS[toolIndex] || String(toolIndex + 1);
-  const tagId = `${job.request_number}-${toolLetter}`;
+  const tagId = `${job.request_number}-${toolSuffix(toolIndex)}`;
 
   const contactName = escHtml(`${job.first_name} ${job.last_name}`.toUpperCase());
 
@@ -48,8 +49,17 @@ function buildTagHTML(job, toolItem, toolIndex) {
       ).join('')
     : '<li class="none">No parts listed</li>';
 
-  const remarksHTML = toolItem.remarks
-    ? `<div class="section"><div class="label">REMARKS</div><div class="remarks-text">${escHtml(toolItem.remarks.toUpperCase())}</div></div>`
+  // The tag travels with the tool: the customer's reported problem and the
+  // numbered diagnosis (with its solution once known), in the tag's caps.
+  const reported = (toolItem.remarks || '').trim();
+  const diagnostics = (toolItem.diagnostics || []).filter(d => d?.diagnosis?.trim());
+  const notesHTML = (reported || diagnostics.length)
+    ? `<div class="section">
+        ${reported ? `<div class="label">REPORTED PROBLEM</div><div class="remarks-text">${escHtml(reported.toUpperCase())}</div>` : ''}
+        ${diagnostics.length ? `
+          <div class="label"${reported ? ' style="margin-top:3px;"' : ''}>DIAGNOSIS</div>
+          <ol class="diag-list">${diagnostics.map(d => `<li>${escHtml(d.diagnosis.toUpperCase())}${d.solution ? ` — ${escHtml(d.solution.toUpperCase())}` : ''}</li>`).join('')}</ol>` : ''}
+      </div>`
     : '';
 
   // Hathorn camera intake: pushrod footage and what arrived with the unit.
@@ -119,7 +129,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
           </div>
         </div>
 
-        ${remarksHTML}
+        ${notesHTML}
         ${includesHTML}
 
         <div class="section parts-section">
@@ -244,6 +254,13 @@ function getTagStyles(prefix) {
       line-height: 1.3;
       color: #111;
     }
+    ${p}.diag-list {
+      margin: 0;
+      padding-left: 12px;
+      font-size: 8px;
+      line-height: 1.3;
+      color: #111;
+    }
 
     ${p}.parts-section { flex: 1; }
     ${p}.parts-list {
@@ -300,7 +317,7 @@ export function openPrintToolTag(job, toolItem, toolIndex) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tag ${job.request_number}-${TOOL_LETTERS[toolIndex] || toolIndex + 1}</title>
+  <title>Tag ${job.request_number}-${toolSuffix(toolIndex)}</title>
   <style>${getTagStyles('')}</style>
 </head>
 <body>${tagBodyHTML}</body>

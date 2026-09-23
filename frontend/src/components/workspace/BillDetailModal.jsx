@@ -6,7 +6,7 @@ import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import { INPUT_CLS, LABEL_CLS, pillCls } from './formStyles';
 import { BTN_NEUTRAL, BTN_PRIMARY } from '../sales/ui';
-import { BILL_CATEGORIES, PAYMENT_METHODS, PAYMENT_METHOD_LIST, BILL_STATUSES, isBillOverdue, linkedWorkOrders } from '../../constants/bills';
+import { BILL_CATEGORIES, PAYMENT_METHODS, PAYMENT_METHOD_LIST, BILL_STATUSES, BILL_LINE_KINDS, isBillOverdue, linkedWorkOrders } from '../../constants/bills';
 import { formatMoney } from '../../utils/money';
 import { getTodayPacific, formatYmd, formatDatePacific, daysSinceYmd } from '../../utils/dateFormat';
 import { billAttachmentUrl } from '../../utils/photoUrl';
@@ -267,7 +267,13 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
                       <p className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-1.5">
                         {ln.part_number && <span>{ln.part_number}</span>}
                         <span>{ln.quantity}{ln.unit_price != null && ` × ${formatMoney(ln.unit_price, bill.currency)}`}</span>
+                        {ln.kind && ln.kind !== 'part' && (
+                          <span className="px-1 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{BILL_LINE_KINDS[ln.kind] || ln.kind}</span>
+                        )}
                         {ln.repair_id && ln.request_number && <WorkOrderChip repairId={ln.repair_id} requestNumber={ln.request_number} />}
+                        {ln.tool_label && (
+                          <span className="px-1 rounded text-[10px] font-bold bg-slate-200/70 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300" title="The tool this line was for">{ln.tool_label}</span>
+                        )}
                       </p>
                     </div>
                     {ln.line_total != null && <span className="font-bold whitespace-nowrap text-slate-900 dark:text-white">{formatMoney(ln.line_total, bill.currency)}</span>}

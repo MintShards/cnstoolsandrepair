@@ -15,8 +15,10 @@ logger = logging.getLogger(__name__)
 
 TOOL_FIELD_LABELS = {
     "tool_type": "Tool type", "brand": "Brand", "model_number": "Model",
-    "serial_number": "Serial", "quantity": "Quantity", "remarks": "Remarks",
+    "serial_number": "Serial", "quantity": "Quantity", "remarks": "Reported problem",
     "labour_hours": "Labour hours", "hourly_rate": "Hourly rate",
+    "invoiced_amount": "Invoiced amount", "labour_cost_rate": "Labour cost rate",
+    "tax_status": "Tax on invoice",
     "priority": "Priority", "warranty": "Warranty",
     "zoho_quote_number": "Zoho quote #", "zoho_invoice_number": "Zoho invoice #",
     "assigned_technician": "Technician", "estimated_completion": "Est. completion",
@@ -105,6 +107,10 @@ def _fmt(value) -> str:
 
 def _same(a, b) -> bool:
     a, b = _plain(a), _plain(b)
+    # A field the document never had and an empty value from the form are
+    # the same nothing; without this an older tool logs "— → —" on every save.
+    if a in (None, "", []) and b in (None, "", []):
+        return True
     if isinstance(a, str) or isinstance(b, str):
         return str(a or "").strip().lower() == str(b or "").strip().lower()
     if isinstance(a, list) and isinstance(b, list):
@@ -116,6 +122,15 @@ def _same(a, b) -> bool:
     return a == b
 
 
+# Choice fields print their label, not their stored value.
+VALUE_LABELS = {
+    "tax_status": {"taxable": "GST + PST", "pst_exempt": "GST only (PST exempt)", "tax_exempt": "No tax"},
+}
+# What a missing field has always meant, so the first edit of an older record
+# does not log a change from "—" to the default.
+FIELD_DEFAULTS = {"tax_status": "taxable"}
+
+
 def diff_fields(old: dict, new: dict, labels: dict) -> list:
     """Human lines for the labelled keys present in `new` whose value changed."""
     lines = []
@@ -123,9 +138,18 @@ def diff_fields(old: dict, new: dict, labels: dict) -> list:
         if key not in new:
             continue
         before, after = old.get(key), new.get(key)
+        if before is None and key in FIELD_DEFAULTS:
+            before = FIELD_DEFAULTS[key]
         if _same(before, after):
             continue
-        lines.append(f"{label}: {_fmt(before)} → {_fmt(after)}")
+        if key in VALUE_LABELS:
+            # Only scalar choice fields come through here; list values are
+            # unhashable and must never reach dict.get.
+            names = VALUE_LABELS[key]
+            shown = f"{names.get(_plain(before), _fmt(before))} → {names.get(_plain(after), _fmt(after))}"
+        else:
+            shown = f"{_fmt(before)} → {_fmt(after)}"
+        lines.append(f"{label}: {shown}")
     return lines
 
 
@@ -147,10 +171,42 @@ def _diff_parts(old_parts: list, new_parts: list) -> list:
     return lines
 
 
+def _charges_summary(charges) -> str:
+    """'Shop supplies $10.00 · Freight $25.00' — or — when there are none."""
+    bits = [
+        f"{c.get('description')} ${float(c.get('amount') or 0):.2f}"
+        for c in (charges or []) if isinstance(c, dict) and c.get("description")
+    ]
+    return " · ".join(bits) or "—"
+
+
+def _diagnostics_summary(items) -> str:
+    """'1. Seized rotor → replaced · 2. …' — or — when there are none."""
+    bits = []
+    for i, d in enumerate(items or [], 1):
+        if not isinstance(d, dict) or not d.get("diagnosis"):
+            continue
+        text = str(d["diagnosis"])[:80]
+        if d.get("solution"):
+            text += f" → {str(d['solution'])[:80]}"
+        bits.append(f"{i}. {text}")
+    return " · ".join(bits) or "—"
+
+
 def diff_tool(old: dict, new_fields: dict) -> list:
     lines = diff_fields(old, new_fields, TOOL_FIELD_LABELS)
     if "parts" in new_fields:
         lines += _diff_parts(old.get("parts") or [], new_fields.get("parts") or [])
+    if "extra_charges" in new_fields:
+        before = _charges_summary(_plain(old.get("extra_charges")))
+        after = _charges_summary(_plain(new_fields.get("extra_charges")))
+        if before != after:
+            lines.append(f"Extra charges: {before} → {after}")
+    if "diagnostics" in new_fields:
+        before = _diagnostics_summary(_plain(old.get("diagnostics")))
+        after = _diagnostics_summary(_plain(new_fields.get("diagnostics")))
+        if before != after:
+            lines.append(f"Diagnosis & solution: {before} → {after}")
     return lines
 
 

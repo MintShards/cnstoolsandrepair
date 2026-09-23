@@ -3,12 +3,16 @@ import { Link } from 'react-router-dom';
 import { suppliersAPI, staffAPI, partsLibraryAPI, repairsAPI } from '../../../services/api';
 import { getTodayPacific } from '../../../utils/dateFormat';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
+import { useSettings } from '../../../contexts/SettingsContext';
+import { BILL_LINE_KINDS } from '../../../constants/bills';
+import { formatMoney } from '../../../utils/money';
+import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
 const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
-  quantity: 1, remarks: '', parts: [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
-  labour_hours: '', hourly_rate: '', priority: 'standard', warranty: false,
+  quantity: 1, remarks: '', diagnostics: [], parts: [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
+  labour_hours: '', hourly_rate: '', extra_charges: [], invoiced_amount: '', labour_cost_rate: '', tax_status: 'taxable', priority: 'standard', warranty: false,
   zoho_quote_number: '', zoho_invoice_number: '', assigned_technician: '', estimated_completion: '',
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   camera_head_model: '', camera_head_serial: '',
@@ -215,7 +219,10 @@ export const syncPartsToLibrary = async (tools) => {
 // Omit wizardStep (or isNewJobForm=false) to render all sections (add tool modal / edit mode)
 // fieldErrors: keys from utils/toolValidation.toolProblems() the host wants
 // highlighted (red border + message) after a failed submit/next attempt.
-export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId, fieldErrors = [] }) {
+// showCost: render the shop-side "Cost to shop" group (admins only).
+// costLines: this tool's Cash Flow bill lines, read-only, or null when there
+// is nothing to list yet (a tool being added).
+export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId, fieldErrors = [], showCost = false, costLines = null }) {
   // Configurable camera-intake lists; the shared fetch resolves once per
   // page load, so many ToolForm instances don't stack requests.
   const [intakeConfig, setIntakeConfig] = useState(CAMERA_INTAKE_DEFAULTS);
@@ -532,6 +539,10 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   );
 
   const data = toolData;
+  // Shop-wide labour cost rate (Admin Settings → Repair Tracker) — the
+  // placeholder for the per-tool override below.
+  const { settings: shopSettings } = useSettings();
+  const shopLabourCostRate = shopSettings?.labourCostRate;
 
   const inputCls = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
   // Highlight for a field the host flagged as missing. The red border
@@ -851,11 +862,43 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 <option value="urgent">Urgent</option>
               </select>
             </div>
+            {/* The customer's words stay separate from the tech's findings:
+                online requests fill Reported Problem from their description;
+                Diagnosis & Solution is the numbered list that prints on the
+                work order and tool tag. Both kept as typed. */}
             <div className="md:col-span-2">
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Remarks / Description</label>
-              <textarea value={data.remarks || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('remarks', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                rows={3} placeholder="Customer's description of the problem"
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Reported Problem <span className="text-xs text-slate-400">(the customer’s description)</span></label>
+              <textarea value={data.remarks || ''} onChange={(e) => handleChange('remarks', e.target.value)}
+                rows={2} placeholder="What the customer says is wrong"
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Diagnosis &amp; Solution <span className="text-xs text-slate-400">(numbered — one finding per line, solution optional)</span></label>
+              {(data.diagnostics || []).length > 0 && (
+                <div className="space-y-2 mb-2">
+                  {data.diagnostics.map((d, di) => (
+                    <div key={di} className="flex items-start gap-2">
+                      <span className="w-7 h-11 flex-shrink-0 flex items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400">{di + 1}.</span>
+                      <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input value={d.diagnosis || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, diagnosis: e.target.value } : x)))}
+                          placeholder="Diagnosis — what was found" aria-label={`Diagnosis ${di + 1}`} className={inputCls} />
+                        <input value={d.solution || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, solution: e.target.value } : x)))}
+                          placeholder="Solution — what was done (optional)" aria-label={`Solution ${di + 1}`} className={inputCls} />
+                      </div>
+                      <button type="button" onClick={() => handleChange('diagnostics', data.diagnostics.filter((_, j) => j !== di))}
+                        aria-label={`Remove diagnosis ${di + 1}`} title="Remove"
+                        className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 transition-colors">
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button type="button" onClick={() => handleChange('diagnostics', [...(data.diagnostics || []), { diagnosis: '', solution: '' }])}
+                className="inline-flex items-center gap-1 min-h-[44px] sm:min-h-0 text-sm font-bold text-primary dark:text-blue-400 hover:underline">
+                <span className="material-symbols-outlined text-base">add</span>
+                Add diagnosis
+              </button>
             </div>
             <div className="md:col-span-2 flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -1197,11 +1240,29 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
         )}
       </div>}
 
-      {/* Section 5 — Labour & Cost */}
+      {/* Sections 5–8 read the way the work order's accounting does: what the
+          customer is charged (labour, extra charges), the Zoho references,
+          and — admins only — what the tool costs the shop. Same header and
+          grid as every other section, one helper line at most. */}
       {showSection([4]) && (
         <div>
-          <p className={sectionHdr}>Labour & Cost</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <p className={sectionHdr}>Labour</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
+              <select value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
+                title="People come from Users & Accounts"
+                className="w-full px-3 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:outline-none focus:border-primary">
+                <option value="">Unassigned</option>
+                {/* A name assigned before this dropdown keyed on accounts (or
+                    from a since-deactivated account) stays selectable so
+                    opening the form never silently clears the assignment. */}
+                {data.assigned_technician && !technicians.includes(data.assigned_technician) && (
+                  <option value={data.assigned_technician}>{data.assigned_technician}</option>
+                )}
+                {technicians.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Labour Hours</label>
               <input type="number" step="0.5" min="0" value={data.labour_hours || ''} onChange={(e) => handleChange('labour_hours', e.target.value)}
@@ -1212,8 +1273,47 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <input type="number" step="0.01" min="0" value={data.hourly_rate || ''} onChange={(e) => handleChange('hourly_rate', e.target.value)}
                 placeholder="e.g., 95.00" className={inputCls} />
             </div>
-            {/* Zoho Books numbers — required before a tool can move to
-                Quoted / Invoiced; the status dialog also asks for them. */}
+          </div>
+        </div>
+      )}
+
+      {showSection([4]) && (
+        <div>
+          <p className={sectionHdr}>Extra Charges</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">What the customer pays for this tool beyond labour and parts — shop supplies, freight billed on, fees.</p>
+          {(data.extra_charges || []).length > 0 && (
+            <div className="space-y-2 mb-3">
+              {data.extra_charges.map((c, ci) => (
+                <div key={ci} className="grid grid-cols-[1fr_8rem_2.75rem] gap-2 items-center">
+                  <input value={c.description || ''} onChange={(e) => handleChange('extra_charges', data.extra_charges.map((x, j) => (j === ci ? { ...x, description: e.target.value } : x)))}
+                    placeholder="What for" aria-label={`Extra charge ${ci + 1}: what for`} className={inputCls} />
+                  <input type="number" step="0.01" min="0" value={c.amount ?? ''} onChange={(e) => handleChange('extra_charges', data.extra_charges.map((x, j) => (j === ci ? { ...x, amount: e.target.value } : x)))}
+                    placeholder="0.00" aria-label={`Extra charge ${ci + 1}: amount`} className={inputCls} />
+                  <button type="button" onClick={() => handleChange('extra_charges', data.extra_charges.filter((_, j) => j !== ci))}
+                    aria-label={`Remove extra charge ${ci + 1}`} title="Remove"
+                    className="w-11 h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 transition-colors">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={() => handleChange('extra_charges', [...(data.extra_charges || []), { description: '', amount: '' }])}
+            className="inline-flex items-center gap-1 min-h-[44px] sm:min-h-0 text-sm font-bold text-primary dark:text-blue-400 hover:underline">
+            <span className="material-symbols-outlined text-base">add</span>
+            Add charge
+          </button>
+        </div>
+      )}
+
+      {/* Zoho Books numbers — required before a tool can move to Quoted /
+          Invoiced; the status dialog also asks for them. The invoiced amount
+          only matters when the Zoho invoice came out different from labour +
+          parts + extra charges. */}
+      {showSection([4]) && (
+        <div>
+          <p className={sectionHdr}>Zoho Books</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Zoho Quote #</label>
               <input value={data.zoho_quote_number || ''} onChange={(e) => { const pos = e.target.selectionStart; handleChange('zoho_quote_number', e.target.value.toUpperCase()); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
@@ -1225,20 +1325,67 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 placeholder="Needed to mark Invoiced" className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
-              <select value={data.assigned_technician || ''} onChange={(e) => handleChange('assigned_technician', e.target.value)}
-                className="w-full px-3 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:outline-none focus:border-primary">
-                <option value="">Unassigned</option>
-                {/* A name assigned before this dropdown keyed on accounts (or
-                    from a since-deactivated account) stays selectable so
-                    opening the form never silently clears the assignment. */}
-                {data.assigned_technician && !technicians.includes(data.assigned_technician) && (
-                  <option value={data.assigned_technician}>{data.assigned_technician}</option>
-                )}
-                {technicians.map(name => <option key={name} value={name}>{name}</option>)}
-              </select>
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">People come from Users &amp; Accounts</p>
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Invoiced Amount ($, before tax)</label>
+              <input type="number" step="0.01" min="0" value={data.invoiced_amount ?? ''} onChange={(e) => handleChange('invoiced_amount', e.target.value)}
+                placeholder="Only if it differs" title="Leave blank to use labour + parts + extra charges" className={inputCls} />
             </div>
+            <div>
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Tax on Invoice</label>
+              <select value={data.tax_status || 'taxable'} onChange={(e) => handleChange('tax_status', e.target.value)}
+                title="Turns the pre-tax revenue into the invoice total the customer pays; rates are in Admin Settings → Repair Tracker" className={inputCls}>
+                {TAX_STATUS_LIST.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cost side — admins only, like the rest of job accounting. The tool's
+          expenses themselves are Cash Flow bills; this just shows which ones
+          point here. */}
+      {showSection([4]) && showCost && (
+        <div>
+          <p className={sectionHdr}>Cost to Shop</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Labour Cost Rate ($/h)</label>
+              <input type="number" step="0.01" min="0" value={data.labour_cost_rate ?? ''} onChange={(e) => handleChange('labour_cost_rate', e.target.value)}
+                placeholder={shopLabourCostRate != null ? `Shop rate $${Number(shopLabourCostRate).toFixed(2)}/h` : 'No shop rate set'}
+                title="What this tool's labour costs the shop. Blank uses the shop rate from Admin Settings → Repair Tracker." className={inputCls} />
+              {/* Live result, so the effect of the rate is visible before saving. */}
+              {(() => {
+                const hours = parseFloat(data.labour_hours);
+                const own = parseFloat(data.labour_cost_rate);
+                const rate = Number.isFinite(own) ? own : (shopLabourCostRate != null ? Number(shopLabourCostRate) : null);
+                if (rate == null) return <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">No rate anywhere yet — labour cost stays out of the figures.</p>;
+                if (!Number.isFinite(hours) || hours <= 0) return <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Enter labour hours above to get a labour cost.</p>;
+                return <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Labour cost: {hours} h × {formatMoney(rate)} = <span className="font-bold text-slate-700 dark:text-slate-200">{formatMoney(hours * rate)}</span>{Number.isFinite(own) ? '' : ' (shop rate)'}</p>;
+              })()}
+            </div>
+            {costLines && (
+              <div className="md:col-span-2">
+                <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Expenses Logged in Cash Flow</label>
+                {costLines.length === 0 ? (
+                  <p className="px-4 py-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 text-sm text-slate-400 dark:text-slate-500 italic">None yet</p>
+                ) : (
+                  <ul className="rounded-lg border border-slate-300 dark:border-slate-600 divide-y divide-slate-200 dark:divide-slate-700/60 text-xs">
+                    {costLines.map((l, i) => (
+                      <li key={`${l.bill_id}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="min-w-0">
+                          <span className="block font-bold text-slate-900 dark:text-white truncate">{l.description}{l.part_number ? ` · ${l.part_number}` : ''}</span>
+                          <span className="block text-slate-500 dark:text-slate-400 truncate">
+                            {l.supplier_name} · {BILL_LINE_KINDS[l.kind || 'part'] || l.kind} · <span className="font-mono">{l.bill_number}</span>
+                          </span>
+                        </span>
+                        <span className="font-black tabular-nums whitespace-nowrap text-slate-900 dark:text-white">
+                          {l.line_total != null ? formatMoney(l.line_total) : <span className="font-medium text-slate-400">no price</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

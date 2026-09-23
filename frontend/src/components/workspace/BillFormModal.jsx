@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react';
-import { billsAPI, suppliersAPI } from '../../services/api';
+import { billsAPI, suppliersAPI, repairsAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import { apiErrorMessage } from '../../utils/apiError';
 import useEscapeClose from '../../utils/useEscapeClose';
@@ -7,9 +7,10 @@ import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import { INPUT_CLS, AMOUNT_INPUT_CLS, LABEL_CLS, CANCEL_BTN_CLS, SUBMIT_BTN_CLS, pillCls } from './formStyles';
 import { BTN_NEUTRAL } from '../sales/ui';
 import {
-  BILL_CATEGORY_LIST, PAYMENT_METHOD_LIST, CURRENCIES, GST_RATE, PST_RATE,
+  BILL_CATEGORY_LIST, BILL_LINE_KIND_LIST, PAYMENT_METHOD_LIST, CURRENCIES, GST_RATE, PST_RATE,
 } from '../../constants/bills';
 import { formatMoney, round2 } from '../../utils/money';
+import { toolLabel } from '../../utils/jobAccounting';
 import { getTodayPacific } from '../../utils/dateFormat';
 import WorkOrderPicker from './WorkOrderPicker';
 
@@ -31,6 +32,10 @@ const newLine = (line = {}) => ({
   part_number: line.part_number || '',
   quantity: numStr(line.quantity ?? 1),
   unit_price: numStr(line.unit_price),
+  // What the line paid for (parts vs additional expenses) and, on a linked
+  // work order, which tool it was for — this is what per-tool profit hangs on.
+  kind: line.kind || 'part',
+  tool_id: line.tool_id || null,
   workOrder: line.repair_id ? { repair_id: line.repair_id, request_number: line.request_number } : null,
   linking: false,
 });
@@ -228,6 +233,9 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
   const [pst, setPst] = useState(numStr(bill?.pst));
   const [total, setTotal] = useState(bill ? numStr(bill.total) : linesSubtotal(seed.lines));
   const [lines, setLines] = useState(() => (bill?.lines || seed.lines || []).map(newLine));
+  // { repair_id: [{ tool_id, label }] } for the per-line tool picker. Seeds
+  // from the work order dialog arrive with theirs; the rest are fetched once.
+  const [jobTools, setJobTools] = useState(() => seed.jobTools || {});
   const [zohoBillNumber, setZohoBillNumber] = useState(bill?.zoho_bill_number || '');
   const [notes, setNotes] = useState(bill?.notes || '');
   const [files, setFiles] = useState([]);
@@ -239,6 +247,26 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
   useBodyScrollLock(true);
 
   const showPayment = editing ? bill.status === 'paid' : paidAlready;
+
+  useEffect(() => {
+    const missing = [...new Set(lines.map((l) => l.workOrder?.repair_id).filter(Boolean))]
+      .filter((id) => !jobTools[id]);
+    if (!missing.length) return;
+    // Mark as loading first so a re-render doesn't fetch the same job twice.
+    setJobTools((m) => Object.fromEntries([...Object.entries(m), ...missing.map((id) => [id, []])]));
+    missing.forEach((id) => {
+      repairsAPI.get(id).then((job) => {
+        const tools = (job.tools || []).map((t) => ({ tool_id: t.tool_id, label: toolLabel(t) }));
+        setJobTools((m) => ({ ...m, [id]: tools }));
+        // A single-tool job: its lines are that tool's without asking.
+        if (tools.length === 1) {
+          setLines((ls) => ls.map((l) => (l.workOrder?.repair_id === id && !l.tool_id ? { ...l, tool_id: tools[0].tool_id } : l)));
+        }
+      }).catch(() => {
+        // No picker for that job; the line stays shared by the whole work order.
+      });
+    });
+  }, [lines, jobTools]);
 
   // Soft check only — shipping, enviro fees and discounts legitimately break it.
   const s = numOrNull(subtotal);
@@ -285,7 +313,9 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
           part_number: l.part_number.trim() || null,
           quantity: num(l.quantity) > 0 ? num(l.quantity) : 1,
           unit_price: numOrNull(l.unit_price),
+          kind: l.kind || 'part',
           repair_id: l.workOrder?.repair_id || null,
+          tool_id: l.workOrder ? (l.tool_id || null) : null,
         })),
       zoho_bill_number: zohoBillNumber.trim() || null,
       notes: notes.trim() || null,
@@ -371,11 +401,13 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
           <div>
             <div className="flex items-center justify-between gap-3 mb-1.5">
               <p className={`${LABEL_CLS} mb-0`}>Amounts</p>
-              <div className="flex gap-1" role="group" aria-label="Currency">
-                {CURRENCIES.map((c) => (
-                  <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c} className={pillCls(currency === c, { compact: true })}>{c}</button>
-                ))}
-              </div>
+              {CURRENCIES.length > 1 && (
+                <div className="flex gap-1" role="group" aria-label="Currency">
+                  {CURRENCIES.map((c) => (
+                    <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c} className={pillCls(currency === c, { compact: true })}>{c}</button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -462,8 +494,31 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
                         <input type="text" inputMode="decimal" value={ln.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} placeholder="Qty" aria-label={`Line ${n}: quantity`} className={INPUT_CLS} />
                         <input type="text" inputMode="decimal" value={ln.unit_price} onChange={(e) => updateLine(i, { unit_price: e.target.value })} placeholder="Unit price" aria-label={`Line ${n}: unit price`} className={INPUT_CLS} />
                       </div>
+                      {/* Parts feed a job's parts cost; the other kinds are its
+                          additional expenses. On a multi-tool job the line can
+                          name its tool, or stay shared by the whole job. */}
+                      {(() => {
+                        const tools = ln.workOrder ? jobTools[ln.workOrder.repair_id] : null;
+                        const single = tools?.length === 1 ? tools[0] : null;
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select value={ln.kind} onChange={(e) => updateLine(i, { kind: e.target.value })} aria-label={`Line ${n}: what it paid for`} className={INPUT_CLS}>
+                              {BILL_LINE_KIND_LIST.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+                            </select>
+                            {tools?.length > 1 && (
+                              <select value={ln.tool_id || ''} onChange={(e) => updateLine(i, { tool_id: e.target.value || null })} aria-label={`Line ${n}: which tool`} className={INPUT_CLS}>
+                                <option value="">Whole job (shared)</option>
+                                {tools.map((t, ti) => <option key={t.tool_id} value={t.tool_id}>{ti + 1}. {t.label}</option>)}
+                              </select>
+                            )}
+                            {single && (
+                              <p className="self-center text-xs text-slate-500 dark:text-slate-400 truncate" title={single.label}>For {single.label}</p>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {(ln.workOrder || ln.linking) ? (
-                        <WorkOrderPicker value={ln.workOrder} onChange={(wo) => updateLine(i, { workOrder: wo, linking: wo ? false : ln.linking })} label="Work order" />
+                        <WorkOrderPicker value={ln.workOrder} onChange={(wo) => updateLine(i, { workOrder: wo, tool_id: null, linking: wo ? false : ln.linking })} label="Work order" />
                       ) : (
                         <button type="button" onClick={() => updateLine(i, { linking: true })} className="text-xs font-bold text-primary dark:text-blue-400 hover:underline min-h-[44px] sm:min-h-0 inline-flex items-center gap-1">
                           <span className="material-symbols-outlined text-sm">build_circle</span>

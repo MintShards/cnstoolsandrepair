@@ -107,6 +107,16 @@ class Priority(str, Enum):
     URGENT = "urgent"
 
 
+class TaxStatus(str, Enum):
+    """Sales tax on the tool's invoice. Job accounting keeps revenue and
+    profit before tax and uses this to turn revenue into the invoice total
+    the customer actually pays, so a payment of the whole Zoho invoice reads
+    as paid in full."""
+    TAXABLE = "taxable"          # GST + PST — the BC default
+    PST_EXEMPT = "pst_exempt"    # GST only — the customer holds a PST exemption
+    TAX_EXEMPT = "tax_exempt"    # no tax on the invoice
+
+
 class PartStatus(str, Enum):
     PENDING = "pending"
     ORDERED = "ordered"
@@ -175,6 +185,40 @@ class StatusHistoryEntry(BaseModel):
     by: Optional[ActorRef] = None
 
 
+class ExtraCharge(BaseModel):
+    """A charge to the customer beyond labour and parts — shop supplies,
+    freight billed on, an environmental fee. Pre-tax, per tool."""
+    description: str = Field(..., min_length=1, max_length=200)
+    amount: float = Field(..., ge=0)
+
+    @field_validator('description', mode='before')
+    @classmethod
+    def strip_description(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator('amount', mode='before')
+    @classmethod
+    def round_amount(cls, v):
+        if v == '' or v is None:
+            return 0
+        return round(float(v), 2)
+
+
+class DiagnosisEntry(BaseModel):
+    """One numbered finding on a tool: what the tech diagnosed and, once
+    known, what was done about it. Kept as typed — these are sentences."""
+    diagnosis: str = Field(..., min_length=1, max_length=500)
+    solution: Optional[str] = Field(None, max_length=500)
+
+    @field_validator('diagnosis', 'solution', mode='before')
+    @classmethod
+    def strip_text(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            return v if v else None
+        return v
+
+
 class ToolItemCreate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
@@ -187,10 +231,25 @@ class ToolItemCreate(BaseModel):
     model_number: Optional[str] = Field(None, max_length=100)
     serial_number: Optional[str] = Field(None, max_length=100)
     quantity: int = Field(default=1, gt=0, le=1000)
+    # `remarks` is the customer's reported problem (online requests fill it
+    # from their description); `diagnostics` is the tech's numbered findings.
     remarks: Optional[str] = Field(None, max_length=2000)
+    diagnostics: List[DiagnosisEntry] = Field(default_factory=list, max_length=30)
     parts: List[PartItem] = Field(default_factory=list)
     labour_hours: Optional[float] = Field(None, ge=0)
     hourly_rate: Optional[float] = Field(None, ge=0)
+    # Charges to the customer beyond labour and parts (shop supplies, freight
+    # billed on…) and, when the Zoho invoice came out different from the
+    # tracker's figures, the pre-tax amount actually invoiced. Both feed the
+    # work order's accounting (revenue per tool); neither is printed for the
+    # customer.
+    extra_charges: List[ExtraCharge] = Field(default_factory=list, max_length=20)
+    invoiced_amount: Optional[float] = Field(None, ge=0)
+    # What this tool's labour costs the shop per hour, when it differs from
+    # the shop-wide business_settings.labour_cost_rate. Blank = use the default.
+    labour_cost_rate: Optional[float] = Field(None, ge=0)
+    # Sales tax on this tool's invoice (see TaxStatus). Accounting only.
+    tax_status: TaxStatus = TaxStatus.TAXABLE
     priority: Priority = Priority.STANDARD
     warranty: bool = False
     # Zoho Books numbers — different documents, different numbers. Required
@@ -261,7 +320,7 @@ class ToolItemCreate(BaseModel):
                 out.append(s)
         return out
 
-    @field_validator('labour_hours', 'hourly_rate', 'rod_length_received',
+    @field_validator('labour_hours', 'hourly_rate', 'invoiced_amount', 'labour_cost_rate', 'rod_length_received',
                      'rod_length_cut', 'rod_length_remaining',
                      'counter_at_intake', 'counter_after_repair', mode='before')
     @classmethod
@@ -285,6 +344,11 @@ class ToolItemCreate(BaseModel):
         if isinstance(v, str) and len(v) == 10:
             return datetime.fromisoformat(v)
         return v
+
+    @field_validator('tax_status', mode='before')
+    @classmethod
+    def default_tax_status(cls, v):
+        return v if v else TaxStatus.TAXABLE
 
     @model_validator(mode='after')
     def require_identity(self):
@@ -315,9 +379,14 @@ class ToolItemUpdate(BaseModel):
     serial_number: Optional[str] = Field(None, max_length=100)
     quantity: Optional[int] = Field(None, gt=0, le=1000)
     remarks: Optional[str] = Field(None, max_length=2000)
+    diagnostics: Optional[List[DiagnosisEntry]] = Field(None, max_length=30)
     parts: Optional[List[PartItem]] = None
     labour_hours: Optional[float] = Field(None, ge=0)
     hourly_rate: Optional[float] = Field(None, ge=0)
+    extra_charges: Optional[List[ExtraCharge]] = Field(None, max_length=20)
+    invoiced_amount: Optional[float] = Field(None, ge=0)
+    labour_cost_rate: Optional[float] = Field(None, ge=0)
+    tax_status: Optional[TaxStatus] = None
     priority: Optional[Priority] = None
     warranty: Optional[bool] = None
     zoho_quote_number: Optional[str] = Field(None, max_length=100)
@@ -367,7 +436,7 @@ class ToolItemUpdate(BaseModel):
                 out.append(s)
         return out
 
-    @field_validator('labour_hours', 'hourly_rate', 'rod_length_received',
+    @field_validator('labour_hours', 'hourly_rate', 'invoiced_amount', 'labour_cost_rate', 'rod_length_received',
                      'rod_length_cut', 'rod_length_remaining',
                      'counter_at_intake', 'counter_after_repair', mode='before')
     @classmethod
@@ -391,6 +460,13 @@ class ToolItemUpdate(BaseModel):
         if isinstance(v, str) and len(v) == 10:
             return datetime.fromisoformat(v)
         return v
+
+    @field_validator('tax_status', mode='before')
+    @classmethod
+    def blank_tax_status_to_default(cls, v):
+        # A blank or null sent as "set" would otherwise store null, which the
+        # response model rejects on every later read of the job.
+        return v if v else TaxStatus.TAXABLE
 
 
 class ToolStatusUpdate(BaseModel):
@@ -437,9 +513,14 @@ class ToolItemResponse(BaseModel):
     serial_number: Optional[str] = None
     quantity: int
     remarks: Optional[str] = None
+    diagnostics: List[DiagnosisEntry] = Field(default_factory=list)
     parts: List[PartItem] = Field(default_factory=list)
     labour_hours: Optional[float] = None
     hourly_rate: Optional[float] = None
+    extra_charges: List[ExtraCharge] = Field(default_factory=list)
+    invoiced_amount: Optional[float] = None
+    labour_cost_rate: Optional[float] = None
+    tax_status: TaxStatus = TaxStatus.TAXABLE
     priority: Priority
     warranty: bool
     zoho_quote_number: Optional[str] = None
@@ -465,6 +546,12 @@ class ToolItemResponse(BaseModel):
     estimated_completion: Optional[datetime] = None
     date_completed: Optional[datetime] = None
     status_history: List[StatusHistoryEntry]
+
+    @field_validator('tax_status', mode='before')
+    @classmethod
+    def default_tax_status(cls, v):
+        # Documents from before the field existed, or a stray null.
+        return v if v else TaxStatus.TAXABLE
 
 
 class RepairJobCreate(BaseModel):

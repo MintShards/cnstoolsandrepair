@@ -129,10 +129,18 @@ def _build_tool_response(tool: dict) -> ToolItemResponse:
     return ToolItemResponse(**_migrate_tool_parts(tool))
 
 
-def _build_job_response(job: dict) -> RepairJobResponse:
-    """Convert a repair job dict from DB into a RepairJobResponse"""
+def _build_job_response(job: dict, viewer: Optional[User] = None) -> RepairJobResponse:
+    """Convert a repair job dict from DB into a RepairJobResponse. What a
+    tool's labour costs the shop is admin-only: any other viewer (or none)
+    gets that field blanked."""
     job["id"] = job.pop("_id")
-    tools = [ToolItemResponse(**_migrate_tool_parts(t)) for t in job.get("tools", [])]
+    redact = viewer is None or viewer.role != "admin"
+    tools = []
+    for t in job.get("tools", []):
+        t = _migrate_tool_parts(t)
+        if redact:
+            t = {**t, "labour_cost_rate": None}
+        tools.append(ToolItemResponse(**t))
     job["tools"] = tools
     return RepairJobResponse(**job)
 
@@ -1386,7 +1394,7 @@ async def list_repair_jobs(
         jobs = await cursor.to_list(length=limit)
 
     jobs = [convert_objectid_to_str(j) for j in jobs]
-    return [_build_job_response(j) for j in jobs]
+    return [_build_job_response(j, current_user) for j in jobs]
 
 
 # ──────────────────────────────────────────────
@@ -1654,6 +1662,8 @@ async def create_repair_job(
     for tool_in in job_data.tools:
         tool = ToolItem(**tool_in.model_dump())
         tool_dict = tool.model_dump()
+        if current_user.role != "admin":
+            tool_dict["labour_cost_rate"] = None   # admin-only figure
         tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
         # Add initial status history entry
         tool_dict["status_history"] = [{
@@ -1680,7 +1690,7 @@ async def create_repair_job(
     created_job = await db.repairs.find_one({"_id": result.inserted_id})
     created_job = convert_objectid_to_str(created_job)
 
-    return _build_job_response(created_job)
+    return _build_job_response(created_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -1805,7 +1815,7 @@ async def convert_from_request(
     created_job = await db.repairs.find_one({"_id": result.inserted_id})
     created_job = convert_objectid_to_str(created_job)
 
-    return _build_job_response(created_job)
+    return _build_job_response(created_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -1968,7 +1978,7 @@ async def get_repair_job(
         raise HTTPException(status_code=404, detail="Repair job not found")
 
     job = convert_objectid_to_str(job)
-    return _build_job_response(job)
+    return _build_job_response(job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2008,7 +2018,7 @@ async def update_repair_job(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2087,6 +2097,8 @@ async def add_tool(
 
     tool = ToolItem(**tool_data.model_dump())
     tool_dict = tool.model_dump()
+    if current_user.role != "admin":
+        tool_dict["labour_cost_rate"] = None   # admin-only figure
     tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
     tool_dict["status_history"] = [{
         "status": RepairStatus.RECEIVED.value,
@@ -2105,7 +2117,7 @@ async def add_tool(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2139,6 +2151,11 @@ async def update_tool(
 
     # Build update with only provided fields
     update_fields = tool_update.model_dump(exclude_unset=True)
+    # What labour costs the shop is admin-only. Other roles never see the
+    # stored value (it is blanked in responses), so their edit form would
+    # send it back blank: drop it rather than let that clear the admin's rate.
+    if current_user.role != "admin":
+        update_fields.pop("labour_cost_rate", None)
     # What actually changed, in words, for the activity log — computed before
     # the parts loop below decorates the incoming parts with dates.
     changes = diff_tool(tools[tool_index], update_fields)
@@ -2186,7 +2203,7 @@ async def update_tool(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2367,7 +2384,7 @@ async def update_tool_status(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2419,7 +2436,7 @@ async def upload_tool_photo(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2477,7 +2494,7 @@ async def delete_tool_photo(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 # ──────────────────────────────────────────────
@@ -2530,7 +2547,7 @@ async def remove_tool(
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
-    return _build_job_response(updated_job)
+    return _build_job_response(updated_job, current_user)
 
 
 @router.post("/{job_id}/send-work-order-email", dependencies=[Depends(require_staff_or_admin)])
