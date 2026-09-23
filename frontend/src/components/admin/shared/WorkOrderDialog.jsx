@@ -86,7 +86,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
 
   // Cash Flow hooks (admin only): the job's money block, and logging a bill
   // or a payment prefilled from this work order. Bills seed their lines from
-  // the parts that have actually arrived (received / installed).
+  // the parts a supplier bill can exist for (ordered / received / installed).
   const { isAdmin } = useCurrentUser();
   const [billSeed, setBillSeed] = useState(null);
   const [paymentSeed, setPaymentSeed] = useState(null);
@@ -101,30 +101,42 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       return [];
     }
   };
-  const receivedParts = (tool) => (tool.parts || [])
-    .filter((p) => p.name?.trim() && ['received', 'installed'].includes(p.status));
+  // Ordered online, the invoice arrives with the order; received or installed,
+  // it came with the parts. Shop stock (in_stock) was paid for long ago.
+  const billableParts = (tool) => (tool.parts || [])
+    .filter((p) => p.name?.trim() && ['ordered', 'received', 'installed'].includes(p.status));
   const openBillFor = async (tool) => {
     const list = suppliers.length ? suppliers : await loadSuppliers();
-    const parts = tool ? receivedParts(tool) : (job.tools || []).flatMap(receivedParts);
-    // The most-named supplier on those parts becomes the bill's supplier —
-    // linked to the directory when the name matches, a one-off vendor otherwise.
+    const all = tool ? billableParts(tool) : (job.tools || []).flatMap(billableParts);
+    // A bill comes from one supplier: the most-named one on those parts
+    // becomes the bill's supplier — linked to the directory when the name
+    // matches, a one-off otherwise — and only its parts (plus any with no
+    // supplier named) become lines.
     const tally = {};
-    parts.forEach((p) => { const n = (p.supplier || '').trim(); if (n) tally[n] = (tally[n] || 0) + 1; });
+    all.forEach((p) => { const n = (p.supplier || '').trim(); if (n) tally[n] = (tally[n] || 0) + 1; });
     const topName = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0] || '';
     const match = topName ? list.find((s) => s.name.toLowerCase() === topName.toLowerCase()) : null;
+    const parts = topName
+      ? all.filter((p) => { const n = (p.supplier || '').trim().toLowerCase(); return !n || n === topName.toLowerCase(); })
+      : all;
+    const link = { repair_id: job.id, request_number: job.request_number };
     setBillSeed({
       supplier: !topName ? null : (match
         ? { supplier_id: match.id, supplier_name: match.name }
         : { supplier_id: null, supplier_name: topName }),
       category: 'parts',
-      lines: parts.map((p) => ({
-        description: p.name.trim(),
-        part_number: p.part_number || '',
-        quantity: p.quantity || 1,
-        unit_price: (p.price != null && p.price !== '') ? Number(p.price) : null,
-        repair_id: job.id,
-        request_number: job.request_number,
-      })),
+      // Prices stay blank on purpose: the tracker's part price is what the
+      // customer is charged, not what the supplier billed. With no parts to
+      // list, one linked line still ties the bill to this work order.
+      lines: parts.length
+        ? parts.map((p) => ({
+            description: p.name.trim(),
+            part_number: p.part_number || '',
+            quantity: p.quantity || 1,
+            unit_price: null,
+            ...link,
+          }))
+        : [{ description: `Parts for ${job.request_number}`, quantity: 1, unit_price: null, ...link }],
     });
   };
   const openPaymentFor = () => {
@@ -300,11 +312,12 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       if (updateAllOpen && !updateAllApplying) { setUpdateAllOpen(false); return; }
       if (editingJob) { setEditingJob(false); return; }
       if (emailOpen) return; // email modal manages its own closing
+      if (billSeed || paymentSeed) return; // Cash Flow forms close themselves (useEscapeClose)
       onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, onClose]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, billSeed, paymentSeed, onClose]);
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
   const now = new Date();
@@ -1257,12 +1270,12 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>Parts {tool.parts?.filter(p => p.name?.trim()).length > 0 && `(${tool.parts.filter(p => p.name?.trim()).length})`}</span>
-                              {/* Admin shortcut into Cash Flow: the received parts become the bill's lines. */}
-                              {isAdmin && receivedParts(tool).length > 0 && (
+                              {/* Admin shortcut into Cash Flow: the ordered/received parts become the bill's lines. */}
+                              {isAdmin && billableParts(tool).length > 0 && (
                                 <button
                                   type="button"
                                   onClick={() => openBillFor(tool)}
-                                  title="Log the supplier bill for this tool's received parts"
+                                  title="Log the supplier bill for this tool's parts"
                                   className="inline-flex items-center gap-1 px-2 py-1 -my-1 min-h-[44px] sm:min-h-0 rounded-lg text-xs font-bold text-primary dark:text-blue-400 hover:bg-primary/10 transition-colors"
                                 >
                                   <span className="material-symbols-outlined" style={{fontSize:'14px'}}>receipt_long</span>

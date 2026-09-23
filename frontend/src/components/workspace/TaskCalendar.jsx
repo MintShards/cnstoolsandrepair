@@ -10,8 +10,8 @@ import { getTodayPacific, formatYmd } from '../../utils/dateFormat';
 import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
 import StaffAvatar from './StaffAvatar';
-import { Link } from 'react-router-dom';
 import WorkOrderChip from './WorkOrderChip';
+import CashFlowChip from './CashFlowChip';
 import TaskFormModal from './TaskFormModal';
 import TaskDetailModal from './TaskDetailModal';
 import ActivityReportModal from './ActivityReportModal';
@@ -148,17 +148,10 @@ function DayModal({ ymd, tasks, activity, onOpenTask, onAddTask, onClose }) {
                           {e.job_id && e.request_number && (
                             <WorkOrderChip repairId={e.job_id} requestNumber={e.request_number} />
                           )}
-                          {/* Cash Flow events (admins only) link to their record. */}
-                          {(e.bill_id || e.payment_id) && (
-                            <Link
-                              to={`/workspace?section=cash-flow&${e.bill_id ? `bill=${e.bill_id}` : `payment=${e.payment_id}`}`}
-                              onClick={(ev) => ev.stopPropagation()}
-                              title="Open in Cash Flow"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300 hover:opacity-80 transition-opacity whitespace-nowrap"
-                            >
-                              <span className="material-symbols-outlined text-sm">{e.bill_id ? 'receipt_long' : 'payments'}</span>
-                              {e.bill_number || e.payment_number}
-                            </Link>
+                          {/* Cash Flow events (admins only) link to their record —
+                              except a deletion, whose record is gone. */}
+                          {(e.bill_id || e.payment_id) && !String(e.kind).endsWith('_deleted') && (
+                            <CashFlowChip billId={e.bill_id} paymentId={e.payment_id} number={e.bill_number || e.payment_number} />
                           )}
                         </span>
                       </span>

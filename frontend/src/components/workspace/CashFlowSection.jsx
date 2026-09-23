@@ -42,22 +42,31 @@ function MoneyStack({ totals, loaded, tone = '' }) {
   );
 }
 
+/**
+ * A summary tile. It is a real button only when it leads somewhere (Money in
+ * and Money out switch views, Unpaid bills opens that list); Net is plain, so
+ * keyboard users never land on a control that does nothing.
+ */
 function Tile({ label, sub, red, active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-left rounded-xl border px-3 py-2.5 min-h-[44px] transition-colors ${
-        active
-          ? 'border-primary bg-primary/5 dark:bg-primary/10'
-          : red
-            ? 'border-red-300 dark:border-red-800/50 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20'
-            : 'border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800'
-      }`}
-    >
+  const clickable = Boolean(onClick);
+  const cls = `text-left rounded-xl border px-3 py-2.5 min-h-[44px] transition-colors ${
+    active
+      ? 'border-primary bg-primary/5 dark:bg-primary/10'
+      : red
+        ? `border-red-300 dark:border-red-800/50 bg-red-50 dark:bg-red-900/10 ${clickable ? 'hover:bg-red-100 dark:hover:bg-red-900/20' : ''}`
+        : `border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 ${clickable ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : ''}`
+  }`;
+  const body = (
+    <>
       <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</span>
       <span className="block text-base sm:text-xl font-black leading-tight truncate text-slate-900 dark:text-white">{children}</span>
       {sub && <span className={`block text-[11px] truncate ${red ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>{sub}</span>}
+    </>
+  );
+  if (!clickable) return <div className={cls}>{body}</div>;
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active === undefined ? undefined : active} className={cls}>
+      {body}
     </button>
   );
 }
@@ -101,13 +110,17 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
     refreshCounts();
   }, [loadSummary, refreshCounts]);
 
-  const selectView = (id) => {
+  // `chip` lands Money Out on a specific bills list (?chip=overdue from the
+  // Unpaid tile, the sidebar alert or Needs Attention); BillsView owns it.
+  const selectView = (id, chip) => {
     setView(id);
     localStorage.setItem('ws_cash_view', id);
     const next = new URLSearchParams(searchParams);
     next.set('view', id);
     next.delete('bill');
     next.delete('payment');
+    if (chip) next.set('chip', chip);
+    else if (id === 'in') next.delete('chip');
     setSearchParams(next, { replace: true });
   };
 
@@ -117,7 +130,6 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
   const net = loaded ? netByCurrency(payments.month_total, bills.month_total) : null;
   const netCad = net ? (net.CAD ?? 0) : 0;
   const overdue = bills?.overdue_count ?? 0;
-  const unpaidParts = totalsByCurrency(bills?.unpaid_total);
 
   return (
     <div>
@@ -155,19 +167,21 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
         <Tile label="Net" sub={loaded ? (netCad >= 0 ? 'in minus out' : 'more out than in') : ''} red={loaded && netCad < 0}>
           <MoneyStack totals={net} loaded={loaded} tone={netCad < 0 ? 'text-red-600 dark:text-red-400' : ''} />
         </Tile>
-        <Tile label="Unpaid bills" red={overdue > 0} onClick={() => selectView('out')}
+        {/* Unpaid is all-time, not this month: what the shop still owes today. */}
+        <Tile label="Unpaid bills" red={overdue > 0} onClick={() => selectView('out', overdue > 0 ? 'overdue' : 'unpaid')}
               sub={bills ? (overdue > 0 ? `${overdue} overdue` : `${bills.unpaid_count} open`) : ''}>
-          {bills ? (unpaidParts.length ? formatMoney(unpaidParts[0].amount, unpaidParts[0].currency) : formatMoney(0)) : '—'}
+          <MoneyStack totals={bills?.unpaid_total} loaded={Boolean(bills)} />
         </Tile>
       </div>
 
       {/* Money Out / Money In switcher — same segmented control as the tasks Board/List. */}
-      <div className="flex w-full sm:w-auto sm:inline-flex rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden mb-4">
+      <div className="flex w-full sm:w-auto sm:inline-flex rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden mb-4" role="group" aria-label="Money out or money in">
         {VIEWS.map((v) => (
           <button
             key={v.id}
             type="button"
             onClick={() => selectView(v.id)}
+            aria-pressed={view === v.id}
             title={v.sub}
             className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 min-h-11 sm:min-h-0 text-sm font-bold transition-colors ${
               view === v.id

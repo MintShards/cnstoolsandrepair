@@ -235,14 +235,24 @@ export const settingsAPI = {
 };
 
 // Auth API
+// Fired on window after every login and logout so anything caching "who am I"
+// (utils/useCurrentUser.js) starts over with the new session.
+export const AUTH_CHANGED_EVENT = 'cns:auth-changed';
+const announceAuthChange = () => window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+
 export const authAPI = {
   login: async ({ email, password }) => {
     const response = await api.post('/api/auth/login', { email, password });
+    announceAuthChange();
     return response.data;
   },
   logout: async () => {
-    const response = await api.post('/api/auth/logout');
-    return response.data;
+    try {
+      const response = await api.post('/api/auth/logout');
+      return response.data;
+    } finally {
+      announceAuthChange(); // the caller redirects even when the request fails
+    }
   },
   getMe: async () => {
     const response = await api.get('/api/auth/me');

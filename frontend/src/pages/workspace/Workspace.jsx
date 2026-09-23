@@ -41,9 +41,12 @@ export default function Workspace() {
 
   // Active section lives in the URL (?section=feed) so each area is a real
   // link — open-in-new-tab and back/forward work, same as the tracker.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get('section');
   const [currentUser, setCurrentUser] = useState(null);
+  // True once getMe() has answered either way — a failed answer must not
+  // leave an admin-only deep link on the spinner forever.
+  const [userChecked, setUserChecked] = useState(false);
   const isAdmin = currentUser?.role === 'admin';
   // Admin-only sections wait for the role instead of guessing: null renders
   // the spinner until getMe() answers, and a non-admin deep link lands on
@@ -51,7 +54,7 @@ export default function Workspace() {
   const requested = WORKSPACE_SECTION_IDS.includes(sectionParam) ? sectionParam : 'my-tasks';
   const requestedAdminOnly = Boolean(WORKSPACE_SECTIONS.find((s) => s.id === requested)?.adminOnly);
   let activeSection = requested;
-  if (requestedAdminOnly) activeSection = currentUser ? (isAdmin ? requested : 'my-tasks') : null;
+  if (requestedAdminOnly) activeSection = userChecked ? (isAdmin ? requested : 'my-tasks') : null;
 
   const [staff, setStaff] = useState([]);
   const [counts, setCounts] = useState({
@@ -105,7 +108,7 @@ export default function Workspace() {
         ...me,
         name: (`${me.first_name || ''} ${me.last_name || ''}`.trim()) || me.email,
       });
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setUserChecked(true));
     loadStaff();
   }, [loadStaff]);
 
@@ -114,6 +117,14 @@ export default function Workspace() {
   useEffect(() => {
     refreshCounts();
   }, [refreshCounts]);
+
+  // A non-admin bounced off an admin-only link (Cash Flow) sees My Tasks;
+  // the URL follows, so a reload or a shared link doesn't bounce again.
+  useEffect(() => {
+    if (requestedAdminOnly && userChecked && !isAdmin) {
+      setSearchParams({ section: 'my-tasks' }, { replace: true });
+    }
+  }, [requestedAdminOnly, userChecked, isAdmin, setSearchParams]);
 
   usePollWhileVisible(refreshCounts, 60000);
 

@@ -147,7 +147,8 @@ function BillDueRow({ item }) {
       className="flex flex-wrap sm:flex-nowrap items-center gap-x-2 gap-y-1 px-3 py-2 min-h-[44px] sm:min-h-0 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 hover:border-primary/50 transition-colors"
     >
       <span className="material-symbols-outlined text-base text-violet-500 flex-shrink-0">receipt_long</span>
-      <span className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm truncate">
+      {/* Phones wrap the supplier + numbers (nothing to truncate into); sm+ keeps one line. */}
+      <span className="order-last w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 text-sm break-words sm:truncate">
         <span className="font-bold text-slate-900 dark:text-white">{item.supplier_name}</span>
         <span className="text-slate-500 dark:text-slate-400 ml-1.5 font-mono text-xs">{item.bill_number}</span>
         {item.vendor_invoice_number && <span className="text-slate-500 dark:text-slate-400 ml-1.5 text-xs">· {item.vendor_invoice_number}</span>}
@@ -306,7 +307,7 @@ export default function AttentionPanel({ staff, focusTick, onTaskCreated }) {
                       <BillDueRow key={item.bill_id} item={item} />
                     ))}
                     <Link
-                      to="/workspace?section=cash-flow&view=out"
+                      to="/workspace?section=cash-flow&view=out&chip=unpaid"
                       className="flex items-center min-h-[44px] sm:min-h-0 px-3 py-2 sm:py-1 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
                     >
                       {billsDue.count > ROWS_SHOWN ? `+${billsDue.count - ROWS_SHOWN} more — ` : ''}Open Cash Flow →

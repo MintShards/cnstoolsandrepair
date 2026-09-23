@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { billsAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import { apiErrorMessage } from '../../utils/apiError';
 import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
-import { INPUT_CLS, LABEL_CLS } from './formStyles';
+import { INPUT_CLS, LABEL_CLS, pillCls } from './formStyles';
 import { BTN_NEUTRAL, BTN_PRIMARY } from '../sales/ui';
 import { BILL_CATEGORIES, PAYMENT_METHODS, PAYMENT_METHOD_LIST, BILL_STATUSES, isBillOverdue, linkedWorkOrders } from '../../constants/bills';
 import { formatMoney } from '../../utils/money';
@@ -16,12 +16,11 @@ import BillStatusPill from './BillStatusPill';
 import ConfirmModal from '../sales/ConfirmModal';
 
 const MAX_ATTACHMENTS = 10;
+const noop = () => {};
 const ACTION = 'w-full sm:w-auto min-h-[44px] sm:min-h-0';
+// The status-specific first action spans the phone footer's two columns.
+const LEAD = 'col-span-2';
 const DANGER_BTN = 'inline-flex items-center justify-center gap-1.5 px-4 py-2.5 border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold rounded-xl transition-colors text-sm disabled:opacity-50';
-const PILL_BASE = 'inline-flex items-center justify-center px-3 py-2 min-h-[44px] sm:min-h-0 rounded-xl border-2 text-xs font-bold uppercase transition-all';
-const pillCls = (active) => `${PILL_BASE} ${active
-  ? 'border-primary bg-primary/5 text-slate-900 dark:text-white'
-  : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`;
 
 function Row({ label, children, className = '' }) {
   return (
@@ -33,23 +32,33 @@ function Row({ label, children, className = '' }) {
 }
 
 /**
- * Read view + actions for one bill: mark paid / undo / dispute / void /
+ * Read view + actions for one bill: mark paid / mark unpaid / dispute / void /
  * reopen, attachments in and out, history. Field edits go through
  * BillFormModal via onEdit.
  */
 export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, onClose }) {
   const showToast = useToast();
   const fileRef = useRef(null);
+  const payRef = useRef(null);
+  const uid = useId();
+  const fid = (name) => `${uid}-${name}`;
   const [busy, setBusy] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [paidDate, setPaidDate] = useState(getTodayPacific());
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
   const [uploading, setUploading] = useState(false);
-  // { kind: 'delete' | 'void' | 'attachment', url? }
+  // { kind: 'delete' | 'void' | 'unpay' | 'attachment', url? }
   const [confirm, setConfirm] = useState(null);
-  useEscapeClose(confirm ? () => {} : onClose);
+  // Escape and a backdrop tap peel one layer at a time: the confirm dialog,
+  // then the mark-paid panel, then the modal.
+  useEscapeClose(confirm ? noop : payOpen ? () => setPayOpen(false) : onClose);
   useBodyScrollLock(true);
+
+  // The panel sits at the end of the scroll body; bring it into view when it opens.
+  useEffect(() => {
+    if (payOpen) payRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [payOpen]);
 
   const today = getTodayPacific();
   const overdue = isBillOverdue(bill, today);
@@ -69,6 +78,8 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
       return true;
     } catch (err) {
       showToast('error', apiErrorMessage(err, 'Could not update the bill.'));
+      // Most likely someone else moved it first — show the bill as it is now.
+      try { onChanged(await billsAPI.get(bill.id)); } catch { /* keep what we have */ }
       return false;
     } finally {
       setBusy(false);
@@ -139,12 +150,24 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
       confirmClass: 'bg-slate-700 hover:bg-slate-800',
       onConfirm: () => changeStatus('void', {}, 'Bill voided.').then(() => setConfirm(null)),
     },
+    unpay: {
+      message: `Mark ${bill.bill_number} unpaid again? The payment details (date, method, reference) are cleared and noted in its history.`,
+      confirmLabel: 'Mark unpaid',
+      confirmClass: 'bg-slate-700 hover:bg-slate-800',
+      onConfirm: () => changeStatus('unpaid', {}, 'Marked unpaid — payment details cleared.').then(() => setConfirm(null)),
+    },
     attachment: {
       message: 'Remove this attachment? The file is deleted from storage.',
       confirmLabel: 'Remove',
       onConfirm: () => handleRemoveAttachment(confirm.url),
     },
   })[confirm.kind];
+
+  const onBackdrop = (e) => {
+    if (e.target !== e.currentTarget || confirm) return;
+    if (payOpen) setPayOpen(false);
+    else onClose();
+  };
 
   return (
     <>
@@ -153,9 +176,14 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
         fixed descendants and would anchor the confirm to scrolled content. */}
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 pt-3 sm:pt-10 overflow-y-auto"
-      onClick={(e) => { if (e.target === e.currentTarget && !confirm) onClose(); }}
+      onClick={onBackdrop}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-5rem)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={fid('title')}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-5rem)]"
+      >
         <div className="flex items-start justify-between gap-3 p-5 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -167,7 +195,7 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
                 </span>
               )}
             </div>
-            <h2 className="mt-1 font-black text-slate-900 dark:text-white tracking-tight leading-snug break-words">{bill.supplier_name}</h2>
+            <h2 id={fid('title')} className="mt-1 font-black text-slate-900 dark:text-white tracking-tight leading-snug break-words">{bill.supplier_name}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {BILL_CATEGORIES[bill.category] || bill.category}
               {bill.vendor_invoice_number && ` · ${bill.vendor_invoice_number}`}
@@ -180,7 +208,7 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
           </div>
           <div className="text-right flex-shrink-0">
             <p className="text-xl font-black text-slate-900 dark:text-white whitespace-nowrap">{formatMoney(bill.total, bill.currency)}</p>
-            <button onClick={onClose} className="mt-1 p-2 -mr-2 -mb-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" aria-label="Close">
+            <button type="button" onClick={onClose} className="mt-1 p-2 -mr-2 -mb-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" aria-label="Close">
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
@@ -192,7 +220,7 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
             <Row label="Due">
               {bill.due_date ? (
                 <span className={`font-bold ${overdue ? 'text-red-600 dark:text-red-400' : ''}`}>{formatYmd(bill.due_date)}</span>
-              ) : <span className="text-slate-400">—</span>}
+              ) : <span className="text-slate-500 dark:text-slate-400">No due date</span>}
             </Row>
             {bill.status === 'paid' && (
               <Row label="Paid">
@@ -224,7 +252,7 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
             )}
             <Row label="Logged">
               <span className="text-slate-600 dark:text-slate-300">{formatDatePacific(bill.created_at)}</span>
-              {bill.created_by?.name && <span className="block text-xs text-slate-400">by {bill.created_by.name}</span>}
+              {bill.created_by?.name && <span className="block text-xs text-slate-500 dark:text-slate-400">by {bill.created_by.name}</span>}
             </Row>
           </div>
 
@@ -259,14 +287,22 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
               </button>
             </div>
             {attachments.length === 0 ? (
-              <p className="text-xs text-slate-400 dark:text-slate-500 italic">No photo or PDF of this bill yet.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic">No photo or PDF of this bill yet.</p>
             ) : (
               <ul className="grid grid-cols-3 gap-2">
                 {attachments.map((a) => {
                   const href = billAttachmentUrl(bill.id, a.url);
+                  const name = a.filename || (a.kind === 'pdf' ? 'PDF' : 'photo');
                   return (
                     <li key={a.url} className="relative group">
-                      <a href={href} target="_blank" rel="noopener noreferrer" title={a.filename || a.kind} className="block rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`${name} (opens in a new tab)`}
+                        aria-label={`Open ${name} in a new tab`}
+                        className="block rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800"
+                      >
                         {a.kind === 'pdf' ? (
                           <span className="h-24 flex flex-col items-center justify-center gap-1 px-2 text-slate-600 dark:text-slate-300">
                             <span className="material-symbols-outlined text-3xl text-red-500">picture_as_pdf</span>
@@ -276,12 +312,15 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
                           <img src={href} alt={a.filename || 'Bill photo'} loading="lazy" className="w-full h-24 object-cover" />
                         )}
                       </a>
+                      {/* after: an invisible halo lifts the 28px button to a
+                          44px tap target on phones without a bigger badge. */}
                       <button
                         type="button"
                         onClick={() => setConfirm({ kind: 'attachment', url: a.url })}
                         disabled={busy}
-                        aria-label="Remove attachment"
-                        className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-500 hover:text-red-500 flex items-center justify-center shadow"
+                        aria-label={`Remove ${name}`}
+                        title="Remove attachment"
+                        className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-500 hover:text-red-500 flex items-center justify-center shadow after:absolute after:-inset-2 after:content-[''] sm:after:hidden"
                       >
                         <span className="material-symbols-outlined text-sm">close</span>
                       </button>
@@ -316,22 +355,22 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
           )}
 
           {payOpen && (
-            <div className="rounded-xl border border-green-300 dark:border-green-800/40 bg-green-50/60 dark:bg-green-900/10 p-3 space-y-3">
+            <div ref={payRef} className="rounded-xl border border-green-300 dark:border-green-800/40 bg-green-50/60 dark:bg-green-900/10 p-3 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={LABEL_CLS}>Paid on</label>
-                  <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={INPUT_CLS} />
+                  <label htmlFor={fid('paid-date')} className={LABEL_CLS}>Paid on</label>
+                  <input id={fid('paid-date')} type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={INPUT_CLS} />
                 </div>
                 <div>
-                  <label className={LABEL_CLS}>Reference</label>
-                  <input type="text" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} maxLength={100} placeholder="Last 4, e-transfer ref, cheque #" className={INPUT_CLS} autoFocus />
+                  <label htmlFor={fid('reference')} className={LABEL_CLS}>Reference</label>
+                  <input id={fid('reference')} type="text" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} maxLength={100} placeholder="Last 4, e-transfer ref, cheque #" className={INPUT_CLS} autoFocus />
                 </div>
               </div>
               <div>
-                <label className={LABEL_CLS}>Paid by</label>
-                <div className="flex flex-wrap gap-2">
+                <p id={fid('method')} className={LABEL_CLS}>Paid by</p>
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby={fid('method')}>
                   {PAYMENT_METHOD_LIST.map((m) => (
-                    <button key={m.value} type="button" onClick={() => setPaymentMethod(paymentMethod === m.value ? '' : m.value)} className={pillCls(paymentMethod === m.value)}>{m.label}</button>
+                    <button key={m.value} type="button" onClick={() => setPaymentMethod(paymentMethod === m.value ? '' : m.value)} aria-pressed={paymentMethod === m.value} className={pillCls(paymentMethod === m.value)}>{m.label}</button>
                   ))}
                 </div>
               </div>
@@ -339,28 +378,29 @@ export default function BillDetailModal({ bill, suppliers, onEdit, onChanged, on
                 <button type="button" onClick={() => setPayOpen(false)} disabled={busy} className={`${BTN_NEUTRAL} flex-1 min-h-[44px] sm:min-h-0`}>Cancel</button>
                 <button type="button" onClick={markPaid} disabled={busy} className={`${BTN_PRIMARY} flex-1 min-h-[44px] sm:min-h-0 disabled:opacity-50`}>
                   <span className="material-symbols-outlined text-base">check</span>
-                  Confirm paid {formatMoney(bill.total, bill.currency)}
+                  Confirm paid<span className="hidden sm:inline">&nbsp;{formatMoney(bill.total, bill.currency)}</span>
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0 flex flex-col sm:flex-row sm:flex-wrap gap-2">
+        {/* Phones: two-up grid with the lead action across the top; sm+: one wrapping row. */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0 grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-2">
           {(bill.status === 'unpaid' || bill.status === 'disputed') && !payOpen && (
-            <button type="button" onClick={() => setPayOpen(true)} disabled={busy} className={`${BTN_PRIMARY} ${ACTION} disabled:opacity-50`}>
+            <button type="button" onClick={() => setPayOpen(true)} disabled={busy} className={`${BTN_PRIMARY} ${LEAD} ${ACTION} disabled:opacity-50`}>
               <span className="material-symbols-outlined text-base">price_check</span>
               Mark paid
             </button>
           )}
           {bill.status === 'paid' && (
-            <button type="button" onClick={() => changeStatus('unpaid', {}, 'Payment undone — back to unpaid.')} disabled={busy} className={`${BTN_NEUTRAL} ${ACTION}`}>
+            <button type="button" onClick={() => setConfirm({ kind: 'unpay' })} disabled={busy} className={`${BTN_NEUTRAL} ${LEAD} ${ACTION}`}>
               <span className="material-symbols-outlined text-base">undo</span>
-              Undo payment
+              Mark unpaid
             </button>
           )}
           {bill.status === 'void' && (
-            <button type="button" onClick={() => changeStatus('unpaid', {}, 'Bill reopened.')} disabled={busy} className={`${BTN_PRIMARY} ${ACTION} disabled:opacity-50`}>
+            <button type="button" onClick={() => changeStatus('unpaid', {}, 'Bill reopened.')} disabled={busy} className={`${BTN_PRIMARY} ${LEAD} ${ACTION} disabled:opacity-50`}>
               <span className="material-symbols-outlined text-base">restart_alt</span>
               Reopen
             </button>

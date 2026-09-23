@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { billsAPI, suppliersAPI } from '../../services/api';
 import { useToast } from '../admin/shared/ToastProvider';
 import { apiErrorMessage } from '../../utils/apiError';
 import useEscapeClose from '../../utils/useEscapeClose';
 import useBodyScrollLock from '../../utils/useBodyScrollLock';
-import { INPUT_CLS, LABEL_CLS, CANCEL_BTN_CLS, SUBMIT_BTN_CLS } from './formStyles';
+import { INPUT_CLS, AMOUNT_INPUT_CLS, LABEL_CLS, CANCEL_BTN_CLS, SUBMIT_BTN_CLS, pillCls } from './formStyles';
 import { BTN_NEUTRAL } from '../sales/ui';
 import {
   BILL_CATEGORY_LIST, PAYMENT_METHOD_LIST, CURRENCIES, GST_RATE, PST_RATE,
@@ -14,6 +14,9 @@ import { getTodayPacific } from '../../utils/dateFormat';
 import WorkOrderPicker from './WorkOrderPicker';
 
 const MAX_FILES = 10;
+const noop = () => {};
+// Small labels inside the amounts and lines blocks (the big ones use LABEL_CLS).
+const MINI_LABEL = 'block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1';
 
 const numStr = (n) => (n === null || n === undefined ? '' : String(n));
 const num = (s) => {
@@ -31,17 +34,14 @@ const newLine = (line = {}) => ({
   workOrder: line.repair_id ? { repair_id: line.repair_id, request_number: line.request_number } : null,
   linking: false,
 });
-
-const PILL_BASE = 'inline-flex items-center justify-center px-3 py-2 min-h-[44px] sm:min-h-0 rounded-xl border-2 text-xs font-bold uppercase transition-all';
-const pillCls = (active) => `${PILL_BASE} ${active
-  ? 'border-primary bg-primary/5 text-slate-900 dark:text-white'
-  : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`;
+/** Something typed on the line besides the description — worth stopping for, not dropping. */
+const lineHasContent = (l) => Boolean(l.part_number.trim() || l.unit_price.trim() || l.workOrder);
 
 /**
  * Supplier picker: type to filter the active suppliers, or keep the typed
- * name as a one-off vendor, or add it to the directory right here.
+ * name as a one-off supplier, or add it to the directory right here.
  */
-function SupplierPicker({ value, suppliers, onChange, onCreated }) {
+function SupplierPicker({ inputId, value, suppliers, onChange, onCreated }) {
   const showToast = useToast();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -59,12 +59,12 @@ function SupplierPicker({ value, suppliers, onChange, onCreated }) {
   if (value) {
     return (
       <div>
-        <label className={LABEL_CLS}>Supplier *</label>
+        <p className={LABEL_CLS}>Supplier *</p>
         <div className="flex items-center justify-between gap-2 px-4 py-3 bg-primary/5 border border-primary/30 rounded-xl">
           <span className="inline-flex items-center gap-1.5 text-sm font-bold text-primary dark:text-blue-400 min-w-0">
             <span className="material-symbols-outlined text-base">storefront</span>
             <span className="truncate">{value.supplier_name}</span>
-            {!value.supplier_id && <span className="text-[10px] font-bold uppercase text-slate-400">one-off</span>}
+            {!value.supplier_id && <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">one-off</span>}
           </span>
           <button
             type="button"
@@ -84,10 +84,16 @@ function SupplierPicker({ value, suppliers, onChange, onCreated }) {
   const matches = (needle
     ? suppliers.filter((s) => s.name.toLowerCase().includes(needle))
     : suppliers).slice(0, 8);
-  const exact = suppliers.some((s) => s.name.toLowerCase() === needle);
+  const exact = suppliers.find((s) => s.name.toLowerCase() === needle) || null;
 
   const pick = (supplier) => {
     onChange({ supplier_id: supplier.id, supplier_name: supplier.name });
+    setQuery('');
+    setOpen(false);
+  };
+
+  const pickTyped = () => {
+    onChange({ supplier_id: null, supplier_name: query.trim() });
     setQuery('');
     setOpen(false);
   };
@@ -106,19 +112,43 @@ function SupplierPicker({ value, suppliers, onChange, onCreated }) {
     }
   };
 
+  const listOpen = open && (matches.length > 0 || Boolean(needle));
+
+  // Enter takes the obvious pick (an exact name, else the first match, else
+  // the typed name as a one-off) instead of submitting the whole bill;
+  // Escape closes just the list when one is showing — otherwise it falls
+  // through to the modal's own Escape.
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!needle) return;
+      if (exact) pick(exact);
+      else if (matches.length) pick(matches[0]);
+      else pickTyped();
+    } else if (e.key === 'Escape' && listOpen) {
+      e.stopPropagation();
+      setOpen(false);
+    }
+  };
+
   return (
     <div ref={boxRef} className="relative">
-      <label className={LABEL_CLS}>Supplier *</label>
+      <label htmlFor={inputId} className={LABEL_CLS}>Supplier *</label>
       <input
+        id={inputId}
         type="text"
         value={query}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
+        onKeyDown={onKeyDown}
         placeholder="Type a supplier name…"
+        autoComplete="off"
+        aria-autocomplete="list"
+        aria-expanded={listOpen}
         className={INPUT_CLS}
         autoFocus
       />
-      {open && (matches.length > 0 || needle) && (
+      {listOpen && (
         <ul className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl divide-y divide-slate-100 dark:divide-slate-700/60">
           {matches.map((s) => (
             <li key={s.id}>
@@ -133,11 +163,11 @@ function SupplierPicker({ value, suppliers, onChange, onCreated }) {
               <li>
                 <button
                   type="button"
-                  onClick={() => { onChange({ supplier_id: null, supplier_name: query.trim() }); setQuery(''); setOpen(false); }}
+                  onClick={pickTyped}
                   className="w-full text-left px-4 py-2.5 min-h-11 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                 >
                   <span className="material-symbols-outlined text-base align-middle mr-1">storefront</span>
-                  Use “{query.trim()}” as a one-off vendor
+                  Use “{query.trim()}” as a one-off supplier
                 </button>
               </li>
               <li>
@@ -171,10 +201,12 @@ function linesSubtotal(lines) {
  * paid ("Paid already"); attachments chosen while logging upload one by one
  * after the bill exists, and are managed from the bill itself afterwards.
  * `defaults` prefills create mode — the work order dialog passes the job's
- * received parts as lines and their supplier.
+ * parts as lines and their supplier.
  */
 export default function BillFormModal({ bill, defaults, suppliers, onSuppliersChange, onSaved, onClose }) {
   const showToast = useToast();
+  const uid = useId();
+  const fid = (name) => `${uid}-${name}`;
   const editing = Boolean(bill);
   const fileRef = useRef(null);
   const seed = !editing ? (defaults || {}) : {};
@@ -201,7 +233,9 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
   const [files, setFiles] = useState([]);
   const [uploadIndex, setUploadIndex] = useState(0);
   const [saving, setSaving] = useState(false);
-  useEscapeClose(onClose);
+  // Nothing closes the form mid-save: the bill may already exist and the
+  // attachments still be uploading.
+  useEscapeClose(saving ? noop : onClose);
   useBodyScrollLock(true);
 
   const showPayment = editing ? bill.status === 'paid' : paidAlready;
@@ -226,8 +260,12 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!supplier) { showToast('error', 'Pick a supplier or type a vendor name.'); return; }
+    if (!supplier) { showToast('error', 'Pick a supplier or type a name.'); return; }
     if (!(t > 0)) { showToast('error', 'Enter the bill total.'); return; }
+    // A line with a part number, price or work order but no description would
+    // otherwise be dropped without a word.
+    const unnamed = lines.findIndex((l) => !l.description.trim() && lineHasContent(l));
+    if (unnamed >= 0) { showToast('error', `Line ${unnamed + 1} needs a description — what was bought.`); return; }
     const payload = {
       supplier_id: supplier.supplier_id || null,
       supplier_name: supplier.supplier_name,
@@ -287,27 +325,33 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 pt-3 sm:pt-10 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-5rem)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={fid('title')}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-5rem)]"
+      >
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-          <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          <h2 id={fid('title')} className="font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {editing ? `Edit ${bill.bill_number}` : 'Log a bill'}
           </h2>
-          <button onClick={onClose} className="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+          <button type="button" onClick={onClose} disabled={saving} aria-label="Close" className="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors disabled:opacity-50">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         <form id="bill-form" onSubmit={handleSubmit} className="p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0">
-          <SupplierPicker value={supplier} suppliers={suppliers} onChange={setSupplier} onCreated={onSuppliersChange} />
+          <SupplierPicker inputId={fid('supplier')} value={supplier} suppliers={suppliers} onChange={setSupplier} onCreated={onSuppliersChange} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={LABEL_CLS}>Supplier invoice / receipt #</label>
-              <input type="text" value={vendorInvoiceNumber} onChange={(e) => setVendorInvoiceNumber(e.target.value)} maxLength={100} placeholder="Their number" className={INPUT_CLS} />
+              <label htmlFor={fid('vendor')} className={LABEL_CLS}>Supplier invoice / receipt #</label>
+              {/* First field to fill when the supplier came prefilled (work order dialog). */}
+              <input id={fid('vendor')} type="text" value={vendorInvoiceNumber} onChange={(e) => setVendorInvoiceNumber(e.target.value)} maxLength={100} placeholder="Their number" autoFocus={Boolean(seed.supplier)} className={INPUT_CLS} />
             </div>
             <div>
-              <label className={LABEL_CLS}>Category</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className={INPUT_CLS}>
+              <label htmlFor={fid('category')} className={LABEL_CLS}>Category</label>
+              <select id={fid('category')} value={category} onChange={(e) => setCategory(e.target.value)} className={INPUT_CLS}>
                 {BILL_CATEGORY_LIST.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
@@ -315,42 +359,42 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={LABEL_CLS}>Bill date</label>
-              <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className={INPUT_CLS} />
+              <label htmlFor={fid('bill-date')} className={LABEL_CLS}>Bill date</label>
+              <input id={fid('bill-date')} type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className={INPUT_CLS} />
             </div>
             <div>
-              <label className={LABEL_CLS}>Due date</label>
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={INPUT_CLS} />
+              <label htmlFor={fid('due-date')} className={LABEL_CLS}>Due date</label>
+              <input id={fid('due-date')} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={INPUT_CLS} />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between gap-3 mb-1.5">
-              <label className={`${LABEL_CLS} mb-0`}>Amounts</label>
-              <div className="flex gap-1">
+              <p className={`${LABEL_CLS} mb-0`}>Amounts</p>
+              <div className="flex gap-1" role="group" aria-label="Currency">
                 {CURRENCIES.map((c) => (
-                  <button key={c} type="button" onClick={() => setCurrency(c)} className={`${pillCls(currency === c)} px-2.5 py-1 min-h-0 text-[11px]`}>{c}</button>
+                  <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c} className={pillCls(currency === c, { compact: true })}>{c}</button>
                 ))}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {[
-                ['Subtotal', subtotal, setSubtotal],
-                ['GST', gst, setGst],
-                ['PST', pst, setPst],
-              ].map(([label, value, set]) => (
-                <div key={label}>
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</label>
-                  <input type="text" inputMode="decimal" value={value} onChange={(e) => set(e.target.value)} placeholder="0.00" className={INPUT_CLS} />
+                ['Subtotal', 'subtotal', subtotal, setSubtotal],
+                ['GST', 'gst', gst, setGst],
+                ['PST', 'pst', pst, setPst],
+              ].map(([label, key, value, set]) => (
+                <div key={key}>
+                  <label htmlFor={fid(key)} className={MINI_LABEL}>{label}</label>
+                  <input id={fid(key)} type="text" inputMode="decimal" value={value} onChange={(e) => set(e.target.value)} placeholder="0.00" className={INPUT_CLS} />
                 </div>
               ))}
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider mb-1">Total *</label>
-                <input type="text" inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" required className={`${INPUT_CLS} font-black`} />
+                <label htmlFor={fid('total')} className={MINI_LABEL}>Total *</label>
+                <input id={fid('total')} type="text" inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" required className={AMOUNT_INPUT_CLS} />
               </div>
             </div>
             <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-              <button type="button" onClick={calcFromSubtotal} disabled={s === null} className={`${BTN_NEUTRAL} text-xs py-2 min-h-[44px] sm:min-h-0 disabled:opacity-50`}>
+              <button type="button" onClick={calcFromSubtotal} disabled={s === null} className={`${BTN_NEUTRAL} w-full sm:w-auto min-h-[44px] sm:min-h-0 disabled:opacity-50`}>
                 <span className="material-symbols-outlined text-base">calculate</span>
                 GST 5% + PST 7% from subtotal
               </button>
@@ -374,44 +418,49 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
             <div className="rounded-xl border border-green-300 dark:border-green-800/40 bg-green-50/60 dark:bg-green-900/10 p-3 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={LABEL_CLS}>Paid on</label>
-                  <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={INPUT_CLS} />
+                  <label htmlFor={fid('paid-date')} className={LABEL_CLS}>Paid on</label>
+                  <input id={fid('paid-date')} type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={INPUT_CLS} />
                 </div>
                 <div>
-                  <label className={LABEL_CLS}>Reference</label>
-                  <input type="text" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} maxLength={100} placeholder="Last 4, e-transfer ref, cheque #" className={INPUT_CLS} />
+                  <label htmlFor={fid('reference')} className={LABEL_CLS}>Reference</label>
+                  <input id={fid('reference')} type="text" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} maxLength={100} placeholder="Last 4, e-transfer ref, cheque #" className={INPUT_CLS} />
                 </div>
               </div>
               <div>
-                <label className={LABEL_CLS}>Paid by</label>
-                <div className="flex flex-wrap gap-2">
+                <p id={fid('method')} className={LABEL_CLS}>Paid by</p>
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby={fid('method')}>
                   {PAYMENT_METHOD_LIST.map((m) => (
-                    <button key={m.value} type="button" onClick={() => setPaymentMethod(paymentMethod === m.value ? '' : m.value)} className={pillCls(paymentMethod === m.value)}>{m.label}</button>
+                    <button key={m.value} type="button" onClick={() => setPaymentMethod(paymentMethod === m.value ? '' : m.value)} aria-pressed={paymentMethod === m.value} className={pillCls(paymentMethod === m.value)}>{m.label}</button>
                   ))}
                 </div>
               </div>
             </div>
           )}
 
-          <div>
-            <label className={LABEL_CLS}>Lines <span className="normal-case tracking-normal font-medium">(optional)</span></label>
+          {/* Enter inside a line (or its work-order search) must not submit the
+              bill half-typed; the Total field above still submits on Enter. */}
+          <div onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); }}>
+            <p className={LABEL_CLS}>Lines <span className="normal-case tracking-normal font-medium">(optional)</span></p>
             {lines.length > 0 && (
               <div className="space-y-2">
                 {lines.map((ln, i) => {
                   const unit = numOrNull(ln.unit_price);
                   const qty = num(ln.quantity) > 0 ? num(ln.quantity) : 1;
+                  const n = i + 1;
                   return (
                     <div key={ln.key} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
                       <div className="flex gap-2">
-                        <input type="text" value={ln.description} onChange={(e) => updateLine(i, { description: e.target.value })} maxLength={300} placeholder="What was bought *" className={INPUT_CLS} />
-                        <button type="button" onClick={() => removeLine(i)} aria-label="Remove line" className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-red-500 transition-colors">
+                        <input type="text" value={ln.description} onChange={(e) => updateLine(i, { description: e.target.value })} maxLength={300} placeholder="What was bought *" aria-label={`Line ${n}: what was bought`} className={INPUT_CLS} />
+                        <button type="button" onClick={() => removeLine(i)} aria-label={`Remove line ${n}`} title="Remove line" className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl text-slate-400 hover:text-red-500 transition-colors">
                           <span className="material-symbols-outlined">close</span>
                         </button>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <input type="text" value={ln.part_number} onChange={(e) => updateLine(i, { part_number: e.target.value })} maxLength={100} placeholder="Part #" className={INPUT_CLS} />
-                        <input type="text" inputMode="decimal" value={ln.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} placeholder="Qty" className={INPUT_CLS} />
-                        <input type="text" inputMode="decimal" value={ln.unit_price} onChange={(e) => updateLine(i, { unit_price: e.target.value })} placeholder="Unit price" className={INPUT_CLS} />
+                      {/* Phones: part number on its own row, qty and price below — three
+                          abreast at 375px truncated every placeholder. */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <input type="text" value={ln.part_number} onChange={(e) => updateLine(i, { part_number: e.target.value })} maxLength={100} placeholder="Part #" aria-label={`Line ${n}: part number`} className={`${INPUT_CLS} col-span-2 sm:col-span-1`} />
+                        <input type="text" inputMode="decimal" value={ln.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} placeholder="Qty" aria-label={`Line ${n}: quantity`} className={INPUT_CLS} />
+                        <input type="text" inputMode="decimal" value={ln.unit_price} onChange={(e) => updateLine(i, { unit_price: e.target.value })} placeholder="Unit price" aria-label={`Line ${n}: unit price`} className={INPUT_CLS} />
                       </div>
                       {(ln.workOrder || ln.linking) ? (
                         <WorkOrderPicker value={ln.workOrder} onChange={(wo) => updateLine(i, { workOrder: wo, linking: wo ? false : ln.linking })} label="Work order" />
@@ -437,18 +486,18 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={LABEL_CLS}>Zoho bill #</label>
-              <input type="text" value={zohoBillNumber} onChange={(e) => setZohoBillNumber(e.target.value)} maxLength={100} placeholder="If entered in Zoho Books" className={INPUT_CLS} />
+              <label htmlFor={fid('zoho')} className={LABEL_CLS}>Zoho bill #</label>
+              <input id={fid('zoho')} type="text" value={zohoBillNumber} onChange={(e) => setZohoBillNumber(e.target.value)} maxLength={100} placeholder="If entered in Zoho Books" className={INPUT_CLS} />
             </div>
             <div>
-              <label className={LABEL_CLS}>Notes</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={5000} rows={2} placeholder="Anything worth remembering…" className={`${INPUT_CLS} resize-none`} />
+              <label htmlFor={fid('notes')} className={LABEL_CLS}>Notes</label>
+              <textarea id={fid('notes')} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={5000} rows={2} placeholder="Anything worth remembering…" className={`${INPUT_CLS} resize-none`} />
             </div>
           </div>
 
           {!editing ? (
             <div>
-              <label className={LABEL_CLS}>Attach the bill <span className="normal-case tracking-normal font-medium">(photo or PDF)</span></label>
+              <p className={LABEL_CLS}>Attach the bill <span className="normal-case tracking-normal font-medium">(photo or PDF)</span></p>
               {/* No `capture`: the phone's picker already offers the camera, and
                   capture would hide the Files option that PDFs need. */}
               <input
@@ -470,13 +519,13 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
               {files.length > 0 && (
                 <ul className="mt-2 space-y-1">
                   {files.map((f, i) => (
-                    <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 text-sm px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                    <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 text-sm text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
                       <span className="truncate inline-flex items-center gap-1.5 min-w-0">
                         <span className="material-symbols-outlined text-base text-slate-400">{f.type === 'application/pdf' ? 'picture_as_pdf' : 'image'}</span>
                         <span className="truncate">{f.name}</span>
-                        <span className="text-xs text-slate-400 flex-shrink-0">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
                       </span>
-                      <button type="button" onClick={() => setFiles((fs) => fs.filter((_, j) => j !== i))} aria-label="Remove file" className="w-11 h-11 -my-2 flex items-center justify-center text-slate-400 hover:text-red-500 flex-shrink-0">
+                      <button type="button" onClick={() => setFiles((fs) => fs.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} title="Remove file" className="w-11 h-11 -my-2 flex items-center justify-center text-slate-400 hover:text-red-500 flex-shrink-0">
                         <span className="material-symbols-outlined text-base">close</span>
                       </button>
                     </li>
@@ -491,7 +540,7 @@ export default function BillFormModal({ bill, defaults, suppliers, onSuppliersCh
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
           {uploadIndex > 0 && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Uploading {uploadIndex} of {files.length}…</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" aria-live="polite">Uploading {uploadIndex} of {files.length}…</p>
           )}
           <div className="flex gap-2">
             <button type="button" onClick={onClose} disabled={saving} className={CANCEL_BTN_CLS}>Cancel</button>

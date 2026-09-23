@@ -135,7 +135,9 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
           <div>
             <h2 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Print activity report</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Who did what — tools in, status changes, tasks, edits</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Who did what — tools in, status changes, tasks, edits{currentUser?.role === 'admin' ? ', cash flow' : ''}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" aria-label="Close">
             <span className="material-symbols-outlined">close</span>
@@ -182,7 +184,7 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
                   [loaded.data.events.length, 'All events'],
                   // Cash Flow counts arrive for admins only (the API omits the keys otherwise).
                   ...(summary.bills_logged != null
-                    ? [[summary.bills_logged, 'Bills logged'], [summary.bills_paid, 'Bills paid'], [summary.payments_received, 'Payments in']]
+                    ? [[summary.bills_logged, 'Bills logged'], [summary.bills_paid, 'Bills paid'], [summary.payments_received, 'Payments received']]
                     : []),
                 ].map(([n, label]) => (
                   <div key={label}>

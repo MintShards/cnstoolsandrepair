@@ -5,13 +5,17 @@ import StaffAvatar from './StaffAvatar';
 // Badge + attention-dot rules per section, driven by the shared counts poll.
 function badgeFor(sectionId, counts) {
   switch (sectionId) {
-    case 'cash-flow':
-      // Unpaid bills count; the dot only fires once something is past due.
+    case 'cash-flow': {
+      // Unpaid bills count; the dot only fires once something is past due —
+      // and then the pill lands straight on the Overdue list.
+      const overdue = (counts.billsOverdue || 0) > 0;
       return {
         count: counts.billsUnpaid,
-        alert: (counts.billsOverdue || 0) > 0,
+        alert: overdue,
         alertTitle: `${counts.billsOverdue} bill${counts.billsOverdue === 1 ? '' : 's'} overdue`,
+        to: overdue ? '/workspace?section=cash-flow&view=out&chip=overdue' : undefined,
       };
+    }
     case 'my-tasks':
       return { count: counts.myOpen, alert: counts.myOverdue > 0, alertTitle: 'You have overdue tasks' };
     case 'all-tasks':
@@ -62,7 +66,7 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
         <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible">
           {sectionsForRole(currentUser?.role).map((section) => {
             const active = activeSection === section.id;
-            const { count, alert, alertTitle } = badgeFor(section.id, counts);
+            const { count, alert, alertTitle, to } = badgeFor(section.id, counts);
             const hasCount = count != null && count > 0;
             const showAlert = alert && !active;
             const badgeCls = active
@@ -76,7 +80,7 @@ export default function WorkspaceSidebar({ activeSection, counts, currentUser, o
             return (
               <Link
                 key={section.id}
-                to={`/workspace?section=${section.id}`}
+                to={to || `/workspace?section=${section.id}`}
                 className={`flex-1 md:flex-none min-w-0 flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 px-1 md:px-4 py-2 md:py-2.5 rounded-xl font-bold text-sm transition-all flex-shrink-0 ${
                   active
                     ? 'bg-primary text-white shadow-md shadow-primary/25'
