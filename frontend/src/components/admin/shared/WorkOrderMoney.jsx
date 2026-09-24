@@ -45,12 +45,14 @@ function PaymentLine({ acct }) {
     { label: 'Paid by customer', value: fmtMoney(received), tone: received != null ? 'text-green-700 dark:text-green-400' : '', hint: 'Customer payments logged in Cash Flow' },
     { ...balance, hint: balance.hint || 'Invoice total minus what the customer has paid' },
   ];
+  // Three cells side by side from sm up; on phones each is a label/value row,
+  // since three 100px columns would truncate the labels and "Paid in full".
   return (
-    <div className={`${PANEL} grid grid-cols-3 gap-2`}>
+    <div className={`${PANEL} grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2`}>
       {cells.map((c) => (
-        <div key={c.label} className="min-w-0" title={c.hint}>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{c.label}</p>
-          <p className={`text-sm font-black tabular-nums truncate ${c.tone || 'text-slate-900 dark:text-white'}`}>{c.value}</p>
+        <div key={c.label} className="min-w-0 flex items-baseline justify-between gap-3 sm:block" title={c.hint}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 sm:truncate">{c.label}</p>
+          <p className={`text-sm font-black tabular-nums whitespace-nowrap sm:truncate ${c.tone || 'text-slate-900 dark:text-white'}`}>{c.value}</p>
         </div>
       ))}
     </div>
@@ -88,30 +90,35 @@ function ExpenseList({ acct }) {
     <div>
       <div className="flex items-baseline justify-between gap-2 mb-1">
         <p className={LIST_HDR}>Bill lines on this job ({rows.length})</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">each line opens its bill in Cash Flow</p>
+        <p className="hidden sm:block text-[11px] text-slate-400 dark:text-slate-500 truncate">each line opens its bill in Cash Flow</p>
       </div>
+      {/* Two lines per row: what and how much, then who / kind / tool / bill
+          with the status pill. Keeps the description readable on a phone,
+          where a pill and an amount beside it left "Hammer cag…". */}
       <ul className={LIST}>
         {rows.map((r, i) => (
           <li key={`${r.bill_id}-${i}`} className={r.excluded ? 'opacity-60' : ''}>
             <Link
               to={`/workspace?section=cash-flow&bill=${r.bill_id}`}
-              className="flex items-center gap-3 px-3 py-2 min-h-[44px] sm:min-h-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="block px-3 py-2 min-h-[44px] sm:min-h-0 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               title={`Open ${r.bill_number} in Cash Flow`}
             >
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs font-bold text-slate-900 dark:text-white truncate">
+              <span className="flex items-start justify-between gap-3">
+                <span className="min-w-0 text-xs font-bold text-slate-900 dark:text-white">
                   {r.description}{r.part_number ? ` · ${r.part_number}` : ''}
                 </span>
-                <span className="block text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                <span className={`text-xs font-black tabular-nums whitespace-nowrap ${r.excluded ? 'text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
+                  {r.line_total != null ? formatMoney(r.line_total) : <span className="font-medium text-slate-400 no-underline">no price</span>}
+                </span>
+              </span>
+              <span className="mt-0.5 flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-[11px] text-slate-500 dark:text-slate-400">
                   {r.supplier_name} · {BILL_LINE_KINDS[r.kind || 'part'] || r.kind} · {r.where}
                   {r.quantity !== 1 && r.unit_price != null ? ` · ${r.quantity} × ${formatMoney(r.unit_price)}` : ''}
                   {' · '}<span className="font-mono">{r.bill_number}</span>
                   {r.excluded && <span className="ml-1 text-amber-700 dark:text-amber-400">· {r.reason} — not counted</span>}
                 </span>
-              </span>
-              <BillStatusPill status={r.bill_status} small />
-              <span className={`text-xs font-black tabular-nums whitespace-nowrap ${r.excluded ? 'text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
-                {r.line_total != null ? formatMoney(r.line_total) : <span className="font-medium text-slate-400 no-underline">no price</span>}
+                <BillStatusPill status={r.bill_status} small />
               </span>
             </Link>
           </li>

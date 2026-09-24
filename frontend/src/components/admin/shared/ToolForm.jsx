@@ -879,11 +879,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   {data.diagnostics.map((d, di) => (
                     <div key={di} className="flex items-start gap-2">
                       <span className="w-7 h-11 flex-shrink-0 flex items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400">{di + 1}.</span>
+                      {/* Two-line boxes: these are sentences, and a single-line
+                          input clips them on a phone. */}
                       <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <input value={d.diagnosis || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, diagnosis: e.target.value } : x)))}
-                          placeholder="Diagnosis — what was found" aria-label={`Diagnosis ${di + 1}`} className={inputCls} />
-                        <input value={d.solution || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, solution: e.target.value } : x)))}
-                          placeholder="Solution — what was done (optional)" aria-label={`Solution ${di + 1}`} className={inputCls} />
+                        <textarea value={d.diagnosis || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, diagnosis: e.target.value } : x)))}
+                          rows={2} style={{ fieldSizing: 'content' }} placeholder="Diagnosis — what was found" aria-label={`Diagnosis ${di + 1}`} className={`${inputCls} resize-none`} />
+                        <textarea value={d.solution || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, solution: e.target.value } : x)))}
+                          rows={2} style={{ fieldSizing: 'content' }} placeholder="Solution — what was done (optional)" aria-label={`Solution ${di + 1}`} className={`${inputCls} resize-none`} />
                       </div>
                       <button type="button" onClick={() => handleChange('diagnostics', data.diagnostics.filter((_, j) => j !== di))}
                         aria-label={`Remove diagnosis ${di + 1}`} title="Remove"
@@ -1284,11 +1286,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
           {(data.extra_charges || []).length > 0 && (
             <div className="space-y-2 mb-3">
               {data.extra_charges.map((c, ci) => (
-                <div key={ci} className="grid grid-cols-[1fr_8rem_2.75rem] gap-2 items-center">
+                // One line on wider screens; on a phone the description keeps
+                // the first line to itself and the amount + remove wrap under it.
+                <div key={ci} className="flex flex-wrap items-center gap-2">
                   <input value={c.description || ''} onChange={(e) => handleChange('extra_charges', data.extra_charges.map((x, j) => (j === ci ? { ...x, description: e.target.value } : x)))}
-                    placeholder="What for" aria-label={`Extra charge ${ci + 1}: what for`} className={inputCls} />
+                    placeholder="What for" aria-label={`Extra charge ${ci + 1}: what for`} className={`${inputCls} flex-1 min-w-[12rem]`} />
                   <input type="number" step="0.01" min="0" value={c.amount ?? ''} onChange={(e) => handleChange('extra_charges', data.extra_charges.map((x, j) => (j === ci ? { ...x, amount: e.target.value } : x)))}
-                    placeholder="0.00" aria-label={`Extra charge ${ci + 1}: amount`} className={inputCls} />
+                    placeholder="0.00" aria-label={`Extra charge ${ci + 1}: amount`} className={`${inputCls} max-w-[8rem] flex-none`} />
                   <button type="button" onClick={() => handleChange('extra_charges', data.extra_charges.filter((_, j) => j !== ci))}
                     aria-label={`Remove extra charge ${ci + 1}`} title="Remove"
                     className="w-11 h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 transition-colors">
