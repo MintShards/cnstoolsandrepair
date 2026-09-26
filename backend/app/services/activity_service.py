@@ -189,6 +189,8 @@ def _diagnostics_summary(items) -> str:
         text = str(d["diagnosis"])[:80]
         if d.get("solution"):
             text += f" → {str(d['solution'])[:80]}"
+        if d.get("parts"):
+            text += f" (parts: {str(d['parts'])[:60]})"
         bits.append(f"{i}. {text}")
     return " · ".join(bits) or "—"
 

@@ -74,6 +74,7 @@ function getStyles(prefix) {
     ${p}.notes-text { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
     ${p}.diag-list { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.5; }
     ${p}.diag-list li { margin-bottom: 2px; }
+    ${p}.diag-parts { font-size: 10px; color: #555; }
     ${p}.diag-solution { color: #374151; }
     ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
     ${p}.camera-line { font-size: 11px; line-height: 1.5; }
@@ -194,7 +195,10 @@ function buildBody(job, businessInfo, serviceAgreement) {
         ${diagnostics.length ? `
           <div class="notes-label"${reported ? ' style="margin-top:6px;"' : ''}>Diagnosis &amp; solution</div>
           <ol class="diag-list">
-            ${diagnostics.map(d => `<li>${escHtml(d.diagnosis)}${d.solution ? ` <span class="diag-solution">— ${escHtml(d.solution)}</span>` : ''}</li>`).join('')}
+            ${diagnostics.map(d => {
+              const partsLine = d.parts?.trim() ? `<div class="diag-parts">Parts: ${escHtml(d.parts.trim())}</div>` : '';
+              return `<li>${escHtml(d.diagnosis)}${d.solution ? ` <span class="diag-solution">— ${escHtml(d.solution)}</span>` : ''}${partsLine}</li>`;
+            }).join('')}
           </ol>` : ''}
       </div>
     ` : '';

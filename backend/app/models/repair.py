@@ -209,12 +209,16 @@ class ExtraCharge(BaseModel):
 
 
 class DiagnosisEntry(BaseModel):
-    """One numbered finding on a tool: what the tech diagnosed and, once
-    known, what was done about it. Kept as typed — these are sentences."""
+    """One numbered finding on a tool: what the tech diagnosed, what needs
+    doing about it, and the parts it needs — three plain texts, kept as
+    typed. The parts text is just a note; the tool's Parts list is entered
+    separately. `id` keeps the entry stable across edits (router-assigned)."""
+    id: Optional[str] = Field(None, max_length=50)
     diagnosis: str = Field(..., min_length=1, max_length=500)
     solution: Optional[str] = Field(None, max_length=500)
+    parts: Optional[str] = Field(None, max_length=500)
 
-    @field_validator('diagnosis', 'solution', mode='before')
+    @field_validator('diagnosis', 'solution', 'parts', mode='before')
     @classmethod
     def strip_text(cls, v):
         if isinstance(v, str):

@@ -136,6 +136,15 @@ def _build_tool_response(tool: dict) -> ToolItemResponse:
     return ToolItemResponse(**_migrate_tool_parts(tool))
 
 
+def _ensure_diagnosis_ids(tool_fields: dict) -> None:
+    """Every finding gets a stable id, so the tool's parts can point at the
+    one they are needed for (PartItem.diagnosis_id) across later edits."""
+    import uuid
+    for d in tool_fields.get("diagnostics") or []:
+        if isinstance(d, dict) and not d.get("id"):
+            d["id"] = str(uuid.uuid4())
+
+
 async def _fill_part_costs(db, parts: Optional[list]) -> None:
     """Snapshot what the shop paid for each part from the parts library when
     the part is linked to one and carries no cost of its own. Job accounting
@@ -1695,6 +1704,7 @@ async def create_repair_job(
         if current_user.role != "admin":
             tool_dict["labour_cost_override"] = None   # admin-only figure
         await _fill_part_costs(db, tool_dict.get("parts"))
+        _ensure_diagnosis_ids(tool_dict)
         tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
         # Add initial status history entry
         tool_dict["status_history"] = [{
@@ -2131,6 +2141,7 @@ async def add_tool(
     if current_user.role != "admin":
         tool_dict["labour_cost_override"] = None   # admin-only figure
     await _fill_part_costs(db, tool_dict.get("parts"))
+    _ensure_diagnosis_ids(tool_dict)
     tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
     tool_dict["status_history"] = [{
         "status": RepairStatus.RECEIVED.value,
@@ -2218,6 +2229,8 @@ async def update_tool(
 
     if "parts" in update_fields:
         await _fill_part_costs(db, update_fields["parts"])
+    if "diagnostics" in update_fields:
+        _ensure_diagnosis_ids(update_fields)
 
     set_data = {f"tools.{tool_index}.{k}": v for k, v in update_fields.items()}
     set_data["updated_at"] = datetime.utcnow()

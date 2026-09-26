@@ -7,6 +7,7 @@ import { useSettings } from '../../../contexts/SettingsContext';
 import { BILL_LINE_KINDS } from '../../../constants/bills';
 import { formatMoney } from '../../../utils/money';
 import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
+import DiagnosisEditor from './DiagnosisEditor';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
 const EMPTY_TOOL_BASE = {
@@ -222,7 +223,9 @@ export const syncPartsToLibrary = async (tools) => {
 // showCost: render the shop-side "Cost to shop" group (admins only).
 // costLines: this tool's Cash Flow bill lines, read-only, or null when there
 // is nothing to list yet (a tool being added).
-export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId, fieldErrors = [], showCost = false, costLines = null }) {
+// only: 'parts' renders the Parts section alone (the work order's Parts
+// dialog); every other section stays out, whatever the wizard step.
+export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId, fieldErrors = [], showCost = false, costLines = null, only = null }) {
   // Configurable camera-intake lists; the shared fetch resolves once per
   // page load, so many ToolForm instances don't stack requests.
   const [intakeConfig, setIntakeConfig] = useState(CAMERA_INTAKE_DEFAULTS);
@@ -257,43 +260,18 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const partSearchTimer = useRef(null);
 
-  // Suggested parts for this model
+  // Suggested parts for this model — the library parts filed under the
+  // tool's model(s), loaded as soon as the tool is identified so both the
+  // Parts section and each finding's "Parts needed" can offer them. A
+  // Hathorn tool matches on its component models (head / controller / reel)
+  // instead of the hidden generic model_number, and suggestions merge across
+  // all of them.
   const [suggestedParts, setSuggestedParts] = useState([]);
   const [suggestedPartsLoading, setSuggestedPartsLoading] = useState(false);
   const [showSuggestedParts, setShowSuggestedParts] = useState(false);
-
-  const loadSuggestedParts = async () => {
-    if (showSuggestedParts) { setShowSuggestedParts(false); return; }
-    // Find model IDs from library brands/models — a Hathorn tool matches on
-    // its component models (head / controller / reel) instead of the hidden
-    // generic model_number, and suggestions merge across all of them.
-    const brand = data.brand?.trim();
-    const modelNames = [data.model_number, data.camera_head_model,
-      data.controller_model, data.reel_model]
-      .map((m) => m?.trim()).filter(Boolean);
-    if (!brand || !modelNames.length) return;
-    setSuggestedPartsLoading(true);
-    setShowSuggestedParts(true);
-    try {
-      const brands = await partsLibraryAPI.listBrands();
-      const matchBrand = brands.find(b => b.name.toLowerCase() === brand.toLowerCase());
-      if (!matchBrand) { setSuggestedParts([]); return; }
-      const models = await partsLibraryAPI.listModels(matchBrand.id);
-      const matched = models.filter(m => modelNames.some(n => n.toLowerCase() === m.name.toLowerCase()));
-      if (!matched.length) { setSuggestedParts([]); return; }
-      const results = await Promise.all(
-        matched.map(m => partsLibraryAPI.listParts({ model_id: m.id, limit: 50 }).catch(() => ({ items: [] })))
-      );
-      const seen = new Set();
-      const merged = results.flatMap(r => r.items || []).filter(p => {
-        if (seen.has(p.id)) return false;
-        seen.add(p.id);
-        return true;
-      });
-      setSuggestedParts(merged);
-    } catch { setSuggestedParts([]); }
-    finally { setSuggestedPartsLoading(false); }
-  };
+  // The Parts section's own box only shows or hides the same list; the
+  // lookup itself runs in an effect further down, once `data` exists.
+  const loadSuggestedParts = () => setShowSuggestedParts((v) => !v);
 
   const addSuggestedPart = (libPart) => {
     const updated = [...(data.parts || [])];
@@ -554,6 +532,49 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   // Shop-wide labour cost rate (Admin Settings → Repair Tracker) — the
   // placeholder for the per-tool override below.
   const { settings: shopSettings } = useSettings();
+
+  // Suggested parts for this model — the library parts filed under the
+  // tool's model(s), loaded as soon as the tool is identified so both the
+  // Parts section and each finding's "Parts needed" can offer them. A
+  // Hathorn tool matches on its component models (head / controller / reel)
+  // instead of the hidden generic model_number, and suggestions merge across
+  // all of them.
+  const modelKey = [data.brand, data.model_number, data.camera_head_model, data.controller_model, data.reel_model]
+    .map((m) => (m || '').trim().toLowerCase()).join('|');
+
+  useEffect(() => {
+    const [brand, ...modelNames] = modelKey.split('|');
+    const names = modelNames.filter(Boolean);
+    if (!brand || !names.length) { setSuggestedParts([]); setSuggestedPartsLoading(false); return undefined; }
+    let cancelled = false;
+    // Debounced: the wizard fires this on every keystroke of the model number.
+    const timer = setTimeout(async () => {
+      setSuggestedPartsLoading(true);
+      try {
+        const brands = await partsLibraryAPI.listBrands();
+        const matchBrand = brands.find((b) => b.name.toLowerCase() === brand);
+        if (!matchBrand) { if (!cancelled) setSuggestedParts([]); return; }
+        const models = await partsLibraryAPI.listModels(matchBrand.id);
+        const matched = models.filter((m) => names.includes(m.name.toLowerCase()));
+        if (!matched.length) { if (!cancelled) setSuggestedParts([]); return; }
+        const results = await Promise.all(
+          matched.map((m) => partsLibraryAPI.listParts({ model_id: m.id, limit: 50 }).catch(() => ({ items: [] })))
+        );
+        const seen = new Set();
+        const merged = results.flatMap((r) => r.items || []).filter((p) => {
+          if (seen.has(p.id)) return false;
+          seen.add(p.id);
+          return true;
+        });
+        if (!cancelled) setSuggestedParts(merged);
+      } catch {
+        if (!cancelled) setSuggestedParts([]);
+      } finally {
+        if (!cancelled) setSuggestedPartsLoading(false);
+      }
+    }, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [modelKey]);
   const shopLabourCostRate = shopSettings?.labourCostRate;
 
   const inputCls = "w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary";
@@ -569,8 +590,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   ) : null);
   const sectionHdr = "text-sm text-slate-500 uppercase tracking-wide font-bold mb-4 pb-2 border-b border-slate-300 dark:border-slate-700";
 
-  // Which sections to show: no wizardStep (or non-wizard) = show all
-  const showSection = (sections) => !isNewJobForm || !wizardStep || sections.includes(wizardStep);
+  // Which sections to show: no wizardStep (or non-wizard) = show all; a
+  // single-section render (`only`) hides everything gated here.
+  const showSection = (sections) => !only && (!isNewJobForm || !wizardStep || sections.includes(wizardStep));
 
   return (
     <div className="space-y-6 text-base">
@@ -884,36 +906,10 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 rows={2} placeholder="What the customer says is wrong"
                 className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Diagnosis &amp; Solution <span className="text-xs text-slate-400">(numbered — one finding per line, solution optional)</span></label>
-              {(data.diagnostics || []).length > 0 && (
-                <div className="space-y-2 mb-2">
-                  {data.diagnostics.map((d, di) => (
-                    <div key={di} className="flex items-start gap-2">
-                      <span className="w-7 h-11 flex-shrink-0 flex items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400">{di + 1}.</span>
-                      {/* Two-line boxes: these are sentences, and a single-line
-                          input clips them on a phone. */}
-                      <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <textarea value={d.diagnosis || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, diagnosis: e.target.value } : x)))}
-                          rows={2} style={{ fieldSizing: 'content' }} placeholder="Diagnosis — what was found" aria-label={`Diagnosis ${di + 1}`} className={`${inputCls} resize-none`} />
-                        <textarea value={d.solution || ''} onChange={(e) => handleChange('diagnostics', data.diagnostics.map((x, j) => (j === di ? { ...x, solution: e.target.value } : x)))}
-                          rows={2} style={{ fieldSizing: 'content' }} placeholder="Solution — what was done (optional)" aria-label={`Solution ${di + 1}`} className={`${inputCls} resize-none`} />
-                      </div>
-                      <button type="button" onClick={() => handleChange('diagnostics', data.diagnostics.filter((_, j) => j !== di))}
-                        aria-label={`Remove diagnosis ${di + 1}`} title="Remove"
-                        className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 transition-colors">
-                        <span className="material-symbols-outlined">close</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <button type="button" onClick={() => handleChange('diagnostics', [...(data.diagnostics || []), { diagnosis: '', solution: '' }])}
-                className="inline-flex items-center gap-1 min-h-[44px] sm:min-h-0 text-sm font-bold text-primary dark:text-blue-400 hover:underline">
-                <span className="material-symbols-outlined text-base">add</span>
-                Add diagnosis
-              </button>
-            </div>
+            <DiagnosisEditor
+              diagnostics={data.diagnostics || []}
+              onDiagnosticsChange={(v) => handleChange('diagnostics', v)}
+            />
             <div className="md:col-span-2 flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={data.warranty || false} onChange={(e) => handleChange('warranty', e.target.checked)}
@@ -980,19 +976,20 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       )}
 
       {/* Section 4 — Parts */}
-      {showSection([3]) && <div>
+      {(only === 'parts' || showSection([3])) && <div>
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-300 dark:border-slate-700">
-          <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>
-          <div className="flex items-center gap-3">
+          {/* The Parts dialog already says "Parts" in its header. */}
+          {only !== 'parts' && <p className="text-sm text-slate-500 uppercase tracking-wide font-bold">Parts</p>}
+          <div className="flex items-center gap-3 ml-auto">
             {data.brand && (data.model_number || data.camera_head_model || data.controller_model || data.reel_model) && (
               <button type="button" onClick={loadSuggestedParts}
-                className={`text-xs font-bold flex items-center gap-1 transition-colors ${showSuggestedParts ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-amber-600 dark:hover:text-amber-400'}`}>
+                className={`text-xs font-bold flex items-center gap-1 min-h-[44px] sm:min-h-0 transition-colors ${showSuggestedParts ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-amber-600 dark:hover:text-amber-400'}`}>
                 <span className="material-symbols-outlined" style={{fontSize:'15px'}}>lightbulb</span>
                 {suggestedPartsLoading ? 'Loading…' : showSuggestedParts ? 'Hide Suggestions' : 'Suggested Parts'}
               </button>
             )}
             <button type="button" onClick={() => handleChange('parts', [...(data.parts || []), { name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }])}
-              className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-1 transition-colors">
+              className="text-sm text-primary hover:text-blue-400 font-bold flex items-center gap-1 min-h-[44px] sm:min-h-0 transition-colors">
               <span className="material-symbols-outlined text-base">add</span> Add Part
             </button>
           </div>

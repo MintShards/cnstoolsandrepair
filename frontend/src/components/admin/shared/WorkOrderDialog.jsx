@@ -24,9 +24,23 @@ import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { toolProblems, describeToolProblems, scrollToFirstProblem } from '../../../utils/toolValidation';
 import { useSettings } from '../../../contexts/SettingsContext';
 import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from './ToolForm';
+import DiagnosisEditor, { newDiagnosisId } from './DiagnosisEditor';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
 import { customerPhotoUrl } from '../../../utils/photoUrl';
 
+
+// A finding is saved by its diagnosis. One typed with only a solution or
+// parts would be dropped silently on save, so the save refuses it instead:
+// returns that finding's number, or 0 when every finding is complete.
+const incompleteFinding = (diagnostics) => {
+  const i = (diagnostics || []).findIndex((d) => !d.diagnosis?.trim() && (d.solution?.trim() || d.parts?.trim()));
+  return i === -1 ? 0 : i + 1;
+};
+// The findings as the API takes them: blanks dropped, texts trimmed, empty
+// optional texts as null.
+const findingsPayload = (diagnostics) => (diagnostics || [])
+  .filter((d) => d.diagnosis?.trim())
+  .map((d) => ({ id: d.id || null, diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null, parts: d.parts?.trim() || null }));
 
 const getErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -87,6 +101,16 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [addToolForm, setAddToolForm] = useState(null);
   const [addingTool, setAddingTool] = useState(false);
   const [editingToolId, setEditingToolId] = useState(null);
+  // Diagnosis & Solution has its own small dialog, so recording a finding
+  // never means scrolling the whole edit form: the tool it is for, the
+  // findings being typed, and whether the save is in flight.
+  const [diagnosisToolId, setDiagnosisToolId] = useState(null);
+  const [diagnosisForm, setDiagnosisForm] = useState(null);
+  const [savingDiagnosis, setSavingDiagnosis] = useState(false);
+  // Same again for the Parts list: the tool form's Parts section alone.
+  const [partsToolId, setPartsToolId] = useState(null);
+  const [partsForm, setPartsForm] = useState(null);
+  const [savingParts, setSavingParts] = useState(false);
   const navigate = useNavigate();
 
   // Job accounting (admin only): the block at the top, each tool's subtotal,
@@ -291,6 +315,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       if (selectedPhoto) { setSelectedPhoto(null); return; }
       if (statusUpdateModal && !updatingStatus) { setStatusUpdateModal(null); return; }
       if (editingToolId && !savingToolEdit) { handleCancelToolEdit(); return; }
+      if (diagnosisToolId && !savingDiagnosis) { handleCancelDiagnosis(); return; }
+      if (partsToolId && !savingParts) { handleCancelParts(); return; }
       if (addToolForm && !addingTool) { setAddToolForm(null); return; }
       if (updateAllOpen && !updateAllApplying) { setUpdateAllOpen(false); return; }
       if (editingJob) { setEditingJob(false); return; }
@@ -300,7 +326,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, diagnosisToolId, savingDiagnosis, partsToolId, savingParts, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
   const now = new Date();
@@ -482,19 +508,22 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   };
 
   // ── EDIT TOOL DETAILS ───────────────────────────────
-  const handleStartToolEdit = (tool) => {
-    setEditingToolId(tool.tool_id);
+  // A saved tool as the tool form edits it: strings for every input, dates
+  // trimmed to YYYY-MM-DD, parts and findings normalised. Shared by the edit
+  // form and the Parts dialog, which edit the same shape.
+  const toolToForm = (tool) => {
     const parts = tool.parts?.length > 0
       ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', cost: p.cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' }))
       : [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }];
-    setToolEditForm({
+    return {
       tool_type: (tool.tool_type || '').toUpperCase(),
       brand: (tool.brand || '').toUpperCase(),
       model_number: (tool.model_number || '').toUpperCase(),
       serial_number: (tool.serial_number || '').toUpperCase(),
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
-      diagnostics: (tool.diagnostics || []).map((d) => ({ diagnosis: d.diagnosis || '', solution: d.solution || '' })),
+      // Findings saved before ids existed get one here, so parts can be tied to them.
+      diagnostics: (tool.diagnostics || []).map((d) => ({ id: d.id || newDiagnosisId(), diagnosis: d.diagnosis || '', solution: d.solution || '', parts: d.parts || '' })),
       parts,
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
@@ -523,15 +552,19 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       final_checklist: tool.final_checklist || [],
       date_received: tool.date_received ? tool.date_received.split('T')[0] : '',
       estimated_completion: tool.estimated_completion ? tool.estimated_completion.split('T')[0] : '',
-    });
-    // Enrich parts with library stock data
+    };
+  };
+
+  // Stock on hand for the library-linked parts, fetched once the form is
+  // open and merged into whichever form (edit or Parts dialog) holds them.
+  const enrichPartsWithStock = (parts, setForm) => {
     const libraryIds = [...new Set(parts.filter(p => p.library_part_id).map(p => p.library_part_id))];
     if (libraryIds.length) {
       Promise.all(libraryIds.map(id => partsLibraryAPI.getPart(id).catch(() => null)))
         .then(results => {
           const stockMap = {};
           results.forEach(lp => { if (lp) stockMap[lp.id] = { qty: lp.quantity_on_hand ?? 0, low: lp.low_stock ?? false }; });
-          setToolEditForm(prev => prev ? ({
+          setForm(prev => prev ? ({
             ...prev,
             parts: prev.parts.map(p =>
               p.library_part_id && stockMap[p.library_part_id]
@@ -541,6 +574,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
           }) : prev);
         });
     }
+  };
+
+  const handleStartToolEdit = (tool) => {
+    setEditingToolId(tool.tool_id);
+    const form = toolToForm(tool);
+    setToolEditForm(form);
+    enrichPartsWithStock(form.parts, setToolEditForm);
   };
 
   const handleCancelToolEdit = () => {
@@ -557,6 +597,11 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       showToast('error', describeToolProblems(problems));
       return;
     }
+    const incomplete = incompleteFinding(toolEditForm.diagnostics);
+    if (incomplete) {
+      showToast('error', `Finding ${incomplete} has a solution or parts but no diagnosis`);
+      return;
+    }
     setSavingToolEdit(true);
     let updated;
     try {
@@ -570,7 +615,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         labour_cost_override: toolEditForm.labour_cost_override !== '' && toolEditForm.labour_cost_override != null ? parseFloat(toolEditForm.labour_cost_override) : null,
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
-        diagnostics: (toolEditForm.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null })),
+        diagnostics: findingsPayload(toolEditForm.diagnostics),
         parts: (toolEditForm.parts || []).filter(p => p.name?.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_quote_number: toolEditForm.zoho_quote_number || null,
         zoho_invoice_number: toolEditForm.zoho_invoice_number || null,
@@ -591,6 +636,78 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     setToolEditForm(null);
     showToast('success', 'Tool details updated');
     setSavingToolEdit(false);
+  };
+
+  // ── DIAGNOSIS & SOLUTION ─────────────────────────────
+  // Its own dialog, styled like the edit form but holding only the findings,
+  // so the tech can record what was found without the whole tool form.
+  const handleStartDiagnosis = (tool) => {
+    setDiagnosisToolId(tool.tool_id);
+    setDiagnosisForm((tool.diagnostics || []).map((d) => ({ id: d.id || newDiagnosisId(), diagnosis: d.diagnosis || '', solution: d.solution || '', parts: d.parts || '' })));
+  };
+
+  const handleCancelDiagnosis = () => {
+    setDiagnosisToolId(null);
+    setDiagnosisForm(null);
+  };
+
+  const handleSaveDiagnosis = async () => {
+    if (!diagnosisToolId || !diagnosisForm) return;
+    const incomplete = incompleteFinding(diagnosisForm);
+    if (incomplete) {
+      showToast('error', `Finding ${incomplete} has a solution or parts but no diagnosis`);
+      return;
+    }
+    setSavingDiagnosis(true);
+    let updated;
+    try {
+      // A partial update: only the findings change, the rest of the tool stays as it is.
+      updated = await repairsAPI.updateTool(job.id, diagnosisToolId, { diagnostics: findingsPayload(diagnosisForm) });
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to save diagnosis'));
+      setSavingDiagnosis(false);
+      return;
+    }
+    onJobUpdated(updated);
+    handleCancelDiagnosis();
+    showToast('success', 'Diagnosis saved');
+    setSavingDiagnosis(false);
+  };
+
+  // ── PARTS ────────────────────────────────────────────
+  // Its own dialog too: the tool form's Parts section alone (suggested parts,
+  // library autocomplete, sourcing flags), saved as a parts-only update.
+  const handleStartParts = (tool) => {
+    setPartsToolId(tool.tool_id);
+    const form = toolToForm(tool);
+    setPartsForm(form);
+    enrichPartsWithStock(form.parts, setPartsForm);
+  };
+
+  const handleCancelParts = () => {
+    setPartsToolId(null);
+    setPartsForm(null);
+  };
+
+  const handleSaveParts = async () => {
+    if (!partsToolId || !partsForm) return;
+    setSavingParts(true);
+    let updated;
+    try {
+      updated = await repairsAPI.updateTool(job.id, partsToolId, {
+        parts: (partsForm.parts || []).filter((p) => p.name?.trim()).map(({ _suggested_suppliers, ...p }) => p),
+      });
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to save parts'));
+      setSavingParts(false);
+      return;
+    }
+    // New part numbers go to the Parts Library, as they do from the edit form.
+    syncPartsToLibrary([partsForm]);
+    onJobUpdated(updated);
+    handleCancelParts();
+    showToast('success', 'Parts saved');
+    setSavingParts(false);
   };
 
   // ── ADD TOOL TO EXISTING JOB ─────────────────────────
@@ -616,7 +733,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         labour_cost_override: addToolForm.labour_cost_override !== '' && addToolForm.labour_cost_override != null ? parseFloat(addToolForm.labour_cost_override) : null,
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
-        diagnostics: (addToolForm.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null })),
+        diagnostics: findingsPayload(addToolForm.diagnostics),
         parts: (addToolForm.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
         zoho_quote_number: addToolForm.zoho_quote_number || null,
         zoho_invoice_number: addToolForm.zoho_invoice_number || null,
@@ -1162,6 +1279,22 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             <span className="material-symbols-outlined text-base">update</span>
                             Update Status
                           </button>
+                          <button
+                            onClick={() => handleStartDiagnosis(tool)}
+                            title="Record what was found, what it needs and the parts for it"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                          >
+                            <span className="material-symbols-outlined text-base">troubleshoot</span>
+                            Diagnosis
+                          </button>
+                          <button
+                            onClick={() => handleStartParts(tool)}
+                            title="Parts for this tool"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                          >
+                            <span className="material-symbols-outlined text-base">inventory_2</span>
+                            Parts
+                          </button>
                           {editingToolId !== tool.tool_id && (
                             <button
                               onClick={() => handleStartToolEdit(tool)}
@@ -1247,6 +1380,9 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                         <span className={`block text-xs leading-snug mt-0.5 ${d.solution ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-600 italic'}`}>
                                           {d.solution ? `Solution: ${d.solution}` : 'No solution yet'}
                                         </span>
+                                        {d.parts && (
+                                          <span className="block text-xs leading-snug mt-0.5 text-violet-700 dark:text-violet-300">Parts: {d.parts}</span>
+                                        )}
                                       </span>
                                     </li>
                                   ))}
@@ -1562,8 +1698,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
               </div>
             </div>
             <div className="flex gap-3 px-6 pb-6">
-              <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0 || zohoNumberMissing(statusUpdateForm)} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+              <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0 || zohoNumberMissing(statusUpdateForm)} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                 {updatingStatus ? 'Updating...' : 'Update Status'}
               </button>
             </div>
@@ -1607,9 +1743,88 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 costLines={isEdit && acct ? (acct.tools.find((x) => x.tool_id === editingToolId)?.cost.lines || []) : null}
               />
               <div className="flex gap-3 mt-6">
-                <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
-                <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+                <button onClick={handleClose} disabled={busy} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={handleSubmit} disabled={busy} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                   {busy ? (isEdit ? 'Saving...' : 'Adding...') : (isEdit ? 'Save Changes' : 'Add Tool')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* ── DIAGNOSIS & SOLUTION DIALOG ──────────────────── */}
+      {diagnosisToolId && diagnosisForm && (() => {
+        const tool = job.tools.find((t) => t.tool_id === diagnosisToolId);
+        if (!tool) return null;
+        const handleClose = () => { if (!savingDiagnosis) handleCancelDiagnosis(); };
+        return (
+        <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-3xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-lg">troubleshoot</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Diagnosis &amp; Solution</h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">{toolDisplayTitle(tool).toUpperCase()}</p>
+              </div>
+              <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              {/* The customer's words at intake, for reference while diagnosing. */}
+              <div className="mb-4 rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5">
+                <span className="block text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Reported problem</span>
+                <p className={`mt-1 text-sm leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'Nothing recorded at intake'}</p>
+              </div>
+              <DiagnosisEditor diagnostics={diagnosisForm} onDiagnosticsChange={setDiagnosisForm} showLabel={false} />
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleClose} disabled={savingDiagnosis} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={handleSaveDiagnosis} disabled={savingDiagnosis} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+                  {savingDiagnosis ? 'Saving...' : 'Save Diagnosis'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* ── PARTS DIALOG ─────────────────────────────────── */}
+      {partsToolId && partsForm && (() => {
+        const tool = job.tools.find((t) => t.tool_id === partsToolId);
+        if (!tool) return null;
+        const handleClose = () => { if (!savingParts) handleCancelParts(); };
+        return (
+        <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-5xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-lg">inventory_2</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Parts</h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">{toolDisplayTitle(tool).toUpperCase()}</p>
+              </div>
+              <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <ToolForm toolData={partsForm} onChange={setPartsForm} currentJobId={job.id} only="parts" />
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleClose} disabled={savingParts} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={handleSaveParts} disabled={savingParts} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+                  {savingParts ? 'Saving...' : 'Save Parts'}
                 </button>
               </div>
             </div>
