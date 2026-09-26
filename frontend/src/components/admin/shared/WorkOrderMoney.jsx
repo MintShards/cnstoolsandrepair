@@ -216,15 +216,6 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
 
             <PaymentLine acct={acct} />
 
-            {/* Where the total cost comes from, so no figure has to be
-                inferred: labour is hours × rate, parts are the installed
-                parts at cost, other is the bills and expenses listed below. */}
-            {t.totalCost != null && (
-              <p className={NOTE}>
-                Total cost {formatMoney(t.totalCost)} = labour {fmtMoney(t.labourCost)} + parts {fmtMoney(t.partsCost)} (installed parts at cost) + other {fmtMoney(t.otherCost)} (bills and expenses).
-              </p>
-            )}
-
             <ExpenseList acct={acct} />
 
             {multi && (
