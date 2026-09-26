@@ -5,14 +5,14 @@
 //
 //   charged  = labour (hours × rate) + parts at customer price + extra charges
 //   revenue  = charged, or the pre-tax invoiced amount typed on the tool
-//   cost     = labour (hours × cost rate) + parts (installed parts × what the
+//   cost     = labour (hours × cost rate) + parts (the tool's parts × what the
 //              shop paid for them) + other (non-part bill lines and expenses)
 //   profit   = revenue − cost, margin = profit / revenue
 //   invoice  = revenue + GST and PST per the tool's tax status: the total the
 //              customer actually pays, which is what payments count against
 //
 // A figure nobody has entered is null (shown as "—"), not 0: a tool with no
-// labour hours has no labour charge, a tool with no installed parts has no
+// labour hours has no labour charge, a tool whose parts carry no cost has no
 // parts cost. Sums skip nulls and are themselves null only when every part is.
 // Tools whose work will never be done (declined, beyond economical repair,
 // abandoned) keep their own figures but stay out of the job's totals.
@@ -128,20 +128,18 @@ export function toolLabourCost(tool, defaultRate) {
 }
 
 /**
- * What one tool's parts cost the shop: each installed part's cost (what the
- * shop paid, snapshotted from the parts library when the part was picked and
- * editable on the part) × quantity. A part is only used once installed, so
- * parts still pending, ordered or received are not counted yet; installed
+ * What one tool's parts cost the shop: each part's cost (what the shop paid,
+ * snapshotted from the parts library when the part was picked) × quantity.
+ * Every part on the tool counts whatever its status, exactly as parts
+ * charged does, so a job shows its expected profit from the quote stage on;
  * parts with no cost are counted separately so the statement can say so.
  */
 export function toolPartsCost(tool) {
   const named = (tool.parts || []).filter((p) => p.name?.trim());
-  const installed = named.filter((p) => p.status === 'installed');
-  const costed = installed.filter((p) => entered(p.cost));
+  const costed = named.filter((p) => entered(p.cost));
   return {
     amount: costed.length ? round2(costed.reduce((s, p) => s + num(p.cost) * (p.quantity || 1), 0)) : null,
-    uncosted: installed.length - costed.length,
-    pending: named.length - installed.length,
+    uncosted: named.length - costed.length,
   };
 }
 
@@ -199,7 +197,6 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
       other: fromBills.other,
       total: sumEntered([labour.amount, parts.amount, fromBills.other]),
       uncostedParts: parts.uncosted,
-      pendingParts: parts.pending,
       unpriced: fromBills.unpriced,
       lines: fromBills.lines,
       labourRate: labour.rate,
@@ -274,10 +271,9 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
       invoiced: counted.some((t) => t.charges.invoiced != null),
     },
     labourRateSet: entered(labourCostRate),
-    // Installed parts with no cost, and parts not installed yet, on the
-    // counted tools — the two reasons parts cost can trail parts charged.
+    // Parts with no cost on the counted tools — why parts cost can trail
+    // parts charged.
     uncostedParts: counted.reduce((s, t) => s + t.cost.uncostedParts, 0),
-    pendingParts: counted.reduce((s, t) => s + t.cost.pendingParts, 0),
     unpriced: shared.unpriced + counted.reduce((s, t) => s + t.cost.unpriced, 0),
     received,
     // What the customer still owes on the invoice total; null until there is revenue.

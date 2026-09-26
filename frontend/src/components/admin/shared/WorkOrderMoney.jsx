@@ -196,7 +196,7 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
                 rows={[
                   // Same order as the charged column: labour, parts, then the rest.
                   { label: 'Labour cost', value: fmtMoney(t.labourCost), hint: 'Labour hours × the labour cost rate' },
-                  { label: 'Parts cost', value: fmtMoney(t.partsCost), hint: 'Installed parts at what they cost the shop — each part’s cost, from the parts library' },
+                  { label: 'Parts cost', value: fmtMoney(t.partsCost), hint: 'The tools’ parts at what they cost the shop — each part’s cost, from the parts library' },
                   { label: 'Other cost', value: fmtMoney(t.otherCost), hint: 'Freight, outsourced work and other expenses logged for this job' },
                   { label: 'Total cost', value: fmtMoney(t.totalCost), strong: true },
                 ]}
@@ -234,10 +234,7 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
               <p className={WARN}>Labour cost is not counted because no labour cost rate is set — Admin Settings → Repair Tracker, or per tool in its edit form.</p>
             )}
             {acct.uncostedParts > 0 && (
-              <p className={WARN}>{acct.uncostedParts} installed {plural(acct.uncostedParts, 'part')} {plural(acct.uncostedParts, 'has', 'have')} no cost yet — give the part a cost in the parts library and save the tool again; until then {plural(acct.uncostedParts, 'it is', 'they are')} left out of the parts cost.</p>
-            )}
-            {acct.pendingParts > 0 && (
-              <p className={NOTE}>{acct.pendingParts} {plural(acct.pendingParts, 'part')} not installed yet — {plural(acct.pendingParts, 'its', 'their')} cost counts once installed.</p>
+              <p className={WARN}>{acct.uncostedParts} {plural(acct.uncostedParts, 'part')} {plural(acct.uncostedParts, 'has', 'have')} no cost yet — give the part a cost in the parts library and save the tool again; until then {plural(acct.uncostedParts, 'it is', 'they are')} left out of the parts cost.</p>
             )}
             {acct.unpriced > 0 && (
               <p className={NOTE}>{acct.unpriced} expense {plural(acct.unpriced, 'line')} for this job {plural(acct.unpriced, 'carries', 'carry')} no price yet and {plural(acct.unpriced, 'is', 'are')} left out of the costs.</p>
