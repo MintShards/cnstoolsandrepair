@@ -129,6 +129,10 @@ class PartItem(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     quantity: int = Field(default=1, gt=0)
     price: Optional[float] = Field(None, ge=0)
+    # What the shop paid for the part (price is what the customer pays).
+    # Snapshotted from the parts library when the part is picked or saved, and
+    # editable on the part; job accounting counts installed parts at this cost.
+    cost: Optional[float] = Field(None, ge=0)
     supplier: Optional[str] = Field(None, max_length=200)
     order_link: Optional[str] = Field(None, max_length=500)
     notes: Optional[str] = Field(None, max_length=500)
@@ -142,7 +146,7 @@ class PartItem(BaseModel):
     needs_sourcing: bool = False
     sourcing_emailed: bool = False
 
-    @field_validator('price', mode='before')
+    @field_validator('price', 'cost', mode='before')
     @classmethod
     def empty_string_to_none_float(cls, v):
         if v == '' or v is None:

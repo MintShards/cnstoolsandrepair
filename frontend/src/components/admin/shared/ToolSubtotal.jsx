@@ -13,7 +13,7 @@ const money = (v) => (v == null ? '—' : formatMoney(v));
  * from jobAccounting(), null for non-admins or while it loads.
  */
 export default function ToolSubtotal({ index, charges, acct, isAdmin, excludedReason = null }) {
-  const hasCost = Boolean(acct && (acct.cost.total != null || acct.cost.lines.length > 0 || acct.provisional));
+  const hasCost = Boolean(acct && (acct.cost.total != null || acct.cost.lines.length > 0 || acct.cost.uncostedParts > 0));
   if (charges.subtotal == null && charges.invoiced == null && !hasCost) return null;
 
   const charged = {
@@ -46,8 +46,8 @@ export default function ToolSubtotal({ index, charges, acct, isAdmin, excludedRe
           ? `${charges.hours} h × ${formatMoney(acct.cost.labourRate)}${acct.cost.ownLabourRate ? ' (this tool’s rate)' : ' (shop rate)'}`
           : acct.cost.labourRate == null ? 'No labour cost rate set' : 'Needs labour hours on the tool',
       },
-      { label: 'Parts cost', value: money(acct.cost.parts), hint: 'Part lines on supplier bills for this tool' },
-      { label: 'Other cost', value: money(acct.cost.other), hint: 'Freight, outsourced work and other bill lines for this tool' },
+      { label: 'Parts cost', value: money(acct.cost.parts), hint: 'Installed parts at what they cost the shop — each part’s cost, from the parts library' },
+      { label: 'Other cost', value: money(acct.cost.other), hint: 'Freight, outsourced work and other expenses logged for this tool' },
       { label: 'Total cost', value: money(acct.cost.total), strong: true },
     ],
   } : null;
@@ -79,8 +79,11 @@ export default function ToolSubtotal({ index, charges, acct, isAdmin, excludedRe
       {admin && acct.cost.labour == null && acct.cost.labourRate != null && (
         <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400">Labour cost needs labour hours on this tool — the rate alone ({formatMoney(acct.cost.labourRate)}/h) has nothing to multiply.</p>
       )}
-      {admin && acct.provisional && (
-        <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400">No supplier bill for these parts yet — profit is provisional.</p>
+      {admin && acct.cost.uncostedParts > 0 && (
+        <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400">{acct.cost.uncostedParts} installed part{acct.cost.uncostedParts === 1 ? '' : 's'} without a cost in the parts library — left out of the parts cost.</p>
+      )}
+      {admin && acct.cost.pendingParts > 0 && (
+        <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">{acct.cost.pendingParts} part{acct.cost.pendingParts === 1 ? '' : 's'} not installed yet — cost counts once installed.</p>
       )}
       {admin && acct.cost.unpriced > 0 && (
         <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">{acct.cost.unpriced} bill line{acct.cost.unpriced === 1 ? '' : 's'} without a price left out.</p>

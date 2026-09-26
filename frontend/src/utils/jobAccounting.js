@@ -1,18 +1,19 @@
 // Work order accounting, computed on the client from what is already loaded:
-// the job's tools (the tracker's charges), its Cash Flow bills and payments,
-// and the shop's labour cost rate and tax rates from business settings.
+// the job's tools (the tracker's charges and its parts at cost), its Cash
+// Flow bills and payments, and the shop's labour cost rate and tax rates
+// from business settings.
 //
 //   charged  = labour (hours × rate) + parts at customer price + extra charges
 //   revenue  = charged, or the pre-tax invoiced amount typed on the tool
-//   cost     = labour (hours × cost rate) + parts (part bill lines) + other
-//              (every other bill line: freight, outsourced work…)
+//   cost     = labour (hours × cost rate) + parts (installed parts × what the
+//              shop paid for them) + other (non-part bill lines and expenses)
 //   profit   = revenue − cost, margin = profit / revenue
 //   invoice  = revenue + GST and PST per the tool's tax status: the total the
 //              customer actually pays, which is what payments count against
 //
 // A figure nobody has entered is null (shown as "—"), not 0: a tool with no
-// labour hours has no labour charge, a tool with no bill lines has no parts
-// cost. Sums skip nulls and are themselves null only when every part is.
+// labour hours has no labour charge, a tool with no installed parts has no
+// parts cost. Sums skip nulls and are themselves null only when every part is.
 // Tools whose work will never be done (declined, beyond economical repair,
 // abandoned) keep their own figures but stay out of the job's totals.
 // Revenue, cost and profit are before tax; everything is in CAD.
@@ -126,20 +127,38 @@ export function toolLabourCost(tool, defaultRate) {
   return { hours, rate, own: own != null, amount: hours != null && rate != null ? round2(hours * rate) : null };
 }
 
-// Parts a supplier bill should exist for. Shop stock (in_stock) was paid for
-// long ago and pending parts haven't been bought yet.
-const BILLABLE = new Set(['ordered', 'received', 'installed']);
+/**
+ * What one tool's parts cost the shop: each installed part's cost (what the
+ * shop paid, snapshotted from the parts library when the part was picked and
+ * editable on the part) × quantity. A part is only used once installed, so
+ * parts still pending, ordered or received are not counted yet; installed
+ * parts with no cost are counted separately so the statement can say so.
+ */
+export function toolPartsCost(tool) {
+  const named = (tool.parts || []).filter((p) => p.name?.trim());
+  const installed = named.filter((p) => p.status === 'installed');
+  const costed = installed.filter((p) => entered(p.cost));
+  return {
+    amount: costed.length ? round2(costed.reduce((s, p) => s + num(p.cost) * (p.quantity || 1), 0)) : null,
+    uncosted: installed.length - costed.length,
+    pending: named.length - installed.length,
+  };
+}
 
+// The bill lines behind a tool's "other" cost. Part lines are deliberately
+// left out: parts are counted from the tool's installed parts, so adding the
+// supplier bill as well would count them twice.
 function costFromLines(lines) {
-  let parts = null;
   let other = null;
   let unpriced = 0;
+  const kept = [];
   for (const l of lines) {
+    if ((l.kind || 'part') === 'part') continue;
+    kept.push(l);
     if (l.line_total == null) { unpriced += 1; continue; }
-    if ((l.kind || 'part') === 'part') parts = round2((parts ?? 0) + l.line_total);
-    else other = round2((other ?? 0) + l.line_total);
+    other = round2((other ?? 0) + l.line_total);
   }
-  return { parts, other, unpriced, lines };
+  return { other, unpriced, lines: kept };
 }
 
 /**
@@ -172,20 +191,20 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
     const taxStatus = t.tax_status || 'taxable';
     const tax = taxOn(charges.revenue, taxStatus, gst, pst);
     const labour = toolLabourCost(t, labourCostRate);
+    const parts = toolPartsCost(t);
     const fromBills = costFromLines(jobLines.filter((l) => l.tool_id === t.tool_id));
     const cost = {
       labour: labour.amount,
-      parts: fromBills.parts,
+      parts: parts.amount,
       other: fromBills.other,
-      total: sumEntered([labour.amount, fromBills.parts, fromBills.other]),
+      total: sumEntered([labour.amount, parts.amount, fromBills.other]),
+      uncostedParts: parts.uncosted,
+      pendingParts: parts.pending,
       unpriced: fromBills.unpriced,
       lines: fromBills.lines,
       labourRate: labour.rate,
       ownLabourRate: labour.own,
     };
-    // Parts that should have a bill but don't yet: the profit is provisional.
-    const hasBillable = (t.parts || []).some((p) => p.name?.trim() && BILLABLE.has(p.status));
-    const provisional = hasBillable && !fromBills.lines.some((l) => (l.kind || 'part') === 'part');
     const profit = charges.revenue == null && cost.total == null ? null : round2((charges.revenue ?? 0) - (cost.total ?? 0));
     const reason = excludedReason(t);
     return {
@@ -200,14 +219,13 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
       tax,
       inclTax: charges.revenue == null ? null : round2(charges.revenue + tax.total),
       cost,
-      provisional,
       profit,
       margin: charges.revenue > 0 ? Math.round((profit / charges.revenue) * 100) : null,
     };
   });
   // Lines with no tool (or a tool since removed) belong to the job as a whole.
   const sharedLines = costFromLines(jobLines.filter((l) => !l.tool_id || !toolIds.has(l.tool_id)));
-  const shared = { ...sharedLines, total: sumEntered([sharedLines.parts, sharedLines.other]) };
+  const shared = { ...sharedLines, total: sharedLines.other };
 
   // Only tools the customer is paying for make it into the job's totals.
   const counted = tools.filter((t) => !t.excluded);
@@ -226,7 +244,7 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
   const taxTotal = sumEntered([gstTotal, pstTotal]);
   const invoicedInclTax = revenue == null ? null : round2(revenue + (taxTotal || 0));
   const labourCost = total((t) => t.cost.labour);
-  const partsCost = total((t) => t.cost.parts, shared.parts);
+  const partsCost = total((t) => t.cost.parts);
   const otherCost = total((t) => t.cost.other, shared.other);
   const totalCost = sumEntered([labourCost, partsCost, otherCost]);
   const profit = revenue == null && totalCost == null ? null : round2((revenue ?? 0) - (totalCost ?? 0));
@@ -256,7 +274,10 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
       invoiced: counted.some((t) => t.charges.invoiced != null),
     },
     labourRateSet: entered(labourCostRate),
-    provisional: counted.some((t) => t.provisional),
+    // Installed parts with no cost, and parts not installed yet, on the
+    // counted tools — the two reasons parts cost can trail parts charged.
+    uncostedParts: counted.reduce((s, t) => s + t.cost.uncostedParts, 0),
+    pendingParts: counted.reduce((s, t) => s + t.cost.pendingParts, 0),
     unpriced: shared.unpriced + counted.reduce((s, t) => s + t.cost.unpriced, 0),
     received,
     // What the customer still owes on the invoice total; null until there is revenue.

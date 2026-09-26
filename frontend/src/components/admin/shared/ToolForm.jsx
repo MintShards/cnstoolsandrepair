@@ -303,6 +303,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       library_part_id: libPart.id,
       quantity: 1,
       price: libPart.suggested_price != null ? String(libPart.suggested_price) : '',
+      cost: libPart.cost != null ? String(libPart.cost) : '',
       supplier: libPart.suggested_suppliers?.[0] || '',
       _suggested_suppliers: libPart.suggested_suppliers || [],
       order_link: '',
@@ -359,6 +360,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       supplier: part.suggested_suppliers?.[0] || '',
       _suggested_suppliers: part.suggested_suppliers || [],
       price: part.suggested_price != null ? String(part.suggested_price) : '',
+      cost: part.cost != null ? String(part.cost) : '',
       order_link: '',
       notes: part.notes || '',
       status: (part.quantity_on_hand ?? 0) > 0 ? 'in_stock' : 'pending',
@@ -1138,10 +1140,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     </div>
                     <input type="number" min="1" placeholder="Qty" value={part.quantity ?? ''} onChange={(e) => updatePart({ quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })}
                       className={`w-14 ${partInputCls}`} />
-                    <div className="relative">
+                    {/* Price = what the customer pays. What the shop paid (the
+                        part's cost) is managed in the parts library and copied
+                        onto the part when it is picked or saved, never typed here. */}
+                    <div className="relative" title="What the customer pays for this part">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
                       <input type="number" min="0" step="0.01" placeholder="Price" value={part.price ?? ''} onChange={(e) => updatePart({ price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                        className={`w-24 pl-5 ${partInputCls}`} />
+                        aria-label="Part price to the customer" className={`w-24 pl-5 ${partInputCls}`} />
                     </div>
                     <select value={part.status || 'pending'} onChange={(e) => updatePart({ status: e.target.value })}
                       className={`w-28 ${partInputCls}`}>

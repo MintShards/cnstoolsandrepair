@@ -129,6 +129,29 @@ def _build_tool_response(tool: dict) -> ToolItemResponse:
     return ToolItemResponse(**_migrate_tool_parts(tool))
 
 
+async def _fill_part_costs(db, parts: Optional[list]) -> None:
+    """Snapshot what the shop paid for each part from the parts library when
+    the part is linked to one and carries no cost of its own. Job accounting
+    counts installed parts at this cost; taking the snapshot here means a
+    later library price change does not rewrite old jobs."""
+    wanted = {}
+    for p in parts or []:
+        lib_id = p.get("library_part_id")
+        if p.get("cost") is None and lib_id:
+            try:
+                wanted[lib_id] = ObjectId(lib_id)
+            except Exception:
+                continue
+    if not wanted:
+        return
+    costs = {}
+    async for lp in db.parts_library_parts.find({"_id": {"$in": list(wanted.values())}}, {"cost": 1}):
+        costs[str(lp["_id"])] = lp.get("cost")
+    for p in parts or []:
+        if p.get("cost") is None and costs.get(p.get("library_part_id")) is not None:
+            p["cost"] = costs[p["library_part_id"]]
+
+
 def _build_job_response(job: dict, viewer: Optional[User] = None) -> RepairJobResponse:
     """Convert a repair job dict from DB into a RepairJobResponse. What a
     tool's labour costs the shop is admin-only: any other viewer (or none)
@@ -1664,6 +1687,7 @@ async def create_repair_job(
         tool_dict = tool.model_dump()
         if current_user.role != "admin":
             tool_dict["labour_cost_rate"] = None   # admin-only figure
+        await _fill_part_costs(db, tool_dict.get("parts"))
         tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
         # Add initial status history entry
         tool_dict["status_history"] = [{
@@ -2099,6 +2123,7 @@ async def add_tool(
     tool_dict = tool.model_dump()
     if current_user.role != "admin":
         tool_dict["labour_cost_rate"] = None   # admin-only figure
+    await _fill_part_costs(db, tool_dict.get("parts"))
     tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
     tool_dict["status_history"] = [{
         "status": RepairStatus.RECEIVED.value,
@@ -2183,6 +2208,9 @@ async def update_tool(
                     stock_adjustments.append((lib_id, -qty, "installed_in_job"))
                 elif old_status == "installed" and new_status != "installed":
                     stock_adjustments.append((lib_id, qty, "reversed_from_installed"))
+
+    if "parts" in update_fields:
+        await _fill_part_costs(db, update_fields["parts"])
 
     set_data = {f"tools.{tool_index}.{k}": v for k, v in update_fields.items()}
     set_data["updated_at"] = datetime.utcnow()

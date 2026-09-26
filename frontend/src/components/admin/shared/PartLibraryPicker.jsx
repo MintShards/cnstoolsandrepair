@@ -81,6 +81,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
       supplier,
       _suggested_suppliers: part.suggested_suppliers || [],
       price,
+      cost: part.cost != null ? String(part.cost) : '',
       order_link: '',
       notes: part.notes || '',
     });

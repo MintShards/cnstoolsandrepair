@@ -13,6 +13,9 @@ const fmtMoney = (v) => (v == null ? '—' : formatMoney(v));
 const LIST_HDR = 'text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400';
 const LIST = 'rounded-lg border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/40 divide-y divide-slate-200 dark:divide-slate-700/40';
 const PANEL = 'rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200/40 dark:border-slate-700/40 px-3 py-2';
+const NOTE = 'text-[11px] text-slate-500 dark:text-slate-400';
+const WARN = 'text-[11px] text-amber-700 dark:text-amber-400';
+const plural = (n, one, many = `${one}s`) => (n === 1 ? one : many);
 
 /**
  * Has the customer paid? Kept apart from the statement because it answers a
@@ -60,36 +63,25 @@ function PaymentLine({ acct }) {
 }
 
 /**
- * Every cost line behind the statement — parts and additional expenses
- * alike — with what it was for, who was paid, its kind, which tool, and the
- * amount. Each row opens its bill in Cash Flow, so any figure in "Cost to
- * shop" can be traced. Tool lines first in tool order, then the whole-job
- * lines; parts before other kinds within a tool.
+ * The bill lines behind "Other cost" — freight, outsourced work, anything
+ * the shop paid for this job that is not a part — with who was paid, the
+ * kind, which tool, and the amount. Each row opens its bill in Cash Flow.
+ * Parts are not listed here: they are counted from each tool's installed
+ * parts at cost, not from the supplier bill. Tool lines first in tool order,
+ * then the whole-job lines.
  */
 function ExpenseList({ acct }) {
   const rows = [];
   acct.tools.forEach((t, i) => t.cost.lines.forEach((l) => rows.push({ ...l, where: `Tool ${i + 1}`, order: i, excluded: t.excluded, reason: t.excludedReason })));
   acct.shared.lines.forEach((l) => rows.push({ ...l, where: 'Whole job', order: acct.tools.length, excluded: false }));
   if (!rows.length) return null;
-  const isPart = (l) => ((l.kind || 'part') === 'part' ? 0 : 1);
-  rows.sort((a, b) => a.order - b.order || isPart(a) - isPart(b));
+  rows.sort((a, b) => a.order - b.order);
   // Lines on excluded tools are listed for the record but not added in.
-  const total = sumEntered(rows.filter((r) => !r.excluded).map((r) => r.line_total));
   const notCounted = sumEntered(rows.filter((r) => r.excluded).map((r) => r.line_total));
-  // The footer adds up to the statement's total cost, so the bills figure is
-  // never mistaken for the whole cost: labour is hours × rate, not a bill.
-  const t = acct.totals;
-  const footer = [];
-  if (total != null) {
-    footer.push(t.labourCost != null
-      ? `Bills ${formatMoney(total)} + labour ${formatMoney(t.labourCost)} (hours × rate, not a bill) = total cost ${formatMoney(t.totalCost)}`
-      : `Bills ${formatMoney(total)} = total cost ${formatMoney(t.totalCost)} · no labour cost yet`);
-  }
-  if (notCounted != null) footer.push(`not counted ${formatMoney(notCounted)}`);
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <p className={LIST_HDR}>Bill lines on this job ({rows.length})</p>
+        <p className={LIST_HDR}>Other expenses on this job ({rows.length})</p>
         <p className="hidden sm:block text-[11px] text-slate-400 dark:text-slate-500 truncate">each line opens its bill in Cash Flow</p>
       </div>
       {/* Two lines per row: what and how much, then who / kind / tool / bill
@@ -113,7 +105,7 @@ function ExpenseList({ acct }) {
               </span>
               <span className="mt-0.5 flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {r.supplier_name} · {BILL_LINE_KINDS[r.kind || 'part'] || r.kind} · {r.where}
+                  {r.supplier_name} · {BILL_LINE_KINDS[r.kind] || r.kind} · {r.where}
                   {r.quantity !== 1 && r.unit_price != null ? ` · ${r.quantity} × ${formatMoney(r.unit_price)}` : ''}
                   {' · '}<span className="font-mono">{r.bill_number}</span>
                   {r.excluded && <span className="ml-1 text-amber-700 dark:text-amber-400">· {r.reason} — not counted</span>}
@@ -124,8 +116,8 @@ function ExpenseList({ acct }) {
           </li>
         ))}
       </ul>
-      {footer.length > 0 && (
-        <p className="mt-1 text-[11px] text-right text-slate-500 dark:text-slate-400">{footer.join(' · ')}</p>
+      {notCounted != null && (
+        <p className="mt-1 text-[11px] text-right text-slate-500 dark:text-slate-400">Not counted: {formatMoney(notCounted)} on tools left out of the figures</p>
       )}
     </div>
   );
@@ -181,7 +173,7 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
         ) : !loaded || !acct ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">Loading…</p>
         ) : empty ? (
-          <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nothing priced or logged yet — set labour and parts on the tools, log parts bills in Cash Flow, and use the buttons above for other expenses and payments.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nothing priced or logged yet — set labour and parts on the tools, and use the buttons above for other expenses and payments.</p>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -204,8 +196,8 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
                 rows={[
                   // Same order as the charged column: labour, parts, then the rest.
                   { label: 'Labour cost', value: fmtMoney(t.labourCost), hint: 'Labour hours × the labour cost rate' },
-                  { label: 'Parts cost', value: fmtMoney(t.partsCost), hint: 'Part lines on supplier bills attributed to this job' },
-                  { label: 'Other cost', value: fmtMoney(t.otherCost), hint: 'Freight, outsourced work and other bill lines for this job' },
+                  { label: 'Parts cost', value: fmtMoney(t.partsCost), hint: 'Installed parts at what they cost the shop — each part’s cost, from the parts library' },
+                  { label: 'Other cost', value: fmtMoney(t.otherCost), hint: 'Freight, outsourced work and other expenses logged for this job' },
                   { label: 'Total cost', value: fmtMoney(t.totalCost), strong: true },
                 ]}
               />
@@ -224,31 +216,43 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
 
             <PaymentLine acct={acct} />
 
+            {/* Where the total cost comes from, so no figure has to be
+                inferred: labour is hours × rate, parts are the installed
+                parts at cost, other is the bills and expenses listed below. */}
+            {t.totalCost != null && (
+              <p className={NOTE}>
+                Total cost {formatMoney(t.totalCost)} = labour {fmtMoney(t.labourCost)} + parts {fmtMoney(t.partsCost)} (installed parts at cost) + other {fmtMoney(t.otherCost)} (bills and expenses).
+              </p>
+            )}
+
             <ExpenseList acct={acct} />
 
             {multi && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={NOTE}>
                 Each tool’s own figures are under its parts list below
                 {acct.shared.total > 0 ? ` · ${formatMoney(acct.shared.total)} of the cost belongs to the whole job rather than one tool` : ''}.
               </p>
             )}
             {acct.excluded.map((x) => (
-              <p key={x.tool_id} className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p key={x.tool_id} className={NOTE}>
                 <span className="font-bold text-slate-600 dark:text-slate-300">{x.label}</span> is {x.reason} — left out of the figures
                 {x.cost != null && x.cost > 0 ? `; its ${formatMoney(x.cost)} of costs is not counted` : ''}.
               </p>
             ))}
             {!acct.labourRateSet && t.labourCharged != null && t.labourCost == null && (
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">Labour cost is not counted because no labour cost rate is set — Admin Settings → Repair Tracker, or per tool in its edit form.</p>
+              <p className={WARN}>Labour cost is not counted because no labour cost rate is set — Admin Settings → Repair Tracker, or per tool in its edit form.</p>
             )}
-            {acct.provisional && (
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">Some parts have no supplier bill logged yet — the profit is provisional.</p>
+            {acct.uncostedParts > 0 && (
+              <p className={WARN}>{acct.uncostedParts} installed {plural(acct.uncostedParts, 'part')} {plural(acct.uncostedParts, 'has', 'have')} no cost yet — give the part a cost in the parts library and save the tool again; until then {plural(acct.uncostedParts, 'it is', 'they are')} left out of the parts cost.</p>
+            )}
+            {acct.pendingParts > 0 && (
+              <p className={NOTE}>{acct.pendingParts} {plural(acct.pendingParts, 'part')} not installed yet — {plural(acct.pendingParts, 'its', 'their')} cost counts once installed.</p>
             )}
             {acct.unpriced > 0 && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{acct.unpriced} bill line{acct.unpriced === 1 ? '' : 's'} for this job carr{acct.unpriced === 1 ? 'ies' : 'y'} no price yet and {acct.unpriced === 1 ? 'is' : 'are'} left out of the costs.</p>
+              <p className={NOTE}>{acct.unpriced} expense {plural(acct.unpriced, 'line')} for this job {plural(acct.unpriced, 'carries', 'carry')} no price yet and {plural(acct.unpriced, 'is', 'are')} left out of the costs.</p>
             )}
             {acct.foreign > 0 && (
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">{acct.foreign} record{acct.foreign === 1 ? '' : 's'} on this job {acct.foreign === 1 ? 'is' : 'are'} in another currency and not counted — these figures are CAD only.</p>
+              <p className={WARN}>{acct.foreign} {plural(acct.foreign, 'record')} on this job {plural(acct.foreign, 'is', 'are')} in another currency and not counted — these figures are CAD only.</p>
             )}
           </>
         )}

@@ -485,7 +485,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const handleStartToolEdit = (tool) => {
     setEditingToolId(tool.tool_id);
     const parts = tool.parts?.length > 0
-      ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' }))
+      ? tool.parts.map(p => ({ ...p, price: p.price ?? p.unit_cost ?? '', cost: p.cost ?? '', supplier: p.supplier ?? '', order_link: p.order_link ?? '', notes: p.notes ?? '', tracking: p.tracking ?? '', eta: p.eta ? p.eta.split('T')[0] : '' }))
       : [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }];
     setToolEditForm({
       tool_type: (tool.tool_type || '').toUpperCase(),
@@ -1302,7 +1302,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                       <span className="text-slate-700 dark:text-slate-200 font-medium flex-1">{`${p.name}${p.part_number ? ` - ${p.part_number}` : ''}`.toUpperCase()}</span>
                                       <span className="text-slate-500 text-xs">×{p.quantity}</span>
                                       {(p.price != null && p.price !== '') && (
-                                        <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">${(parseFloat(p.price) * (p.quantity || 1)).toFixed(2)}</span>
+                                        <span className="text-slate-700 dark:text-slate-300 text-xs font-medium" title="Charged to the customer">${(parseFloat(p.price) * (p.quantity || 1)).toFixed(2)}</span>
                                       )}
                                       <span className={`px-1.5 py-px rounded-full font-bold ${
                                         p.status === 'installed' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
