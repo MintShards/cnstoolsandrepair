@@ -82,6 +82,12 @@ class StaffCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, description="Minimum 8 characters")
     role: Literal["staff", "technician", "admin"] = "staff"
+    # The labour cost agreed with this person, for job accounting on the tools
+    # assigned to them: `hourly` = rate × the tool's labour hours, `per_job` =
+    # the same flat amount for every tool, whatever the hours. Admin-only in
+    # responses.
+    labour_cost_basis: Literal["hourly", "per_job"] = "hourly"
+    labour_cost_rate: Optional[float] = Field(None, ge=0, le=10000)
 
 
 class StaffUpdate(BaseModel):
@@ -92,6 +98,9 @@ class StaffUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(None, min_length=8, description="Leave blank to keep current password")
     role: Optional[Literal["staff", "technician", "admin"]] = None
+    labour_cost_basis: Optional[Literal["hourly", "per_job"]] = None
+    # Sent as null to clear (the router checks model_fields_set).
+    labour_cost_rate: Optional[float] = Field(None, ge=0, le=10000)
 
 
 class RoleChangeRequest(BaseModel):
@@ -112,6 +121,9 @@ class StaffResponse(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+    # Only filled for admin callers; every other viewer gets the defaults.
+    labour_cost_basis: str = "hourly"
+    labour_cost_rate: Optional[float] = None
 
 
 class ChangePasswordRequest(BaseModel):

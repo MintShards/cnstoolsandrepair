@@ -280,7 +280,9 @@ async def activate_sales_rep(rep_id: str, current_user: User = Depends(require_a
 STAFF_ROLES = ["staff", "technician", "admin"]
 
 
-def _build_staff_response(doc: dict) -> StaffResponse:
+def _build_staff_response(doc: dict, include_rate: bool = False) -> StaffResponse:
+    """`include_rate` adds what the person's hour costs the shop — a wage
+    figure, so only admin callers get it."""
     return StaffResponse(
         id=doc["id"],
         first_name=doc.get("first_name"),
@@ -290,19 +292,23 @@ def _build_staff_response(doc: dict) -> StaffResponse:
         role=doc.get("role", "admin"),
         is_active=doc.get("is_active", True),
         created_at=doc["created_at"],
+        labour_cost_basis=(doc.get("labour_cost_basis") or "hourly") if include_rate else "hourly",
+        labour_cost_rate=doc.get("labour_cost_rate") if include_rate else None,
     )
 
 
 @router.get("/staff", response_model=List[StaffResponse])
 async def list_staff(current_user: User = Depends(require_staff_or_admin)):
     """List all shop accounts (role staff or admin). Staff-accessible: it
-    feeds the assignee pickers, seen-by names, and the team directory."""
+    feeds the assignee pickers, seen-by names, and the team directory. The
+    labour cost rate rides along for admins only."""
     db = get_database()
+    include_rate = current_user.role == "admin"
     staff = []
     async for doc in db.users.find({"role": {"$in": STAFF_ROLES}}).sort("created_at", -1):
         doc = convert_objectid_to_str(doc)
         doc["id"] = doc.pop("_id")
-        staff.append(_build_staff_response(doc))
+        staff.append(_build_staff_response(doc, include_rate))
     return staff
 
 
@@ -322,6 +328,8 @@ async def create_staff(data: StaffCreate, current_user: User = Depends(require_a
         "email": data.email.lower().strip(),
         "password_hash": hash_password(data.password),
         "role": data.role,
+        "labour_cost_basis": data.labour_cost_basis,
+        "labour_cost_rate": data.labour_cost_rate,
         "is_active": True,
         "created_at": now,
         "updated_at": now,
@@ -331,7 +339,7 @@ async def create_staff(data: StaffCreate, current_user: User = Depends(require_a
     created = convert_objectid_to_str(created)
     created["id"] = created.pop("_id")
     logger.info(f"Staff account created: {created['email']} by admin {current_user.email}")
-    return _build_staff_response(created)
+    return _build_staff_response(created, include_rate=True)
 
 
 @router.put("/staff/{user_id}", response_model=StaffResponse)
@@ -375,12 +383,17 @@ async def update_staff(user_id: str, data: StaffUpdate, current_user: User = Dep
                                     detail="Cannot remove admin access from the last active admin account")
         updates["role"] = data.role
         logger.info(f"Access level for {member['email']} set to {data.role} by admin {current_user.email}")
+    # Sent explicitly (a number, or null to clear) — never touched otherwise.
+    if "labour_cost_rate" in data.model_fields_set:
+        updates["labour_cost_rate"] = data.labour_cost_rate
+    if data.labour_cost_basis is not None:
+        updates["labour_cost_basis"] = data.labour_cost_basis
 
     await db.users.update_one({"_id": oid}, {"$set": updates})
     updated = await db.users.find_one({"_id": oid})
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
-    return _build_staff_response(updated)
+    return _build_staff_response(updated, include_rate=True)
 
 
 @router.patch("/staff/{user_id}/deactivate", response_model=StaffResponse)

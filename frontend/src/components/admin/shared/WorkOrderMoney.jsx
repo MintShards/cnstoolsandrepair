@@ -195,7 +195,7 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
                 title="Cost to shop"
                 rows={[
                   // Same order as the charged column: labour, parts, then the rest.
-                  { label: 'Labour cost', value: fmtMoney(t.labourCost), hint: 'Labour hours × the labour cost rate' },
+                  { label: 'Labour cost', value: fmtMoney(t.labourCost), hint: 'What the technicians’ work cost the shop — hours × their hourly rate, or their flat rate per job' },
                   { label: 'Parts cost', value: fmtMoney(t.partsCost), hint: 'The tools’ parts at what they cost the shop — each part’s cost, from the parts library' },
                   { label: 'Other cost', value: fmtMoney(t.otherCost), hint: 'Freight, outsourced work and other expenses logged for this job' },
                   { label: 'Total cost', value: fmtMoney(t.totalCost), strong: true },
@@ -230,8 +230,8 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
                 {x.cost != null && x.cost > 0 ? `; its ${formatMoney(x.cost)} of costs is not counted` : ''}.
               </p>
             ))}
-            {!acct.labourRateSet && t.labourCharged != null && t.labourCost == null && (
-              <p className={WARN}>Labour cost is not counted because no labour cost rate is set — Admin Settings → Repair Tracker, or per tool in its edit form.</p>
+            {t.labourCharged != null && t.labourCost == null && (
+              <p className={WARN}>Labour cost is not counted: the assigned technician has no agreed labour cost yet — set it in Admin Settings → Users & Accounts, per hour or per job (the shop’s hourly rate in Repair Tracker settings is the fallback).</p>
             )}
             {acct.uncostedParts > 0 && (
               <p className={WARN}>{acct.uncostedParts} {plural(acct.uncostedParts, 'part')} {plural(acct.uncostedParts, 'has', 'have')} no cost yet — give the part a cost in the parts library and save the tool again; until then {plural(acct.uncostedParts, 'it is', 'they are')} left out of the parts cost.</p>

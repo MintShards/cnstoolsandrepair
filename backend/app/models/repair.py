@@ -249,9 +249,10 @@ class ToolItemCreate(BaseModel):
     # customer.
     extra_charges: List[ExtraCharge] = Field(default_factory=list, max_length=20)
     invoiced_amount: Optional[float] = Field(None, ge=0)
-    # What this tool's labour costs the shop per hour, when it differs from
-    # the shop-wide business_settings.labour_cost_rate. Blank = use the default.
-    labour_cost_rate: Optional[float] = Field(None, ge=0)
+    # A flat labour cost for this tool, when it differs from the assigned
+    # technician's agreed terms (hourly or per job, on their shop account).
+    # Blank = use those terms, or the shop's hourly rate as the last resort.
+    labour_cost_override: Optional[float] = Field(None, ge=0)
     # Sales tax on this tool's invoice (see TaxStatus). Accounting only.
     tax_status: TaxStatus = TaxStatus.TAXABLE
     priority: Priority = Priority.STANDARD
@@ -324,7 +325,7 @@ class ToolItemCreate(BaseModel):
                 out.append(s)
         return out
 
-    @field_validator('labour_hours', 'hourly_rate', 'invoiced_amount', 'labour_cost_rate', 'rod_length_received',
+    @field_validator('labour_hours', 'hourly_rate', 'invoiced_amount', 'labour_cost_override', 'rod_length_received',
                      'rod_length_cut', 'rod_length_remaining',
                      'counter_at_intake', 'counter_after_repair', mode='before')
     @classmethod
@@ -389,7 +390,7 @@ class ToolItemUpdate(BaseModel):
     hourly_rate: Optional[float] = Field(None, ge=0)
     extra_charges: Optional[List[ExtraCharge]] = Field(None, max_length=20)
     invoiced_amount: Optional[float] = Field(None, ge=0)
-    labour_cost_rate: Optional[float] = Field(None, ge=0)
+    labour_cost_override: Optional[float] = Field(None, ge=0)
     tax_status: Optional[TaxStatus] = None
     priority: Optional[Priority] = None
     warranty: Optional[bool] = None
@@ -440,7 +441,7 @@ class ToolItemUpdate(BaseModel):
                 out.append(s)
         return out
 
-    @field_validator('labour_hours', 'hourly_rate', 'invoiced_amount', 'labour_cost_rate', 'rod_length_received',
+    @field_validator('labour_hours', 'hourly_rate', 'invoiced_amount', 'labour_cost_override', 'rod_length_received',
                      'rod_length_cut', 'rod_length_remaining',
                      'counter_at_intake', 'counter_after_repair', mode='before')
     @classmethod
@@ -523,7 +524,7 @@ class ToolItemResponse(BaseModel):
     hourly_rate: Optional[float] = None
     extra_charges: List[ExtraCharge] = Field(default_factory=list)
     invoiced_amount: Optional[float] = None
-    labour_cost_rate: Optional[float] = None
+    labour_cost_override: Optional[float] = None
     tax_status: TaxStatus = TaxStatus.TAXABLE
     priority: Priority
     warranty: bool

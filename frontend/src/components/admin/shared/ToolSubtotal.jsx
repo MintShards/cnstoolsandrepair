@@ -43,8 +43,12 @@ export default function ToolSubtotal({ index, charges, acct, isAdmin, excludedRe
         label: 'Labour cost',
         value: money(acct.cost.labour),
         hint: acct.cost.labour != null
-          ? `${charges.hours} h × ${formatMoney(acct.cost.labourRate)}${acct.cost.ownLabourRate ? ' (this tool’s rate)' : ' (shop rate)'}`
-          : acct.cost.labourRate == null ? 'No labour cost rate set' : 'Needs labour hours on the tool',
+          ? (acct.cost.labourRateSource === 'tool'
+            ? `${formatMoney(acct.cost.labour)} flat (this tool’s override)`
+            : acct.cost.labourBasis === 'per_job'
+              ? `${formatMoney(acct.cost.labour)} (the technician’s agreed rate per job)`
+              : `${charges.hours} h × ${formatMoney(acct.cost.labourRate)} (${acct.cost.labourRateSource === 'technician' ? 'the technician’s agreed rate per hour' : 'shop rate'})`)
+          : acct.cost.labourRate == null ? 'No terms: set the technician’s agreed labour cost in Users & Accounts' : 'Needs labour hours on the tool',
       },
       { label: 'Parts cost', value: money(acct.cost.parts), hint: 'This tool’s parts at what they cost the shop — each part’s cost, from the parts library' },
       { label: 'Other cost', value: money(acct.cost.other), hint: 'Freight, outsourced work and other expenses logged for this tool' },

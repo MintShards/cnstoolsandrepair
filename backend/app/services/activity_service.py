@@ -17,7 +17,7 @@ TOOL_FIELD_LABELS = {
     "tool_type": "Tool type", "brand": "Brand", "model_number": "Model",
     "serial_number": "Serial", "quantity": "Quantity", "remarks": "Reported problem",
     "labour_hours": "Labour hours", "hourly_rate": "Hourly rate",
-    "invoiced_amount": "Invoiced amount", "labour_cost_rate": "Labour cost rate",
+    "invoiced_amount": "Invoiced amount", "labour_cost_override": "Labour cost override",
     "tax_status": "Tax on invoice",
     "priority": "Priority", "warranty": "Warranty",
     "zoho_quote_number": "Zoho quote #", "zoho_invoice_number": "Zoho invoice #",

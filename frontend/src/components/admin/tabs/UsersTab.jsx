@@ -56,6 +56,10 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState(user ? user.role : 'staff');
+  // What an hour of this person's time costs the shop — the rate agreed with
+  // them. Shop accounts only; job accounting uses it for their tools.
+  const [costRate, setCostRate] = useState(user?.labour_cost_rate ?? '');
+  const [costBasis, setCostBasis] = useState(user?.labour_cost_basis || 'hourly');
   const [saving, setSaving] = useState(false);
   useEscapeClose(onClose);
   useBodyScrollLock(true);
@@ -68,6 +72,7 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
       last_name: lastName.trim(),
       email: email.trim(),
     };
+    const rate = costRate === '' ? null : parseFloat(costRate);
     try {
       if (editing) {
         // Person fields go through the account's CURRENT kind first — after
@@ -76,7 +81,7 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
         if (user.kind === 'sales') {
           await salesRepsAPI.update(user.id, person);
         } else {
-          await staffAPI.update(user.id, person);
+          await staffAPI.update(user.id, { ...person, labour_cost_rate: rate, labour_cost_basis: costBasis });
         }
         if (!isSelf && role !== user.role) {
           await staffAPI.changeRole(user.id, role);
@@ -86,7 +91,7 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
         await salesRepsAPI.create({ ...person, password });
         showToast('success', 'Sales rep created — they can log in at /sales/login.');
       } else {
-        await staffAPI.create({ ...person, password, role });
+        await staffAPI.create({ ...person, password, role, labour_cost_rate: rate, labour_cost_basis: costBasis });
         showToast('success', 'Account created — they can log in now.');
       }
       onSaved();
@@ -158,6 +163,27 @@ function UserFormModal({ user, currentUser, onSaved, onClose }) {
               </p>
             )}
           </div>
+          {role !== 'sales' && (
+            <div>
+              <label className={LABEL_CLS}>Labour cost agreed with them</label>
+              <div className="grid grid-cols-2 gap-3">
+                <select value={costBasis} onChange={(e) => setCostBasis(e.target.value)} aria-label="Labour cost basis" className={INPUT_CLS}>
+                  <option value="hourly">Per hour</option>
+                  <option value="per_job">Per job (flat)</option>
+                </select>
+                <input
+                  type="number" min="0" max="10000" step="0.5" value={costRate} onChange={(e) => setCostRate(e.target.value)}
+                  placeholder={costBasis === 'per_job' ? '$ per job' : '$ per hour'} aria-label="Labour cost amount" className={INPUT_CLS}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                {costBasis === 'per_job'
+                  ? 'The same flat amount for every tool assigned to them, however many hours it takes.'
+                  : 'Multiplied by the labour hours on tools assigned to them.'}
+                {' '}Blank falls back to the shop’s hourly rate in Repair Tracker settings.
+              </p>
+            </div>
+          )}
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className={CANCEL_BTN_CLS}>Cancel</button>
             <button type="submit" disabled={saving} className={SUBMIT_BTN_CLS}>
@@ -330,6 +356,7 @@ function UsersPanel({ currentUser }) {
                   <th className="py-3 px-4 font-bold">Name</th>
                   <th className="py-3 px-4 font-bold hidden md:table-cell">Email</th>
                   <th className="py-3 px-4 font-bold">Role</th>
+                  <th className="py-3 px-4 font-bold hidden lg:table-cell" title="Labour cost agreed with the person, per hour or per job">Labour cost</th>
                   <th className="py-3 px-4 font-bold hidden sm:table-cell">Status</th>
                   <th className="py-3 px-4 font-bold hidden lg:table-cell">Activity</th>
                   <th className="py-3 px-4 font-bold hidden xl:table-cell">Added</th>
@@ -359,6 +386,9 @@ function UsersPanel({ currentUser }) {
                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border whitespace-nowrap ${roleCfg.badge}`}>
                           {roleCfg.label}
                         </span>
+                      </td>
+                      <td className="py-3.5 px-4 hidden lg:table-cell text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums">
+                        {user.kind === 'shop' && user.labour_cost_rate != null ? `$${Number(user.labour_cost_rate).toFixed(2)}${user.labour_cost_basis === 'per_job' ? '/job' : '/h'}` : '—'}
                       </td>
                       <td className="py-3.5 px-4 hidden sm:table-cell">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-bold border ${

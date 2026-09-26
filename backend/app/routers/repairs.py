@@ -121,6 +121,13 @@ def _migrate_tool_parts(tool: dict) -> dict:
         part.setdefault("tracking", None)
         part.setdefault("part_number", None)
         part.setdefault("library_part_id", None)
+    # The per-tool labour cost override used to be an hourly rate; it is now a
+    # flat amount for the tool. An old value carries over as that flat amount
+    # (the few that existed were typed as "what this job's labour costs").
+    if tool.get("labour_cost_override") is None and tool.get("labour_cost_rate") is not None:
+        tool["labour_cost_override"] = tool.pop("labour_cost_rate")
+    else:
+        tool.pop("labour_cost_rate", None)
     return tool
 
 
@@ -162,7 +169,7 @@ def _build_job_response(job: dict, viewer: Optional[User] = None) -> RepairJobRe
     for t in job.get("tools", []):
         t = _migrate_tool_parts(t)
         if redact:
-            t = {**t, "labour_cost_rate": None}
+            t = {**t, "labour_cost_override": None}
         tools.append(ToolItemResponse(**t))
     job["tools"] = tools
     return RepairJobResponse(**job)
@@ -1686,7 +1693,7 @@ async def create_repair_job(
         tool = ToolItem(**tool_in.model_dump())
         tool_dict = tool.model_dump()
         if current_user.role != "admin":
-            tool_dict["labour_cost_rate"] = None   # admin-only figure
+            tool_dict["labour_cost_override"] = None   # admin-only figure
         await _fill_part_costs(db, tool_dict.get("parts"))
         tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
         # Add initial status history entry
@@ -2122,7 +2129,7 @@ async def add_tool(
     tool = ToolItem(**tool_data.model_dump())
     tool_dict = tool.model_dump()
     if current_user.role != "admin":
-        tool_dict["labour_cost_rate"] = None   # admin-only figure
+        tool_dict["labour_cost_override"] = None   # admin-only figure
     await _fill_part_costs(db, tool_dict.get("parts"))
     tool_dict["date_received"] = _pacific_date_to_utc(tool_dict["date_received"])
     tool_dict["status_history"] = [{
@@ -2180,7 +2187,7 @@ async def update_tool(
     # stored value (it is blanked in responses), so their edit form would
     # send it back blank: drop it rather than let that clear the admin's rate.
     if current_user.role != "admin":
-        update_fields.pop("labour_cost_rate", None)
+        update_fields.pop("labour_cost_override", None)
     # What actually changed, in words, for the activity log — computed before
     # the parts loop below decorates the incoming parts with dates.
     changes = diff_tool(tools[tool_index], update_fields)

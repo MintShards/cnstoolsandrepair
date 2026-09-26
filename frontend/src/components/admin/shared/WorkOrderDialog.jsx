@@ -120,7 +120,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   // accounting block and each tool's subtotal.
   const money = useJobMoney(job.id, isAdmin, moneyTick);
   const acct = isAdmin && money.loaded
-    ? jobAccounting(job, money.bills, money.payments, { labourCostRate: settings?.labourCostRate, gstRate: settings?.gstRate, pstRate: settings?.pstRate })
+    ? jobAccounting(job, money.bills, money.payments, { labourCostRate: settings?.labourCostRate, gstRate: settings?.gstRate, pstRate: settings?.pstRate, technicianRates: money.technicianRates })
     : null;
   const openPaymentFor = () => {
     const cust = jobCustomer || job;
@@ -500,7 +500,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       hourly_rate: tool.hourly_rate ?? '',
       extra_charges: (tool.extra_charges || []).map((c) => ({ description: c.description || '', amount: c.amount ?? '' })),
       invoiced_amount: tool.invoiced_amount ?? '',
-      labour_cost_rate: tool.labour_cost_rate ?? '',
+      labour_cost_override: tool.labour_cost_override ?? '',
       tax_status: tool.tax_status || 'taxable',
       priority: tool.priority || 'standard',
       warranty: tool.warranty || false,
@@ -567,7 +567,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         hourly_rate: toolEditForm.hourly_rate ? parseFloat(toolEditForm.hourly_rate) : null,
         extra_charges: (toolEditForm.extra_charges || []).filter((c) => c.description?.trim()).map((c) => ({ description: c.description.trim(), amount: parseFloat(c.amount) || 0 })),
         invoiced_amount: toolEditForm.invoiced_amount !== '' && toolEditForm.invoiced_amount != null ? parseFloat(toolEditForm.invoiced_amount) : null,
-        labour_cost_rate: toolEditForm.labour_cost_rate !== '' && toolEditForm.labour_cost_rate != null ? parseFloat(toolEditForm.labour_cost_rate) : null,
+        labour_cost_override: toolEditForm.labour_cost_override !== '' && toolEditForm.labour_cost_override != null ? parseFloat(toolEditForm.labour_cost_override) : null,
         serial_number: toolEditForm.serial_number || null,
         remarks: toolEditForm.remarks || null,
         diagnostics: (toolEditForm.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null })),
@@ -613,7 +613,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         hourly_rate: addToolForm.hourly_rate ? parseFloat(addToolForm.hourly_rate) : null,
         extra_charges: (addToolForm.extra_charges || []).filter((c) => c.description?.trim()).map((c) => ({ description: c.description.trim(), amount: parseFloat(c.amount) || 0 })),
         invoiced_amount: addToolForm.invoiced_amount !== '' && addToolForm.invoiced_amount != null ? parseFloat(addToolForm.invoiced_amount) : null,
-        labour_cost_rate: addToolForm.labour_cost_rate !== '' && addToolForm.labour_cost_rate != null ? parseFloat(addToolForm.labour_cost_rate) : null,
+        labour_cost_override: addToolForm.labour_cost_override !== '' && addToolForm.labour_cost_override != null ? parseFloat(addToolForm.labour_cost_override) : null,
         serial_number: addToolForm.serial_number || null,
         remarks: addToolForm.remarks || null,
         diagnostics: (addToolForm.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null })),

@@ -295,7 +295,7 @@ export default function RepairTrackerTab() {
             <span className="material-symbols-outlined text-sky-400 text-xl flex-shrink-0">engineering</span>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-white">Labour Cost Per Hour</p>
-              <p className="text-[11px] text-slate-400">What technician time costs the shop (wages and burden). Job accounting multiplies it by each tool’s labour hours; a tool can carry its own rate.</p>
+              <p className="text-[11px] text-slate-400">Hourly fallback for tools whose technician has no agreed labour cost of their own — each technician’s terms, per hour or per job, are set in Users & Accounts.</p>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <span className="text-xs text-slate-400">$</span>

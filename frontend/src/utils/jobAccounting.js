@@ -115,16 +115,27 @@ export function toolCharges(tool) {
 }
 
 /**
- * What one tool's labour costs the shop: its hours × its own cost rate, or
- * the shop-wide rate when the tool carries none. Null until both the hours
- * and a rate exist.
+ * What one tool's labour costs the shop, by whichever terms apply:
+ *   1. a flat override typed on the tool (`labour_cost_override`);
+ *   2. the terms agreed with the assigned technician (`technicianRates`,
+ *      keyed by the display name the tool stores, each `{ basis, rate }`):
+ *      a flat amount per job whatever the hours, or hours × an hourly rate;
+ *   3. hours × the shop-wide hourly rate.
+ * Null until whatever the terms need exists.
  */
-export function toolLabourCost(tool, defaultRate) {
+export function toolLabourCost(tool, defaultRate, technicianRates = {}) {
   const hours = entered(tool.labour_hours) ? num(tool.labour_hours) : null;
-  const own = entered(tool.labour_cost_rate) ? num(tool.labour_cost_rate) : null;
+  const own = entered(tool.labour_cost_override) ? num(tool.labour_cost_override) : null;
+  if (own != null) return { hours, rate: own, basis: 'flat', source: 'tool', amount: round2(own) };
+  const agreed = technicianRates[tool.assigned_technician];
+  if (agreed && entered(agreed.rate)) {
+    const rate = num(agreed.rate);
+    if (agreed.basis === 'per_job') return { hours, rate, basis: 'per_job', source: 'technician', amount: round2(rate) };
+    return { hours, rate, basis: 'hourly', source: 'technician', amount: hours != null ? round2(hours * rate) : null };
+  }
   const shop = entered(defaultRate) ? num(defaultRate) : null;
-  const rate = own ?? shop;
-  return { hours, rate, own: own != null, amount: hours != null && rate != null ? round2(hours * rate) : null };
+  if (shop != null) return { hours, rate: shop, basis: 'hourly', source: 'shop', amount: hours != null ? round2(hours * shop) : null };
+  return { hours, rate: null, basis: null, source: null, amount: null };
 }
 
 /**
@@ -163,9 +174,11 @@ function costFromLines(lines) {
  * The whole job's money in one object: per-tool charges, costs and profit,
  * the job-level (shared) costs, the totals, the invoice total with tax, and
  * what has been received against it. `labourCostRate`, `gstRate` and
- * `pstRate` come from business settings; the tax rates fall back to BC's.
+ * `pstRate` come from business settings (the tax rates fall back to BC's);
+ * `technicianRates` maps each technician's display name to the terms agreed
+ * with them, `{ basis: 'hourly' | 'per_job', rate }`.
  */
-export function jobAccounting(job, bills = [], payments = [], { labourCostRate = null, gstRate = null, pstRate = null } = {}) {
+export function jobAccounting(job, bills = [], payments = [], { labourCostRate = null, gstRate = null, pstRate = null, technicianRates = {} } = {}) {
   const gst = entered(gstRate) ? num(gstRate) : DEFAULT_GST_RATE;
   const pst = entered(pstRate) ? num(pstRate) : DEFAULT_PST_RATE;
   // The shop works in CAD. A record in another currency (possible on older
@@ -188,7 +201,7 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
     const charges = toolCharges(t);
     const taxStatus = t.tax_status || 'taxable';
     const tax = taxOn(charges.revenue, taxStatus, gst, pst);
-    const labour = toolLabourCost(t, labourCostRate);
+    const labour = toolLabourCost(t, labourCostRate, technicianRates);
     const parts = toolPartsCost(t);
     const fromBills = costFromLines(jobLines.filter((l) => l.tool_id === t.tool_id));
     const cost = {
@@ -200,7 +213,8 @@ export function jobAccounting(job, bills = [], payments = [], { labourCostRate =
       unpriced: fromBills.unpriced,
       lines: fromBills.lines,
       labourRate: labour.rate,
-      ownLabourRate: labour.own,
+      labourBasis: labour.basis,
+      labourRateSource: labour.source,
     };
     const profit = charges.revenue == null && cost.total == null ? null : round2((charges.revenue ?? 0) - (cost.total ?? 0));
     const reason = excludedReason(t);

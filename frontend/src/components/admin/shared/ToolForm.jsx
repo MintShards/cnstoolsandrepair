@@ -12,7 +12,7 @@ import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
 const EMPTY_TOOL_BASE = {
   tool_type: '', brand: '', model_number: '', serial_number: '',
   quantity: 1, remarks: '', diagnostics: [], parts: [{ name: '', part_number: '', quantity: 1, price: '', supplier: '', order_link: '', notes: '', status: 'pending', tracking: '', eta: '' }],
-  labour_hours: '', hourly_rate: '', extra_charges: [], invoiced_amount: '', labour_cost_rate: '', tax_status: 'taxable', priority: 'standard', warranty: false,
+  labour_hours: '', hourly_rate: '', extra_charges: [], invoiced_amount: '', labour_cost_override: '', tax_status: 'taxable', priority: 'standard', warranty: false,
   zoho_quote_number: '', zoho_invoice_number: '', assigned_technician: '', estimated_completion: '',
   included_items: [], rod_length_received: '', rod_length_cut: '', rod_length_remaining: '',
   camera_head_model: '', camera_head_serial: '',
@@ -404,15 +404,25 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   // technicians directory, which was a second hand-typed list that couldn't
   // stay in sync with Users & Accounts.
   const [technicians, setTechnicians] = useState([]);
+  // The hourly rate agreed with each technician, by display name, for the
+  // labour cost preview below. The API includes it for admins only.
+  const [technicianRates, setTechnicianRates] = useState({});
 
   useEffect(() => {
     staffAPI.list()
-      .then((accounts) => setTechnicians(
-        accounts
-          .filter((a) => a.is_active)
-          .map((a) => a.name)
-          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-      ))
+      .then((accounts) => {
+        setTechnicians(
+          accounts
+            .filter((a) => a.is_active)
+            .map((a) => a.name)
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+        );
+        const rates = {};
+        for (const a of accounts) {
+          if (a.labour_cost_rate != null) rates[a.name] = { basis: a.labour_cost_basis || 'hourly', rate: a.labour_cost_rate };
+        }
+        setTechnicianRates(rates);
+      })
       .catch(() => {});
   }, []);
 
@@ -1357,18 +1367,46 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
           <p className={sectionHdr}>Cost to Shop</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Labour Cost Rate ($/h)</label>
-              <input type="number" step="0.01" min="0" value={data.labour_cost_rate ?? ''} onChange={(e) => handleChange('labour_cost_rate', e.target.value)}
-                placeholder={shopLabourCostRate != null ? `Shop rate $${Number(shopLabourCostRate).toFixed(2)}/h` : 'No shop rate set'}
-                title="What this tool's labour costs the shop. Blank uses the shop rate from Admin Settings → Repair Tracker." className={inputCls} />
-              {/* Live result, so the effect of the rate is visible before saving. */}
+              {/* The terms that apply are the technician's (Users & Accounts):
+                  a flat amount per job or an hourly rate. This box overrides
+                  them with a flat figure for this one tool. */}
+              {(() => {
+                const terms = data.assigned_technician ? technicianRates[data.assigned_technician] : null;
+                const describe = (x) => (x.basis === 'per_job' ? `$${Number(x.rate).toFixed(2)} per job` : `$${Number(x.rate).toFixed(2)}/h`);
+                const placeholder = terms
+                  ? `${data.assigned_technician}: ${describe(terms)}`
+                  : shopLabourCostRate != null ? `Shop rate $${Number(shopLabourCostRate).toFixed(2)}/h` : 'No terms set';
+                return (
+                  <>
+                    <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Labour Cost Override ($ for this tool)</label>
+                    <input type="number" step="0.01" min="0" value={data.labour_cost_override ?? ''} onChange={(e) => handleChange('labour_cost_override', e.target.value)}
+                      placeholder={placeholder}
+                      title="A flat labour cost for this tool only, when it differs from the technician's agreed terms. Blank uses those terms (Users & Accounts), or the shop's hourly rate when the technician has none." className={inputCls} />
+                  </>
+                );
+              })()}
+              {/* Live result, so the effect is visible before saving. */}
               {(() => {
                 const hours = parseFloat(data.labour_hours);
-                const own = parseFloat(data.labour_cost_rate);
-                const rate = Number.isFinite(own) ? own : (shopLabourCostRate != null ? Number(shopLabourCostRate) : null);
-                if (rate == null) return <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">No rate anywhere yet — labour cost stays out of the figures.</p>;
+                const own = parseFloat(data.labour_cost_override);
+                const who = data.assigned_technician;
+                const terms = who ? technicianRates[who] : null;
+                const bold = 'font-bold text-slate-700 dark:text-slate-200';
+                if (Number.isFinite(own)) return <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Labour cost: <span className={bold}>{formatMoney(own)}</span> flat (this tool’s override).</p>;
+                if (terms && terms.basis === 'per_job') return <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Labour cost: <span className={bold}>{formatMoney(terms.rate)}</span> ({who}’s agreed rate per job, whatever the hours).</p>;
+                const rate = terms ? Number(terms.rate) : shopLabourCostRate != null ? Number(shopLabourCostRate) : null;
+                const source = terms ? `${who}’s agreed rate per hour` : 'shop rate';
+                if (rate == null) {
+                  return (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                      {who
+                        ? `No agreed terms for ${who} yet — set them in Admin Settings → Users & Accounts. Labour cost stays out of the figures until then.`
+                        : 'Assign a technician with agreed terms (Users & Accounts) — labour cost stays out of the figures until then.'}
+                    </p>
+                  );
+                }
                 if (!Number.isFinite(hours) || hours <= 0) return <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Enter labour hours above to get a labour cost.</p>;
-                return <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Labour cost: {hours} h × {formatMoney(rate)} = <span className="font-bold text-slate-700 dark:text-slate-200">{formatMoney(hours * rate)}</span>{Number.isFinite(own) ? '' : ' (shop rate)'}</p>;
+                return <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Labour cost: {hours} h × {formatMoney(rate)} ({source}) = <span className={bold}>{formatMoney(hours * rate)}</span></p>;
               })()}
             </div>
             {costLines && (
