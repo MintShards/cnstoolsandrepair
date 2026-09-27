@@ -46,12 +46,16 @@ const categoryIndex = (c) => {
   const i = CATEGORIES.indexOf(c);
   return i === -1 ? CATEGORIES.length : i;
 };
-// Inside a category the generic type ("ANY AIR TOOL") leads, then the tool
-// types alphabetically.
+// Inside a category the generic type ("ANY AIR TOOL") leads, a base type
+// comes before its variants (HYDRAULIC JACK before AIR/HYDRAULIC JACK), and
+// the rest run alphabetically.
 const typeSort = (a, b) => {
   const aa = a.startsWith('ANY ');
   const bb = b.startsWith('ANY ');
   if (aa !== bb) return aa ? -1 : 1;
+  const aw = words(a);
+  const bw = words(b);
+  if (aw.length !== bw.length && (aw.every((w) => bw.includes(w)) || bw.every((w) => aw.includes(w)))) return aw.length - bw.length;
   return a.localeCompare(b);
 };
 const codeSort = (a, b) => (a.prefix === b.prefix ? a.number - b.number : a.prefix.localeCompare(b.prefix));
@@ -124,7 +128,18 @@ export function orderForTool(codes, toolType) {
     if (cat === GENERAL_CATEGORY) return 3;
     return 4;
   };
-  return [...list].sort((a, b) => rank(a) - rank(b) || categoryIndex(category(a)) - categoryIndex(category(b)) || typeSort((a.tool_type || ''), (b.tool_type || '')) || codeSort(a, b));
+  // Among the codes that match the tool, the closest type first: every noun
+  // matched beats a partial match, and a type is set back for each power
+  // word it needs that the tool doesn't mention (AIR/HYDRAULIC JACK codes
+  // after HYDRAULIC JACK codes for a plain floor jack).
+  const closeness = (c) => {
+    const ct = (c.tool_type || '').toUpperCase();
+    const nouns = nounWords(ct);
+    const allNouns = nouns.length > 0 && nouns.every((w) => ownWords.has(w));
+    const missingPower = words(ct).filter((w) => POWER_WORDS[w] && !ownWords.has(w)).length;
+    return (allNouns ? 2 : 1) - missingPower;
+  };
+  return [...list].sort((a, b) => rank(a) - rank(b) || (rank(a) === 0 ? closeness(b) - closeness(a) : 0) || categoryIndex(category(a)) - categoryIndex(category(b)) || typeSort((a.tool_type || ''), (b.tool_type || '')) || codeSort(a, b));
 }
 
 // Free-text search over what the wall chart shows plus the quote note.
