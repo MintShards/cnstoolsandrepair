@@ -5,7 +5,9 @@ import { BILL_LINE_KINDS } from '../../../constants/bills';
 import BillStatusPill from '../../workspace/BillStatusPill';
 import { Column } from './AccountingStatement';
 
-const BTN = 'inline-flex items-center gap-1 px-2.5 py-1 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all';
+// On phones the three buttons sit in a grid and fill their cells, so the
+// icon and label are centred; on wider screens they size to their content.
+const BTN = 'inline-flex items-center justify-center sm:justify-start gap-1 px-2 sm:px-2.5 py-1 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-[13px] sm:text-xs font-bold transition-all';
 // A figure nobody has entered shows as "—", so a real $0.00 stays distinct.
 // (Not called `money`: the component's prop of that name would shadow it.)
 const fmtMoney = (v) => (v == null ? '—' : formatMoney(v));
@@ -151,7 +153,9 @@ export default function WorkOrderMoney({ money, acct, onAddCharge, onAddExpense,
         {/* Parts bills are logged in Cash Flow (Workspace) and point back
             here; the things logged from this side are an extra charge on a
             tool, an additional expense on the job, and a customer payment. */}
-        <div className="flex items-center gap-1.5 flex-wrap sm:ml-auto sm:justify-end">
+        {/* Phones: a two-column grid of equal buttons, the lone third one
+            spanning both columns; wider screens: the inline row. */}
+        <div className="grid grid-cols-2 gap-1.5 [&>:last-child:nth-child(odd)]:col-span-2 sm:flex sm:flex-wrap sm:items-center sm:ml-auto sm:justify-end">
           <button type="button" onClick={onAddCharge} className={BTN} title="Add an extra charge to a tool — shop supplies, freight billed on, a fee: anything the customer pays beyond labour and parts">
             <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>sell</span>
             Add charge

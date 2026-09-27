@@ -1268,13 +1268,18 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2.5 mt-4 flex-wrap">
-                          {tool.warranty && (
-                            <span className="sm:hidden px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
-                          )}
+                        {tool.warranty && (
+                          <div className="sm:hidden mt-3">
+                            <span className="inline-block px-2.5 py-1 rounded-full text-sm font-bold bg-teal-100 text-teal-700 border border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-700/50">Warranty</span>
+                          </div>
+                        )}
+                        {/* Phones: Update Status full width, the rest in a
+                            two-column grid of equal buttons (a lone last one
+                            spans both columns); wider screens: the inline row. */}
+                        <div className="grid grid-cols-2 gap-2 [&>:last-child:nth-child(even)]:col-span-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2.5 mt-4">
                           <button
                             onClick={() => openStatusUpdate(tool)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-sm font-bold transition-all"
+                            className="col-span-2 sm:col-auto inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary hover:text-blue-700 dark:hover:text-blue-300 rounded-lg text-sm font-bold transition-all"
                           >
                             <span className="material-symbols-outlined text-base">update</span>
                             Update Status
@@ -1282,7 +1287,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <button
                             onClick={() => handleStartDiagnosis(tool)}
                             title="Record what was found, what it needs and the parts for it"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                            className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                           >
                             <span className="material-symbols-outlined text-base">troubleshoot</span>
                             Diagnosis
@@ -1290,7 +1295,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <button
                             onClick={() => handleStartParts(tool)}
                             title="Parts for this tool"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                            className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                           >
                             <span className="material-symbols-outlined text-base">inventory_2</span>
                             Parts
@@ -1298,7 +1303,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           {editingToolId !== tool.tool_id && (
                             <button
                               onClick={() => handleStartToolEdit(tool)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                              className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                             >
                               <span className="material-symbols-outlined text-base">edit</span>
                               Edit
@@ -1306,7 +1311,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           )}
                           <button
                             onClick={() => openPrintToolTag(job, tool, idx)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                            className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                             title="Print tool tag"
                           >
                             <span className="material-symbols-outlined text-base">label</span>
@@ -1317,7 +1322,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                               onClick={() => handleRemoveTool(tool.tool_id)}
                               title="Remove tool from work order"
                               aria-label="Remove tool from work order"
-                              className={`px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-bold transition-all border ${
+                              className={`inline-flex items-center justify-center px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-sm font-bold transition-all border ${
                                 removeConfirmId === tool.tool_id
                                   ? 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700/60'
                                   : 'bg-slate-200/40 dark:bg-slate-700/40 hover:bg-red-50 dark:hover:bg-red-900/30 border-slate-200 dark:border-slate-600/40 hover:border-red-300 dark:hover:border-red-700/40 text-slate-500 hover:text-red-600 dark:hover:text-red-400'
