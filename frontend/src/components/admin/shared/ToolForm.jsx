@@ -8,6 +8,7 @@ import { BILL_LINE_KINDS } from '../../../constants/bills';
 import { formatMoney } from '../../../utils/money';
 import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
 import DiagnosisEditor from './DiagnosisEditor';
+import { fetchSuggestedPartsForTool } from '../../../utils/suggestedParts';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
 const EMPTY_TOOL_BASE = {
@@ -551,21 +552,8 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
     const timer = setTimeout(async () => {
       setSuggestedPartsLoading(true);
       try {
-        const brands = await partsLibraryAPI.listBrands();
-        const matchBrand = brands.find((b) => b.name.toLowerCase() === brand);
-        if (!matchBrand) { if (!cancelled) setSuggestedParts([]); return; }
-        const models = await partsLibraryAPI.listModels(matchBrand.id);
-        const matched = models.filter((m) => names.includes(m.name.toLowerCase()));
-        if (!matched.length) { if (!cancelled) setSuggestedParts([]); return; }
-        const results = await Promise.all(
-          matched.map((m) => partsLibraryAPI.listParts({ model_id: m.id, limit: 50 }).catch(() => ({ items: [] })))
-        );
-        const seen = new Set();
-        const merged = results.flatMap((r) => r.items || []).filter((p) => {
-          if (seen.has(p.id)) return false;
-          seen.add(p.id);
-          return true;
-        });
+        const [model_number, camera_head_model, controller_model, reel_model] = modelNames;
+        const merged = await fetchSuggestedPartsForTool({ brand, model_number, camera_head_model, controller_model, reel_model });
         if (!cancelled) setSuggestedParts(merged);
       } catch {
         if (!cancelled) setSuggestedParts([]);
@@ -909,6 +897,15 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
             <DiagnosisEditor
               diagnostics={data.diagnostics || []}
               onDiagnosticsChange={(v) => handleChange('diagnostics', v)}
+              toolType={data.tool_type}
+              libraryParts={suggestedParts}
+              libraryLoading={suggestedPartsLoading}
+              existingParts={data.parts || []}
+              onApplyCode={(next, rows) => handleChange({
+                diagnostics: next,
+                // A code's parts join the list; the empty starter row goes only when something real arrives.
+                parts: rows.length ? [...(data.parts || []).filter((p) => p.name?.trim()), ...rows.map(({ _finding_id, ...r }) => r)] : (data.parts || []),
+              })}
             />
             <div className="md:col-span-2 flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer">

@@ -407,6 +407,31 @@ export const suppliersAPI = {
   },
 };
 
+// Diagnosis codes — the internal library of common tool problems. Staff
+// read and apply them from the tracker; only admins change the list.
+// `list` rows carry a derived `usage_count`; `retire` is a soft delete.
+export const diagnosisCodesAPI = {
+  list: async (params = {}) => {
+    const response = await api.get('/api/diagnosis-codes/', { params });
+    return response.data;
+  },
+  next: async (params = {}) => {
+    const response = await api.get('/api/diagnosis-codes/next', { params });
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/api/diagnosis-codes/', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/api/diagnosis-codes/${id}`, data);
+    return response.data;
+  },
+  retire: async (id) => {
+    await api.delete(`/api/diagnosis-codes/${id}`);
+  },
+};
+
 // Repairs API (admin only)
 export const repairsAPI = {
   summary: async () => {

@@ -217,12 +217,25 @@ class DiagnosisEntry(BaseModel):
     diagnosis: str = Field(..., min_length=1, max_length=500)
     solution: Optional[str] = Field(None, max_length=500)
     parts: Optional[str] = Field(None, max_length=500)
+    # Filled when the finding came from a diagnosis code (HJ-03): the code for
+    # usage counts and the card chip, and the quote wording as used on this
+    # job — copied from the code, editable per job, internal only.
+    code: Optional[str] = Field(None, max_length=20)
+    customer_explanation: Optional[str] = Field(None, max_length=1000)
 
-    @field_validator('diagnosis', 'solution', 'parts', mode='before')
+    @field_validator('diagnosis', 'solution', 'parts', 'customer_explanation', mode='before')
     @classmethod
     def strip_text(cls, v):
         if isinstance(v, str):
             v = v.strip()
+            return v if v else None
+        return v
+
+    @field_validator('code', mode='before')
+    @classmethod
+    def upper_code(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
             return v if v else None
         return v
 

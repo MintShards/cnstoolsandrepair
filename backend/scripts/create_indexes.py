@@ -370,6 +370,23 @@ async def create_bills_indexes():
     print("  ✅ Bills + payments indexes created!")
 
 
+async def create_diagnosis_codes_indexes():
+    """Indexes for the diagnosis code library (Admin Settings → Diagnosis Codes)"""
+    print("\n📌 Creating DIAGNOSIS CODES indexes...")
+    db = get_database()
+
+    # The code string (HJ-03) is what techs type on the tracker; it must be unique.
+    print("  Creating index: diagnosis_codes.code (unique)...")
+    await ensure_index(db.diagnosis_codes, "code", unique=True, name="diagnosis_codes_code_unique_idx")
+
+    # The library lists by tool type, then prefix and number; next-number
+    # lookups run on (prefix, number).
+    print("  Creating index: diagnosis_codes (tool_type, prefix, number)...")
+    await ensure_index(db.diagnosis_codes, [("tool_type", 1), ("prefix", 1), ("number", 1)], name="diagnosis_codes_type_idx")
+    print("  Creating index: diagnosis_codes (prefix, number)...")
+    await ensure_index(db.diagnosis_codes, [("prefix", 1), ("number", -1)], name="diagnosis_codes_prefix_number_idx")
+
+
 async def create_all_indexes():
     """Create every index the app needs, on whatever database .env points to."""
     from app.config import settings
@@ -387,6 +404,7 @@ async def create_all_indexes():
         await create_route_management_indexes()
         await create_workspace_indexes()
         await create_bills_indexes()
+        await create_diagnosis_codes_indexes()
 
         print("\n" + "=" * 60)
         print("✅ ALL INDEXES CREATED SUCCESSFULLY!")
@@ -419,7 +437,8 @@ async def verify_indexes():
         ("tasks", "✅"),
         ("messages", "💬"),
         ("bills", "🧾"),
-        ("payments", "💵")
+        ("payments", "💵"),
+        ("diagnosis_codes", "🏷️")
     ]
 
     total_indexes = 0

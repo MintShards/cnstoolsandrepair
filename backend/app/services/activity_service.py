@@ -187,6 +187,8 @@ def _diagnostics_summary(items) -> str:
         if not isinstance(d, dict) or not d.get("diagnosis"):
             continue
         text = str(d["diagnosis"])[:80]
+        if d.get("code"):
+            text = f"[{d['code']}] {text}"
         if d.get("solution"):
             text += f" → {str(d['solution'])[:80]}"
         if d.get("parts"):

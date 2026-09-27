@@ -1,0 +1,689 @@
+[
+  {
+    "code": "GEN-01",
+    "category": "GENERAL",
+    "tool_type": "GENERAL",
+    "title": "No fault found — service and lubricate",
+    "likely_causes": ["Dirty or dry internals", "Intermittent supply issue at the customer site"],
+    "technician_checks": ["Bench test under load", "Inspect internals for wear", "Clean, lubricate and reassemble"],
+    "solution": "Full service: disassemble, clean, inspect, lubricate and test",
+    "parts": [],
+    "quote_note": "No fault was found on the bench; the tool was serviced, lubricated and tested."
+  },
+  {
+    "code": "GEN-02",
+    "category": "GENERAL",
+    "tool_type": "GENERAL",
+    "title": "Housing cracked or damaged",
+    "likely_causes": ["Dropped or struck", "Over-tightened housing screws", "Corrosion at housing seams"],
+    "technician_checks": ["Inspect handle, inlet and housing joints for cracks", "Check threads and screw holes", "Inspect internal parts for impact damage"],
+    "solution": "Replace the housing or damaged section; check and replace damaged internal parts",
+    "parts": [{"name": "Housing", "quantity": 1}],
+    "quote_note": "The housing is cracked and must be replaced; internal components will be checked for related damage."
+  },
+
+  {
+    "code": "AT-01",
+    "category": "AIR TOOLS",
+    "tool_type": "ANY AIR TOOL",
+    "title": "Air leak at inlet",
+    "likely_causes": ["Worn inlet bushing O-ring", "Cracked or stripped inlet bushing", "Loose fitting or damaged thread"],
+    "technician_checks": ["Soap-test the inlet with air connected", "Inspect bushing threads and O-ring", "Check the fitting and hose end"],
+    "solution": "Replace inlet bushing O-ring or the bushing; reseal or replace the fitting",
+    "parts": [{"name": "Inlet bushing", "quantity": 1}],
+    "quote_note": "Air is leaking at the inlet; the inlet bushing and seal need replacement."
+  },
+  {
+    "code": "AT-02",
+    "category": "AIR TOOLS",
+    "tool_type": "ANY AIR TOOL",
+    "title": "Trigger or throttle sticks / will not return",
+    "likely_causes": ["Gummed throttle valve (dried lubricant, dirt)", "Worn throttle valve O-ring or seat", "Broken or weak trigger spring", "Bent trigger or lever"],
+    "technician_checks": ["Cycle the trigger with air off and on", "Remove the throttle valve; inspect seat, O-ring and spring", "Check the trigger pivot pin and lever"],
+    "solution": "Clean or replace the throttle valve and O-ring; replace the trigger spring or lever as needed",
+    "parts": [{"name": "Throttle valve kit", "quantity": 1}, {"name": "Trigger spring", "quantity": 1}],
+    "quote_note": "The throttle is sticking; the throttle valve assembly needs cleaning or replacement."
+  },
+  {
+    "code": "AT-03",
+    "category": "AIR TOOLS",
+    "tool_type": "ANY AIR TOOL",
+    "title": "Runs but stalls or loses power under load",
+    "likely_causes": ["Low air pressure or volume (undersized hose, fittings)", "Clogged inlet screen or exhaust muffler", "Worn rotor blades", "Scored cylinder or worn end plates"],
+    "technician_checks": ["Verify 90 psi at the tool under load with the correct hose size", "Clean the inlet screen and muffler", "Inspect rotor blades, cylinder and end plates"],
+    "solution": "Correct the air supply; clean inlet and exhaust; replace worn rotor blades and any scored motor parts",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Muffler", "quantity": 1}],
+    "quote_note": "The tool loses power under load; internal motor wear and restricted airflow will be corrected."
+  },
+  {
+    "code": "AT-04",
+    "category": "AIR TOOLS",
+    "tool_type": "ANY AIR TOOL",
+    "title": "Seized or will not turn (corrosion)",
+    "likely_causes": ["Moisture in the air line", "Dried or missing lubricant", "Rust on rotor, cylinder or bearings"],
+    "technician_checks": ["Try to rotate the motor by hand", "Disassemble; inspect rotor, blades, cylinder and bearings for rust and pitting", "Check the customer air supply for water"],
+    "solution": "Disassemble, clean and de-rust; replace rotor blades, bearings and any pitted parts; lubricate",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Bearing set", "quantity": 1}],
+    "quote_note": "Internal corrosion has seized the tool; a teardown, cleaning and replacement of corroded parts is required."
+  },
+  {
+    "code": "AT-05",
+    "category": "AIR TOOLS",
+    "tool_type": "ANY AIR TOOL",
+    "title": "Excessive vibration",
+    "likely_causes": ["Worn bearings", "Damaged rotor or spindle", "Unbalanced accessory (wheel, pad, socket)", "Loose internal fasteners"],
+    "technician_checks": ["Run without the accessory", "Check bearing play at the spindle", "Inspect rotor and shaft for runout", "Check retaining nuts and screws"],
+    "solution": "Replace bearings and any damaged rotor or spindle; balance or replace the accessory",
+    "parts": [{"name": "Bearing set", "quantity": 1}],
+    "quote_note": "Vibration is caused by worn bearings and/or a damaged spindle; these components require replacement."
+  },
+
+  {
+    "code": "IW-01",
+    "category": "AIR TOOLS",
+    "tool_type": "IMPACT WRENCH",
+    "title": "Low torque / weak output",
+    "likely_causes": ["Worn rotor blades", "Worn hammer cage or anvil", "Air leak at inlet or motor housing"],
+    "technician_checks": ["Check air supply and inlet screen", "Measure free speed", "Inspect rotor blades, hammer cage and anvil"],
+    "solution": "Replace rotor blade set; replace hammer cage and anvil if worn; clean and lubricate",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Hammer cage", "quantity": 1}, {"name": "Anvil assembly", "quantity": 1}],
+    "quote_note": "Impact mechanism and motor components are worn; the tool needs an internal rebuild to restore torque."
+  },
+  {
+    "code": "IW-02",
+    "category": "AIR TOOLS",
+    "tool_type": "IMPACT WRENCH",
+    "title": "Will not run / no rotation",
+    "likely_causes": ["Seized motor", "Broken rotor blade", "Throttle valve stuck"],
+    "technician_checks": ["Check trigger and throttle valve", "Turn the rotor by hand", "Inspect motor for corrosion"],
+    "solution": "Free or replace the motor; replace rotor blades; service the throttle valve",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Throttle valve kit", "quantity": 1}],
+    "quote_note": "The motor is seized or the throttle valve is not passing air; internal repair required."
+  },
+  {
+    "code": "IW-03",
+    "category": "AIR TOOLS",
+    "tool_type": "IMPACT WRENCH",
+    "title": "Runs but does not impact",
+    "likely_causes": ["Worn or broken hammers", "Broken hammer pin", "Worn hammer cage or frame", "Anvil lugs worn round"],
+    "technician_checks": ["Run under load and listen for hammer strike", "Disassemble the hammer case; inspect hammers, pins, cage and anvil", "Check the hammer case bearing"],
+    "solution": "Replace hammers, hammer pins and cage or frame as worn; replace anvil if lugs are rounded",
+    "parts": [{"name": "Hammer set", "quantity": 1}, {"name": "Hammer pin", "quantity": 2}, {"name": "Anvil assembly", "quantity": 1}],
+    "quote_note": "The impact mechanism is worn and no longer strikes; the hammer assembly requires replacement."
+  },
+  {
+    "code": "IW-04",
+    "category": "AIR TOOLS",
+    "tool_type": "IMPACT WRENCH",
+    "title": "Anvil broken or drive square worn (socket will not hold)",
+    "likely_causes": ["Cracked or sheared anvil", "Worn drive square or retaining ring groove", "Missing or worn socket retainer"],
+    "technician_checks": ["Inspect the anvil for cracks and rounded corners", "Check the retaining ring and groove", "Check anvil bushing play"],
+    "solution": "Replace the anvil and socket retainer; replace the anvil bushing if worn",
+    "parts": [{"name": "Anvil assembly", "quantity": 1}, {"name": "Socket retainer", "quantity": 1}, {"name": "Anvil bushing", "quantity": 1}],
+    "quote_note": "The anvil is damaged and will not hold sockets safely; anvil replacement is required."
+  },
+  {
+    "code": "IW-05",
+    "category": "AIR TOOLS",
+    "tool_type": "IMPACT WRENCH",
+    "title": "Reverse does not work / runs one direction only",
+    "likely_causes": ["Reverse valve worn or stuck", "Worn reverse valve O-rings", "Damaged reverse lever or detent"],
+    "technician_checks": ["Cycle the reverse lever under air", "Remove the reverse valve; inspect ports, O-rings and detent", "Check for scoring in the valve bore"],
+    "solution": "Clean or replace the reverse valve and O-rings; replace the lever or detent as needed",
+    "parts": [{"name": "Reverse valve", "quantity": 1}, {"name": "O-ring kit", "quantity": 1}],
+    "quote_note": "The forward/reverse valve is not switching correctly; the valve assembly needs service or replacement."
+  },
+
+  {
+    "code": "AR-01",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR RATCHET",
+    "title": "Ratchet slips or free-wheels under load",
+    "likely_causes": ["Worn yoke or drive bushing", "Worn pawl or pawl spring", "Worn drive gear teeth"],
+    "technician_checks": ["Load the drive square by hand in both directions", "Disassemble the head; inspect yoke, pawl, spring and gear", "Check the drive bushing for play"],
+    "solution": "Replace the yoke, drive bushing and pawl; replace the drive gear if teeth are worn",
+    "parts": [{"name": "Yoke", "quantity": 1}, {"name": "Drive bushing", "quantity": 1}, {"name": "Pawl kit", "quantity": 1}],
+    "quote_note": "The ratchet head mechanism is worn and slipping; head components require replacement."
+  },
+  {
+    "code": "AR-02",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR RATCHET",
+    "title": "Low power / slow",
+    "likely_causes": ["Worn rotor blades", "Worn motor bearings", "Scored cylinder", "Restricted inlet"],
+    "technician_checks": ["Check air supply and inlet screen", "Inspect rotor blades, cylinder and bearings", "Check the gear train for drag"],
+    "solution": "Replace rotor blades and motor bearings; replace the cylinder if scored",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Bearing set", "quantity": 1}],
+    "quote_note": "The air motor is worn and down on power; motor components will be replaced."
+  },
+  {
+    "code": "AR-03",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR RATCHET",
+    "title": "Head loose, rattles or locks up",
+    "likely_causes": ["Loose head bolts", "Worn drive bushing", "Damaged yoke or crank", "Dry or seized head"],
+    "technician_checks": ["Check head bolt torque", "Check play at the drive square", "Disassemble and inspect crank, bushing and yoke"],
+    "solution": "Rebuild the head with new bushing and yoke; retorque head bolts; grease",
+    "parts": [{"name": "Head rebuild kit", "quantity": 1}],
+    "quote_note": "The ratchet head is loose or binding; a head rebuild is required."
+  },
+
+  {
+    "code": "AD-01",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR DRILL",
+    "title": "Low speed or power",
+    "likely_causes": ["Worn rotor blades", "Worn bearings", "Restricted inlet or muffler"],
+    "technician_checks": ["Check air supply and inlet screen", "Measure free speed", "Inspect rotor blades, cylinder and bearings"],
+    "solution": "Replace rotor blades and bearings; clean inlet and muffler",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Bearing set", "quantity": 1}],
+    "quote_note": "The air motor is worn; motor components will be replaced to restore speed and power."
+  },
+  {
+    "code": "AD-02",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR DRILL",
+    "title": "Chuck will not hold or bit runs out",
+    "likely_causes": ["Worn chuck jaws", "Bent spindle", "Worn spindle bearings"],
+    "technician_checks": ["Check runout with a straight bit", "Inspect chuck jaws and key", "Check spindle and bearing play"],
+    "solution": "Replace the chuck; replace spindle or bearings if runout remains",
+    "parts": [{"name": "Chuck", "quantity": 1}, {"name": "Spindle bearing", "quantity": 1}],
+    "quote_note": "The chuck is worn and will not hold bits true; chuck replacement is required."
+  },
+
+  {
+    "code": "DG-01",
+    "category": "AIR TOOLS",
+    "tool_type": "DIE GRINDER",
+    "title": "Low speed or power",
+    "likely_causes": ["Worn rotor blades", "Worn end plates or cylinder", "Worn motor bearings", "Clogged muffler"],
+    "technician_checks": ["Check air supply and inlet screen", "Measure free speed", "Inspect blades, cylinder, end plates and bearings"],
+    "solution": "Replace rotor blades and bearings; replace cylinder or end plates if scored; clean muffler",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Bearing set", "quantity": 1}],
+    "quote_note": "The air motor is worn and down on speed; motor components will be replaced."
+  },
+  {
+    "code": "DG-02",
+    "category": "AIR TOOLS",
+    "tool_type": "DIE GRINDER",
+    "title": "Collet slips or bit runs out",
+    "likely_causes": ["Worn or damaged collet", "Worn collet nut", "Bent spindle or worn spindle bearing"],
+    "technician_checks": ["Check runout with a straight shank", "Inspect collet and nut", "Check spindle bearing play"],
+    "solution": "Replace the collet and nut; replace spindle bearing or spindle if runout remains",
+    "parts": [{"name": "Collet", "quantity": 1}, {"name": "Collet nut", "quantity": 1}],
+    "quote_note": "The collet is worn and will not hold accessories true; collet replacement is required."
+  },
+  {
+    "code": "DG-03",
+    "category": "AIR TOOLS",
+    "tool_type": "DIE GRINDER",
+    "title": "Bearing noise or vibration",
+    "likely_causes": ["Failed front or rear bearing", "Damaged rotor", "Dry bearings"],
+    "technician_checks": ["Run without an accessory and listen", "Check bearing play at the spindle", "Inspect rotor and shaft"],
+    "solution": "Replace motor bearings; replace the rotor if damaged",
+    "parts": [{"name": "Bearing set", "quantity": 1}],
+    "quote_note": "Motor bearings have failed; bearing replacement is required."
+  },
+
+  {
+    "code": "AG-01",
+    "category": "AIR TOOLS",
+    "tool_type": "ANGLE GRINDER",
+    "title": "Low power or stalls",
+    "likely_causes": ["Worn rotor blades", "Worn motor bearings", "Restricted inlet or muffler", "Dragging gears"],
+    "technician_checks": ["Check air supply and inlet screen", "Measure free speed", "Inspect blades, cylinder and bearings", "Check the bevel gears"],
+    "solution": "Replace rotor blades and bearings; clean inlet and muffler",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}, {"name": "Bearing set", "quantity": 1}],
+    "quote_note": "The air motor is worn; motor components will be replaced to restore power."
+  },
+  {
+    "code": "AG-02",
+    "category": "AIR TOOLS",
+    "tool_type": "ANGLE GRINDER",
+    "title": "Gear noise or spindle play",
+    "likely_causes": ["Worn bevel gear set", "Worn spindle bearings", "Lack of grease"],
+    "technician_checks": ["Run and listen at the head", "Check spindle play", "Disassemble the head; inspect gears and bearings"],
+    "solution": "Replace the bevel gear set and spindle bearings; regrease",
+    "parts": [{"name": "Bevel gear set", "quantity": 1}, {"name": "Spindle bearing", "quantity": 1}],
+    "quote_note": "The angle head gears and bearings are worn; head components require replacement."
+  },
+  {
+    "code": "AG-03",
+    "category": "AIR TOOLS",
+    "tool_type": "ANGLE GRINDER",
+    "title": "Spindle lock or guard damaged",
+    "likely_causes": ["Broken spindle lock pin or button", "Bent or missing guard", "Damaged guard clamp"],
+    "technician_checks": ["Test the spindle lock", "Inspect guard and clamp"],
+    "solution": "Replace the spindle lock and the guard or clamp",
+    "parts": [{"name": "Spindle lock", "quantity": 1}, {"name": "Wheel guard", "quantity": 1}],
+    "quote_note": "Safety components (spindle lock/guard) are damaged and must be replaced before use."
+  },
+
+  {
+    "code": "AS-01",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR SANDER",
+    "title": "Low speed or stalls",
+    "likely_causes": ["Worn rotor blades", "Worn end plate or cylinder", "Restricted inlet or exhaust"],
+    "technician_checks": ["Check air supply and inlet screen", "Measure free speed", "Inspect rotor blades, cylinder and end plates"],
+    "solution": "Replace rotor blades; replace scored cylinder or end plates; clean exhaust",
+    "parts": [{"name": "Rotor blade set", "quantity": 1}],
+    "quote_note": "The air motor is worn and slow; motor components will be replaced."
+  },
+  {
+    "code": "AS-02",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR SANDER",
+    "title": "Pad wobble or heavy vibration",
+    "likely_causes": ["Worn spindle bearing", "Bent balancer shaft", "Damaged pad or loose pad screw"],
+    "technician_checks": ["Run without the pad", "Check spindle bearing play", "Inspect balancer shaft and pad"],
+    "solution": "Replace the spindle bearing and balancer shaft as needed; replace the pad",
+    "parts": [{"name": "Spindle bearing", "quantity": 1}, {"name": "Balancer shaft", "quantity": 1}, {"name": "Sanding pad", "quantity": 1}],
+    "quote_note": "The pad drive is worn and vibrating; bearing and balancer components require replacement."
+  },
+
+  {
+    "code": "AH-01",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR HAMMER",
+    "title": "Weak blow / low impact",
+    "likely_causes": ["Worn piston or cylinder bore", "Worn valve or valve seat", "Low air pressure or restricted inlet"],
+    "technician_checks": ["Check air supply and inlet screen", "Disassemble; inspect piston, barrel bore and valve", "Check for scoring"],
+    "solution": "Replace the piston and valve; replace the barrel if the bore is worn",
+    "parts": [{"name": "Piston", "quantity": 1}, {"name": "Valve kit", "quantity": 1}],
+    "quote_note": "The hammer mechanism is worn and strikes weakly; piston and valve components require replacement."
+  },
+  {
+    "code": "AH-02",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR HAMMER",
+    "title": "Will not cycle / hammer",
+    "likely_causes": ["Valve stuck", "Piston seized (rust, debris)", "Broken valve spring", "Throttle not opening"],
+    "technician_checks": ["Check throttle valve operation", "Remove the barrel; check piston movement", "Inspect the valve and spring"],
+    "solution": "Free or replace the piston; replace the valve kit and spring; clean the barrel",
+    "parts": [{"name": "Valve kit", "quantity": 1}, {"name": "Piston", "quantity": 1}],
+    "quote_note": "The hammer will not cycle; the piston and valve assembly require service or replacement."
+  },
+  {
+    "code": "AH-03",
+    "category": "AIR TOOLS",
+    "tool_type": "AIR HAMMER",
+    "title": "Chisel will not stay in / retainer broken",
+    "likely_causes": ["Broken or stretched retainer spring", "Worn quick-change retainer", "Worn barrel nose"],
+    "technician_checks": ["Inspect the retainer and spring", "Check the barrel nose bore"],
+    "solution": "Replace the chisel retainer; replace the barrel if the nose is worn",
+    "parts": [{"name": "Chisel retainer", "quantity": 1}],
+    "quote_note": "The chisel retainer is damaged and unsafe; retainer replacement is required."
+  },
+
+  {
+    "code": "NS-01",
+    "category": "AIR TOOLS",
+    "tool_type": "NEEDLE SCALER",
+    "title": "Weak or no needle action",
+    "likely_causes": ["Worn piston or valve", "Worn needles", "Low air pressure", "Needle holder jammed"],
+    "technician_checks": ["Check air supply", "Inspect piston, valve and barrel", "Check needle holder movement"],
+    "solution": "Replace the piston and valve; replace needles; free the needle holder",
+    "parts": [{"name": "Valve kit", "quantity": 1}, {"name": "Needle set", "quantity": 1}],
+    "quote_note": "The scaler mechanism is worn; piston, valve and needles require replacement."
+  },
+  {
+    "code": "NS-02",
+    "category": "AIR TOOLS",
+    "tool_type": "NEEDLE SCALER",
+    "title": "Needles bent, broken or falling out",
+    "likely_causes": ["Worn needles", "Worn needle holder or guide", "Loose front cap"],
+    "technician_checks": ["Inspect needle set and holder", "Check the front cap and guide"],
+    "solution": "Replace the needle set and holder as worn; secure the front cap",
+    "parts": [{"name": "Needle set", "quantity": 1}, {"name": "Needle holder", "quantity": 1}],
+    "quote_note": "The needle set and holder are worn; replacement is required."
+  },
+
+  {
+    "code": "HJ-01",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "External oil leak",
+    "likely_causes": ["Worn O-rings, packing or seals", "Loose or damaged plugs and fittings", "Damaged sealing surface"],
+    "technician_checks": ["Clean the unit and find the exact leak path", "Inspect ram, gland, reservoir, plugs and valve area"],
+    "solution": "Reseal the affected components; replace damaged plugs or fittings",
+    "parts": [{"name": "Seal kit", "quantity": 1}],
+    "quote_note": "Leak found; affected hydraulic sealing components require repair or reseal."
+  },
+  {
+    "code": "HJ-02",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "Ram / cylinder seal bypass",
+    "likely_causes": ["Worn piston, cup or packing", "Hardened seal", "Damaged ram or bore"],
+    "technician_checks": ["Load-hold test", "Inspect for drift", "Teardown cylinder", "Inspect ram, bore and seal lips"],
+    "solution": "Replace cylinder packing; polish or replace the ram if scored",
+    "parts": [{"name": "Cylinder packing kit", "quantity": 1}],
+    "quote_note": "Internal cylinder sealing is bypassing or suspected to be bypassing under load."
+  },
+  {
+    "code": "HJ-03",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "Lifts but will not hold",
+    "likely_causes": ["Cylinder packing leak", "Suction, delivery, release or bypass valve leakage", "Trapped air"],
+    "technician_checks": ["Check release valve seating", "Load-hold test", "Bleed", "Inspect valve seats, balls and cylinder packing"],
+    "solution": "Reseal cylinder; lap or replace valve seats and balls; bleed the system",
+    "parts": [{"name": "Packing kit", "quantity": 1}, {"name": "Release valve", "quantity": 1}],
+    "quote_note": "Jack loses hydraulic pressure under load; internal leakage requires inspection."
+  },
+  {
+    "code": "HJ-04",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "Will not lift to full height",
+    "likely_causes": ["Low oil level", "Air in the system", "Bent ram or damaged lift arm"],
+    "technician_checks": ["Check oil level with ram fully lowered", "Bleed the system", "Inspect ram and lift arm for damage"],
+    "solution": "Top up oil and bleed; replace the ram or lift arm if bent",
+    "parts": [{"name": "Hydraulic oil", "quantity": 1}],
+    "quote_note": "The jack is short on travel; the hydraulic system will be refilled, bled and checked for damage."
+  },
+  {
+    "code": "HJ-05",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "Handle pumps with no resistance",
+    "likely_causes": ["Worn pump piston seals", "Check valve stuck or debris on the seat", "Very low oil"],
+    "technician_checks": ["Check oil level", "Inspect pump piston and seals", "Inspect check valve balls and seats"],
+    "solution": "Reseal the pump piston; clean or replace check valves; refill",
+    "parts": [{"name": "Pump piston seal kit", "quantity": 1}, {"name": "Check valve kit", "quantity": 1}],
+    "quote_note": "The pump is not building pressure; pump seals and check valves require replacement."
+  },
+  {
+    "code": "HJ-06",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "Will not lower or lowers too fast",
+    "likely_causes": ["Release valve damaged or stuck", "Worn release valve seat", "Bent release needle"],
+    "technician_checks": ["Operate the release valve through its range", "Inspect release valve, needle and seat"],
+    "solution": "Replace the release valve and seat",
+    "parts": [{"name": "Release valve", "quantity": 1}],
+    "quote_note": "The release valve is faulty; replacement is required for controlled lowering."
+  },
+  {
+    "code": "HJ-07",
+    "category": "HYDRAULIC TOOLS",
+    "tool_type": "HYDRAULIC JACK",
+    "title": "Air/hydraulic: air pump does not run",
+    "likely_causes": ["Air motor seized or worn", "Air valve stuck", "Restricted or leaking air inlet", "Low air pressure"],
+    "technician_checks": ["Check air supply and inlet", "Test the air valve", "Disassemble and inspect the air motor"],
+    "solution": "Rebuild or replace the air motor and air valve",
+    "parts": [{"name": "Air motor rebuild kit", "quantity": 1}, {"name": "Air valve", "quantity": 1}],
+    "quote_note": "The air-operated pump is not running; the air motor requires rebuild or replacement."
+  },
+
+  {
+    "code": "ET-01",
+    "category": "ELECTRIC TOOLS",
+    "tool_type": "ANY ELECTRIC TOOL",
+    "title": "Will not start",
+    "likely_causes": ["Damaged power cord or plug", "Faulty switch", "Worn or stuck carbon brushes", "Open armature or field"],
+    "technician_checks": ["Test the cord and plug for continuity", "Test the switch", "Inspect brushes and brush holders", "Test armature and field windings"],
+    "solution": "Replace the cord, switch or brushes as found; replace armature or field if open",
+    "parts": [{"name": "Carbon brush set", "quantity": 1}, {"name": "Switch", "quantity": 1}],
+    "quote_note": "The tool is not powering on; the electrical fault has been located and the failed component will be replaced."
+  },
+  {
+    "code": "ET-02",
+    "category": "ELECTRIC TOOLS",
+    "tool_type": "ANY ELECTRIC TOOL",
+    "title": "Sparks heavily or smells burnt",
+    "likely_causes": ["Worn carbon brushes", "Burnt or scored commutator", "Shorted armature winding"],
+    "technician_checks": ["Inspect brushes and commutator", "Test the armature for shorts", "Check the field windings"],
+    "solution": "Replace brushes; replace the armature if the commutator or windings are damaged",
+    "parts": [{"name": "Carbon brush set", "quantity": 1}, {"name": "Armature", "quantity": 1}],
+    "quote_note": "The motor is arcing and overheating; the armature and brushes require replacement."
+  },
+  {
+    "code": "ET-03",
+    "category": "ELECTRIC TOOLS",
+    "tool_type": "ANY ELECTRIC TOOL",
+    "title": "Overheats or low power",
+    "likely_causes": ["Blocked cooling vents", "Failing bearings", "Weak field or armature", "Worn brushes"],
+    "technician_checks": ["Clear vents and fan", "Check bearing drag", "Test field and armature", "Inspect brushes"],
+    "solution": "Clean the motor; replace bearings and brushes; replace field or armature if weak",
+    "parts": [{"name": "Bearing set", "quantity": 1}, {"name": "Carbon brush set", "quantity": 1}],
+    "quote_note": "The motor is overheating and down on power; it will be cleaned and worn components replaced."
+  },
+  {
+    "code": "ET-04",
+    "category": "ELECTRIC TOOLS",
+    "tool_type": "ANY ELECTRIC TOOL",
+    "title": "Power cord damaged",
+    "likely_causes": ["Cut or crushed cord", "Broken strain relief", "Damaged plug"],
+    "technician_checks": ["Inspect the full cord length and plug", "Check the strain relief and terminal connections"],
+    "solution": "Replace the cord and strain relief",
+    "parts": [{"name": "Power cord", "quantity": 1}, {"name": "Strain relief", "quantity": 1}],
+    "quote_note": "The power cord is damaged and unsafe; cord replacement is required."
+  },
+
+  {
+    "code": "CH-01",
+    "category": "LIFTING TOOLS",
+    "tool_type": "CHAIN HOIST",
+    "title": "Load slips or will not hold",
+    "likely_causes": ["Worn brake friction discs", "Worn ratchet disc or pawl", "Contaminated brake (oil, grease)", "Weak pawl spring"],
+    "technician_checks": ["Load test: raise, hold, check for drift", "Disassemble the brake; inspect discs, ratchet and pawl", "Check for contamination"],
+    "solution": "Replace brake friction discs, ratchet disc and pawl spring; clean and reassemble the brake dry",
+    "parts": [{"name": "Brake disc set", "quantity": 1}, {"name": "Ratchet pawl kit", "quantity": 1}],
+    "quote_note": "The load brake is worn and not holding safely; brake components require replacement."
+  },
+  {
+    "code": "CH-02",
+    "category": "LIFTING TOOLS",
+    "tool_type": "CHAIN HOIST",
+    "title": "Hard to operate / binds",
+    "likely_causes": ["Worn or twisted load chain", "Worn load sheave or chain guide", "Damaged gears or bearings", "Dry mechanism"],
+    "technician_checks": ["Inspect load chain for wear, stretch and twist", "Check the load sheave and guide", "Inspect gears and bearings", "Operate unloaded"],
+    "solution": "Replace worn load chain, sheave or guide; replace damaged gears or bearings; lubricate",
+    "parts": [{"name": "Load chain", "quantity": 1}, {"name": "Chain guide", "quantity": 1}],
+    "quote_note": "The hoist binds because of chain and drive wear; worn components will be replaced."
+  },
+  {
+    "code": "CH-03",
+    "category": "LIFTING TOOLS",
+    "tool_type": "CHAIN HOIST",
+    "title": "Hook stretched, twisted or latch damaged",
+    "likely_causes": ["Overload", "Broken or missing safety latch", "Worn hook bearing"],
+    "technician_checks": ["Measure hook throat opening against the limit", "Inspect for twist and cracks", "Check the latch and hook bearing"],
+    "solution": "Replace the hook assembly and safety latch",
+    "parts": [{"name": "Hook assembly", "quantity": 1}, {"name": "Safety latch", "quantity": 1}],
+    "quote_note": "The hook is damaged beyond safe limits; hook replacement is required."
+  },
+  {
+    "code": "CH-04",
+    "category": "LIFTING TOOLS",
+    "tool_type": "CHAIN HOIST",
+    "title": "Load chain worn, stretched or corroded",
+    "likely_causes": ["Chain stretch beyond the limit", "Link wear or nicks", "Corrosion"],
+    "technician_checks": ["Measure chain pitch over several links", "Inspect links for wear, cracks and corrosion"],
+    "solution": "Replace the load chain",
+    "parts": [{"name": "Load chain", "quantity": 1}],
+    "quote_note": "The load chain is worn beyond the safe limit; chain replacement is required."
+  },
+
+  {
+    "code": "LH-01",
+    "category": "LIFTING TOOLS",
+    "tool_type": "LEVER HOIST",
+    "title": "Free-chains under load or will not hold",
+    "likely_causes": ["Worn brake discs", "Worn pawl or ratchet", "Weak pawl springs", "Contaminated brake"],
+    "technician_checks": ["Load test: lift, hold, check for drift", "Disassemble; inspect brake discs, pawls and ratchet"],
+    "solution": "Replace brake discs, pawls and springs; clean the brake",
+    "parts": [{"name": "Brake disc set", "quantity": 1}, {"name": "Pawl kit", "quantity": 1}],
+    "quote_note": "The load brake is not holding safely; brake components require replacement."
+  },
+  {
+    "code": "LH-02",
+    "category": "LIFTING TOOLS",
+    "tool_type": "LEVER HOIST",
+    "title": "Lever ratchet slips",
+    "likely_causes": ["Worn ratchet wheel teeth", "Worn or broken pawl", "Weak pawl spring"],
+    "technician_checks": ["Operate the lever in both directions", "Inspect ratchet wheel, pawl and spring"],
+    "solution": "Replace the ratchet wheel, pawl and spring",
+    "parts": [{"name": "Ratchet wheel", "quantity": 1}, {"name": "Pawl kit", "quantity": 1}],
+    "quote_note": "The lever ratchet is worn and slipping; ratchet components require replacement."
+  },
+  {
+    "code": "LH-03",
+    "category": "LIFTING TOOLS",
+    "tool_type": "LEVER HOIST",
+    "title": "Chain, cable or hook damaged",
+    "likely_causes": ["Chain stretch or link wear", "Frayed or kinked cable", "Overloaded or latch-less hook", "Corrosion"],
+    "technician_checks": ["Measure chain pitch or inspect cable strands", "Measure hook throat opening; inspect latch", "Check for kinks, nicks and corrosion"],
+    "solution": "Replace the load chain or cable and the hook assembly as needed",
+    "parts": [{"name": "Load chain", "quantity": 1}, {"name": "Hook assembly", "quantity": 1}],
+    "quote_note": "The load chain, cable or hook is worn beyond the safe limit; replacement is required."
+  },
+
+  {
+    "code": "SB-01",
+    "category": "LIFTING TOOLS",
+    "tool_type": "SPRING BALANCER",
+    "title": "Weak or no retraction",
+    "likely_causes": ["Fatigued or broken power spring", "Tension set too low", "Drum binding"],
+    "technician_checks": ["Check tension adjustment", "Inspect the spring and drum", "Operate through full travel"],
+    "solution": "Replace the power spring; reset tension",
+    "parts": [{"name": "Power spring", "quantity": 1}],
+    "quote_note": "The main spring is fatigued or broken; spring replacement is required."
+  },
+  {
+    "code": "SB-02",
+    "category": "LIFTING TOOLS",
+    "tool_type": "SPRING BALANCER",
+    "title": "Cable frayed or broken",
+    "likely_causes": ["Cable wear at the drum or guide", "Kinked cable", "Worn cable guide"],
+    "technician_checks": ["Inspect the full cable length and end fittings", "Check the cable guide"],
+    "solution": "Replace the cable assembly and cable guide",
+    "parts": [{"name": "Cable assembly", "quantity": 1}, {"name": "Cable guide", "quantity": 1}],
+    "quote_note": "The suspension cable is damaged and unsafe; cable replacement is required."
+  },
+  {
+    "code": "SB-03",
+    "category": "LIFTING TOOLS",
+    "tool_type": "SPRING BALANCER",
+    "title": "Drum lock not holding or stuck",
+    "likely_causes": ["Worn lock pawl", "Broken pawl spring", "Damaged ratchet teeth"],
+    "technician_checks": ["Test the lock at several positions", "Inspect pawl, spring and ratchet"],
+    "solution": "Replace the lock pawl and spring; replace the drum if the ratchet is damaged",
+    "parts": [{"name": "Lock pawl kit", "quantity": 1}],
+    "quote_note": "The drum lock is faulty; lock components require replacement."
+  },
+
+  {
+    "code": "DC-01",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "No picture / black screen",
+    "likely_causes": ["Failed camera head", "Damaged push rod cable", "Faulty controller or monitor", "Bad connector"],
+    "technician_checks": ["Test the camera head on a known controller", "Check continuity through the push rod", "Inspect connectors for corrosion"],
+    "solution": "Replace the camera head, push rod or controller as found; clean connectors",
+    "parts": [{"name": "Camera head", "quantity": 1}],
+    "quote_note": "The system is not producing an image; the failed component has been identified for replacement."
+  },
+  {
+    "code": "DC-02",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "Picture intermittent or flickers",
+    "likely_causes": ["Damaged push rod conductor", "Loose or corroded connector", "Worn slip ring in the reel"],
+    "technician_checks": ["Flex-test the push rod while watching the picture", "Inspect connectors and slip ring", "Test with a known head"],
+    "solution": "Repair or replace the push rod section; replace the slip ring or connector",
+    "parts": [{"name": "Slip ring", "quantity": 1}],
+    "quote_note": "The video signal is intermittent; the damaged cable or connector requires repair."
+  },
+  {
+    "code": "DC-03",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "Push rod kinked, cracked or broken",
+    "likely_causes": ["Forced past a bend", "Wear at the reel guide", "Rod jacket cracked"],
+    "technician_checks": ["Inspect the full rod length", "Measure the damaged section", "Test continuity"],
+    "solution": "Cut back and re-terminate the rod, or replace the push rod",
+    "parts": [{"name": "Push rod", "quantity": 1}],
+    "quote_note": "The push rod is damaged; it will be cut back and re-terminated or replaced."
+  },
+  {
+    "code": "DC-04",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "Camera lights not working",
+    "likely_causes": ["Failed LED board", "Water ingress in the head", "Light control fault at the controller"],
+    "technician_checks": ["Test light control", "Inspect the head for moisture", "Test the LED board"],
+    "solution": "Replace the LED board; reseal the head",
+    "parts": [{"name": "LED board", "quantity": 1}],
+    "quote_note": "The camera lighting has failed; the LED assembly requires replacement."
+  },
+  {
+    "code": "DC-05",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "Distance counter not reading",
+    "likely_causes": ["Faulty counter sensor", "Worn counter wheel", "Wiring fault"],
+    "technician_checks": ["Test the counter while feeding rod", "Inspect the sensor and wheel", "Check wiring"],
+    "solution": "Replace the counter sensor or wheel; repair wiring",
+    "parts": [{"name": "Counter sensor", "quantity": 1}],
+    "quote_note": "The distance counter is not reading; the counter assembly requires repair."
+  },
+  {
+    "code": "DC-06",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "Water in the camera head",
+    "likely_causes": ["Failed head seal or O-ring", "Cracked lens or window", "Damaged head connector seal"],
+    "technician_checks": ["Inspect the lens window and seals", "Check for moisture and corrosion inside the head"],
+    "solution": "Reseal or replace the camera head",
+    "parts": [{"name": "Camera head", "quantity": 1}],
+    "quote_note": "Water has entered the camera head; the head requires reseal or replacement."
+  },
+  {
+    "code": "DC-07",
+    "category": "DRAIN CAMERAS",
+    "tool_type": "DRAIN CAMERA",
+    "title": "Sonde / locator not transmitting",
+    "likely_causes": ["Failed sonde", "Sonde wiring fault", "Locator frequency mismatch"],
+    "technician_checks": ["Test with a locator at the correct frequency", "Check sonde wiring at the head"],
+    "solution": "Replace the sonde; repair wiring",
+    "parts": [{"name": "Sonde", "quantity": 1}],
+    "quote_note": "The locating sonde is not transmitting; sonde replacement is required."
+  },
+
+  {
+    "code": "CT-01",
+    "category": "CORDLESS TOOLS",
+    "tool_type": "ANY CORDLESS TOOL",
+    "title": "Battery will not charge or runtime is short",
+    "likely_causes": ["Worn battery cells", "Faulty charger", "Dirty or damaged battery contacts", "Battery protection tripped"],
+    "technician_checks": ["Test the battery on a known charger", "Test a known battery on the tool", "Inspect contacts"],
+    "solution": "Replace the battery or charger; clean or replace contacts",
+    "parts": [{"name": "Battery pack", "quantity": 1}],
+    "quote_note": "The battery no longer holds a charge; battery replacement is required."
+  },
+  {
+    "code": "CT-02",
+    "category": "CORDLESS TOOLS",
+    "tool_type": "ANY CORDLESS TOOL",
+    "title": "Will not run with a good battery",
+    "likely_causes": ["Faulty trigger switch", "Failed controller board", "Motor open or seized", "Worn brushes (brushed motors)"],
+    "technician_checks": ["Test with a known battery", "Test the switch", "Check the controller and motor"],
+    "solution": "Replace the switch, controller or motor as found",
+    "parts": [{"name": "Trigger switch", "quantity": 1}],
+    "quote_note": "The tool does not run; the failed electrical component will be replaced."
+  },
+  {
+    "code": "CT-03",
+    "category": "CORDLESS TOOLS",
+    "tool_type": "ANY CORDLESS TOOL",
+    "title": "Runs briefly then stops",
+    "likely_causes": ["Battery protection cutting out (weak cell)", "Overheated motor or controller", "Intermittent switch"],
+    "technician_checks": ["Test with a known battery", "Check motor temperature and vents", "Test the switch under load"],
+    "solution": "Replace the battery, switch or controller as found; clean cooling vents",
+    "parts": [{"name": "Battery pack", "quantity": 1}],
+    "quote_note": "The tool cuts out under load; the failing component has been identified for replacement."
+  }
+]

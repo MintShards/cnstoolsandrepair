@@ -25,6 +25,9 @@ import { toolProblems, describeToolProblems, scrollToFirstProblem } from '../../
 import { useSettings } from '../../../contexts/SettingsContext';
 import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from './ToolForm';
 import DiagnosisEditor, { newDiagnosisId } from './DiagnosisEditor';
+import { fetchSuggestedPartsForTool } from '../../../utils/suggestedParts';
+import DiagnosisCodeFormModal from '../tabs/DiagnosisCodeFormModal';
+import { invalidateCodes } from '../../../utils/diagnosisCodesCache';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
 import { customerPhotoUrl } from '../../../utils/photoUrl';
 
@@ -40,7 +43,24 @@ const incompleteFinding = (diagnostics) => {
 // optional texts as null.
 const findingsPayload = (diagnostics) => (diagnostics || [])
   .filter((d) => d.diagnosis?.trim())
-  .map((d) => ({ id: d.id || null, diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null, parts: d.parts?.trim() || null }));
+  .map((d) => ({
+    id: d.id || null,
+    diagnosis: d.diagnosis.trim(),
+    solution: d.solution?.trim() || null,
+    parts: d.parts?.trim() || null,
+    code: d.code?.trim() || null,
+    customer_explanation: d.customer_explanation?.trim() || null,
+  }));
+// Saved findings as the editor holds them: every text a string, and older
+// entries given the id they never had.
+const findingsToForm = (diagnostics) => (diagnostics || []).map((d) => ({
+  id: d.id || newDiagnosisId(),
+  diagnosis: d.diagnosis || '',
+  solution: d.solution || '',
+  parts: d.parts || '',
+  code: d.code || '',
+  customer_explanation: d.customer_explanation || '',
+}));
 
 const getErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -107,6 +127,17 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [diagnosisToolId, setDiagnosisToolId] = useState(null);
   const [diagnosisForm, setDiagnosisForm] = useState(null);
   const [savingDiagnosis, setSavingDiagnosis] = useState(false);
+  // The model's library parts (to match a diagnosis code's parts) and the
+  // rows a code queued for the Parts list, saved together with the findings.
+  const [diagnosisLibrary, setDiagnosisLibrary] = useState([]);
+  const [diagnosisLibraryLoading, setDiagnosisLibraryLoading] = useState(false);
+  const [diagnosisPendingParts, setDiagnosisPendingParts] = useState([]);
+  // Offered when the tool is still `received`: the finding is the diagnosis,
+  // so the status can follow in the same save instead of a second dialog.
+  const [diagnosisMarkDiagnosed, setDiagnosisMarkDiagnosed] = useState(false);
+  // Admin: a hand-typed finding worth a code of its own — the code form
+  // opens prefilled from the job, and the finding takes the new code.
+  const [codeFromFinding, setCodeFromFinding] = useState(null);   // { tool, index, finding }
   // Same again for the Parts list: the tool form's Parts section alone.
   const [partsToolId, setPartsToolId] = useState(null);
   const [partsForm, setPartsForm] = useState(null);
@@ -320,13 +351,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       if (addToolForm && !addingTool) { setAddToolForm(null); return; }
       if (updateAllOpen && !updateAllApplying) { setUpdateAllOpen(false); return; }
       if (editingJob) { setEditingJob(false); return; }
+      if (codeFromFinding) return; // the code form closes itself (useEscapeClose)
       if (emailOpen) return; // email modal manages its own closing
       if (paymentSeed || expenseOpen || chargeFor !== null) return; // those modals close themselves (useEscapeClose)
       onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, diagnosisToolId, savingDiagnosis, partsToolId, savingParts, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
+  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, diagnosisToolId, savingDiagnosis, partsToolId, savingParts, codeFromFinding, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
   const now = new Date();
@@ -523,7 +555,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       quantity: tool.quantity || 1,
       remarks: tool.remarks || '',
       // Findings saved before ids existed get one here, so parts can be tied to them.
-      diagnostics: (tool.diagnostics || []).map((d) => ({ id: d.id || newDiagnosisId(), diagnosis: d.diagnosis || '', solution: d.solution || '', parts: d.parts || '' })),
+      diagnostics: findingsToForm(tool.diagnostics),
       parts,
       labour_hours: tool.labour_hours ?? '',
       hourly_rate: tool.hourly_rate ?? '',
@@ -643,12 +675,52 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   // so the tech can record what was found without the whole tool form.
   const handleStartDiagnosis = (tool) => {
     setDiagnosisToolId(tool.tool_id);
-    setDiagnosisForm((tool.diagnostics || []).map((d) => ({ id: d.id || newDiagnosisId(), diagnosis: d.diagnosis || '', solution: d.solution || '', parts: d.parts || '' })));
+    setDiagnosisForm(findingsToForm(tool.diagnostics));
+    setDiagnosisPendingParts([]);
+    setDiagnosisMarkDiagnosed(tool.status === 'received');
+    // The model's library parts, so a code's parts arrive with numbers and prices.
+    setDiagnosisLibrary([]);
+    setDiagnosisLibraryLoading(true);
+    fetchSuggestedPartsForTool(tool)
+      .then((parts) => setDiagnosisLibrary(parts))
+      .catch(() => setDiagnosisLibrary([]))
+      .finally(() => setDiagnosisLibraryLoading(false));
   };
 
   const handleCancelDiagnosis = () => {
     setDiagnosisToolId(null);
     setDiagnosisForm(null);
+    setDiagnosisPendingParts([]);
+  };
+
+  // A finding's quote wording, straight to the clipboard for Zoho Books.
+  const copyForQuote = (text) => {
+    if (!navigator.clipboard) { showToast('error', 'Copying needs a secure (https) page'); return; }
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('success', 'Copied for the quote'))
+      .catch(() => showToast('error', 'Could not copy'));
+  };
+
+  // A finding's parts note, "Packing kit, Release valve ×2", as code parts rows.
+  const partsFromNote = (note) => String(note || '').split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean).map((s) => {
+    const m = s.match(/^(.*?)\s*[×x]\s*(\d+)$/i);
+    return m ? { name: m[1].trim(), quantity: parseInt(m[2], 10) || 1 } : { name: s, quantity: 1 };
+  });
+
+  // Save as code (admin): the code is in the library; now the finding it
+  // came from takes it, so the job counts and shows the chip like any other.
+  const handleCodeSavedFromFinding = async (saved) => {
+    const { tool, index } = codeFromFinding;
+    setCodeFromFinding(null);
+    invalidateCodes();
+    try {
+      const diagnostics = findingsPayload(findingsToForm(tool.diagnostics).map((f, i) => (i === index ? { ...f, code: saved.code } : f)));
+      const updated = await repairsAPI.updateTool(job.id, tool.tool_id, { diagnostics });
+      onJobUpdated(updated);
+      showToast('success', `${saved.code} added to the library and stamped on the finding`);
+    } catch (err) {
+      showToast('error', getErrorMessage(err, `${saved.code} was added, but the finding could not be stamped`));
+    }
   };
 
   const handleSaveDiagnosis = async () => {
@@ -660,9 +732,28 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     }
     setSavingDiagnosis(true);
     let updated;
+    let movedToDiagnosed = false;
     try {
-      // A partial update: only the findings change, the rest of the tool stays as it is.
-      updated = await repairsAPI.updateTool(job.id, diagnosisToolId, { diagnostics: findingsPayload(diagnosisForm) });
+      // A partial update: the findings, plus the Parts list only when a code
+      // queued rows for it (the tool's rows as the edit form would send them,
+      // then the new ones); the rest of the tool stays as it is.
+      const payload = { diagnostics: findingsPayload(diagnosisForm) };
+      if (diagnosisPendingParts.length) {
+        const tool = job.tools.find((t) => t.tool_id === diagnosisToolId);
+        const cleanRow = ({ _suggested_suppliers, _finding_id, ...p }) => p;
+        payload.parts = [...toolToForm(tool).parts.filter((p) => p.name?.trim()), ...diagnosisPendingParts].map(cleanRow);
+      }
+      updated = await repairsAPI.updateTool(job.id, diagnosisToolId, payload);
+      // The status follows in the same save when asked; a refused move (a
+      // gate, a race) keeps the saved findings and says so.
+      if (diagnosisMarkDiagnosed) {
+        try {
+          updated = await repairsAPI.updateToolStatus(job.id, diagnosisToolId, { status: 'diagnosed', notes: null });
+          movedToDiagnosed = true;
+        } catch (err) {
+          showToast('error', getErrorMessage(err, 'Findings saved, but the status did not change'));
+        }
+      }
     } catch (err) {
       showToast('error', getErrorMessage(err, 'Failed to save diagnosis'));
       setSavingDiagnosis(false);
@@ -670,7 +761,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     }
     onJobUpdated(updated);
     handleCancelDiagnosis();
-    showToast('success', 'Diagnosis saved');
+    showToast('success', movedToDiagnosed ? 'Diagnosis saved · tool is now Diagnosed' : 'Diagnosis saved');
     setSavingDiagnosis(false);
   };
 
@@ -1372,21 +1463,66 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                               <p className={`mt-1 leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'Nothing recorded'}</p>
                             </div>
                             <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg px-3.5 py-3 border border-slate-200/40 dark:border-slate-700/40">
-                              <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>
-                                Diagnosis &amp; solution{tool.diagnostics?.length > 0 && ` (${tool.diagnostics.length})`}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-500 uppercase tracking-wide font-bold" style={{fontSize:'12px'}}>
+                                  Diagnosis &amp; solution{tool.diagnostics?.length > 0 && ` (${tool.diagnostics.length})`}
+                                </span>
+                                {/* Every finding's quote wording at once, numbered, for a multi-problem quote. */}
+                                {(tool.diagnostics || []).filter((d) => d.customer_explanation).length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => copyForQuote((tool.diagnostics || []).filter((d) => d.customer_explanation).map((d, i) => `${i + 1}. ${d.customer_explanation}`).join('\n'))}
+                                    title="Copy every finding's customer wording, numbered"
+                                    className="ml-auto inline-flex items-center gap-1 min-h-[44px] sm:min-h-0 text-[11px] font-bold text-primary dark:text-blue-400 hover:underline"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                                    Copy all
+                                  </button>
+                                )}
+                              </div>
                               {tool.diagnostics?.length > 0 ? (
                                 <ol className="mt-1.5 space-y-2">
                                   {tool.diagnostics.map((d, i) => (
                                     <li key={i} className="flex gap-2">
                                       <span className="flex-shrink-0 w-5 h-5 mt-px rounded-full bg-slate-200 dark:bg-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center">{i + 1}</span>
-                                      <span className="min-w-0">
-                                        <span className="block text-slate-800 dark:text-slate-100 font-medium leading-snug">{d.diagnosis}</span>
+                                      <span className="min-w-0 flex-1">
+                                        <span className="block text-slate-800 dark:text-slate-100 font-medium leading-snug">
+                                          {d.code && <span className="inline-flex items-center align-middle mr-1.5 px-1.5 rounded border border-slate-400 dark:border-slate-500 font-mono text-[10px] font-black text-slate-600 dark:text-slate-300" title="Diagnosis code">{d.code}</span>}
+                                          {d.diagnosis}
+                                          {/* Admin: a typed finding worth a code of its own. */}
+                                          {isAdmin && !d.code && (
+                                            <button
+                                              type="button"
+                                              onClick={() => setCodeFromFinding({ tool, index: i, finding: d })}
+                                              title="Save this finding as a diagnosis code (admin)"
+                                              aria-label={`Save finding ${i + 1} as a diagnosis code`}
+                                              className="ml-2 inline-flex items-center align-middle gap-0.5 text-[10px] font-bold text-primary dark:text-blue-400 hover:underline"
+                                            >
+                                              <span className="material-symbols-outlined text-sm">library_add</span>
+                                              Save as code
+                                            </button>
+                                          )}
+                                        </span>
                                         <span className={`block text-xs leading-snug mt-0.5 ${d.solution ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-600 italic'}`}>
                                           {d.solution ? `Solution: ${d.solution}` : 'No solution yet'}
                                         </span>
                                         {d.parts && (
                                           <span className="block text-xs leading-snug mt-0.5 text-violet-700 dark:text-violet-300">Parts: {d.parts}</span>
+                                        )}
+                                        {/* The quote wording (internal) with a one-tap copy for Zoho. */}
+                                        {d.customer_explanation && (
+                                          <span className="flex items-start gap-1.5 mt-1">
+                                            <span className="block min-w-0 flex-1 text-xs leading-snug text-sky-700 dark:text-sky-300">Customer: {d.customer_explanation}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => copyForQuote(d.customer_explanation)}
+                                              title="Copy for the quote"
+                                              aria-label={`Copy customer wording for finding ${i + 1}`}
+                                              className="flex-shrink-0 -my-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 w-6 h-6 inline-flex items-center justify-center rounded text-slate-400 hover:text-primary transition-colors"
+                                            >
+                                              <span className="material-symbols-outlined text-sm">content_copy</span>
+                                            </button>
+                                          </span>
                                         )}
                                       </span>
                                     </li>
@@ -1788,7 +1924,46 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 <span className="block text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Reported problem</span>
                 <p className={`mt-1 text-sm leading-relaxed whitespace-pre-wrap ${tool.remarks ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600 italic'}`}>{tool.remarks || 'Nothing recorded at intake'}</p>
               </div>
-              <DiagnosisEditor diagnostics={diagnosisForm} onDiagnosticsChange={setDiagnosisForm} showLabel={false} />
+              <DiagnosisEditor
+                diagnostics={diagnosisForm}
+                onDiagnosticsChange={(next) => {
+                  setDiagnosisForm(next);
+                  // A queued part leaves with the finding it came from.
+                  const ids = new Set(next.map((d) => d.id));
+                  setDiagnosisPendingParts((prev) => prev.filter((p) => !p._finding_id || ids.has(p._finding_id)));
+                }}
+                showLabel={false}
+                toolType={tool.tool_type}
+                libraryParts={diagnosisLibrary}
+                libraryLoading={diagnosisLibraryLoading}
+                existingParts={[...(tool.parts || []), ...diagnosisPendingParts]}
+                onApplyCode={(next, rows) => {
+                  setDiagnosisForm(next);
+                  if (rows.length) setDiagnosisPendingParts((prev) => [...prev, ...rows]);
+                }}
+              />
+              {diagnosisPendingParts.length > 0 && (
+                <div className="mt-3 rounded-lg border border-violet-200 dark:border-violet-800/50 bg-violet-50 dark:bg-violet-900/15 px-3 py-2.5">
+                  <p className="text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">Parts to add on save</p>
+                  <ul className="mt-1 space-y-1">
+                    {diagnosisPendingParts.map((p, i) => (
+                      <li key={`${p.name}-${i}`} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                        <span className="material-symbols-outlined text-base text-violet-500 flex-shrink-0">{p.library_part_id ? 'link' : 'edit_note'}</span>
+                        <span className="min-w-0 flex-1 truncate">{p.name}{p.part_number ? ` · ${p.part_number}` : ''}{p.quantity > 1 ? ` ×${p.quantity}` : ''}</span>
+                        <button type="button" onClick={() => setDiagnosisPendingParts((prev) => prev.filter((_, j) => j !== i))} aria-label={`Do not add ${p.name}`} className="flex-shrink-0 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 transition-colors">
+                          <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {tool.status === 'received' && (
+                <label className="mt-4 flex items-center gap-2 cursor-pointer min-h-[44px] sm:min-h-0">
+                  <input type="checkbox" checked={diagnosisMarkDiagnosed} onChange={(e) => setDiagnosisMarkDiagnosed(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Move this tool to <strong>Diagnosed</strong> on save</span>
+                </label>
+              )}
               <div className="flex gap-3 mt-6">
                 <button onClick={handleClose} disabled={savingDiagnosis} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleSaveDiagnosis} disabled={savingDiagnosis} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
@@ -1837,6 +2012,22 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         </div>
         );
       })()}
+
+      {/* ── SAVE A FINDING AS A DIAGNOSIS CODE (admin) ───── */}
+      {codeFromFinding && (
+        <DiagnosisCodeFormModal
+          initial={{
+            tool_type: codeFromFinding.tool.tool_type || '',
+            title: codeFromFinding.finding.diagnosis || '',
+            solution: codeFromFinding.finding.solution || '',
+            parts: partsFromNote(codeFromFinding.finding.parts),
+            quote_note: codeFromFinding.finding.customer_explanation || '',
+          }}
+          toolTypes={[codeFromFinding.tool.tool_type].filter(Boolean)}
+          onSaved={handleCodeSavedFromFinding}
+          onClose={() => setCodeFromFinding(null)}
+        />
+      )}
 
       {selectedPhoto && (
         <div className="fixed inset-0 z-[70] bg-black/90 dark:bg-black/95 flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>

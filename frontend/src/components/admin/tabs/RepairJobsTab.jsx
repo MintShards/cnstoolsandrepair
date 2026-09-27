@@ -527,7 +527,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         hourly_rate: t.hourly_rate ? parseFloat(t.hourly_rate) : null,
         serial_number: t.serial_number || null,
         remarks: t.remarks || null,
-        diagnostics: (t.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ id: d.id || null, diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null, parts: d.parts?.trim() || null })),
+        diagnostics: (t.diagnostics || []).filter((d) => d.diagnosis?.trim()).map((d) => ({ id: d.id || null, diagnosis: d.diagnosis.trim(), solution: d.solution?.trim() || null, parts: d.parts?.trim() || null, code: d.code?.trim() || null, customer_explanation: d.customer_explanation?.trim() || null })),
         // Same clean-up as the work order dialog: a blank "Add charge" row must not reach the API.
         extra_charges: (t.extra_charges || []).filter((c) => c.description?.trim()).map((c) => ({ description: c.description.trim(), amount: parseFloat(c.amount) || 0 })),
         parts: (t.parts || []).filter(p => p.name.trim()).map(({ _suggested_suppliers, ...p }) => p),
