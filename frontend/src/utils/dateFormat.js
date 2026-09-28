@@ -92,6 +92,29 @@ const ageLabel = (days) => {
 export const formatAge = (dateString) => ageLabel(daysSince(dateString));
 
 /**
+ * When something was posted, date and time always visible — "Today · 10:14 AM",
+ * "Yesterday · 4:02 PM", "Sep 25 · 10:14 AM · 3d ago" (the year appears once
+ * it differs from this one). For feed posts and comments, where a hover
+ * tooltip is the only other place the date could live and phones have none.
+ */
+export const formatPostedAt = (dateString) => {
+  const days = daysSince(dateString);
+  if (days === null) return '';
+  const when = new Date(normalizeUtcString(dateString));
+  const time = when.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Vancouver' });
+  if (days <= 0) return `Today · ${time}`;
+  if (days === 1) return `Yesterday · ${time}`;
+  const sameYear = pacificYmd(when).slice(0, 4) === pacificYmd(new Date()).slice(0, 4);
+  const date = when.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone: 'America/Vancouver',
+  });
+  return `${date} · ${time} · ${ageLabel(days)}`;
+};
+
+/**
  * Pacific calendar days between a plain YYYY-MM-DD string (route/follow-up
  * dates, already shop-local) and today. Compared as dates, never through a
  * timezone, so the day can't shift.

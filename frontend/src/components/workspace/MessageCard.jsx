@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatAge, formatDatePacific } from '../../utils/dateFormat';
+import { formatPostedAt, formatDatePacific } from '../../utils/dateFormat';
 import { telHref } from '../../utils/links';
 import StaffAvatar from './StaffAvatar';
 import WorkOrderChip from './WorkOrderChip';
@@ -44,7 +44,7 @@ export default function MessageCard({
               )}
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500" title={formatDatePacific(message.created_at)}>
-              {formatAge(message.created_at) || 'today'}
+              {formatPostedAt(message.created_at) || 'Today'}
             </p>
           </div>
           {message.important && (
