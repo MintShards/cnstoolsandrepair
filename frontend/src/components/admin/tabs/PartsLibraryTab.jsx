@@ -599,11 +599,33 @@ function BrandFormModal({ brand, onClose, onSaved }) {
 
 // ─── Model Form Modal ─────────────────────────────────────────────────────────
 
-function ModelFormModal({ model, brandId, onClose, onSaved }) {
+// Hathorn camera systems are tracked per component, so each Hathorn library
+// model says which one it is; the tool form offers it only under that one.
+const COMPONENT_LABELS = { camera_head: 'Camera head', controller: 'Controller', reel: 'Reel' };
+const isHathornBrand = (name) => /hathorn/i.test(name || '');
+
+// Error detail is a plain string, or an object with a message when the
+// server also sends data (the existing part on a duplicate part number).
+const apiDetailMessage = (err) => {
+  const d = err?.response?.data?.detail;
+  return typeof d === 'string' ? d : d?.message;
+};
+
+// Where a part fits. One part can be listed under models of several brands
+// (one record, one stock count), so a model of another brand is shown with
+// its brand in front; the part's own brand's models by name alone.
+const modelRefLabel = (m) => [m.brand_name, m.name].filter(Boolean).join(' · ');
+const fitsLabel = (part) => (part.models?.length
+  ? part.models.map((m) => (m.brand_id && m.brand_id !== part.brand_id ? modelRefLabel(m) : m.name)).join(', ')
+  : (part.model_names || []).join(', '));
+
+function ModelFormModal({ model, brandId, brandName = '', onClose, onSaved }) {
   const toast = useToast();
+  const hathorn = isHathornBrand(brandName);
   const [form, setForm] = useState({
     name: (model?.name || '').toUpperCase(),
-    category: (model?.category || '').toUpperCase(),
+    category: (model?.category || (hathorn ? 'DRAIN CAMERA' : '')).toUpperCase(),
+    component: model?.component || '',
     specifications: model?.specifications || '',
     discontinued: model?.discontinued || false,
     retail_price: model?.retail_price ?? '',
@@ -701,7 +723,9 @@ function ModelFormModal({ model, brandId, onClose, onSaved }) {
 
 // ─── Part Form Modal ──────────────────────────────────────────────────────────
 
-function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved }) {
+// modelRef: the model the form was opened from ({id, name, brand_id,
+// brand_name}), preselected under Fits Models on create.
+function PartFormModal({ part, brandId, modelRef = null, compatGroups, onClose, onSaved }) {
   const toast = useToast();
   const { settings } = useSettings();
   const defaultMarkup = settings?.defaultMarkupPercentage ?? 30;
@@ -711,7 +735,6 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     part_number: (part?.part_number || '').toUpperCase(),
     name: (part?.name || '').toUpperCase(),
     brand_id: part?.brand_id || brandId || '',
-    model_ids: part?.model_ids || (modelId ? [modelId] : []),
     compatibility_group_ids: part?.compatibility_group_ids || [],
     suggested_suppliers: part?.suggested_suppliers || [],
     cost: part?.cost ?? '',
@@ -725,10 +748,62 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
   });
   const [suppliersList, setSuppliersList] = useState([]);
   const [saving, setSaving] = useState(false);
+  // The models this part fits, any brand — these chips are model_ids.
+  const [models, setModels] = useState(() => part?.models || (modelRef ? [modelRef] : []));
+  const [modelQuery, setModelQuery] = useState('');
+  const [modelResults, setModelResults] = useState([]);
+  const [modelSearching, setModelSearching] = useState(false);
+  // The part the server pointed at when the number was already taken under
+  // this brand: offered for listing here instead of creating a twin.
+  const [duplicate, setDuplicate] = useState(null);
+  const [attaching, setAttaching] = useState(false);
 
   const refreshSuppliers = () => suppliersAPI.getAll().then(setSuppliersList).catch(() => {});
 
   useEffect(() => { refreshSuppliers(); }, []);
+
+  useEffect(() => {
+    const q = modelQuery.trim();
+    if (!q) { setModelResults([]); setModelSearching(false); return; }
+    setModelSearching(true);
+    const timer = setTimeout(async () => {
+      try { setModelResults(await partsLibraryAPI.searchModels(q, 20)); }
+      catch { setModelResults([]); }
+      finally { setModelSearching(false); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [modelQuery]);
+
+  const modelOptions = modelResults.filter((m) => !models.some((x) => x.id === m.id));
+
+  const addModel = (m) => {
+    setModels((list) => (list.some((x) => x.id === m.id) ? list : [...list, {
+      id: m.id, name: m.name, brand_id: m.brand_id, brand_name: m.brand_name || '', component: m.component || null,
+    }]));
+    setModelQuery('');
+    setModelResults([]);
+  };
+  const removeModel = (id) => setModels((list) => list.filter((m) => m.id !== id));
+
+  const useExistingPart = async () => {
+    if (!duplicate) return;
+    setAttaching(true);
+    try {
+      const have = new Set(duplicate.model_ids || []);
+      const missing = models.filter((m) => !have.has(m.id));
+      let updated = duplicate;
+      for (const m of missing) updated = await partsLibraryAPI.attachPartToModel(duplicate.id, m.id);
+      onSaved(updated);
+      toast('success', missing.length
+        ? `${duplicate.part_number} is now listed under ${missing.map(modelRefLabel).join(', ')}`
+        : `${duplicate.part_number} was already listed here`);
+      onClose();
+    } catch (err) {
+      toast('error', apiDetailMessage(err) || 'Failed to add the existing part');
+    } finally {
+      setAttaching(false);
+    }
+  };
 
   const addSupplier = (name) => {
     if (name && !form.suggested_suppliers.includes(name)) {
@@ -751,6 +826,7 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
     try {
       const payload = {
         ...form,
+        model_ids: models.map((m) => m.id),
         cost: form.cost === '' ? null : Number(form.cost),
         suggested_price: form.suggested_price === '' ? null : Number(form.suggested_price),
         market_price: form.market_price === '' ? null : Number(form.market_price),
@@ -767,7 +843,9 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
       toast('success', `Part ${part?.id ? 'updated' : 'created'} successfully`);
       onClose();
     } catch (err) {
-      toast('error', err.response?.data?.detail || 'Failed to save part');
+      const existing = err.response?.status === 409 ? err.response?.data?.detail?.existing_part : null;
+      if (existing?.id) setDuplicate(existing);
+      else toast('error', apiDetailMessage(err) || 'Failed to save part');
     } finally {
       setSaving(false);
     }
@@ -782,7 +860,36 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80dvh] overflow-y-auto">
+          {duplicate && (
+            <div className="rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/15 p-3">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{duplicate.part_number} is already in the library</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 uppercase">
+                {duplicate.name} · {duplicate.brand_name} · {duplicate.quantity_on_hand ?? 0} in stock
+                {duplicate.models?.length > 0 && ` · fits ${fitsLabel(duplicate)}`}
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
+                One part number is one part. List the existing one here instead of a second record with its own stock?
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={useExistingPart}
+                  disabled={attaching}
+                  className="px-3 py-2 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white transition-colors disabled:opacity-50"
+                >
+                  {attaching ? 'Adding…' : 'Use the existing part'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuplicate(null)}
+                  className="px-3 py-2 min-h-[44px] sm:min-h-0 rounded-xl text-xs font-medium bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700/60 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                >
+                  Change the number
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Part Name *</label>
@@ -805,6 +912,54 @@ function PartFormModal({ part, brandId, modelId, compatGroups, onClose, onSaved 
               />
             </div>
           </div>
+
+          {/* Fits Models — any brand; one part, one stock count wherever it fits */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fits Models</label>
+            {models.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {models.map((m) => (
+                  <span key={m.id} className="flex items-center gap-1 text-xs rounded-lg px-2 py-0.5 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 uppercase">
+                    {modelRefLabel(m)}
+                    <button type="button" onClick={() => removeModel(m.id)} className="hover:text-red-500 transition-colors" title="Remove from this model">
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">Not listed under any model yet.</p>
+            )}
+            <div className="relative">
+              <input
+                value={modelQuery}
+                onChange={e => setModelQuery(e.target.value)}
+                placeholder="Add a model — any brand…"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {modelQuery.trim() && (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                  {modelSearching ? (
+                    <p className="px-3 py-2 text-xs text-slate-400">Searching…</p>
+                  ) : modelOptions.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-slate-400">No models match</p>
+                  ) : modelOptions.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onMouseDown={() => addModel(m)}
+                      className="w-full text-left px-3 py-2 min-h-[44px] sm:min-h-0 text-sm border-b last:border-b-0 border-slate-100 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      <span className="text-slate-800 dark:text-slate-100 uppercase">{modelRefLabel(m)}</span>
+                      {m.category && <span className="ml-2 text-xs text-slate-400 uppercase">{m.category}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">One part, one stock count, wherever it fits.</p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Cost ($)</label>
@@ -1049,9 +1204,149 @@ function CompatGroupFormModal({ group, onClose, onSaved }) {
 
 // ─── Parts List (for a model) ─────────────────────────────────────────────────
 
+// ─── Attach Existing Part Modal ───────────────────────────────────────────────
+// Lists a part that is already in the library (any brand) under this model:
+// the same record, so its stock count is shared, never copied.
+
+function AttachExistingPartModal({ model, excludeIds, onAttached, onClose }) {
+  const toast = useToast();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [attachingId, setAttachingId] = useState(null);
+  const excluded = new Set(excludeIds);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setResults([]); setSearching(false); return; }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try { setResults(await partsLibraryAPI.search(q, 30)); }
+      catch { setResults([]); }
+      finally { setSearching(false); }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const candidates = results.filter((p) => !excluded.has(p.id));
+
+  const attach = async (part) => {
+    setAttachingId(part.id);
+    try {
+      const updated = await partsLibraryAPI.attachPartToModel(part.id, model.id);
+      onAttached(updated);
+      toast('success', `${part.part_number} is now listed under ${model.name}`);
+      onClose();
+    } catch (err) {
+      toast('error', apiDetailMessage(err) || 'Failed to add part');
+    } finally {
+      setAttachingId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg mx-auto border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85dvh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+          <div>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100">Add an existing part</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 uppercase">List it under {model.name} — same part, same stock count</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <input
+            autoFocus
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Part number or name — any brand"
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {query.trim().length < 2 ? (
+            <p className="text-sm text-slate-400 text-center py-6">Type at least two characters of a part number or name.</p>
+          ) : searching ? (
+            <div className="flex items-center justify-center py-8">
+              <span className="material-symbols-outlined animate-spin text-slate-400 text-2xl">progress_activity</span>
+            </div>
+          ) : candidates.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">
+              {results.length > 0 ? 'Every match is already listed under this model.' : `No parts match “${query.trim()}”.`}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {candidates.map((part) => (
+                <button
+                  key={part.id}
+                  type="button"
+                  disabled={attachingId !== null}
+                  onClick={() => attach(part)}
+                  className="w-full text-left flex items-start gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <span className={`material-symbols-outlined text-slate-400 mt-0.5 ${attachingId === part.id ? 'animate-spin' : ''}`}>
+                    {attachingId === part.id ? 'progress_activity' : 'settings'}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100 uppercase">{part.name} - {part.part_number}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400 uppercase mt-0.5">
+                      {part.brand_name}{part.models?.length > 0 ? ` — fits ${fitsLabel(part)}` : ' — not listed under any model yet'}
+                    </span>
+                  </span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                    part.low_stock
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                      : part.quantity_on_hand > 0
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+                  }`}>
+                    {part.quantity_on_hand ?? 0} in stock
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Remove Part Modal ────────────────────────────────────────────────────────
+// A part listed under several models: take it off this one, or delete it
+// from the library altogether.
+
+function RemovePartModal({ part, model, onDetach, onDelete, onCancel }) {
+  const others = (part.models || []).filter((m) => m.id !== model.id);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 border border-slate-200 dark:border-slate-700">
+        <p className="text-slate-700 dark:text-slate-200 text-sm">
+          <span className="uppercase font-semibold">{part.name} ({part.part_number})</span> is also listed under{' '}
+          <span className="uppercase">{others.length > 0 ? others.map(modelRefLabel).join(', ') : 'other models'}</span>.
+        </p>
+        <div className="flex flex-col gap-2 mt-5">
+          <button onClick={onDetach} className="w-full px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+            Remove from <span className="uppercase">{model.name}</span> only
+          </button>
+          <button onClick={onDelete} className="w-full px-4 py-2.5 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors">
+            Delete from the library
+          </button>
+          <button onClick={onCancel} className="w-full px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PartsView({ model, compatGroups, onBack }) {
   const toast = useToast();
   const [parts, setParts] = useState([]);
+  const [showAttach, setShowAttach] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showPartForm, setShowPartForm] = useState(false);
@@ -1091,6 +1386,18 @@ function PartsView({ model, compatGroups, onBack }) {
       toast('success', 'Part removed');
     } catch {
       toast('error', 'Failed to remove part');
+    }
+    setConfirmDelete(null);
+  };
+
+  // Take the part off this model only; it stays in the library under the rest.
+  const handleDetachPart = async () => {
+    try {
+      await partsLibraryAPI.detachPartFromModel(confirmDelete.id, model.id);
+      setParts(p => p.filter(x => x.id !== confirmDelete.id));
+      toast('success', `${confirmDelete.part_number} removed from ${model.name} — it stays under its other models`);
+    } catch (err) {
+      toast('error', apiDetailMessage(err) || 'Failed to remove part from this model');
     }
     setConfirmDelete(null);
   };
@@ -1215,6 +1522,15 @@ function PartsView({ model, compatGroups, onBack }) {
             className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
           />
           <button
+            onClick={() => setShowAttach(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium transition-colors flex-shrink-0"
+            title="List a part that is already in the library under this model"
+          >
+            <span className="material-symbols-outlined text-sm">link</span>
+            <span className="hidden sm:inline">Add existing</span>
+            <span className="sm:hidden">Existing</span>
+          </button>
+          <button
             onClick={() => { setEditingPart(null); setShowPartForm(true); }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex-shrink-0"
           >
@@ -1290,6 +1606,11 @@ function PartsView({ model, compatGroups, onBack }) {
                         {part.compatibility_group_ids.length} compat
                       </span>
                     )}
+                    {part.models?.length > 1 && (
+                      <span className="text-xs bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded-full whitespace-nowrap" title={fitsLabel(part)}>
+                        fits {part.models.length} models
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -1355,6 +1676,22 @@ function PartsView({ model, compatGroups, onBack }) {
                       </div>
                     )}
                   </div>
+                  {part.models?.length > 0 && (
+                    <div className="mt-3">
+                      <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Fits</span>
+                      <div className="flex flex-wrap gap-1">
+                        {part.models.map((m) => (
+                          <span key={m.id} className={`text-xs px-2 py-0.5 rounded-md uppercase ${
+                            m.id === model.id
+                              ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 font-semibold'
+                              : 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300'
+                          }`}>
+                            {modelRefLabel(m)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {part.notes && (
                     <div className="mt-3">
                       <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Notes</span>
@@ -1634,26 +1971,47 @@ function PartsView({ model, compatGroups, onBack }) {
         <PartFormModal
           part={editingPart}
           brandId={model.brand_id}
-          modelId={model.id}
+          modelRef={{ id: model.id, name: model.name, brand_id: model.brand_id, brand_name: model.brand_name || '', component: model.component || null }}
           compatGroups={compatGroups}
           onClose={() => { setShowPartForm(false); setEditingPart(null); }}
           onSaved={(saved) => {
-            if (editingPart) {
-              setParts(p => p.map(x => x.id === saved.id ? saved : x));
-            } else {
-              setParts(p => [...p, saved]);
-            }
+            // The saved part may have been taken off this model, or be an
+            // existing part just listed here — the list follows its fits.
+            setParts(p => {
+              const listed = saved.model_ids?.includes(model.id);
+              if (p.some(x => x.id === saved.id)) {
+                return listed ? p.map(x => x.id === saved.id ? saved : x) : p.filter(x => x.id !== saved.id);
+              }
+              return listed ? [...p, saved] : p;
+            });
           }}
         />
       )}
 
-      {confirmDelete && (
+      {showAttach && (
+        <AttachExistingPartModal
+          model={model}
+          excludeIds={parts.map(p => p.id)}
+          onAttached={(updated) => setParts(p => [...p, updated])}
+          onClose={() => setShowAttach(false)}
+        />
+      )}
+
+      {confirmDelete && (confirmDelete.model_ids?.length > 1 ? (
+        <RemovePartModal
+          part={confirmDelete}
+          model={model}
+          onDetach={handleDetachPart}
+          onDelete={handleDeletePart}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      ) : (
         <ConfirmModal
           message={`Remove part "${confirmDelete.name}" (${confirmDelete.part_number}) from the library?`}
           onConfirm={handleDeletePart}
           onCancel={() => setConfirmDelete(null)}
         />
-      )}
+      ))}
 
       {confirmDeleteDiagram && (
         <ConfirmModal
@@ -1808,8 +2166,9 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
       try {
         const data = await partsLibraryAPI.search(modelSearch.trim());
         // Scope to the brand being viewed — the global endpoint returns
-        // every brand's parts, and foreign rows here were dead on click
-        setPartResults(data.filter(p => p.brand_id === brand.id));
+        // every brand's parts. A part of another brand belongs here when it
+        // is listed under one of this brand's models (the click opens it).
+        setPartResults(data.filter(p => p.brand_id === brand.id || (p.models || []).some(m => m.brand_id === brand.id)));
       } catch { /* silent */ }
       finally { setPartSearchLoading(false); }
     }, 300);
@@ -1983,7 +2342,7 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-slate-800 dark:text-slate-100 uppercase">{part.name}{part.part_number ? ` - ${part.part_number}` : ''}</span>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 uppercase">
-                      {part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}
+                      {part.brand_name}{part.models?.length > 0 ? ` — ${fitsLabel(part)}` : ''}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
@@ -2008,6 +2367,7 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
         <ModelFormModal
           model={editingModel}
           brandId={brand.id}
+          brandName={brand.name}
           onClose={() => { setShowModelForm(false); setEditingModel(null); }}
           onSaved={(saved) => {
             if (editingModel) {
@@ -2818,7 +3178,8 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                         setSelectedBrand(brandObj);
                         setSelectedModel(null);
                         setSearchQuery('');
-                        const firstModelId = part.model_ids?.[0];
+                        // Prefer a model of the part's own brand: its fits may span brands
+                        const firstModelId = (part.models || []).find(m => m.brand_id === part.brand_id)?.id || part.model_ids?.[0];
                         if (firstModelId) {
                           partsLibraryAPI.listModels(brandObj.id).then(models => {
                             const m = models.find(x => x.id === firstModelId);
@@ -2855,8 +3216,8 @@ export default function PartsLibraryTab({ initialFilter, initialNav } = {}) {
                         }`}>
                           {part.quantity_on_hand ?? 0} in stock
                         </span>
-                        <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 uppercase truncate min-w-0" title={`${part.brand_name}${part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}`}>
-                          {part.brand_name}{part.model_names?.length > 0 ? ` — ${part.model_names.join(', ')}` : ''}
+                        <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 uppercase truncate min-w-0" title={`${part.brand_name}${part.models?.length > 0 ? ` — ${fitsLabel(part)}` : ''}`}>
+                          {part.brand_name}{part.models?.length > 0 ? ` — ${fitsLabel(part)}` : ''}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>

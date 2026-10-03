@@ -9,7 +9,7 @@ import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
 import { useSettings } from '../../../contexts/SettingsContext';
-import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from '../shared/ToolForm';
+import ToolForm, { getEmptyTool, linkSavedPartsToLibrary, toolDisplayTitle } from '../shared/ToolForm';
 import { toolProblems, describeToolProblems, scrollToFirstProblem } from '../../../utils/toolValidation';
 import WorkOrderDialog from '../shared/WorkOrderDialog';
 
@@ -569,8 +569,10 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         return;
       }
 
-      // Silently save new parts to the Parts Library (fire-and-forget)
-      syncPartsToLibrary(newJobForm.tools);
+      // New part numbers go to the Parts Library in the background; the
+      // library ids come back onto the job's parts once the sync lands.
+      linkSavedPartsToLibrary(created.id, (created.tools || []).map((t) => t.tool_id), newJobForm.tools)
+        .then((refreshed) => { if (refreshed) setJobs((prev) => prev.map((j) => (j.id === refreshed.id ? refreshed : j))); });
 
       // API succeeded — upload staged photos then update UI
       const hasPhotos = pendingPhotosByIndex.some(arr => arr.length > 0);

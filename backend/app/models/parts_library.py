@@ -311,6 +311,18 @@ class StockAdjustment(BaseModel):
     reason: str = Field(..., min_length=1, max_length=500)
 
 
+class PartModelRef(BaseModel):
+    """A model a library part fits, with its brand — one part can fit models
+    of several brands, so the brand travels with each model."""
+    model_config = ConfigDict(protected_namespaces=())
+
+    id: str
+    name: str
+    brand_id: Optional[str] = None
+    brand_name: str = ""
+    component: Optional[str] = None
+
+
 class LibraryPartResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
@@ -321,6 +333,7 @@ class LibraryPartResponse(BaseModel):
     brand_name: Optional[str] = None
     model_ids: List[str] = []
     model_names: List[str] = []
+    models: List[PartModelRef] = []
     compatibility_group_ids: List[str] = []
     compatibility_group_names: List[str] = []
     diagram_urls: List[str] = []

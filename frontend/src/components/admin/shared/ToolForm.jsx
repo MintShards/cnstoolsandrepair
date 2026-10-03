@@ -146,7 +146,15 @@ export const getEmptyTool = () => ({
 });
 
 // Silently save new parts to the Parts Library (fire-and-forget)
+// A tool form's parts as the API takes them: named rows only, without the
+// client-side supplier hints the stock enrichment attaches.
+export const partsPayload = (parts) =>
+  (parts || []).filter((p) => p.name?.trim()).map(({ _suggested_suppliers, ...p }) => p);
+
+// Resolves to the indexes (into `tools`) whose parts were linked to a
+// library part during the sync — the caller writes those ids back to the job.
 export const syncPartsToLibrary = async (tools) => {
+  const linkedTools = [];
   try {
     let libraryBrands = null;
     const getBrandId = async (brandName) => {
@@ -173,22 +181,41 @@ export const syncPartsToLibrary = async (tools) => {
       } catch { return []; }
     };
 
-    for (const tool of tools) {
+    for (const [toolIndex, tool] of tools.entries()) {
       const brandId = await getBrandId(tool.brand);
       if (!brandId) continue;
+      const markLinked = () => { if (!linkedTools.includes(toolIndex)) linkedTools.push(toolIndex); };
       // A Hathorn tool has no generic model_number — its component models
-      // (head / controller / reel) each become a library model, and new
-      // parts link to every one that was recorded.
-      const modelNames = [tool.model_number, tool.camera_head_model,
-        tool.controller_model, tool.reel_model]
-        .map((m) => m?.trim()).filter(Boolean);
+      // (head / controller / reel) each become a library model tagged with
+      // that component, and new parts link to every one that was recorded.
+      const modelEntries = [
+        { name: tool.model_number, component: null },
+        { name: tool.camera_head_model, component: 'camera_head' },
+        { name: tool.controller_model, component: 'controller' },
+        { name: tool.reel_model, component: 'reel' },
+      ].map((e) => ({ ...e, name: e.name?.trim() })).filter((e) => e.name);
       let modelIds = [];
-      for (const name of modelNames) {
-        modelIds.push(...await getModelId(brandId, name, tool.tool_type));
+      for (const entry of modelEntries) {
+        modelIds.push(...await getModelId(brandId, entry.name, tool.tool_type, entry.component));
       }
       modelIds = [...new Set(modelIds)];
+      // A library part used on this job fits this job's models: list it
+      // under any it isn't under yet, so the library learns from the bench.
+      const attachMissing = async (libraryPart) => {
+        const have = new Set(libraryPart?.model_ids || []);
+        for (const mid of modelIds) {
+          if (have.has(mid)) continue;
+          try { await partsLibraryAPI.attachPartToModel(libraryPart.id, mid); } catch { /* best effort */ }
+        }
+      };
       for (const part of (tool.parts || [])) {
-        if (!part.name?.trim() || part.library_part_id) continue;
+        if (!part.name?.trim()) continue;
+        if (part.library_part_id) {
+          if (modelIds.length > 0) {
+            try { await attachMissing(await partsLibraryAPI.getPart(part.library_part_id)); } catch { /* best effort */ }
+          }
+          continue;
+        }
         try {
           const created = await partsLibraryAPI.createPart({
             name: part.name.trim(),
@@ -201,19 +228,45 @@ export const syncPartsToLibrary = async (tools) => {
             notes: part.notes || null,
           });
           // Backfill library_part_id on the part
-          if (created?.id) part.library_part_id = created.id;
-        } catch {
-          // Duplicate — try to find existing and backfill library_part_id
+          if (created?.id) { part.library_part_id = created.id; markLinked(); }
+        } catch (err) {
+          // The number already exists under this brand: that record IS the
+          // part (one part number, one stock count), so link it and list it
+          // under this job's models instead of creating a twin.
+          const existing = err?.response?.data?.detail?.existing_part;
+          if (existing?.id) {
+            part.library_part_id = existing.id;
+            markLinked();
+            await attachMissing(existing);
+            continue;
+          }
           try {
             const partNum = part.part_number?.trim() || part.name.trim().toUpperCase().replace(/\s+/g, '-');
-            const existing = await partsLibraryAPI.search(partNum, 5);
-            const match = existing.find(p => p.brand_id === brandId && p.part_number.toLowerCase() === partNum.toLowerCase());
-            if (match) part.library_part_id = match.id;
+            const found = await partsLibraryAPI.search(partNum, 5);
+            const match = found.find(p => p.brand_id === brandId && p.part_number.toLowerCase() === partNum.toLowerCase());
+            if (match) { part.library_part_id = match.id; markLinked(); await attachMissing(match); }
           } catch { /* ignore */ }
         }
       }
     }
   } catch { /* never block the caller */ }
+  return linkedTools;
+};
+
+// After a job save: send typed part numbers to the library, then write the
+// library ids the sync linked back onto the job's parts, so the tool card
+// shows stock and the auto in-stock update can find them. Best effort:
+// resolves to the refreshed job, or null when there was nothing to write.
+export const linkSavedPartsToLibrary = async (jobId, toolIds, forms) => {
+  try {
+    const linked = await syncPartsToLibrary(forms);
+    let refreshed = null;
+    for (const i of linked) {
+      if (!toolIds[i]) continue;
+      refreshed = await repairsAPI.updateTool(jobId, toolIds[i], { parts: partsPayload(forms[i].parts) });
+    }
+    return refreshed;
+  } catch { return null; }
 };
 
 // ── TOOL FORM (reusable for new job form and add tool modal) ──

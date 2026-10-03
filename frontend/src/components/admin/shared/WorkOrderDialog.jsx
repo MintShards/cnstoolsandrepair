@@ -23,7 +23,7 @@ import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFo
 import useBodyScrollLock from '../../../utils/useBodyScrollLock';
 import { toolProblems, describeToolProblems, scrollToFirstProblem } from '../../../utils/toolValidation';
 import { useSettings } from '../../../contexts/SettingsContext';
-import ToolForm, { getEmptyTool, syncPartsToLibrary, toolDisplayTitle } from './ToolForm';
+import ToolForm, { getEmptyTool, linkSavedPartsToLibrary, toolDisplayTitle } from './ToolForm';
 import DiagnosisEditor, { newDiagnosisId } from './DiagnosisEditor';
 import { fetchSuggestedPartsForTool } from '../../../utils/suggestedParts';
 import DiagnosisCodeFormModal from '../tabs/DiagnosisCodeFormModal';
@@ -660,8 +660,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       setSavingToolEdit(false);
       return;
     }
-    // Silently save new parts to library
-    syncPartsToLibrary([toolEditForm]);
+    // New part numbers go to the library, and the library ids come back onto
+    // the job's parts (stock badges, auto in-stock) once the sync lands.
+    linkSavedPartsToLibrary(job.id, [editingToolId], [toolEditForm])
+      .then((refreshed) => { if (refreshed) onJobUpdated(refreshed); });
 
     onJobUpdated(updated);
     setEditingToolId(null);
@@ -793,8 +795,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       setSavingParts(false);
       return;
     }
-    // New part numbers go to the Parts Library, as they do from the edit form.
-    syncPartsToLibrary([partsForm]);
+    // New part numbers go to the Parts Library, as they do from the edit
+    // form, and the library ids come back onto the job's parts.
+    linkSavedPartsToLibrary(job.id, [partsToolId], [partsForm])
+      .then((refreshed) => { if (refreshed) onJobUpdated(refreshed); });
     onJobUpdated(updated);
     handleCancelParts();
     showToast('success', 'Parts saved');
@@ -837,8 +841,11 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       setAddingTool(false);
       return;
     }
-    // Silently save new parts to library
-    syncPartsToLibrary([addToolForm]);
+    // New part numbers go to the library, and the library ids come back onto
+    // the new tool — the one the job didn't have before this save.
+    const newTool = (updated?.tools || []).find((t) => !(job.tools || []).some((x) => x.tool_id === t.tool_id));
+    linkSavedPartsToLibrary(job.id, [newTool?.tool_id], [addToolForm])
+      .then((refreshed) => { if (refreshed) onJobUpdated(refreshed); });
 
     onJobUpdated(updated);
     setAddToolForm(null);

@@ -629,6 +629,15 @@ export const partsLibraryAPI = {
   deletePart: async (id) => {
     await api.delete(`/api/parts-library/parts/${id}`);
   },
+  // A part fits any number of models, of any brand — one record, one stock count.
+  attachPartToModel: async (partId, modelId) => {
+    const response = await api.post(`/api/parts-library/parts/${partId}/models/${modelId}`);
+    return response.data;
+  },
+  detachPartFromModel: async (partId, modelId) => {
+    const response = await api.delete(`/api/parts-library/parts/${partId}/models/${modelId}`);
+    return response.data;
+  },
   getCompatibleParts: async (id) => {
     const response = await api.get(`/api/parts-library/parts/${id}/compatible`);
     return response.data;

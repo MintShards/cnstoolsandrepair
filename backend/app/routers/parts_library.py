@@ -98,11 +98,13 @@ def _doc_to_model(doc: dict, brand_name: Optional[str] = None, part_count: Optio
 
 
 def _doc_to_part(doc: dict, brand_name: str = "", model_names: Optional[List[str]] = None,
-                  group_names: Optional[List[str]] = None) -> LibraryPartResponse:
+                  group_names: Optional[List[str]] = None,
+                  models: Optional[List[dict]] = None) -> LibraryPartResponse:
     doc = convert_objectid_to_str(doc)
     doc["id"] = doc.pop("_id")
     doc["brand_name"] = brand_name
     doc["model_names"] = model_names or []
+    doc["models"] = models or []
     doc["compatibility_group_names"] = group_names or []
     # Compute low_stock flag
     reorder_pt = doc.get("reorder_point", 0) or 0
@@ -120,35 +122,8 @@ def _doc_to_compat_group(doc: dict, part_count: Optional[int] = None) -> CompatG
 
 
 async def _enrich_part(db, doc: dict) -> LibraryPartResponse:
-    """Populate brand_name, model_names, and compat group names for a single part doc."""
-    brand_name = ""
-    if doc.get("brand_id"):
-        try:
-            brand = await db.parts_library_brands.find_one({"_id": _to_object_id(doc["brand_id"])})
-            if brand:
-                brand_name = brand.get("name", "")
-        except Exception as e:
-            logger.warning("Failed to fetch brand %s for part enrichment: %s", doc.get("brand_id"), e)
-
-    model_names = []
-    for mid in doc.get("model_ids", []):
-        try:
-            m = await db.parts_library_models.find_one({"_id": _to_object_id(mid)})
-            if m:
-                model_names.append(m.get("name", ""))
-        except Exception as e:
-            logger.warning("Failed to fetch model %s for part enrichment: %s", mid, e)
-
-    group_names = []
-    for gid in doc.get("compatibility_group_ids", []):
-        try:
-            g = await db.parts_library_compat_groups.find_one({"_id": _to_object_id(gid)})
-            if g:
-                group_names.append(g.get("name", ""))
-        except Exception as e:
-            logger.warning("Failed to fetch compat group %s for part enrichment: %s", gid, e)
-
-    return _doc_to_part(doc, brand_name=brand_name, model_names=model_names, group_names=group_names)
+    """Populate brand_name, models, model_names and compat group names for one part doc."""
+    return (await _enrich_parts_batch(db, [doc]))[0]
 
 
 async def _enrich_parts_batch(db, docs: list) -> List[LibraryPartResponse]:
@@ -168,6 +143,20 @@ async def _enrich_parts_batch(db, docs: list) -> List[LibraryPartResponse]:
         for gid in doc.get("compatibility_group_ids", []):
             all_group_ids.add(gid)
 
+    # Batch fetch models first: a part can fit models of other brands, and
+    # each of those brands must resolve too, so their ids join the brand fetch.
+    model_map: dict = {}
+    if all_model_ids:
+        try:
+            model_oids = [_to_object_id(mid) for mid in all_model_ids]
+            cursor = db.parts_library_models.find({"_id": {"$in": model_oids}})
+            async for m in cursor:
+                model_map[str(m["_id"])] = m
+                if m.get("brand_id"):
+                    all_brand_ids.add(m["brand_id"])
+        except Exception as e:
+            logger.warning("Failed to batch-fetch models for part enrichment: %s", e)
+
     # Batch fetch brands
     brand_map: dict = {}
     if all_brand_ids:
@@ -178,17 +167,6 @@ async def _enrich_parts_batch(db, docs: list) -> List[LibraryPartResponse]:
                 brand_map[str(b["_id"])] = b.get("name", "")
         except Exception as e:
             logger.warning("Failed to batch-fetch brands for part enrichment: %s", e)
-
-    # Batch fetch models
-    model_map: dict = {}
-    if all_model_ids:
-        try:
-            model_oids = [_to_object_id(mid) for mid in all_model_ids]
-            cursor = db.parts_library_models.find({"_id": {"$in": model_oids}})
-            async for m in cursor:
-                model_map[str(m["_id"])] = m.get("name", "")
-        except Exception as e:
-            logger.warning("Failed to batch-fetch models for part enrichment: %s", e)
 
     # Batch fetch compat groups
     group_map: dict = {}
@@ -205,9 +183,20 @@ async def _enrich_parts_batch(db, docs: list) -> List[LibraryPartResponse]:
     results = []
     for doc in docs:
         brand_name = brand_map.get(doc.get("brand_id", ""), "")
-        model_names = [model_map[mid] for mid in doc.get("model_ids", []) if mid in model_map]
+        models = [
+            {
+                "id": mid,
+                "name": model_map[mid].get("name", ""),
+                "brand_id": model_map[mid].get("brand_id"),
+                "brand_name": brand_map.get(model_map[mid].get("brand_id", ""), ""),
+                "component": model_map[mid].get("component"),
+            }
+            for mid in doc.get("model_ids", []) if mid in model_map
+        ]
+        model_names = [m["name"] for m in models]
         group_names = [group_map[gid] for gid in doc.get("compatibility_group_ids", []) if gid in group_map]
-        results.append(_doc_to_part(doc, brand_name=brand_name, model_names=model_names, group_names=group_names))
+        results.append(_doc_to_part(doc, brand_name=brand_name, model_names=model_names,
+                                    group_names=group_names, models=models))
 
     return results
 
@@ -724,7 +713,17 @@ async def create_library_part(
         "active": True
     })
     if existing:
-        raise HTTPException(status_code=400, detail=f"Part number '{body.part_number}' already exists for this brand")
+        # One part number is one part. The existing record travels with the
+        # refusal so the caller can list it under the new model instead of
+        # creating a twin with its own stock.
+        existing_part = await _enrich_part(db, existing)
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"Part number '{body.part_number}' already exists for this brand",
+                "existing_part": existing_part.model_dump(mode="json"),
+            },
+        )
 
     now = datetime.utcnow()
     doc = {**body.model_dump(), "diagram_urls": [], "active": True, "created_at": now, "updated_at": now}
@@ -804,6 +803,48 @@ async def delete_library_part(
         {"$set": {"active": False, "updated_at": datetime.utcnow()}}
     )
     return {"message": "Part deactivated"}
+
+
+# A part fits any number of models, of any brand: the same O-ring or bearing
+# is one record with one stock count wherever it is used. These two routes
+# add or remove one model from a part's fits list.
+@router.post("/parts/{part_id}/models/{model_id}", response_model=LibraryPartResponse)
+async def attach_part_to_model(
+    part_id: str,
+    model_id: str,
+    current_user: User = Depends(require_staff_or_admin),
+):
+    db = get_database()
+    doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Part not found")
+    model = await db.parts_library_models.find_one({"_id": _to_object_id(model_id), "active": True})
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    await db.parts_library_parts.update_one(
+        {"_id": _to_object_id(part_id)},
+        {"$addToSet": {"model_ids": model_id}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+    updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    return await _enrich_part(db, updated)
+
+
+@router.delete("/parts/{part_id}/models/{model_id}", response_model=LibraryPartResponse)
+async def detach_part_from_model(
+    part_id: str,
+    model_id: str,
+    current_user: User = Depends(require_staff_or_admin),
+):
+    db = get_database()
+    doc = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Part not found")
+    await db.parts_library_parts.update_one(
+        {"_id": _to_object_id(part_id)},
+        {"$pull": {"model_ids": model_id}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+    updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
+    return await _enrich_part(db, updated)
 
 
 @router.get("/parts/{part_id}/compatible", response_model=CompatiblePartsResponse)
