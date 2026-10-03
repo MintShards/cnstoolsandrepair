@@ -634,11 +634,16 @@ function ModelFormModal({ model, brandId, brandName = '', onClose, onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hathorn && !form.component) {
+      toast('error', 'Say what this model is: camera head, controller or reel');
+      return;
+    }
     setSaving(true);
     try {
+      const payload = { ...form, component: form.component || null };
       const saved = model?.id
-        ? await partsLibraryAPI.updateModel(model.id, form)
-        : await partsLibraryAPI.createModel(brandId, form);
+        ? await partsLibraryAPI.updateModel(model.id, payload)
+        : await partsLibraryAPI.createModel(brandId, payload);
       onSaved(saved);
       toast('success', `Model ${model?.id ? 'updated' : 'created'} successfully`);
       onClose();
@@ -669,6 +674,22 @@ function ModelFormModal({ model, brandId, brandName = '', onClose, onSaved }) {
               placeholder="e.g. 2135TIMAX"
             />
           </div>
+          {hathorn && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Component *</label>
+              <select
+                value={form.component}
+                onChange={e => setForm(f => ({ ...f, component: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Pick one…</option>
+                <option value="camera_head">Camera head</option>
+                <option value="controller">Controller</option>
+                <option value="reel">Reel</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Hathorn systems are tracked per component — the tool form offers this model only under that one.</p>
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Category</label>
             <input
@@ -2120,6 +2141,8 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
   const [editingModel, setEditingModel] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [modelSearch, setModelSearch] = useState('');
+  // Hathorn only: narrow the grid to one component ('' = all, 'unset' = not tagged yet).
+  const [componentFilter, setComponentFilter] = useState('');
   const [partResults, setPartResults] = useState([]);
   const [partSearchLoading, setPartSearchLoading] = useState(false);
   // Times each model of this brand has been repaired, keyed by lowercase model name
@@ -2153,9 +2176,10 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
   useEffect(() => { load(); }, [load]);
 
   const filteredModels = models.filter(m =>
-    !modelSearch ||
-    m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
-    (m.category && m.category.toLowerCase().includes(modelSearch.toLowerCase()))
+    (!modelSearch ||
+      m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
+      (m.category && m.category.toLowerCase().includes(modelSearch.toLowerCase()))) &&
+    (!componentFilter || (componentFilter === 'unset' ? !m.component : m.component === componentFilter))
   );
 
   // Also search parts via API when query is 2+ chars
@@ -2220,6 +2244,36 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
         </button>
       </div>
 
+      {/* Hathorn: one chip per component, plus the models nobody has tagged yet. */}
+      {isHathornBrand(brand.name) && models.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[
+            { value: '', label: 'All' },
+            { value: 'camera_head', label: 'Camera heads' },
+            { value: 'controller', label: 'Controllers' },
+            { value: 'reel', label: 'Reels' },
+            { value: 'unset', label: 'Component not set' },
+          ].map((chip) => {
+            const count = chip.value === '' ? models.length : models.filter((m) => (chip.value === 'unset' ? !m.component : m.component === chip.value)).length;
+            const active = componentFilter === chip.value;
+            return (
+              <button
+                key={chip.value || 'all'}
+                type="button"
+                onClick={() => setComponentFilter(chip.value)}
+                className={`px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-full text-xs font-bold border transition-colors ${active
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : chip.value === 'unset' && count > 0
+                    ? 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              >
+                {chip.label} · {count}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <span className="material-symbols-outlined animate-spin text-slate-400 text-3xl">progress_activity</span>
@@ -2257,8 +2311,13 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                     <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap flex-shrink-0">${parseFloat(model.retail_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   )}
                 </div>
-                {(model.category || model.discontinued) && (
+                {(model.category || model.discontinued || model.component || isHathornBrand(brand.name)) && (
                   <div className="flex items-center gap-2 flex-wrap mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {model.component ? (
+                      <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">{COMPONENT_LABELS[model.component] || model.component}</span>
+                    ) : isHathornBrand(brand.name) ? (
+                      <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Edit this model and say whether it is a camera head, controller or reel">Component not set</span>
+                    ) : null}
                     {model.category && <span className="uppercase">{model.category}</span>}
                     {model.discontinued && <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">Discontinued</span>}
                   </div>

@@ -167,15 +167,24 @@ export const syncPartsToLibrary = async (tools) => {
       return created.id;
     };
 
-    const getModelId = async (brandId, modelName, toolType) => {
+    const getModelId = async (brandId, modelName, toolType, component = null) => {
       if (!brandId || !modelName?.trim()) return [];
       try {
         const models = await partsLibraryAPI.listModels(brandId);
         const match = models.find(m => m.name.toLowerCase() === modelName.trim().toLowerCase());
-        if (match) return [match.id];
+        if (match) {
+          // A component model the library knew before it had component tags
+          // takes its tag from the job field it was typed into (best effort).
+          if (component && !match.component) {
+            partsLibraryAPI.updateModel(match.id, { component }).catch(() => {});
+          }
+          return [match.id];
+        }
         // Auto-create the model in the library
         try {
-          const created = await partsLibraryAPI.createModel(brandId, { name: modelName.trim(), category: toolType?.trim() || null });
+          const created = await partsLibraryAPI.createModel(brandId, {
+            name: modelName.trim(), category: toolType?.trim() || null, component,
+          });
           return [created.id];
         } catch { return []; }
       } catch { return []; }
@@ -466,8 +475,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const [toolTypes, setToolTypes] = useState([]);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   // Models seen on past jobs for this brand. The generic list merges with
-  // library models; the per-component lists stand alone, because only the
-  // job record knows whether a model was a controller, reel, or camera head.
+  // library models; the per-component lists merge with the library models
+  // tagged as that component (a Hathorn library model says whether it is a
+  // controller, reel, or camera head).
   const [jobModels, setJobModels] = useState([]);
   const [jobComponentModels, setJobComponentModels] = useState({});
   const jobModelsTimer = useRef(null);
@@ -635,6 +645,14 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   // single-section render (`only`) hides everything gated here.
   const showSection = (sections) => !only && (!isNewJobForm || !wizardStep || sections.includes(wizardStep));
 
+  // Hathorn component dropdowns: the names past jobs used in THIS field, plus
+  // the library models tagged as that component (a reel model never shows
+  // under Camera Head). Uppercased and de-duplicated.
+  const componentOptions = (c) => [...new Set([
+    ...(jobComponentModels[c.modelField] || []).map((n) => n.toUpperCase()),
+    ...libraryModels.filter((m) => m.component === c.component).map((m) => m.name.toUpperCase()),
+  ])];
+
   return (
     <div className="space-y-6 text-base">
       {/* Section 1 — Tool Identification */}
@@ -747,24 +765,23 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
-                      { label: 'Controller', modelField: 'controller_model', serialField: 'controller_serial' },
-                      { label: 'Reel', modelField: 'reel_model', serialField: 'reel_serial' },
-                      { label: 'Camera Head', modelField: 'camera_head_model', serialField: 'camera_head_serial' },
+                      { label: 'Controller', modelField: 'controller_model', serialField: 'controller_serial', component: 'controller' },
+                      { label: 'Reel', modelField: 'reel_model', serialField: 'reel_serial', component: 'reel' },
+                      { label: 'Camera Head', modelField: 'camera_head_model', serialField: 'camera_head_serial', component: 'camera_head' },
                     ].map((c) => (
                       <div key={c.modelField} className="space-y-2">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{c.label}</p>
-                        {/* Suggestions come only from THIS component's field
-                            on past jobs — the library can't tell a reel model
-                            from a camera head, so it stays out of these. */}
+                        {/* Suggestions: what past jobs put in THIS field, plus
+                            the library models tagged as this component. */}
                         <div className="relative">
                           <input value={data[c.modelField] || ''} autoComplete="off"
                             onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.modelField, e.target.value.toUpperCase()); setOpenCompField(c.modelField); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                            onFocus={() => { if ((jobComponentModels[c.modelField] || []).length > 0) setOpenCompField(c.modelField); }}
+                            onFocus={() => { if (componentOptions(c).length > 0) setOpenCompField(c.modelField); }}
                             onBlur={() => setTimeout(() => setOpenCompField((f) => (f === c.modelField ? null : f)), 200)}
                             placeholder="Model" className={inputCls} />
                           {openCompField === c.modelField && (() => {
                             const q = (data[c.modelField] || '').trim().toLowerCase();
-                            const opts = (jobComponentModels[c.modelField] || []).filter((name) => !q || name.toLowerCase().includes(q));
+                            const opts = componentOptions(c).filter((name) => !q || name.toLowerCase().includes(q));
                             return opts.length > 0 && (
                               <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                 {opts.map((name) => (

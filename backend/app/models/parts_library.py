@@ -77,14 +77,35 @@ class LibraryBrandResponse(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# Hathorn camera systems are tracked per component (any mix of head,
+# controller and reel arrives), so a Hathorn library model says which one it
+# is. The tool form's per-component dropdowns and the library sync use it.
+MODEL_COMPONENTS = ("camera_head", "controller", "reel")
+
+
+def validate_component(v):
+    if v is None or v == '':
+        return None
+    value = str(v).strip().lower()
+    if value not in MODEL_COMPONENTS:
+        raise ValueError("component must be one of: camera_head, controller, reel")
+    return value
+
+
 class LibraryModelCreate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     name: str = Field(..., min_length=1, max_length=200)
     category: Optional[str] = Field(None, max_length=100)
+    component: Optional[str] = Field(None, max_length=20)
     specifications: Optional[str] = Field(None, max_length=2000)
     discontinued: bool = False
     retail_price: Optional[float] = Field(None, ge=0)
+
+    @field_validator('component', mode='before')
+    @classmethod
+    def check_component(cls, v):
+        return validate_component(v)
 
     @field_validator('name', 'category', mode='before')
     @classmethod
@@ -113,9 +134,15 @@ class LibraryModelUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     category: Optional[str] = Field(None, max_length=100)
+    component: Optional[str] = Field(None, max_length=20)
     specifications: Optional[str] = Field(None, max_length=2000)
     discontinued: Optional[bool] = None
     retail_price: Optional[float] = Field(None, ge=0)
+
+    @field_validator('component', mode='before')
+    @classmethod
+    def check_component(cls, v):
+        return validate_component(v)
 
     @field_validator('name', 'category', mode='before')
     @classmethod
@@ -152,6 +179,7 @@ class LibraryModelResponse(BaseModel):
     diagram_labels: Dict[str, str] = {}
     discontinued: bool
     retail_price: Optional[float] = None
+    component: Optional[str] = None      # Hathorn: camera_head | controller | reel
     active: bool
     part_count: Optional[int] = None
     created_at: datetime
