@@ -1,12 +1,6 @@
 import { BUSINESS_INFO, getFullAddress } from '../../config/business.js';
 import { formatDatePacific, formatDateShortPacific } from '../../utils/dateFormat';
-
-const PART_STATUS_LABELS = {
-  pending: 'Pending',
-  ordered: 'Ordered',
-  received: 'Received',
-  installed: 'Installed',
-};
+import { REPAIR_STATUSES } from '../../constants/repairStatuses';
 
 function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -79,13 +73,14 @@ function getStyles(prefix) {
     ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
     ${p}.camera-line { font-size: 11px; line-height: 1.5; }
     ${p}.camera-label { display: inline-block; margin-right: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
-    ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: auto; }
-    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: auto; word-break: break-word; }
-    ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { white-space: nowrap; }
-    ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { white-space: nowrap; }
-    ${p}.parts-table th:nth-child(4), ${p}.parts-table td:nth-child(4) { }
-    ${p}.parts-table th:nth-child(5), ${p}.parts-table td:nth-child(5) { white-space: nowrap; }
-    ${p}.parts-table th:nth-child(6), ${p}.parts-table td:nth-child(6) { white-space: nowrap; }
+    ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: fixed; }
+    /* Fixed proportions: Part 44 · Part # 22 · Qty 8 · Price 13 · Total 13.
+       A long name or number wraps inside its own column. */
+    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: 44%; word-break: break-word; }
+    ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { width: 22%; word-break: break-all; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10.5px; }
+    ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { width: 8%; white-space: nowrap; }
+    ${p}.parts-table th:nth-child(4), ${p}.parts-table td:nth-child(4) { width: 13%; white-space: nowrap; }
+    ${p}.parts-table th:nth-child(5), ${p}.parts-table td:nth-child(5) { width: 13%; white-space: nowrap; }
     ${p}.parts-table th { background: #f5f5f5; border: 1px solid #ccc; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #333; text-align: left; }
     ${p}.parts-table td { border: 1px solid #ccc; padding: 4px 8px; }
     ${p}.center, ${p}.parts-table th.center { text-align: center; }
@@ -144,13 +139,14 @@ function buildBody(job, businessInfo, serviceAgreement) {
       const postOrderInfo = ['ordered', 'received', 'installed'].includes(p.status)
         ? [p.tracking ? `Track: ${p.tracking}` : '', p.eta ? `ETA: ${new Date(p.eta).toLocaleDateString('en-CA')}` : ''].filter(Boolean).join(' · ')
         : '';
+      // Part and part number in their own columns; supplier and status are
+      // shop-side detail that stays on the tracker, not the customer's copy.
       return `
         <tr>
-          <td>${escHtml((p.name || '').toUpperCase())}${p.part_number ? ' - ' + escHtml(p.part_number.toUpperCase()) : ''}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
+          <td>${escHtml((p.name || '').toUpperCase())}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
+          <td>${p.part_number ? escHtml(String(p.part_number).toUpperCase()) : '—'}</td>
           <td class="center">${p.quantity ?? 1}</td>
           <td class="right">${p.price != null && p.price !== '' ? '$' + parseFloat(p.price).toFixed(2) : '—'}</td>
-          <td>${p.supplier ? escHtml(p.supplier) : '—'}</td>
-          <td class="center">${escHtml(PART_STATUS_LABELS[p.status] || p.status || '')}</td>
           <td class="right">${lineTotal ? '$' + lineTotal : '—'}</td>
         </tr>
       `;
@@ -206,7 +202,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
     const partsTotal = filteredParts.filter(p => p.price != null && p.price !== '').reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
     const partsTotalRow = filteredParts.length > 0 && partsTotal > 0 ? `
       <tr style="border-top:2px solid #e2e8f0;font-weight:700;">
-        <td colspan="5" class="right" style="padding-top:6px;">Parts Subtotal</td>
+        <td colspan="4" class="right" style="padding-top:6px;">Parts Subtotal</td>
         <td class="right" style="padding-top:6px;">$${partsTotal.toFixed(2)}</td>
       </tr>
     ` : '';
@@ -249,10 +245,9 @@ function buildBody(job, businessInfo, serviceAgreement) {
             <thead>
               <tr>
                 <th>Part</th>
+                <th>Part #</th>
                 <th class="center">Qty</th>
                 <th class="right">Price</th>
-                <th>Supplier</th>
-                <th class="center">Status</th>
                 <th class="right">Total</th>
               </tr>
             </thead>
