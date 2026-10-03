@@ -171,8 +171,12 @@ export const syncPartsToLibrary = async (tools) => {
     const getModelId = async (brandId, modelName, toolType, component = null) => {
       if (!brandId || !modelName?.trim()) return [];
       try {
-        const models = await partsLibraryAPI.listModels(brandId);
-        const match = models.find(m => m.name.toLowerCase() === modelName.trim().toLowerCase());
+        // Retired models included: a model deleted in the library stays
+        // deleted — the job's parts simply go unattached — instead of being
+        // re-created from every job that still names it.
+        const models = await partsLibraryAPI.listModels(brandId, false);
+        const matches = models.filter(m => m.name.toLowerCase() === modelName.trim().toLowerCase());
+        const match = matches.find(m => m.active !== false);
         if (match) {
           // A component model the library knew before it had component tags
           // takes its tag from the job field it was typed into (best effort).
@@ -181,6 +185,7 @@ export const syncPartsToLibrary = async (tools) => {
           }
           return [match.id];
         }
+        if (matches.length) return [];
         // Auto-create the model in the library
         try {
           const created = await partsLibraryAPI.createModel(brandId, {
@@ -545,31 +550,42 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
     return () => { alive = false; };
   }, []);
 
-  // When brand changes, load models for matching library brand
+  // When brand changes, load models for matching library brand. The model
+  // fields also reload on focus, so a model deleted in another tab leaves
+  // the suggestions at once instead of after the form is reopened.
   const matchedBrand = libraryBrands.find(b => b.name.toLowerCase() === (toolData.brand || '').trim().toLowerCase());
-  useEffect(() => {
+  const loadLibraryModels = () => {
     if (matchedBrand) {
       partsLibraryAPI.listModels(matchedBrand.id).then(setLibraryModels).catch(() => setLibraryModels([]));
     } else {
       setLibraryModels([]);
     }
+  };
+  useEffect(() => {
+    loadLibraryModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchedBrand?.id]);
 
-  // Past-job models for the current brand, debounced so brand keystrokes
-  // don't stack requests
-  useEffect(() => {
+  // Past-job models for the current brand (names retired in the library are
+  // already left out by the API), debounced so brand keystrokes don't stack
+  // requests.
+  const loadJobModels = async () => {
     const brand = toolData.brand?.trim();
+    if (!brand) { setJobModels([]); setJobComponentModels({}); return; }
+    try {
+      const res = await repairsAPI.usedModels(brand);
+      setJobModels(res.models || []);
+      setJobComponentModels(res.components || {});
+    } catch { setJobModels([]); setJobComponentModels({}); }
+  };
+  useEffect(() => {
     if (jobModelsTimer.current) clearTimeout(jobModelsTimer.current);
-    if (!brand) { setJobModels([]); setJobComponentModels({}); return undefined; }
-    jobModelsTimer.current = setTimeout(async () => {
-      try {
-        const res = await repairsAPI.usedModels(brand);
-        setJobModels(res.models || []);
-        setJobComponentModels(res.components || {});
-      } catch { setJobModels([]); setJobComponentModels({}); }
-    }, 400);
+    if (!toolData.brand?.trim()) { setJobModels([]); setJobComponentModels({}); return undefined; }
+    jobModelsTimer.current = setTimeout(loadJobModels, 400);
     return () => clearTimeout(jobModelsTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolData.brand]);
+  const refreshModelSuggestions = () => { loadLibraryModels(); loadJobModels(); };
 
   const filteredBrands = libraryBrands.filter(b =>
     !toolData.brand?.trim() || b.name.toLowerCase().includes(toolData.brand.trim().toLowerCase())
@@ -697,7 +713,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Model Number <span className="text-red-400">*</span></label>
               <input required value={data.model_number || ''} autoComplete="off"
                 onChange={(e) => { const pos = e.target.selectionStart; handleChange('model_number', e.target.value.toUpperCase()); setShowModelDropdown(true); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                onFocus={() => { if (combinedModels.length > 0) setShowModelDropdown(true); }}
+                onFocus={() => { refreshModelSuggestions(); if (combinedModels.length > 0) setShowModelDropdown(true); }}
                 onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
                 aria-invalid={hasErr('model_number')}
                 placeholder="e.g., 2135TIMAX" className={inputCls + errCls('model_number')} />
@@ -782,7 +798,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                         <div className="relative">
                           <input value={data[c.modelField] || ''} autoComplete="off"
                             onChange={(e) => { const pos = e.target.selectionStart; handleChange(c.modelField, e.target.value.toUpperCase()); setOpenCompField(c.modelField); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }}
-                            onFocus={() => { if (componentOptions(c).length > 0) setOpenCompField(c.modelField); }}
+                            onFocus={() => { refreshModelSuggestions(); if (componentOptions(c).length > 0) setOpenCompField(c.modelField); }}
                             onBlur={() => setTimeout(() => setOpenCompField((f) => (f === c.modelField ? null : f)), 200)}
                             placeholder="Model" className={inputCls} />
                           {openCompField === c.modelField && (() => {

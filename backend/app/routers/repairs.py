@@ -2030,6 +2030,29 @@ async def serial_history(
 _MODEL_FIELDS = ("model_number", "controller_model", "reel_model", "camera_head_model")
 
 
+async def _retired_model_names(db, brand: Optional[str]) -> set:
+    """Lower-cased names of this brand's library models that were deleted
+    (soft delete) and are not active again under the same name. A deleted
+    model is the shop saying "not this one" — past jobs still carry the
+    name, but it is not offered again and the job sync never re-creates it."""
+    if not brand or not brand.strip():
+        return set()
+    brand_ids = [
+        str(b["_id"]) async for b in db.parts_library_brands.find(
+            {"name": {"$regex": f"^{re.escape(brand.strip())}$", "$options": "i"}}, {"_id": 1}
+        )
+    ]
+    if not brand_ids:
+        return set()
+    active, inactive = set(), set()
+    async for m in db.parts_library_models.find({"brand_id": {"$in": brand_ids}}, {"name": 1, "active": 1}):
+        name = (m.get("name") or "").strip().lower()
+        if not name:
+            continue
+        (active if m.get("active", True) else inactive).add(name)
+    return inactive - active
+
+
 @router.get("/models")
 async def list_used_models(
     brand: Optional[str] = None,
@@ -2062,6 +2085,10 @@ async def list_used_models(
     buckets: dict = {f: [] for f in _MODEL_FIELDS}
     async for row in db.repairs.aggregate(pipeline):
         buckets[row["_id"]["field"]].append(row["name"])
+    retired = await _retired_model_names(db, brand)
+    if retired:
+        for f in list(buckets):
+            buckets[f] = [n for n in buckets[f] if n.strip().lower() not in retired]
     for names in buckets.values():
         names.sort(key=str.lower)
     return {
