@@ -9,6 +9,7 @@ import { formatMoney } from '../../../utils/money';
 import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
 import DiagnosisEditor from './DiagnosisEditor';
 import { fetchSuggestedPartsForTool } from '../../../utils/suggestedParts';
+import { fetchToolHistory, visitSummary, daysSince, WARRANTY_DAYS } from '../../../utils/toolHistory';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
 const EMPTY_TOOL_BASE = {
@@ -487,33 +488,38 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
   const isHathorn = /hathorn/i.test(toolData.brand || '');
 
   // Returning-unit check: as serials are typed, look for this exact unit in
-  // past jobs. The shop assigns house serials to unserialized tools, so a
-  // serial match is complete coverage — no fuzzy fallback needed.
+  // past jobs (the shop assigns house serials to unserialized tools, so a
+  // serial match is a confirmed visit). In the new-job wizard the customer
+  // is known, so the same customer's earlier tools of this model show as
+  // "possible" visits when no serial matched.
   const [serialHistory, setSerialHistory] = useState([]);
+  const [possibleHistory, setPossibleHistory] = useState([]);
   const serialHistoryTimer = useRef(null);
   const serialKey = [
     toolData.serial_number, toolData.camera_head_serial,
     toolData.controller_serial, toolData.reel_serial,
   ].map((s) => (s || '').trim()).join(',');
+  const historyModelKey = [
+    toolData.model_number, toolData.camera_head_model,
+    toolData.controller_model, toolData.reel_model,
+  ].map((m) => (m || '').trim()).join(',');
+  const customerKey = newJobForm
+    ? [newJobForm.customer_id, newJobForm.company_name, newJobForm.email].map((v) => v || '').join('|')
+    : '';
 
   useEffect(() => {
-    const filled = serialKey.split(',').filter((s) => s.length >= 3);
     if (serialHistoryTimer.current) clearTimeout(serialHistoryTimer.current);
-    if (!filled.length) { setSerialHistory([]); return undefined; }
     serialHistoryTimer.current = setTimeout(async () => {
       try {
-        const res = await repairsAPI.serialHistory(filled.join(','), toolData.brand?.trim(), currentJobId);
-        setSerialHistory(res.matches || []);
-      } catch { setSerialHistory([]); }
+        const res = await fetchToolHistory(toolData, newJobForm || null, currentJobId);
+        setSerialHistory(res?.matches || []);
+        setPossibleHistory(res?.possible || []);
+      } catch { setSerialHistory([]); setPossibleHistory([]); }
     }, 600);
     return () => clearTimeout(serialHistoryTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serialKey, toolData.brand, currentJobId]);
+  }, [serialKey, historyModelKey, customerKey, toolData.brand, currentJobId]);
 
-  const WARRANTY_DAYS = 90; // service agreement: 3 months on parts and labour
-  // Clamped at 0: completion stamps are naive UTC, which JS parses as local
-  // and can land a few hours in the future — "-1 days ago" helps nobody.
-  const daysSince = (d) => Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000));
   const warrantyHit = serialHistory.find(
     (m) => m.date_completed && daysSince(m.date_completed) <= WARRANTY_DAYS
   );
@@ -893,8 +899,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               </div>
             )}
 
-            {/* Returning unit — this serial has been on the bench before */}
-            {serialHistory.length > 0 && (
+            {/* Returning unit — this serial has been on the bench before, or
+                the customer had this model in before without a serial match */}
+            {(serialHistory.length > 0 || possibleHistory.length > 0) && (
               <div className={`md:col-span-2 p-4 rounded-lg border ${
                 warrantyHit
                   ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-800/50'
@@ -906,10 +913,14 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                   <span className="material-symbols-outlined text-lg">history</span>
                   {warrantyHit
                     ? `Possible warranty return — last completed ${daysSince(warrantyHit.date_completed)} days ago`
-                    : `Returning unit — ${serialHistory.length} previous visit${serialHistory.length !== 1 ? 's' : ''}`}
+                    : serialHistory.length > 0
+                      ? `Returning unit — ${serialHistory.length} previous visit${serialHistory.length !== 1 ? 's' : ''}`
+                      : `Possibly a returning unit — ${possibleHistory.length} earlier job${possibleHistory.length !== 1 ? 's' : ''} of this model for this customer`}
                 </p>
-                <ul className="mt-2 space-y-1">
-                  {serialHistory.slice(0, 4).map((m) => (
+                <ul className="mt-2 space-y-1.5">
+                  {serialHistory.slice(0, 4).map((m) => {
+                    const done = visitSummary(m);
+                    return (
                     <li key={`${m.job_id}-${m.tool_id}`} className="text-sm text-slate-600 dark:text-slate-300">
                       {/* Mid-wizard the draft isn't saved yet, so history opens
                           in a new browser tab; in the edit dialog the same URL
@@ -928,9 +939,29 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                         ? ` · ${new Date(m.date_completed).toLocaleDateString('en-CA')}`
                         : m.date_received ? ` · received ${new Date(m.date_received).toLocaleDateString('en-CA')}` : ''}
                       <span className="text-xs text-slate-400"> (matched {m.matched_serials.join(', ')})</span>
+                      {(done.findings.length > 0 || done.parts.length > 0) && (
+                        <span className="block text-xs text-slate-500 dark:text-slate-400">
+                          {done.findings.length > 0 && `Found: ${done.findings.slice(0, 2).join('; ')}${done.findings.length > 2 ? '…' : ''}`}
+                          {done.findings.length > 0 && done.parts.length > 0 && ' · '}
+                          {done.parts.length > 0 && `Parts: ${done.parts.slice(0, 3).join(', ')}${done.parts.length > 3 ? '…' : ''}`}
+                        </span>
+                      )}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
+                {possibleHistory.length > 0 && (
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    {serialHistory.length > 0 ? 'Possibly this unit too' : 'Possibly this unit'} (same customer and model, no serial match):{' '}
+                    {possibleHistory.slice(0, 4).map((m, i) => (
+                      <span key={`${m.job_id}-${m.tool_id}`}>
+                        {i > 0 && ', '}
+                        <a href={`/admin/repair-tracker?tab=jobs&job=${m.job_id}`} target="_blank" rel="noopener noreferrer" className="font-mono font-bold text-primary hover:underline">{m.work_order}</a>
+                        {m.date_completed ? ` (${new Date(m.date_completed).toLocaleDateString('en-CA')})` : ''}
+                      </span>
+                    ))}
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -449,10 +449,22 @@ export const repairsAPI = {
     return response.data;
   },
   // Has this exact unit been on the bench before? serials is comma-separated;
-  // matches the general serial and the Hathorn component serials.
-  serialHistory: async (serials, brand, excludeJobId) => {
+  // matches the general serial and the Hathorn component serials. opts:
+  // detail (what was done on each visit), and customerId / company / email +
+  // models for the "possibly this unit" fallback when no serial matches.
+  serialHistory: async (serials, brand, excludeJobId, opts = {}) => {
+    const { detail, customerId, company, email, models } = opts;
     const response = await api.get('/api/repairs/serial-history', {
-      params: { serials, ...(brand ? { brand } : {}), ...(excludeJobId ? { exclude_job: excludeJobId } : {}) },
+      params: {
+        serials: serials || '',
+        ...(brand ? { brand } : {}),
+        ...(excludeJobId ? { exclude_job: excludeJobId } : {}),
+        ...(detail ? { detail: true } : {}),
+        ...(customerId ? { customer_id: customerId } : {}),
+        ...(company ? { company } : {}),
+        ...(email ? { email } : {}),
+        ...(models ? { models } : {}),
+      },
     });
     return response.data;
   },

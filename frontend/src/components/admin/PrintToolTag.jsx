@@ -27,7 +27,8 @@ const STATUS_LABELS = {
   beyond_economical_repair: 'Beyond Economical Repair',
 };
 
-function buildTagHTML(job, toolItem, toolIndex) {
+// opts.returning: this unit has been on the bench before (serial match).
+function buildTagHTML(job, toolItem, toolIndex, opts = {}) {
   const tagId = `${job.request_number}-${toolSuffix(toolIndex)}`;
 
   const contactName = escHtml(`${job.first_name} ${job.last_name}`.toUpperCase());
@@ -99,6 +100,7 @@ function buildTagHTML(job, toolItem, toolIndex) {
             <div class="wo-header">
               <div class="wo-id">${escHtml(tagId)}</div>
               ${toolItem.warranty ? '<div class="warranty-badge">WARRANTY</div>' : ''}
+              ${opts.returning ? '<div class="warranty-badge returning-badge">RETURNING</div>' : ''}
             </div>
             <div class="section">
               <div class="value">${escHtml([toolItem.brand, toolItem.model_number].filter(Boolean).join(' ').toUpperCase())}</div>
@@ -184,6 +186,7 @@ function getTagStyles(prefix) {
       letter-spacing: 0.04em;
       color: #000;
     }
+    ${p}.returning-badge { border-color: #b45309 !important; color: #b45309 !important; margin-left: 4px; }
     ${p}.warranty-badge {
       font-size: 7px;
       font-weight: 500;
@@ -308,8 +311,8 @@ function getTagStyles(prefix) {
   `;
 }
 
-export function openPrintToolTag(job, toolItem, toolIndex) {
-  const tagBodyHTML = buildTagHTML(job, toolItem, toolIndex);
+export function openPrintToolTag(job, toolItem, toolIndex, opts = {}) {
+  const tagBodyHTML = buildTagHTML(job, toolItem, toolIndex, opts);
 
   if (isMobile()) {
     const html = `<!DOCTYPE html>

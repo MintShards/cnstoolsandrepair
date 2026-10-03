@@ -1866,70 +1866,160 @@ async def convert_from_request(
 
 @router.get("/serial-history")
 async def serial_history(
-    serials: str,
+    serials: str = "",
     brand: Optional[str] = None,
     exclude_job: Optional[str] = None,
+    detail: bool = False,
+    customer_id: Optional[str] = None,
+    company: Optional[str] = None,
+    email: Optional[str] = None,
+    models: Optional[str] = None,
     current_user: User = Depends(require_staff_or_admin)
 ):
-    """Past repair visits for the given serial number(s).
+    """Past repair visits of one unit.
 
     `serials` is comma-separated and matched case-insensitively against a
     tool's general serial and the three Hathorn component serials — so a
     camera head that comes back mounted on a different reel still matches.
-    The shop assigns house serials to unserialized tools at intake, so
-    serial matching is complete coverage. Scoped to `brand` when given,
-    since different manufacturers can reuse the same serial string.
+    The shop assigns house serials to unserialized tools at intake, so a
+    serial match is a confirmed visit. Scoped to `brand` when given, since
+    different manufacturers can reuse the same serial string.
+
+    `detail=true` adds what was done on each visit — reported problem,
+    findings, parts, labour, technician, and the invoiced amount for admins —
+    and lifts the cap, for the tool's History dialog and the printed work
+    order.
+
+    Fallback: with `models` (comma-separated model numbers) and a customer
+    identifier (`customer_id`, `company` or `email`), the same customer's
+    earlier tools of that brand and model that did NOT match a serial come
+    back as `possible` — jobs from before house serials, or a mistyped
+    serial — kept apart so nobody mistakes them for a confirmed match.
     """
     db = get_database()
+    is_admin = current_user.role == "admin"
 
-    wanted = [s.strip() for s in serials.split(",") if s.strip() and len(s.strip()) >= 3]
-    if not wanted:
-        return {"matches": []}
-    wanted_lower = {s.lower() for s in wanted}
-
-    regexes = [{"$regex": f"^{re.escape(s)}$", "$options": "i"} for s in wanted]
-    serial_fields = ["serial_number", "camera_head_serial", "controller_serial", "reel_serial"]
-    query = {"tools": {"$elemMatch": {"$or": [
-        {field: rx} for rx in regexes for field in serial_fields
-    ]}}}
+    exclude_oid = None
     if exclude_job:
         try:
-            query["_id"] = {"$ne": ObjectId(exclude_job)}
+            exclude_oid = ObjectId(exclude_job)
         except Exception:
-            pass  # bad id just means nothing to exclude
+            exclude_oid = None  # bad id just means nothing to exclude
 
-    matches = []
-    cursor = db.repairs.find(query).sort("created_at", -1).limit(25)
-    async for job in cursor:
-        for tool in job.get("tools", []):
-            if brand and (tool.get("brand") or "").strip().lower() != brand.strip().lower():
-                continue
-            matched_fields = [
-                field for field in serial_fields
-                if (tool.get(field) or "").strip().lower() in wanted_lower
-            ]
-            if not matched_fields:
-                continue
-            matches.append({
-                "job_id": str(job["_id"]),
-                "work_order": job.get("request_number"),
-                "company_name": job.get("company_name"),
-                "customer_name": f"{job.get('first_name') or ''} {job.get('last_name') or ''}".strip(),
-                "tool_id": tool.get("tool_id"),
-                "brand": tool.get("brand"),
-                "model_number": tool.get("model_number"),
-                "status": tool.get("status"),
-                "matched_serials": [tool.get(field) for field in matched_fields],
-                "matched_fields": matched_fields,
-                "date_received": tool.get("date_received"),
-                "date_completed": tool.get("date_completed"),
+    serial_fields = ["serial_number", "camera_head_serial", "controller_serial", "reel_serial"]
+    model_fields = ["model_number", "camera_head_model", "controller_model", "reel_model"]
+
+    def visit(job, tool, matched_fields, kind):
+        out = {
+            "job_id": str(job["_id"]),
+            "work_order": job.get("request_number"),
+            "company_name": job.get("company_name"),
+            "customer_name": f"{job.get('first_name') or ''} {job.get('last_name') or ''}".strip(),
+            "customer_id": job.get("customer_id"),
+            "tool_id": tool.get("tool_id"),
+            "brand": tool.get("brand"),
+            "model_number": tool.get("model_number"),
+            "tool_type": tool.get("tool_type"),
+            "camera_head_model": tool.get("camera_head_model"),
+            "controller_model": tool.get("controller_model"),
+            "reel_model": tool.get("reel_model"),
+            "status": tool.get("status"),
+            "match": kind,
+            "matched_serials": [tool.get(field) for field in matched_fields],
+            "matched_fields": matched_fields,
+            "date_received": tool.get("date_received"),
+            "date_completed": tool.get("date_completed"),
+        }
+        if detail:
+            out.update({
+                "remarks": tool.get("remarks"),
+                "diagnostics": [
+                    {k: d.get(k) for k in ("id", "code", "diagnosis", "solution", "parts", "customer_explanation")}
+                    for d in (tool.get("diagnostics") or [])
+                    if isinstance(d, dict) and (d.get("diagnosis") or "").strip()
+                ],
+                "parts": [
+                    {k: p.get(k) for k in ("name", "part_number", "quantity", "status", "price")}
+                    for p in (tool.get("parts") or [])
+                    if isinstance(p, dict) and (p.get("name") or "").strip()
+                ],
+                "labour_hours": tool.get("labour_hours"),
+                "assigned_technician": tool.get("assigned_technician"),
+                "warranty": bool(tool.get("warranty")),
+                "serial_number": tool.get("serial_number"),
+                "camera_head_serial": tool.get("camera_head_serial"),
+                "controller_serial": tool.get("controller_serial"),
+                "reel_serial": tool.get("reel_serial"),
             })
-            if len(matches) >= 10:
-                break
-        if len(matches) >= 10:
-            break
+            if is_admin:
+                out["invoiced_amount"] = tool.get("invoiced_amount")
+        return out
 
-    return {"matches": matches}
+    def brand_ok(tool):
+        return not brand or (tool.get("brand") or "").strip().lower() == brand.strip().lower()
+
+    cap = 50 if detail else 10
+    matches = []
+    seen = set()
+    wanted = [s.strip() for s in (serials or "").split(",") if s.strip() and len(s.strip()) >= 3]
+    if wanted:
+        wanted_lower = {s.lower() for s in wanted}
+        regexes = [{"$regex": f"^{re.escape(s)}$", "$options": "i"} for s in wanted]
+        query = {"tools": {"$elemMatch": {"$or": [
+            {field: rx} for rx in regexes for field in serial_fields
+        ]}}}
+        if exclude_oid:
+            query["_id"] = {"$ne": exclude_oid}
+        cursor = db.repairs.find(query).sort("created_at", -1).limit(cap)
+        async for job in cursor:
+            for tool in job.get("tools", []):
+                if not brand_ok(tool):
+                    continue
+                matched_fields = [
+                    field for field in serial_fields
+                    if (tool.get(field) or "").strip().lower() in wanted_lower
+                ]
+                if not matched_fields:
+                    continue
+                matches.append(visit(job, tool, matched_fields, "serial"))
+                seen.add((str(job["_id"]), tool.get("tool_id")))
+                if len(matches) >= cap:
+                    break
+            if len(matches) >= cap:
+                break
+
+    possible = []
+    wanted_models = [m.strip() for m in (models or "").split(",") if m.strip()]
+    who = []
+    if customer_id:
+        who.append({"customer_id": customer_id})
+    if company and company.strip():
+        who.append({"company_name": {"$regex": f"^{re.escape(company.strip())}$", "$options": "i"}})
+    if email and email.strip():
+        who.append({"email": {"$regex": f"^{re.escape(email.strip())}$", "$options": "i"}})
+    if wanted_models and who:
+        model_lower = {m.lower() for m in wanted_models}
+        model_rx = [{"$regex": f"^{re.escape(m)}$", "$options": "i"} for m in wanted_models]
+        query = {
+            "$or": who,
+            "tools": {"$elemMatch": {"$or": [{field: rx} for rx in model_rx for field in model_fields]}},
+        }
+        if exclude_oid:
+            query["_id"] = {"$ne": exclude_oid}
+        cursor = db.repairs.find(query).sort("created_at", -1).limit(cap)
+        async for job in cursor:
+            for tool in job.get("tools", []):
+                if (str(job["_id"]), tool.get("tool_id")) in seen or not brand_ok(tool):
+                    continue
+                if not any((tool.get(field) or "").strip().lower() in model_lower for field in model_fields):
+                    continue
+                possible.append(visit(job, tool, [], "customer_model"))
+                if len(possible) >= 20:
+                    break
+            if len(possible) >= 20:
+                break
+
+    return {"matches": matches, "possible": possible}
 
 
 # ──────────────────────────────────────────────

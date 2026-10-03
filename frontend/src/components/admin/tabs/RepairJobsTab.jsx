@@ -5,6 +5,7 @@ import { useToast } from '../../../pages/admin/RepairTracker';
 import { REPAIR_STATUSES, REPAIR_STATUSES_LIST } from '../../../constants/repairStatuses';
 import { StatusBadge } from '../shared/RepairStatusBadges';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
+import { fetchJobHistory } from '../../../utils/toolHistory';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDateShortPacific, getTodayPacific } from '../../../utils/dateFormat';
@@ -597,7 +598,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         try { finalJob = await repairsAPI.get(created.id); } catch { /* use created */ }
         if (photoErrors.length > 0) {
           setJobs(prev => [finalJob, ...prev]);
-          if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob, settings?.contact, serviceAgreement);
+          if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob, settings?.contact, serviceAgreement, { history: await fetchJobHistory(finalJob) });
           handleCloseNewJob();
           showToast('error', `Job ${created.request_number} created. Some photos failed: ${photoErrors.join(', ')}`);
           setSavingJob(false);
@@ -607,7 +608,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       }
 
       setJobs(prev => [finalJob, ...prev]);
-      if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob, settings?.contact, serviceAgreement);
+      if (window.matchMedia('(min-width: 768px)').matches) openPrintWorkOrder(finalJob, settings?.contact, serviceAgreement, { history: await fetchJobHistory(finalJob) });
       handleCloseNewJob();
       showToast('success', `Repair job ${created.request_number} created successfully`);
       setSavingJob(false);
@@ -1260,7 +1261,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               <span className="hidden sm:inline">Open</span>
                             </Link>
                             <button
-                              onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement)}
+                              onClick={async () => openPrintWorkOrder(job, settings?.contact, serviceAgreement, { history: await fetchJobHistory(job) })}
                               className="hidden sm:flex p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 border border-slate-200 hover:border-slate-300 dark:border-slate-600/50 dark:hover:border-slate-500 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-all items-center justify-center"
                               title="Print Work Order"
                             >

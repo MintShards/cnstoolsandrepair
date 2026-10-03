@@ -6,10 +6,12 @@ function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
-export function openPrintWorkOrder(job, businessInfo, serviceAgreement) {
+// opts.history: tool_id → unit history (utils/toolHistory.fetchJobHistory),
+// printed as a Previous Visits block on each returning tool.
+export function openPrintWorkOrder(job, businessInfo, serviceAgreement, opts = {}) {
   if (isMobile()) {
     // Mobile: open in new tab (window.print() is unreliable on iOS/Android)
-    const html = buildFullHTML(job, businessInfo, serviceAgreement);
+    const html = buildFullHTML(job, businessInfo, serviceAgreement, opts);
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(html);
@@ -19,7 +21,7 @@ export function openPrintWorkOrder(job, businessInfo, serviceAgreement) {
     // Desktop: inline DOM print
     const root = document.getElementById('print-work-order-root');
     if (!root) return;
-    root.innerHTML = buildPrintContent(job, businessInfo, serviceAgreement);
+    root.innerHTML = buildPrintContent(job, businessInfo, serviceAgreement, opts);
     const cleanup = () => { root.innerHTML = ''; };
     window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
@@ -70,6 +72,10 @@ function getStyles(prefix) {
     ${p}.diag-list li { margin-bottom: 2px; }
     ${p}.diag-parts { font-size: 10px; color: #555; }
     ${p}.diag-solution { color: #374151; }
+    ${p}.history-block { margin-bottom: 8px; padding: 6px 10px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 4px; }
+    ${p}.history-visit { font-size: 11px; line-height: 1.5; margin-bottom: 3px; }
+    ${p}.history-visit:last-child { margin-bottom: 0; }
+    ${p}.history-detail { font-size: 10px; color: #555; }
     ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
     ${p}.camera-line { font-size: 11px; line-height: 1.5; }
     ${p}.camera-label { display: inline-block; margin-right: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
@@ -121,7 +127,7 @@ function buildServiceAgreementHTML(serviceAgreement) {
   `;
 }
 
-function buildBody(job, businessInfo, serviceAgreement) {
+function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
   const biz = businessInfo || {};
   const name = biz.name || BUSINESS_INFO.name;
   const phone = biz.phone || BUSINESS_INFO.phone;
@@ -199,6 +205,22 @@ function buildBody(job, businessInfo, serviceAgreement) {
       </div>
     ` : '';
 
+    // Earlier visits of this unit, so the bench sees on paper what was done
+    // last time (the three latest; the tracker's History dialog has them all).
+    const visits = opts.history?.[tool.tool_id]?.matches || [];
+    const historyHTML = visits.length ? `
+      <div class="history-block">
+        <div class="notes-label">Previous visits of this unit (${visits.length})${visits.length > 3 ? ' — latest 3' : ''}</div>
+        ${visits.slice(0, 3).map(v => {
+          const when = v.date_completed ? `completed ${formatDateShortPacific(v.date_completed)}`
+            : v.date_received ? `received ${formatDateShortPacific(v.date_received)}` : '';
+          const findings = (v.diagnostics || []).map(d => `${d.code ? `[${d.code}] ` : ''}${d.diagnosis}${d.solution ? ` — ${d.solution}` : ''}`).join('; ');
+          const parts = (v.parts || []).map(p => `${(p.name || '').toUpperCase()}${p.quantity > 1 ? ` ×${p.quantity}` : ''}`).join(', ');
+          return `<div class="history-visit"><strong>${escHtml(v.work_order || '')}</strong>${when ? ` · ${escHtml(when)}` : ''} · ${escHtml(REPAIR_STATUSES[v.status]?.label || v.status || '')}${findings ? `<div class="history-detail">Found: ${escHtml(findings)}</div>` : ''}${parts ? `<div class="history-detail">Parts: ${escHtml(parts)}</div>` : ''}</div>`;
+        }).join('')}
+      </div>
+    ` : '';
+
     const partsTotal = filteredParts.filter(p => p.price != null && p.price !== '').reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
     const partsTotalRow = filteredParts.length > 0 && partsTotal > 0 ? `
       <tr style="border-top:2px solid #e2e8f0;font-weight:700;">
@@ -238,6 +260,7 @@ function buildBody(job, businessInfo, serviceAgreement) {
         </div>
 
         ${notesHTML}
+        ${historyHTML}
         ${cameraHTML}
 
         ${partsRows ? `
@@ -301,11 +324,11 @@ function buildBody(job, businessInfo, serviceAgreement) {
   `;
 }
 
-function buildPrintContent(job, businessInfo, serviceAgreement) {
-  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job, businessInfo, serviceAgreement)}`;
+function buildPrintContent(job, businessInfo, serviceAgreement, opts = {}) {
+  return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job, businessInfo, serviceAgreement, opts)}`;
 }
 
-function buildFullHTML(job, businessInfo, serviceAgreement) {
+function buildFullHTML(job, businessInfo, serviceAgreement, opts = {}) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -319,7 +342,7 @@ function buildFullHTML(job, businessInfo, serviceAgreement) {
   </style>
 </head>
 <body>
-  ${buildBody(job, businessInfo, serviceAgreement)}
+  ${buildBody(job, businessInfo, serviceAgreement, opts)}
 </body>
 </html>`;
 }

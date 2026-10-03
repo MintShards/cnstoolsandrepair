@@ -30,6 +30,8 @@ import DiagnosisCodeFormModal from '../tabs/DiagnosisCodeFormModal';
 import { invalidateCodes } from '../../../utils/diagnosisCodesCache';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
 import { customerPhotoUrl } from '../../../utils/photoUrl';
+import ToolHistoryDialog from './ToolHistoryDialog';
+import { fetchJobHistory } from '../../../utils/toolHistory';
 
 
 // A finding is saved by its diagnosis. One typed with only a solution or
@@ -186,12 +188,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     });
   };
 
-  // Returning-unit badges: for each tool with serials, has this exact unit
-  // (or one of its Hathorn components) been on the bench before? Clicking
-  // the badge lists the visits; each row jumps to that work order via the
-  // ?job= URL param, so the dialog simply swaps to the old job.
+  // Unit history: for each tool, has this exact unit (or one of its Hathorn
+  // components) been on the bench before — and what was done? Confirmed by
+  // serial, plus the same customer's earlier tools of the model as
+  // "possible" visits. The chip and the History button open the dialog;
+  // a visit's work order opens via the ?job= URL param, so the dialog
+  // simply swaps to the old job.
   const [returningMap, setReturningMap] = useState({});
-  const [returningOpenFor, setReturningOpenFor] = useState(null);
+  const [historyFor, setHistoryFor] = useState(null);
   // Configurable final-test checklist — the QC chip counts against the same
   // list the backend's Ready gate enforces (Admin Settings → Camera Intake).
   const [intakeConfig, setIntakeConfig] = useState(CAMERA_INTAKE_DEFAULTS);
@@ -203,23 +207,8 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   useEffect(() => {
     if (!job?.id) return undefined;
     let alive = true;
-    setReturningOpenFor(null);
-    (async () => {
-      const entries = await Promise.all((job.tools || []).map(async (t) => {
-        const serials = [t.serial_number, t.camera_head_serial, t.controller_serial, t.reel_serial]
-          .map((s) => (s || '').trim()).filter((s) => s.length >= 3);
-        if (!serials.length) return [t.tool_id, null];
-        try {
-          const res = await repairsAPI.serialHistory(serials.join(','), t.brand?.trim(), job.id);
-          const ms = res.matches || [];
-          if (!ms.length) return [t.tool_id, null];
-          const warranty = ms.some((m) => m.date_completed
-            && (Date.now() - new Date(m.date_completed).getTime()) / 86400000 <= 90);
-          return [t.tool_id, { count: ms.length, warranty, matches: ms }];
-        } catch { return [t.tool_id, null]; }
-      }));
-      if (alive) setReturningMap(Object.fromEntries(entries.filter((e) => e[1])));
-    })();
+    setHistoryFor(null);
+    fetchJobHistory(job).then((map) => { if (alive) setReturningMap(map); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id, job?.tools?.length]);
@@ -344,6 +333,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     const handleKeyDown = (e) => {
       if (e.key !== 'Escape') return;
       if (selectedPhoto) { setSelectedPhoto(null); return; }
+      if (historyFor) { setHistoryFor(null); return; }
       if (statusUpdateModal && !updatingStatus) { setStatusUpdateModal(null); return; }
       if (editingToolId && !savingToolEdit) { handleCancelToolEdit(); return; }
       if (diagnosisToolId && !savingDiagnosis) { handleCancelDiagnosis(); return; }
@@ -358,7 +348,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, diagnosisToolId, savingDiagnosis, partsToolId, savingParts, codeFromFinding, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
+  }, [selectedPhoto, historyFor, statusUpdateModal, updatingStatus, editingToolId, savingToolEdit, diagnosisToolId, savingDiagnosis, partsToolId, savingParts, codeFromFinding, addToolForm, addingTool, updateAllOpen, updateAllApplying, editingJob, emailOpen, paymentSeed, expenseOpen, chargeFor, onClose]);
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
   const now = new Date();
@@ -960,7 +950,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                   </span>
                 </button>
                 <button
-                  onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement)}
+                  onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement, { history: returningMap })}
                   className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                   title="Print / Save as PDF"
                 >
@@ -1302,44 +1292,19 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                               and a fixed-width row overflowed the dialog at
                               tablet sizes and clipped on phones */}
                           <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
-                            {returningMap[tool.tool_id] && (
-                              <div className="relative">
-                                <button
-                                  type="button"
-                                  onClick={() => setReturningOpenFor(returningOpenFor === tool.tool_id ? null : tool.tool_id)}
-                                  onBlur={() => setTimeout(() => setReturningOpenFor((cur) => (cur === tool.tool_id ? null : cur)), 200)}
-                                  title={`${returningMap[tool.tool_id].count} previous visit${returningMap[tool.tool_id].count !== 1 ? 's' : ''} — click to view`}
-                                  className={`px-2.5 py-1 rounded-full text-sm font-bold border transition-shadow hover:shadow ${
-                                    returningMap[tool.tool_id].warranty
-                                      ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700/50'
-                                      : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
-                                  }`}
-                                >
-                                  {returningMap[tool.tool_id].warranty ? 'Warranty window' : 'Returning unit'}
-                                </button>
-                                {returningOpenFor === tool.tool_id && (
-                                  <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl overflow-hidden">
-                                    <p className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                                      Previous visits
-                                    </p>
-                                    {returningMap[tool.tool_id].matches.slice(0, 6).map((m) => (
-                                      <button
-                                        key={`${m.job_id}-${m.tool_id}`}
-                                        type="button"
-                                        onMouseDown={() => navigate(`/admin/repair-tracker?tab=jobs&job=${m.job_id}`)}
-                                        className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0 border-slate-100 dark:border-slate-700 transition-colors"
-                                      >
-                                        <span className="font-mono font-bold text-sm text-primary">{m.work_order}</span>
-                                        <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                          {m.company_name || m.customer_name} · {m.status}
-                                          {m.date_completed && ` · ${new Date(m.date_completed).toLocaleDateString('en-CA')}`}
-                                          {' · matched '}{m.matched_serials.join(', ')}
-                                        </span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                            {returningMap[tool.tool_id]?.count > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setHistoryFor(tool.tool_id)}
+                                title={`${returningMap[tool.tool_id].count} previous visit${returningMap[tool.tool_id].count !== 1 ? 's' : ''} — click for what was done`}
+                                className={`px-2.5 py-1 rounded-full text-sm font-bold border transition-shadow hover:shadow ${
+                                  returningMap[tool.tool_id].warranty
+                                    ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700/50'
+                                    : 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/50'
+                                }`}
+                              >
+                                {returningMap[tool.tool_id].warranty ? 'Warranty window' : `Visit ${returningMap[tool.tool_id].count + 1}`}
+                              </button>
                             )}
                             {/hathorn/i.test(tool.brand || '') && intakeConfig.final_checklist.length > 0 && (() => {
                               const done = new Set((tool.final_checklist || []).map((i) => i.toLowerCase()));
@@ -1398,6 +1363,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             <span className="material-symbols-outlined text-base">inventory_2</span>
                             Parts
                           </button>
+                          <button
+                            onClick={() => setHistoryFor(tool.tool_id)}
+                            title="Earlier visits of this unit — what was found and what was done"
+                            className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                          >
+                            <span className="material-symbols-outlined text-base">history</span>
+                            History{returningMap[tool.tool_id]?.count ? ` (${returningMap[tool.tool_id].count})` : returningMap[tool.tool_id]?.possible?.length ? ' (?)' : ''}
+                          </button>
                           {editingToolId !== tool.tool_id && (
                             <button
                               onClick={() => handleStartToolEdit(tool)}
@@ -1408,7 +1381,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             </button>
                           )}
                           <button
-                            onClick={() => openPrintToolTag(job, tool, idx)}
+                            onClick={() => openPrintToolTag(job, tool, idx, { returning: (returningMap[tool.tool_id]?.count || 0) > 0 })}
                             className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
                             title="Print tool tag"
                           >
@@ -1903,6 +1876,20 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       })()}
 
       {/* ── DIAGNOSIS & SOLUTION DIALOG ──────────────────── */}
+      {historyFor && (() => {
+        const tool = job.tools.find((t) => t.tool_id === historyFor);
+        if (!tool) return null;
+        return (
+          <ToolHistoryDialog
+            tool={tool}
+            history={returningMap[tool.tool_id] || null}
+            isAdmin={isAdmin}
+            onClose={() => setHistoryFor(null)}
+            onOpenJob={(jobId) => { setHistoryFor(null); navigate(`/admin/repair-tracker?tab=jobs&job=${jobId}`); }}
+          />
+        );
+      })()}
+
       {diagnosisToolId && diagnosisForm && (() => {
         const tool = job.tools.find((t) => t.tool_id === diagnosisToolId);
         if (!tool) return null;

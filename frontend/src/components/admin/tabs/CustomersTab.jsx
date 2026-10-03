@@ -7,6 +7,7 @@ import { StatusBadge } from '../shared/RepairStatusBadges';
 import PaginationBar from '../shared/PaginationBar';
 import { formatDateShortPacific } from '../../../utils/dateFormat';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
+import { fetchJobHistory } from '../../../utils/toolHistory';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { useSettings } from '../../../contexts/SettingsContext';
 import WorkOrderDialog from '../shared/WorkOrderDialog';
@@ -566,7 +567,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                                 Open
                               </Link>
                               <button
-                                onClick={() => openPrintWorkOrder(job, settings?.contact, serviceAgreement)}
+                                onClick={async () => openPrintWorkOrder(job, settings?.contact, serviceAgreement, { history: await fetchJobHistory(job) })}
                                 className="hidden sm:flex p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 border border-slate-200 hover:border-slate-300 dark:border-slate-600/50 dark:hover:border-slate-500 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-all items-center justify-center"
                                 title="Print Work Order"
                               >
