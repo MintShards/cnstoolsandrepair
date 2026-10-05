@@ -7,6 +7,8 @@ import { BTN_NEUTRAL, FILTER_INPUT } from '../sales/ui';
 import { formatYmd } from '../../utils/dateFormat';
 import { presetRange, toCsv, downloadCsv } from '../../utils/accounting';
 import { ACTIVITY_GROUPS, activityKind } from '../../constants/activity';
+import PaginationBar from '../admin/shared/PaginationBar';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../sales/pageSize';
 import PeriodPicker from './PeriodPicker';
 import StaffAvatar from './StaffAvatar';
 import WorkOrderChip from './WorkOrderChip';
@@ -86,6 +88,13 @@ export default function PeopleActivityView({ currentUser }) {
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [q, setQ] = useState('');
   const [printing, setPrinting] = useState(false);
+  // The timeline is paged in the browser, like the Cash Flow lists: the
+  // header count, the CSV and the print take every happening of the period.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  // A new period, person or search starts on page 1.
+  useEffect(() => { setPage(1); }, [range.from, range.to, selected?.user_id, q]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,6 +128,11 @@ export default function PeopleActivityView({ currentUser }) {
     if (!needle) return list;
     return list.filter((e) => [e.summary, e.request_number, e.tool, ...(e.details || [])].some((s) => (s || '').toLowerCase().includes(needle)));
   }, [timeline, q]);
+
+  // A refresh that shrinks the list keeps the page in range.
+  const pageCount = Math.max(1, Math.ceil(events.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pageEvents = events.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const single = range.from === range.to;
   const rangeText = single ? formatYmd(range.from) : `${formatYmd(range.from)} – ${formatYmd(range.to)}`;
@@ -198,7 +212,7 @@ export default function PeopleActivityView({ currentUser }) {
             </div>
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search this timeline…" aria-label="Search this timeline" className={`${FILTER_INPUT} sm:w-56`} />
             <div className="grid grid-cols-2 sm:flex gap-2">
-              <button type="button" onClick={exportCsv} disabled={!events.length} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 disabled:opacity-50`}>
+              <button type="button" onClick={exportCsv} disabled={!events.length} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 disabled:opacity-50`} title="Download every happening that matches as a spreadsheet">
                 <span className="material-symbols-outlined text-base">download</span>CSV
               </button>
               <button type="button" onClick={printTimeline} disabled={!timeline || printing} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 disabled:opacity-50`}>
@@ -214,7 +228,7 @@ export default function PeopleActivityView({ currentUser }) {
             </p>
           ) : (
             <ol className="divide-y divide-slate-200/70 dark:divide-slate-700/60">
-              {events.map((e, i) => {
+              {pageEvents.map((e, i) => {
                 const kind = activityKind(e.kind);
                 const group = ACTIVITY_GROUPS[kind.group] || ACTIVITY_GROUPS.edits;
                 const dayHeader = !single && e.day !== lastDay;
@@ -248,6 +262,17 @@ export default function PeopleActivityView({ currentUser }) {
                 );
               })}
             </ol>
+          )}
+          {events.length > 0 && (
+            <PaginationBar
+              currentPage={safePage}
+              totalItems={events.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              itemLabel="happenings"
+            />
           )}
         </div>
       )}
