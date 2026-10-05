@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { repairsAPI, customersAPI, partsLibraryAPI } from '../../../services/api';
+import { repairsAPI, customersAPI, partsLibraryAPI, paymentsAPI } from '../../../services/api';
 import { useToast } from '../../../pages/admin/RepairTracker';
 import useCurrentUser from '../../../utils/useCurrentUser';
 import WorkOrderMoney from './WorkOrderMoney';
@@ -11,6 +11,8 @@ import AddExpenseModal from './AddExpenseModal';
 import AddExtraChargeModal from './AddExtraChargeModal';
 import ToolExtraCharges from './ToolExtraCharges';
 import PaymentFormModal from '../../workspace/PaymentFormModal';
+import CompletionPaymentFields from './CompletionPaymentFields';
+import { EMPTY_PAY, payInvalid, paymentPayload, resolvePay, suggestedPaymentFor } from '../../../utils/completionPayment';
 import {
   REPAIR_STATUSES, REPAIR_STATUSES_LIST,
   getValidNextStatuses,
@@ -179,13 +181,33 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const acct = isAdmin && money.loaded
     ? jobAccounting(job, money.bills, money.payments, { labourCostRate: settings?.labourCostRate, gstRate: settings?.gstRate, pstRate: settings?.pstRate, technicianRates: money.technicianRates })
     : null;
-  const openPaymentFor = () => {
+  const customerName = () => {
     const cust = jobCustomer || job;
+    return cust.company_name || `${cust.first_name || ''} ${cust.last_name || ''}`.trim();
+  };
+  const openPaymentFor = () => {
     setPaymentSeed({
       workOrder: { repair_id: job.id, request_number: job.request_number },
-      customer_name: cust.company_name || `${cust.first_name || ''} ${cust.last_name || ''}`.trim(),
+      customer_name: customerName(),
       zoho_invoice_number: (job.tools || []).map((t) => t.zoho_invoice_number).find(Boolean) || '',
     });
+  };
+  // "Paid?" on the way to Completed (admins only — payments are admin-only):
+  // the status modal's answer and the Update All strip's, nulls meaning
+  // "take the job's figures" (see CompletionPaymentFields).
+  const [statusPay, setStatusPay] = useState(EMPTY_PAY);
+  const [updateAllPay, setUpdateAllPay] = useState(EMPTY_PAY);
+  // The status change is already saved when this runs, so a failed payment
+  // only means it has to be logged from Cash Flow — the toast says so.
+  const finishCompletion = async (payload, what) => {
+    if (!payload) { showToast('success', what); return; }
+    try {
+      const saved = await paymentsAPI.create(payload);
+      setMoneyTick((t) => t + 1);
+      showToast('success', `${what} · ${saved.payment_number} logged`);
+    } catch (err) {
+      showToast('error', `${what}, but the payment was not logged — ${getErrorMessage(err, 'the payment failed')}. Log it from Cash Flow.`);
+    }
   };
 
   // Unit history: for each tool, has this exact unit (or one of its Hathorn
@@ -460,10 +482,24 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       zoho_quote_number: tool.zoho_quote_number || '',
       zoho_invoice_number: tool.zoho_invoice_number || '',
     });
+    setStatusPay(EMPTY_PAY);
   };
+
+  // The "Paid?" context of the open status modal: null unless an admin is
+  // moving the tool to Completed.
+  const statusPayCtx = () => (
+    isAdmin && statusUpdateModal && statusUpdateForm.status === 'completed'
+      ? suggestedPaymentFor(acct, [statusUpdateModal.tool_id])
+      : null
+  );
 
   const handleStatusUpdate = async () => {
     if (!statusUpdateModal || zohoNumberMissing(statusUpdateForm)) return;
+    const payCtx = statusPayCtx();
+    if (payCtx && payInvalid(statusPay, payCtx)) {
+      showToast('error', 'Enter the amount received, or choose Pay later or Already paid.');
+      return;
+    }
     setUpdatingStatus(true);
     let updated;
     try {
@@ -480,10 +516,19 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       setUpdatingStatus(false);
       return;
     }
+    const tool = statusUpdateModal;
     onJobUpdated(updated);
     setStatusUpdateModal(null);
-    showToast('success', 'Tool status updated');
     setUpdatingStatus(false);
+    if (!payCtx) { showToast('success', 'Tool status updated'); return; }
+    await finishCompletion(
+      paymentPayload(statusPay, payCtx, {
+        customerName: customerName(),
+        jobId: job.id,
+        zohoInvoiceNumber: tool.zoho_invoice_number || (job.tools || []).map((t) => t.zoho_invoice_number).find(Boolean) || null,
+      }),
+      'Tool completed',
+    );
   };
 
   // ── UPDATE ALL/SELECTED TOOLS ─────────────────────────
@@ -493,10 +538,28 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     return job.tools.filter(t => updateAllSelected.has(t.tool_id));
   };
 
+  // The "Paid?" context of the Update All strip: null unless an admin is
+  // moving the selected tools to Completed. One payment covers them all.
+  const updateAllPayCtx = () => (
+    isAdmin && updateAllForm.status === 'completed'
+      ? suggestedPaymentFor(acct, getSelectedTools().map((t) => t.tool_id))
+      : null
+  );
+
   const handleUpdateAllTools = async () => {
     if (!updateAllForm.status || !job) return;
     const tools = getSelectedTools();
     if (tools.length === 0) return;
+    const payCtx = updateAllPayCtx();
+    if (payCtx && payInvalid(updateAllPay, payCtx)) {
+      showToast('error', 'Enter the amount received, or choose Pay later or Already paid.');
+      return;
+    }
+    const payment = payCtx ? paymentPayload(updateAllPay, payCtx, {
+      customerName: customerName(),
+      jobId: job.id,
+      zohoInvoiceNumber: tools.map((t) => t.zoho_invoice_number).find(Boolean) || null,
+    }) : null;
     setUpdateAllApplying(true);
     try {
       // One Zoho quote/invoice covers the whole work order, so a number
@@ -511,16 +574,22 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       }));
       const result = await repairsAPI.batchUpdateStatus(items);
       if (result.success_count > 0) {
-        showToast('success', `Updated ${result.success_count} tool${result.success_count !== 1 ? 's' : ''}`);
+        const what = `Updated ${result.success_count} tool${result.success_count !== 1 ? 's' : ''}`;
         const fresh = await repairsAPI.get(job.id);
         onJobUpdated(fresh);
         setUpdateAllOpen(false);
         setUpdateAllForm({ status: '', notes: '' });
         setUpdateAllSelected(new Set());
+        setUpdateAllPay(EMPTY_PAY);
+        // The amount covered every selected tool, so it is logged only when
+        // every one of them completed.
+        if (payCtx && result.failure_count === 0) await finishCompletion(payment, what);
+        else showToast('success', what);
       }
       if (result.failure_count > 0) {
         const firstError = result.results?.find((r) => !r.success)?.error;
-        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed${firstError ? ` — ${firstError}` : ''}`);
+        const payNote = payment ? ' Payment not logged — log it from Cash Flow once every tool is completed.' : '';
+        showToast('error', `${result.failure_count} update${result.failure_count !== 1 ? 's' : ''} failed${firstError ? ` — ${firstError}` : ''}.${payNote}`);
       }
     } catch (err) {
       showToast('error', getErrorMessage(err, 'Failed to update tools'));
@@ -1155,10 +1224,11 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                       {common.length === 0 ? (
                         <p className="text-xs text-slate-500 dark:text-slate-400">No common next status — adjust selection or update individually.</p>
                       ) : (
+                        <>
                         <div className="flex flex-wrap items-center gap-2">
                           <select
                             value={updateAllForm.status}
-                            onChange={e => setUpdateAllForm(f => ({ ...f, status: e.target.value }))}
+                            onChange={e => { setUpdateAllForm(f => ({ ...f, status: e.target.value })); setUpdateAllPay(EMPTY_PAY); }}
                             className="w-full sm:w-auto min-w-[10rem] text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
                           >
                             {common.map(s => (
@@ -1195,7 +1265,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={handleUpdateAllTools}
-                              disabled={updateAllApplying || !updateAllForm.status || zohoNumberMissing(updateAllForm)}
+                              disabled={updateAllApplying || !updateAllForm.status || zohoNumberMissing(updateAllForm) || (() => { const ctx = updateAllPayCtx(); return Boolean(ctx) && payInvalid(updateAllPay, ctx); })()}
                               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-primary hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap"
                             >
                               <span className="material-symbols-outlined text-sm">{updateAllApplying ? 'refresh' : 'done_all'}</span>
@@ -1209,6 +1279,17 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                             </button>
                           </div>
                         </div>
+                        {/* Completing the selected tools: was it paid? One payment
+                            for all of them, prefilled with their invoice totals. */}
+                        {(() => {
+                          const ctx = updateAllPayCtx();
+                          return ctx ? (
+                            <div className="mt-2">
+                              <CompletionPaymentFields compact value={updateAllPay} onChange={setUpdateAllPay} suggested={ctx.suggested} balance={ctx.balance} idPrefix="update-all-pay" />
+                            </div>
+                          ) : null;
+                        })()}
+                        </>
                       )}
                     </div>
                   );
@@ -1729,11 +1810,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
       {/* ── STATUS UPDATE MODAL ──────────────────────────── */}
       {statusUpdateModal && (
         <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          {/* The panel scrolls inside itself (dvh, not vh) — with the Paid?
+              block a completion runs past a phone's screen. */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[calc(100dvh-2rem)] flex flex-col border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Top accent */}
-            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            <div className="h-0.5 flex-shrink-0 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
             {/* Header */}
-            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60 flex-shrink-0">
               <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <span className="material-symbols-outlined text-primary text-lg">sync</span>
               </div>
@@ -1745,7 +1828,7 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto min-h-0 flex-1">
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Current:</span>
@@ -1795,6 +1878,15 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                         </div>
                       );
                     })()}
+                    {/* Completing the tool: was it paid? Logged in the same step. */}
+                    {(() => {
+                      const ctx = statusPayCtx();
+                      return ctx ? (
+                        <div className="mt-3">
+                          <CompletionPaymentFields value={statusPay} onChange={setStatusPay} suggested={ctx.suggested} balance={ctx.balance} idPrefix="status-pay" />
+                        </div>
+                      ) : null;
+                    })()}
                   </>
                 )}
               </div>
@@ -1818,10 +1910,13 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 />
               </div>
             </div>
-            <div className="flex gap-3 px-6 pb-6">
+            <div className="flex gap-3 px-6 pt-4 pb-6 flex-shrink-0 border-t border-slate-200 dark:border-slate-700/60">
               <button onClick={() => setStatusUpdateModal(null)} disabled={updatingStatus} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
-              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0 || zohoNumberMissing(statusUpdateForm)} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
-                {updatingStatus ? 'Updating...' : 'Update Status'}
+              <button onClick={handleStatusUpdate} disabled={updatingStatus || getValidNextStatuses(statusUpdateModal.status).length === 0 || zohoNumberMissing(statusUpdateForm) || (() => { const ctx = statusPayCtx(); return Boolean(ctx) && payInvalid(statusPay, ctx); })()} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+                {updatingStatus ? 'Updating...' : (() => {
+                  const ctx = statusPayCtx();
+                  return ctx && resolvePay(statusPay, ctx).mode === 'now' && !payInvalid(statusPay, ctx) ? 'Complete & log payment' : 'Update Status';
+                })()}
               </button>
             </div>
           </div>
