@@ -9,6 +9,8 @@ import { formatMoney } from '../../utils/money';
 import { formatYmd } from '../../utils/dateFormat';
 import { profitTone } from '../../utils/jobAccounting';
 import { pnlRows, presetRange, journalEntries, toCsv, downloadCsv, csvMoney } from '../../utils/accounting';
+import PaginationBar from '../admin/shared/PaginationBar';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../sales/pageSize';
 import PeriodPicker from './PeriodPicker';
 import StatTile, { StatRow } from './StatTile';
 import WorkOrderChip from './WorkOrderChip';
@@ -16,6 +18,9 @@ import { openPrintDayClose, openCloseTab, isMobile } from './PrintDayClose';
 
 const money = (n) => (n == null ? '—' : formatMoney(n));
 const pctText = (n) => (n == null ? '—' : `${n}%`);
+// The day-by-day strip folds past this many days; a year's range would
+// otherwise put a few hundred rows between the figures and the repairs.
+const DAY_STRIP = 14;
 
 function PaymentCell({ row }) {
   if (row.paid) return <span className="text-xs font-bold text-green-700 dark:text-green-400">Paid</span>;
@@ -37,6 +42,14 @@ export default function ProfitLossView({ focusTick }) {
   const [technicianRates, setTechnicianRates] = useState({});
   const [loading, setLoading] = useState(true);
   const [printing, setPrinting] = useState(false);
+  // The rows are paged in the browser: the totals, the day strip and the
+  // CSV need every row of the period, and the maths lives here anyway.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [allDays, setAllDays] = useState(false);
+
+  // A new period starts on page 1 with the day strip folded.
+  useEffect(() => { setPage(1); setAllDays(false); }, [range.from, range.to]);
 
   const load = useCallback(async (withSpinner) => {
     if (withSpinner) setLoading(true);
@@ -72,6 +85,15 @@ export default function ProfitLossView({ focusTick }) {
   const pnl = useMemo(() => (data ? pnlRows(data, opts) : null), [data, opts]);
   const single = range.from === range.to;
   const t = pnl?.totals;
+
+  // A refresh that shrinks the list keeps the page in range.
+  const rowCount = pnl?.rows.length || 0;
+  const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pageRows = pnl ? pnl.rows.slice((safePage - 1) * pageSize, safePage * pageSize) : [];
+  // When the list spans pages, the total row says it is the period's.
+  const totalLabel = rowCount > pageSize ? 'Period total' : 'Total';
+  const dayRows = pnl ? (allDays ? pnl.days : pnl.days.slice(0, DAY_STRIP)) : [];
 
   const exportCsv = () => {
     if (!pnl) return;
@@ -123,7 +145,7 @@ export default function ProfitLossView({ focusTick }) {
           width with the two buttons split beneath it. */}
       <TabHeader>
         <PeriodPicker value={range} onChange={setRange} className="col-span-2" />
-        <button type="button" onClick={exportCsv} disabled={!pnl?.rows.length} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 sm:ml-auto disabled:opacity-50`} title="Download these rows as a spreadsheet">
+        <button type="button" onClick={exportCsv} disabled={!pnl?.rows.length} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 sm:ml-auto disabled:opacity-50`} title="Download every repair in the period as a spreadsheet">
           <span className="material-symbols-outlined text-base">download</span>
           Export CSV
         </button>
@@ -155,7 +177,7 @@ export default function ProfitLossView({ focusTick }) {
               </tr>
             </thead>
             <tbody>
-              {pnl.days.map((d) => (
+              {dayRows.map((d) => (
                 <tr key={d.day} className="border-t border-slate-100 dark:border-slate-700/60">
                   <td className="px-2 xl:px-3 py-2 text-slate-700 dark:text-slate-200">{formatYmd(d.day)}</td>
                   <td className="px-2 xl:px-3 py-2 text-right text-slate-700 dark:text-slate-200">{d.count}</td>
@@ -167,6 +189,15 @@ export default function ProfitLossView({ focusTick }) {
               ))}
             </tbody>
           </table>
+          {pnl.days.length > DAY_STRIP && (
+            <button
+              type="button"
+              onClick={() => setAllDays((v) => !v)}
+              className="w-full px-3 py-2 min-h-11 sm:min-h-0 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/80 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              {allDays ? `Show the first ${DAY_STRIP} days` : `Show all ${pnl.days.length} days`}
+            </button>
+          )}
         </div>
       )}
 
@@ -204,7 +235,7 @@ export default function ProfitLossView({ focusTick }) {
                 </tr>
               </thead>
               <tbody>
-                {pnl.rows.map((r) => (
+                {pageRows.map((r) => (
                   <tr key={r.key} className="border-t border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-900/30">
                     {!single && <td className="px-2 xl:px-3 py-2 whitespace-nowrap text-slate-600 dark:text-slate-300">{formatYmd(r.day)}</td>}
                     <td className="px-2 xl:px-3 py-2"><WorkOrderChip repairId={r.job_id} requestNumber={r.request_number} /></td>
@@ -230,7 +261,7 @@ export default function ProfitLossView({ focusTick }) {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 font-bold">
-                  <td className="px-2 xl:px-3 py-2 text-slate-900 dark:text-white whitespace-nowrap" colSpan={single ? 2 : 3}>Total · {t.count} repair{t.count === 1 ? '' : 's'}</td>
+                  <td className="px-2 xl:px-3 py-2 text-slate-900 dark:text-white whitespace-nowrap" colSpan={single ? 2 : 3}>{totalLabel} · {t.count} repair{t.count === 1 ? '' : 's'}</td>
                   <td className="px-2 xl:px-3 py-2 text-right whitespace-nowrap text-slate-900 dark:text-white">{money(t.revenue)}</td>
                   <td className="px-2 xl:px-3 py-2 text-right whitespace-nowrap text-slate-700 dark:text-slate-200 hidden xl:table-cell">{money(t.partsCost)}</td>
                   <td className="px-2 xl:px-3 py-2 text-right whitespace-nowrap text-slate-700 dark:text-slate-200 hidden xl:table-cell">{money(t.labourCost)}</td>
@@ -249,7 +280,7 @@ export default function ProfitLossView({ focusTick }) {
             {/* Cards below lg. The total row repeats the cards' three
                 centred columns so each total sits under its figure. */}
             <ul className="lg:hidden divide-y divide-slate-200/70 dark:divide-slate-700/60">
-              {pnl.rows.map((r) => (
+              {pageRows.map((r) => (
                 <li key={r.key} className="px-3 py-3 bg-white dark:bg-slate-900/30">
                   <div className="flex items-center justify-between gap-2">
                     <WorkOrderChip repairId={r.job_id} requestNumber={r.request_number} />
@@ -267,7 +298,7 @@ export default function ProfitLossView({ focusTick }) {
               ))}
               <li className="px-3 py-3 bg-slate-50 dark:bg-slate-800/80">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Total · {t.count} repair{t.count === 1 ? '' : 's'}{t.unpaid ? ` · ${t.unpaid} owing` : ''}
+                  {totalLabel} · {t.count} repair{t.count === 1 ? '' : 's'}{t.unpaid ? ` · ${t.unpaid} owing` : ''}
                 </p>
                 <div className="mt-1 grid grid-cols-3 gap-2 text-center text-sm font-bold">
                   <span className="text-slate-900 dark:text-white">{money(t.revenue)}</span>
@@ -276,6 +307,16 @@ export default function ProfitLossView({ focusTick }) {
                 </div>
               </li>
             </ul>
+
+            <PaginationBar
+              currentPage={safePage}
+              totalItems={rowCount}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              itemLabel="repairs"
+            />
           </>
         )}
       </div>

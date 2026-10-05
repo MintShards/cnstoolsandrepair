@@ -10,6 +10,8 @@ import { formatMoney } from '../../utils/money';
 import { formatYmd } from '../../utils/dateFormat';
 import { profitTone } from '../../utils/jobAccounting';
 import { journalEntries, pnlRows, presetRange, shopTime, toCsv, downloadCsv, csvMoney, JOURNAL_KINDS, JOURNAL_FILTERS } from '../../utils/accounting';
+import PaginationBar from '../admin/shared/PaginationBar';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../sales/pageSize';
 import PeriodPicker from './PeriodPicker';
 import StatTile, { StatRow } from './StatTile';
 import WorkOrderChip from './WorkOrderChip';
@@ -69,6 +71,13 @@ export default function JournalView({ focusTick }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [printing, setPrinting] = useState(false);
+  // Entries are paged in the browser: the totals and the running cash
+  // balance need every entry of the period, in order.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  // A new period, filter or search starts on page 1.
+  useEffect(() => { setPage(1); }, [range.from, range.to, filter, q]);
 
   const load = useCallback(async (withSpinner) => {
     if (withSpinner) setLoading(true);
@@ -105,6 +114,11 @@ export default function JournalView({ focusTick }) {
     return journal.entries.filter((e) => (!kinds || kinds.includes(e.kind))
       && (!needle || [e.title, e.sub, e.ref?.number, e.wo?.number, e.actor?.name].some((s) => (s || '').toLowerCase().includes(needle))));
   }, [journal, filter, q]);
+
+  // A refresh that shrinks the list keeps the page in range.
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pageEntries = visible.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const exportCsv = () => {
     if (!journal) return;
@@ -156,7 +170,7 @@ export default function JournalView({ focusTick }) {
           width with the two buttons split beneath it. */}
       <TabHeader>
         <PeriodPicker value={range} onChange={setRange} className="col-span-2" />
-        <button type="button" onClick={exportCsv} disabled={!visible.length} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 sm:ml-auto disabled:opacity-50`} title="Download the listed entries as a spreadsheet">
+        <button type="button" onClick={exportCsv} disabled={!visible.length} className={`${BTN_NEUTRAL} min-h-11 sm:min-h-0 sm:ml-auto disabled:opacity-50`} title="Download every entry that matches the filter as a spreadsheet">
           <span className="material-symbols-outlined text-base">download</span>
           Export CSV
         </button>
@@ -220,7 +234,7 @@ export default function JournalView({ focusTick }) {
           </div>
         ) : (
           <ul className="divide-y divide-slate-200/70 dark:divide-slate-700/60">
-            {visible.map((e) => {
+            {pageEntries.map((e) => {
               const kind = JOURNAL_KINDS[e.kind] || { label: e.kind, icon: 'circle', tone: '' };
               const dayHeader = !single && e.day !== lastDay;
               lastDay = e.day;
@@ -259,6 +273,17 @@ export default function JournalView({ focusTick }) {
               );
             })}
           </ul>
+        )}
+        {visible.length > 0 && (
+          <PaginationBar
+            currentPage={safePage}
+            totalItems={visible.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            itemLabel="entries"
+          />
         )}
       </div>
       <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
