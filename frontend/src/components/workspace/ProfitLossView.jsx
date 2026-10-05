@@ -321,7 +321,7 @@ export default function ProfitLossView({ focusTick }) {
         )}
       </div>
       <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
-        A repair counts on the day its tool was marked Completed, with the figures from its work order&rsquo;s accounting block. A job with several tools gets one row per tool; expenses logged against the whole job ride with the tool completed last.
+        A repair counts on the day its tool was marked Completed, with the figures from its work order&rsquo;s accounting block. A job with several tools gets one row per tool, and an expense logged against the whole job is shared evenly between them.
         {settings && settings.labourCostRate == null && ' Labour cost uses each technician’s agreed terms; the shop-wide rate is not set (Admin Settings → Repair Tracker).'}
         {t?.uncostedParts ? ` ${t.uncostedParts} part${t.uncostedParts === 1 ? '' : 's'} carry no cost in the parts library, so parts cost trails parts charged.` : ''}
       </p>

@@ -67,11 +67,23 @@ const labelOf = (src, value) => {
 export const methodLabel = (m) => labelOf(billConst.PAYMENT_METHODS, m);
 export const categoryLabel = (c) => labelOf(billConst.BILL_CATEGORIES, c);
 
+/** n cents-exact shares of an amount; the first shares carry the odd cents. */
+export function splitEvenly(total, n) {
+  if (total == null || !(n > 0)) return [];
+  const cents = Math.round(total * 100);
+  const base = Math.floor(cents / n);
+  const extra = cents - base * n;
+  return Array.from({ length: n }, (_, i) => (base + (i < extra ? 1 : 0)) / 100);
+}
+
 /**
  * One row per tool completed in the period. The job's shared costs (bill
- * lines with no tool) ride with the tool completed last on that job, so a
- * multi-tool job counts them once. Tools the customer will not pay for
- * (declined, BER, abandoned) are left out, as the dialog leaves them out.
+ * lines and dialog expenses with no tool — a delivery, a driver for the
+ * day) are split evenly between the tools that count on that job, so a
+ * two-tool job shows half on each row and the rows still add up to the
+ * bill; a tool still in the shop takes its share when it completes. Tools
+ * the customer will not pay for (declined, BER, abandoned) are left out, as
+ * the dialog leaves them out, and take no share.
  */
 export function pnlRows(data, { from, to, labourCostRate, gstRate, pstRate, technicianRates }) {
   const rows = [];
@@ -79,14 +91,15 @@ export function pnlRows(data, { from, to, labourCostRate, gstRate, pstRate, tech
     const bills = (data.bills || []).filter((b) => (b.lines || []).some((l) => l.repair_id === job.id));
     const payments = (data.payments || []).filter((p) => p.repair_id === job.id);
     const acct = jobAccounting(job, bills, payments, { labourCostRate, gstRate, pstRate, technicianRates });
+    const sharing = acct.tools.filter((x) => !x.excluded).map((x) => x.tool_id);
+    const shares = splitEvenly(acct.shared.other, sharing.length);
     const completed = (job.tools || []).filter((t) => t.date_completed);
-    const last = completed.reduce((a, t) => (!a || tsValue(t.date_completed) > tsValue(a.date_completed) ? t : a), null);
     for (const t of completed) {
       const day = shopDay(t.date_completed);
       if (!inRange(day, from, to)) continue;
       const at = acct.tools.find((x) => x.tool_id === t.tool_id);
       if (!at || at.excluded) continue;
-      const shared = last && last.tool_id === t.tool_id ? acct.shared.other : null;
+      const shared = shares[sharing.indexOf(t.tool_id)] ?? null;
       const other = sumEntered([at.cost.other, shared]);
       const cost = sumEntered([at.cost.labour, at.cost.parts, other]);
       const revenue = at.charges.revenue;
