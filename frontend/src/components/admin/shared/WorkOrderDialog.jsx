@@ -146,6 +146,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   const [partsToolId, setPartsToolId] = useState(null);
   const [partsForm, setPartsForm] = useState(null);
   const [savingParts, setSavingParts] = useState(false);
+  // The Labour dialog: the tool form's Labour section alone.
+  const [labourToolId, setLabourToolId] = useState(null);
+  const [labourForm, setLabourForm] = useState(null);
+  const [savingLabour, setSavingLabour] = useState(false);
   const navigate = useNavigate();
 
   // Job accounting (admin only): the block at the top, each tool's subtotal,
@@ -864,6 +868,46 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
     setSavingParts(false);
   };
 
+  // ── LABOUR ───────────────────────────────────────────
+  // Its own dialog as well: technician, hours and rate (and, for admins, the
+  // flat labour cost override), saved as a labour-only update — hours get
+  // entered at the bench far more often than the rest of the edit form.
+  const handleStartLabour = (tool) => {
+    setLabourToolId(tool.tool_id);
+    setLabourForm(toolToForm(tool));
+  };
+
+  const handleCancelLabour = () => {
+    setLabourToolId(null);
+    setLabourForm(null);
+  };
+
+  const handleSaveLabour = async () => {
+    if (!labourToolId || !labourForm) return;
+    setSavingLabour(true);
+    let updated;
+    try {
+      updated = await repairsAPI.updateTool(job.id, labourToolId, {
+        labour_hours: labourForm.labour_hours ? parseFloat(labourForm.labour_hours) : null,
+        hourly_rate: labourForm.hourly_rate ? parseFloat(labourForm.hourly_rate) : null,
+        assigned_technician: labourForm.assigned_technician || null,
+        // The cost side is admin-only; other roles never send it (the API
+        // ignores it from them anyway).
+        ...(isAdmin ? {
+          labour_cost_override: labourForm.labour_cost_override !== '' && labourForm.labour_cost_override != null ? parseFloat(labourForm.labour_cost_override) : null,
+        } : {}),
+      });
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to save labour'));
+      setSavingLabour(false);
+      return;
+    }
+    onJobUpdated(updated);
+    handleCancelLabour();
+    showToast('success', 'Labour saved');
+    setSavingLabour(false);
+  };
+
   // ── ADD TOOL TO EXISTING JOB ─────────────────────────
   const handleAddTool = async () => {
     if (!addToolForm) return;
@@ -1443,6 +1487,14 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                           >
                             <span className="material-symbols-outlined text-base">inventory_2</span>
                             Parts
+                          </button>
+                          <button
+                            onClick={() => handleStartLabour(tool)}
+                            title="Technician, hours and rate for this tool"
+                            className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-bold transition-all"
+                          >
+                            <span className="material-symbols-outlined text-base">timer</span>
+                            Labour
                           </button>
                           <button
                             onClick={() => setHistoryFor(tool.tool_id)}
@@ -2094,6 +2146,43 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                 <button onClick={handleClose} disabled={savingParts} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
                 <button onClick={handleSaveParts} disabled={savingParts} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
                   {savingParts ? 'Saving...' : 'Save Parts'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* ── LABOUR DIALOG ────────────────────────────────── */}
+      {labourToolId && labourForm && (() => {
+        const tool = job.tools.find((t) => t.tool_id === labourToolId);
+        if (!tool) return null;
+        const handleClose = () => { if (!savingLabour) handleCancelLabour(); };
+        return (
+        <div className="fixed inset-0 z-[60] bg-black/40 dark:bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-3xl w-full my-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl shadow-black/10 dark:shadow-black/40 animate-[fadeInScale_0.2s_ease-out] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Top accent */}
+            <div className="h-0.5 bg-gradient-to-r from-primary via-blue-400 to-primary/30" />
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700/60">
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-lg">timer</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">Labour</h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">{toolDisplayTitle(tool).toUpperCase()}</p>
+              </div>
+              <button onClick={handleClose} className="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex-shrink-0">
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <ToolForm toolData={labourForm} onChange={setLabourForm} currentJobId={job.id} only="labour" showCost={isAdmin} />
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleClose} disabled={savingLabour} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-xl font-bold transition-all disabled:opacity-50">Cancel</button>
+                <button onClick={handleSaveLabour} disabled={savingLabour} className="flex-1 px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-xl font-bold transition-all disabled:opacity-50">
+                  {savingLabour ? 'Saving...' : 'Save Labour'}
                 </button>
               </div>
             </div>

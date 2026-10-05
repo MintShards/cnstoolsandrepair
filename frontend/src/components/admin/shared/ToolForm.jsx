@@ -293,6 +293,8 @@ export const linkSavedPartsToLibrary = async (jobId, toolIds, forms) => {
 // costLines: this tool's Cash Flow bill lines, read-only, or null when there
 // is nothing to list yet (a tool being added).
 // only: 'parts' renders the Parts section alone (the work order's Parts
+// dialog) and 'labour' the Labour section alone — technician, hours, rate,
+// plus the Cost to Shop group when showCost (the work order's Labour
 // dialog); every other section stays out, whatever the wizard step.
 export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep, idx, newJobForm, setNewJobForm, currentJobId, fieldErrors = [], showCost = false, costLines = null, only = null }) {
   // Configurable camera-intake lists; the shared fetch resolves once per
@@ -1372,9 +1374,9 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
           customer is charged (labour, extra charges), the Zoho references,
           and — admins only — what the tool costs the shop. Same header and
           grid as every other section, one helper line at most. */}
-      {showSection([4]) && (
+      {(only === 'labour' || showSection([4])) && (
         <div>
-          <p className={sectionHdr}>Labour</p>
+          {only !== 'labour' && <p className={sectionHdr}>Labour</p>}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-slate-500 dark:text-slate-400 mb-1.5">Assigned Technician</label>
@@ -1473,7 +1475,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       {/* Cost side — admins only, like the rest of job accounting. The tool's
           expenses themselves are Cash Flow bills; this just shows which ones
           point here. */}
-      {showSection([4]) && showCost && (
+      {(only === 'labour' || showSection([4])) && showCost && (
         <div>
           <p className={sectionHdr}>Cost to Shop</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
