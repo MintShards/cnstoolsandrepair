@@ -6,11 +6,16 @@ import { BTN_PRIMARY } from '../sales/ui';
 import { formatMoney, round2 } from '../../utils/money';
 import BillsView from './BillsView';
 import PaymentsView from './PaymentsView';
+import ProfitLossView from './ProfitLossView';
+import JournalView from './JournalView';
 
 const VIEWS = [
-  { id: 'out', icon: 'receipt_long', label: 'Money Out', sub: 'Supplier bills' },
-  { id: 'in',  icon: 'payments',     label: 'Money In',  sub: 'Customer payments' },
+  { id: 'out',     icon: 'receipt_long', label: 'Money Out',     short: 'Out',     sub: 'Supplier bills' },
+  { id: 'in',      icon: 'payments',     label: 'Money In',      short: 'In',      sub: 'Customer payments' },
+  { id: 'pnl',     icon: 'trending_up',  label: 'Profit & Loss', short: 'P&L',     sub: 'By completed repair' },
+  { id: 'journal', icon: 'menu_book',    label: 'Journal',       short: 'Journal', sub: 'Every money event' },
 ];
+const VIEW_IDS = VIEWS.map((v) => v.id);
 
 function monthLabel(ym) {
   if (!ym) return 'This month';
@@ -19,7 +24,7 @@ function monthLabel(ym) {
 }
 
 // The API returns per-currency maps; the shop works in CAD only, so the
-// tiles read the CAD figure and nothing else.
+// cells read the CAD figure and nothing else.
 function netByCurrency(inTotals, outTotals) {
   return { CAD: round2((inTotals?.CAD || 0) - (outTotals?.CAD || 0)) };
 }
@@ -30,24 +35,29 @@ function MoneyStack({ totals, loaded, tone = '' }) {
 }
 
 /**
- * A summary tile. It is a real button only when it leads somewhere (Money in
- * and Money out switch views, Unpaid bills opens that list); Net is plain, so
- * keyboard users never land on a control that does nothing.
+ * One cell of the month overview. It is a real button only when it leads
+ * somewhere (Money in and Money out switch views, Unpaid bills opens that
+ * list); Net is plain, so keyboard users never land on a control that does
+ * nothing. The cells share one card; the grid draws the hairlines between
+ * them, so a cell carries only its border colour.
  */
-function Tile({ label, sub, red, active, onClick, children }) {
+function Cell({ label, sub, red, active, onClick, children }) {
   const clickable = Boolean(onClick);
-  const cls = `text-left rounded-xl border px-3 py-2.5 min-h-[44px] transition-colors ${
+  const cls = `block w-full text-left min-w-0 px-3 py-2.5 min-h-[44px] border-slate-200 dark:border-slate-700/60 transition-colors ${
     active
-      ? 'border-primary bg-primary/5 dark:bg-primary/10'
+      ? 'bg-primary/5 dark:bg-primary/10'
       : red
-        ? `border-red-300 dark:border-red-800/50 bg-red-50 dark:bg-red-900/10 ${clickable ? 'hover:bg-red-100 dark:hover:bg-red-900/20' : ''}`
-        : `border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 ${clickable ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : ''}`
-  }`;
+        ? `bg-red-50 dark:bg-red-900/10 ${clickable ? 'hover:bg-red-100 dark:hover:bg-red-900/20' : ''}`
+        : clickable ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : ''
+  } ${clickable ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60' : ''}`;
+  const labelTone = active
+    ? 'text-primary dark:text-blue-300'
+    : red ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400';
   const body = (
     <>
-      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</span>
+      <span className={`block text-[10px] font-bold uppercase tracking-wider truncate ${labelTone}`}>{label}</span>
       <span className="block text-base sm:text-xl font-black leading-tight truncate text-slate-900 dark:text-white">{children}</span>
-      {sub && <span className={`block text-[11px] truncate ${red ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>{sub}</span>}
+      <span className={`block text-[11px] leading-4 truncate ${red ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>{sub || ' '}</span>
     </>
   );
   if (!clickable) return <div className={cls}>{body}</div>;
@@ -59,10 +69,10 @@ function Tile({ label, sub, red, active, onClick, children }) {
 }
 
 /**
- * Cash Flow (admin only): money in and money out under one roof. Bills are
- * what the shop owes and paid (Out); payments are what customers actually
- * paid on Zoho invoices (In). The tiles are this month's picture; the two
- * views below carry the lists and their own forms.
+ * Cash Flow (admin only): money in and money out under one roof, the profit
+ * on each completed repair, and the money journal. The header carries the
+ * view switcher and the log button, the card under it is this month at a
+ * glance, and each view below brings its own toolbar, figures and list.
  */
 export default function CashFlowSection({ refreshCounts, focusTick }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,9 +81,18 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
     if (searchParams.get('bill')) return 'out';
     if (searchParams.get('payment')) return 'in';
     const fromUrl = searchParams.get('view');
-    if (fromUrl === 'in' || fromUrl === 'out') return fromUrl;
-    return localStorage.getItem('ws_cash_view') === 'in' ? 'in' : 'out';
+    if (VIEW_IDS.includes(fromUrl)) return fromUrl;
+    const remembered = localStorage.getItem('ws_cash_view');
+    return VIEW_IDS.includes(remembered) ? remembered : 'out';
   });
+  // A deep link to a bill or payment (the Journal's reference pills, the
+  // calendar) lands on the side that shows it, whatever view is open.
+  const billParam = searchParams.get('bill');
+  const paymentParam = searchParams.get('payment');
+  useEffect(() => {
+    if (billParam) setView('out');
+    else if (paymentParam) setView('in');
+  }, [billParam, paymentParam]);
   const [summary, setSummary] = useState({ bills: null, payments: null });
   // Bumped by the header button; the mounted view opens its log form.
   const [createTick, setCreateTick] = useState(0);
@@ -83,7 +102,7 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
       const [bills, payments] = await Promise.all([billsAPI.summary(), paymentsAPI.summary()]);
       setSummary({ bills, payments });
     } catch {
-      // Tiles keep their dashes; the lists report their own errors.
+      // Cells keep their dashes; the lists report their own errors.
     }
   }, []);
 
@@ -98,7 +117,7 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
   }, [loadSummary, refreshCounts]);
 
   // `chip` lands Money Out on a specific bills list (?chip=overdue from the
-  // Unpaid tile, the sidebar alert or Needs Attention); BillsView owns it.
+  // Unpaid cell, the sidebar alert or Needs Attention); BillsView owns it.
   const selectView = (id, chip) => {
     setView(id);
     localStorage.setItem('ws_cash_view', id);
@@ -117,76 +136,91 @@ export default function CashFlowSection({ refreshCounts, focusTick }) {
   const net = loaded ? netByCurrency(payments.month_total, bills.month_total) : null;
   const netCad = net ? (net.CAD ?? 0) : 0;
   const overdue = bills?.overdue_count ?? 0;
+  const canLog = view === 'out' || view === 'in';
 
   return (
     <div>
       <TabHeader
         title="Cash Flow"
-        subtitle="Money in and money out — customer payments and supplier bills"
+        subtitle="Money in and out, the profit on each repair, and the money journal"
         action={(
-          <button
-            onClick={() => setCreateTick((t) => t + 1)}
-            className={`${BTN_PRIMARY} w-full sm:w-auto`}
-            title={view === 'out' ? 'Log a supplier bill or receipt' : 'Log a customer payment'}
-          >
-            <span className="material-symbols-outlined text-base">{view === 'out' ? 'receipt_long' : 'payments'}</span>
-            {view === 'out' ? 'Log a bill' : 'Log a payment'}
-          </button>
+          // Phones: the switcher takes its own full-width row under the title
+          // and the log button the row after it; sm+ keeps both beside the
+          // title, hugging the right when the row (or the cluster itself) has
+          // to wrap. The full labels wait for lg: with the sidebar rail a
+          // tablet's main column is ~460px, where "Money Out / Money In /
+          // Profit & Loss / Journal" ran past the card.
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto sm:justify-end">
+            <div className="flex w-full sm:w-auto sm:inline-flex rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden" role="group" aria-label="Cash Flow view">
+              {VIEWS.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => selectView(v.id)}
+                  aria-pressed={view === v.id}
+                  title={v.sub}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 min-h-11 sm:min-h-0 text-sm font-bold whitespace-nowrap transition-colors ${
+                    view === v.id
+                      ? 'bg-primary text-white'
+                      : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">{v.icon}</span>
+                  <span className="lg:hidden">{v.short}</span>
+                  <span className="hidden lg:inline">{v.label}</span>
+                </button>
+              ))}
+            </div>
+            {canLog && (
+              <button
+                onClick={() => setCreateTick((t) => t + 1)}
+                className={`${BTN_PRIMARY} w-full sm:w-auto`}
+                title={view === 'out' ? 'Log a supplier bill or receipt' : 'Log a customer payment'}
+              >
+                <span className="material-symbols-outlined text-base">{view === 'out' ? 'receipt_long' : 'payments'}</span>
+                {view === 'out' ? 'Log a bill' : 'Log a payment'}
+              </button>
+            )}
+          </div>
         )}
       />
 
-      {/* This month at a glance. Money in is by received date, money out by bill date. */}
-      <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">{monthLabel(bills?.month)}</p>
-        <p className="hidden md:block text-[11px] text-slate-400 dark:text-slate-500 truncate">Money in by received date · money out by bill date</p>
-      </div>
-      {/* Two by two until the main column is wide enough for four abreast
-          (xl) — at laptop widths the sidebar rail leaves ~640px here. */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
-        <Tile label="Money in" active={view === 'in'} onClick={() => selectView('in')}
-              sub={payments ? `${payments.month_count} payment${payments.month_count === 1 ? '' : 's'} received` : ''}>
-          <MoneyStack totals={payments?.month_total} loaded={Boolean(payments)} tone="text-green-700 dark:text-green-400" />
-        </Tile>
-        <Tile label="Money out" active={view === 'out'} onClick={() => selectView('out')}
-              sub={bills ? `${bills.month_count} bill${bills.month_count === 1 ? '' : 's'} logged` : ''}>
-          <MoneyStack totals={bills?.month_total} loaded={Boolean(bills)} />
-        </Tile>
-        <Tile label="Net" sub={loaded ? (netCad >= 0 ? 'in minus out' : 'more out than in') : ''} red={loaded && netCad < 0}>
-          <MoneyStack totals={net} loaded={loaded} tone={netCad < 0 ? 'text-red-600 dark:text-red-400' : ''} />
-        </Tile>
-        {/* Unpaid is all-time, not this month: what the shop still owes today. */}
-        <Tile label="Unpaid bills" red={overdue > 0} onClick={() => selectView('out', overdue > 0 ? 'overdue' : 'unpaid')}
-              sub={bills ? (overdue > 0 ? `${overdue} overdue` : `${bills.unpaid_count} open`) : ''}>
-          <MoneyStack totals={bills?.unpaid_total} loaded={Boolean(bills)} />
-        </Tile>
-      </div>
-
-      {/* Money Out / Money In switcher — same segmented control as the tasks Board/List. */}
-      <div className="flex w-full sm:w-auto sm:inline-flex rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden mb-4" role="group" aria-label="Money out or money in">
-        {VIEWS.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => selectView(v.id)}
-            aria-pressed={view === v.id}
-            title={v.sub}
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 min-h-11 sm:min-h-0 text-sm font-bold transition-colors ${
-              view === v.id
-                ? 'bg-primary text-white'
-                : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">{v.icon}</span>
-            {v.label}
-            <span className={`hidden md:inline text-xs font-medium ${view === v.id ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'}`}>· {v.sub}</span>
-          </button>
-        ))}
-      </div>
+      {/* This month at a glance: one card, four cells. Money in is by
+          received date, money out by bill date; unpaid is all-time. Two by
+          two until the main column is wide enough for four abreast: at lg
+          the sidebar rail leaves ~650px here, 160px a cell. */}
+      <section aria-label={`${monthLabel(bills?.month)} at a glance`} className="mb-4 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 overflow-hidden">
+        <div className="flex items-baseline justify-between gap-3 px-3 py-1.5 border-b border-slate-200 dark:border-slate-700/60">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">{monthLabel(bills?.month)}</p>
+          <p className="hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 truncate">Money in by received date · money out by bill date · unpaid is everything still open</p>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 [&>*:nth-child(even)]:border-l [&>*:nth-child(n+3)]:border-t lg:[&>*:nth-child(n+3)]:border-t-0 lg:[&>*:nth-child(n+2)]:border-l">
+          <Cell label="Money in" active={view === 'in'} onClick={() => selectView('in')}
+                sub={payments ? `${payments.month_count} payment${payments.month_count === 1 ? '' : 's'} received` : ''}>
+            <MoneyStack totals={payments?.month_total} loaded={Boolean(payments)} tone="text-green-700 dark:text-green-400" />
+          </Cell>
+          <Cell label="Money out" active={view === 'out'} onClick={() => selectView('out')}
+                sub={bills ? `${bills.month_count} bill${bills.month_count === 1 ? '' : 's'} logged` : ''}>
+            <MoneyStack totals={bills?.month_total} loaded={Boolean(bills)} />
+          </Cell>
+          <Cell label="Net" sub={loaded ? (netCad >= 0 ? 'in minus out' : 'more out than in') : ''} red={loaded && netCad < 0}>
+            <MoneyStack totals={net} loaded={loaded} tone={netCad < 0 ? 'text-red-600 dark:text-red-400' : ''} />
+          </Cell>
+          <Cell label="Unpaid bills" red={overdue > 0} onClick={() => selectView('out', overdue > 0 ? 'overdue' : 'unpaid')}
+                sub={bills ? (overdue > 0 ? `${overdue} overdue` : `${bills.unpaid_count} open`) : ''}>
+            <MoneyStack totals={bills?.unpaid_total} loaded={Boolean(bills)} />
+          </Cell>
+        </div>
+      </section>
 
       {view === 'out' ? (
         <BillsView overdueCount={overdue} onMutated={onMutated} focusTick={focusTick} createTick={createTick} />
-      ) : (
+      ) : view === 'in' ? (
         <PaymentsView onMutated={onMutated} focusTick={focusTick} createTick={createTick} />
+      ) : view === 'pnl' ? (
+        <ProfitLossView focusTick={focusTick} />
+      ) : (
+        <JournalView focusTick={focusTick} />
       )}
     </div>
   );

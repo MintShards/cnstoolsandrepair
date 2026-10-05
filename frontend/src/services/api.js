@@ -908,6 +908,19 @@ export const paymentsAPI = {
 };
 
 // Workspace: Feed messages API (staff or admin)
+// Accounting (admin only): the records a period touches, for the Profit &
+// Loss and Journal views. Dates are shop-local YYYY-MM-DD, inclusive.
+export const accountingAPI = {
+  pnl: async (from, to) => {
+    const response = await api.get('/api/accounting/pnl', { params: { from, to } });
+    return response.data;
+  },
+  journal: async (from, to) => {
+    const response = await api.get('/api/accounting/journal', { params: { from, to } });
+    return response.data;
+  },
+};
+
 export const messagesAPI = {
   summary: async () => {
     const response = await api.get('/api/messages/summary');
