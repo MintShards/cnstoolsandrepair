@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -14,6 +15,36 @@ from app.models.settings import (
 from app.utils.helpers import convert_objectid_to_str
 from app.dependencies.auth import require_admin, get_optional_user
 from app.models.auth import User
+from app.services.activity_service import actor_ref, record_activity
+
+
+_SETTINGS_SKIP_KEYS = {"active", "updatedAt", "createdAt", "_id", "id"}
+
+
+def _humanize(key: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", " ", key).replace("_", " ").lower().capitalize()
+
+
+def _short(value) -> str:
+    text = "—" if value in (None, "") else str(value)
+    return text if len(text) <= 60 else text[:57] + "…"
+
+
+def _settings_changes(old: dict, new: dict) -> list:
+    """One line per top-level setting that changed, for the activity log.
+    Nested blocks (contact, templates) are named, not diffed."""
+    lines = []
+    for key, value in new.items():
+        if key in _SETTINGS_SKIP_KEYS:
+            continue
+        before = old.get(key)
+        if before == value:
+            continue
+        if isinstance(value, (dict, list)) or isinstance(before, (dict, list)):
+            lines.append(f"{_humanize(key)} updated")
+        else:
+            lines.append(f"{_humanize(key)}: {_short(before)} → {_short(value)}")
+    return lines[:40]
 
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -161,16 +192,18 @@ async def get_settings(viewer: Optional[User] = Depends(get_optional_user)):
     return BusinessSettingsResponse(**_for_viewer(settings, viewer))
 
 
-@router.put("/", response_model=BusinessSettingsResponse, dependencies=[Depends(require_admin)])
-async def update_settings(settings_data: BusinessSettingsUpdate):
+@router.put("/", response_model=BusinessSettingsResponse)
+async def update_settings(settings_data: BusinessSettingsUpdate, current_user: User = Depends(require_admin)):
     """
     Admin endpoint to update business settings.
     Creates new settings if none exist, updates existing otherwise.
-    Ensures only one active settings document exists.
+    Ensures only one active settings document exists. What changed goes to
+    the activity log (admin-only kind) with who saved it.
 
     Requires admin authentication.
     """
     db = get_database()
+    previous = await db.business_settings.find_one({"active": True}) or {}
 
     settings_dict = settings_data.model_dump(by_alias=True)
     settings_dict["active"] = True
@@ -184,6 +217,14 @@ async def update_settings(settings_data: BusinessSettingsUpdate):
         },
         upsert=True
     )
+
+    changes = _settings_changes(previous, settings_dict)
+    if changes:
+        await record_activity(
+            db, kind="settings_changed", actor=actor_ref(current_user),
+            summary=f"Business settings saved — {len(changes)} change{'s' if len(changes) != 1 else ''}",
+            details=changes,
+        )
 
     updated_settings = await db.business_settings.find_one({"active": True})
 

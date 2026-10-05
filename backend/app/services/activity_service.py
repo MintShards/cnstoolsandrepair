@@ -55,6 +55,25 @@ PAYMENT_FIELD_LABELS = {
 }
 
 
+# Parts Library and diagnosis-code records, for the edit diffs their routers log.
+BRAND_FIELD_LABELS = {"name": "Brand", "short_code": "Short code", "website": "Website", "notes": "Notes"}
+MODEL_FIELD_LABELS = {
+    "name": "Model", "category": "Category", "component": "Component",
+    "specifications": "Specifications", "discontinued": "Discontinued", "retail_price": "Retail price",
+}
+PART_FIELD_LABELS = {
+    "part_number": "Part number", "name": "Name", "cost": "Cost", "suggested_price": "Sell price",
+    "market_price": "MSRP", "quantity_on_hand": "Qty on hand", "reorder_point": "Reorder point",
+    "reorder_quantity": "Reorder qty", "location": "Location", "notes": "Notes",
+    "suggested_suppliers": "Suppliers",
+}
+CODE_FIELD_LABELS = {
+    "code": "Code", "title": "Symptom", "tool_type": "Tool type", "category": "Section",
+    "likely_causes": "Likely causes", "technician_checks": "Checks", "solution": "Repair",
+    "quote_note": "Quote note", "active": "Active",
+}
+
+
 def actor_ref(user) -> dict:
     """Snapshot of the acting user for history entries and the activity log."""
     name = f"{getattr(user, 'first_name', '') or ''} {getattr(user, 'last_name', '') or ''}".strip()

@@ -10,8 +10,10 @@ the same thing on every screen and on paper.
 import logging
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from typing import Optional
 from zoneinfo import ZoneInfo
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.database import get_database
@@ -87,15 +89,19 @@ def _ts_in(ts, start: datetime, end: datetime) -> bool:
     return isinstance(ts, datetime) and start <= ts < end
 
 
-@router.get("")
-@router.get("/")
-async def list_activity(
-    from_: str = Query(..., alias="from", pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    to: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    current_user: User = Depends(require_staff_or_admin),
-):
-    """Every recorded happening between two shop-local dates (inclusive),
-    oldest first, plus a summary the report prints at the top."""
+# Kinds only admins may see: money, business settings, accounts. The API
+# drops them for everyone else, so the calendar, the report and the person
+# view never leak them.
+_ADMIN_ONLY_PREFIXES = ("bill_", "payment_", "settings_", "account_", "password_")
+_EDIT_KINDS = ("tool_edited", "job_edited", "customer_edited", "bill_edited", "payment_edited")
+_DELETE_KINDS = ("job_deleted", "tool_removed", "customer_deleted", "bill_deleted", "payment_deleted")
+_LIBRARY_PREFIXES = ("part_", "model_", "brand_", "stock_")
+_ADMIN_KIND_PREFIXES = ("settings_", "account_", "password_", "code_")
+_PERSON_COUNT_KEYS = ("total", "jobs_created", "tools_received", "status_changes", "ready", "completed",
+                      "tasks_created", "tasks_completed", "edits", "library", "money", "admin")
+
+
+def _parse_range(from_: str, to: str):
     try:
         start = _day_start_utc(from_)
         end = _day_start_utc(to) + timedelta(days=1)
@@ -105,15 +111,18 @@ async def list_activity(
         raise HTTPException(status_code=400, detail="'to' must not be before 'from'")
     if (end - start).days > _MAX_RANGE_DAYS:
         raise HTTPException(status_code=400, detail=f"Range is capped at {_MAX_RANGE_DAYS} days")
+    return start, end
 
-    db = get_database()
+
+async def _collect_events(db, start: datetime, end: datetime, is_admin: bool) -> dict:
+    """Every recorded happening in [start, end), oldest first, gathered from
+    the primary records and the activity log. Admin-only kinds (money,
+    settings, accounts) are left out for everyone else."""
     rng = {"$gte": start, "$lt": end}
     events: list[dict] = []
     transitions: Counter = Counter()
     tools_received = 0
     turnaround_days: list[int] = []
-    # Bills (suppliers, amounts) are admin-only everywhere, the timeline included.
-    is_admin = current_user.role == "admin"
     bills_paid = 0
 
     # ── Repairs: job creation, tool arrivals, status changes, emails ──
@@ -316,7 +325,7 @@ async def list_activity(
     # ── Activity log: edits, deletions, photos ──
     async for row in db.activity_log.find({"ts": rng}).sort("ts", 1):
         kind = row.get("kind", "other")
-        if (kind.startswith("bill_") or kind.startswith("payment_")) and not is_admin:
+        if kind.startswith(_ADMIN_ONLY_PREFIXES) and not is_admin:
             continue
         events.append(_event(
             kind, row["ts"], row.get("summary", ""),
@@ -327,6 +336,78 @@ async def list_activity(
         ))
 
     events.sort(key=lambda e: e["ts"])
+    return {
+        "events": events,
+        "transitions": transitions,
+        "tools_received": tools_received,
+        "turnaround_days": turnaround_days,
+        "bills_paid": bills_paid,
+    }
+
+
+async def _resolve_person(db, user_id: str) -> dict | None:
+    """{user_id, name} for an account, the name built the way actor_ref
+    stamps it, so older name-only entries can still be matched."""
+    if not ObjectId.is_valid(user_id):
+        return None
+    u = await db.users.find_one({"_id": ObjectId(user_id)}, {"first_name": 1, "last_name": 1, "email": 1})
+    if not u:
+        return None
+    name = f"{u.get('first_name') or ''} {u.get('last_name') or ''}".strip() or u.get("email") or ""
+    return {"user_id": user_id, "name": name}
+
+
+def _event_is_by(e: dict, person: dict) -> bool:
+    a = e.get("actor")
+    if not a:
+        return False
+    if a.get("user_id"):
+        return a["user_id"] == person["user_id"]
+    return (a.get("name") or "").strip().lower() == person["name"].lower()
+
+
+@router.get("")
+@router.get("/")
+async def list_activity(
+    from_: str = Query(..., alias="from", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    to: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    actor: Optional[str] = Query(None, description="Only this account's happenings"),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    """Every recorded happening between two shop-local dates (inclusive),
+    oldest first, plus a summary the report prints at the top. With `actor`
+    the list is one person's: an admin may ask for anyone, everyone else
+    only for themselves."""
+    start, end = _parse_range(from_, to)
+    db = get_database()
+    # Bills (suppliers, amounts) are admin-only everywhere, the timeline included.
+    is_admin = current_user.role == "admin"
+    person = None
+    if actor:
+        if not is_admin and actor != current_user.id:
+            raise HTTPException(status_code=403, detail="You can only view your own activity")
+        person = await _resolve_person(db, actor)
+        if not person:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+    collected = await _collect_events(db, start, end, is_admin)
+    events = collected["events"]
+    transitions = collected["transitions"]
+    tools_received = collected["tools_received"]
+    turnaround_days = collected["turnaround_days"]
+    bills_paid = collected["bills_paid"]
+    if person:
+        events = [e for e in events if _event_is_by(e, person)]
+        # The counts describe the one person's list; the open-work snapshot
+        # below stays shop-wide, and turnaround is a shop figure, not a person's.
+        transitions = Counter(e["status"] for e in events if e["kind"] == "status_changed" and e.get("status"))
+        tools_received = sum(
+            len(e.get("details") or []) if e["kind"] == "job_created" else 1
+            for e in events if e["kind"] in ("job_created", "tool_received")
+        )
+        turnaround_days = []
+        bills_paid = sum(1 for e in events
+                         if e["kind"] == "bill_paid" or (e["kind"] == "bill_logged" and e.get("status") == "paid"))
 
     # ── Open-work snapshot at the END of the range, rebuilt from history so a
     # past month reports what was open then, not what is open now ──
@@ -401,8 +482,101 @@ async def list_activity(
     return {
         "from": from_,
         "to": to,
+        "actor": person,
         "events": events,
         "summary": summary,
         "months": months,
         "days_with_activity": len({e["day"] for e in events}),
+    }
+
+
+@router.get("/people")
+async def activity_by_person(
+    from_: str = Query(..., alias="from", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    to: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    current_user: User = Depends(require_staff_or_admin),
+):
+    """The same happenings grouped the other way: one card per shop account
+    with its counts and last action in the period. Admins see everyone;
+    anyone else gets only their own card. Derived each time, never stored."""
+    start, end = _parse_range(from_, to)
+    db = get_database()
+    is_admin = current_user.role == "admin"
+    collected = await _collect_events(db, start, end, is_admin)
+
+    staff: dict = {}
+    async for u in db.users.find({"role": {"$in": ["admin", "staff", "technician"]}},
+                                 {"first_name": 1, "last_name": 1, "email": 1, "role": 1, "is_active": 1}):
+        uid = str(u["_id"])
+        name = f"{u.get('first_name') or ''} {u.get('last_name') or ''}".strip() or u.get("email") or ""
+        staff[uid] = {"user_id": uid, "name": name, "role": u.get("role"), "is_active": u.get("is_active", True)}
+    by_name = {s["name"].lower(): uid for uid, s in staff.items() if s["name"]}
+
+    def person_key(actor) -> str | None:
+        a = _actor(actor)
+        if not a:
+            return None
+        if a.get("user_id") in staff:
+            return a["user_id"]
+        return by_name.get((a.get("name") or "").strip().lower())
+
+    counters: dict = defaultdict(Counter)
+    last: dict = {}
+    unattributed = 0
+    for e in collected["events"]:
+        key = person_key(e.get("actor"))
+        if not key:
+            # Online requests have no actor by design — the customer sent them.
+            if e["kind"] != "request_received":
+                unattributed += 1
+            continue
+        c = counters[key]
+        c["total"] += 1
+        k = e["kind"]
+        if k == "job_created":
+            c["jobs_created"] += 1
+            c["tools_received"] += len(e.get("details") or [])
+        elif k == "tool_received":
+            c["tools_received"] += 1
+        elif k == "status_changed":
+            c["status_changes"] += 1
+            if e.get("status") == "ready":
+                c["ready"] += 1
+            elif e.get("status") == "completed":
+                c["completed"] += 1
+        elif k == "task_created":
+            c["tasks_created"] += 1
+        elif k == "task_completed":
+            c["tasks_completed"] += 1
+        elif k in _EDIT_KINDS or k in _DELETE_KINDS or k in ("photos_added", "photo_removed", "wo_email_sent", "customer_created"):
+            c["edits"] += 1
+        elif k.startswith(_LIBRARY_PREFIXES):
+            c["library"] += 1
+        elif k.startswith(("bill_", "payment_")):
+            c["money"] += 1
+        elif k.startswith(_ADMIN_KIND_PREFIXES):
+            c["admin"] += 1
+        if key not in last or e["ts"] > last[key]["ts"]:
+            last[key] = {"ts": e["ts"], "day": e["day"], "time": e["time"], "summary": e["summary"]}
+
+    people = []
+    for uid, s in staff.items():
+        if not is_admin and uid != current_user.id:
+            continue
+        c = counters.get(uid, Counter())
+        # Dormant accounts with nothing in the period stay off the board.
+        if not s["is_active"] and c["total"] == 0:
+            continue
+        people.append({
+            **s,
+            "counts": {k: c.get(k, 0) for k in _PERSON_COUNT_KEYS},
+            "last": last.get(uid),
+        })
+    people.sort(key=lambda p: (-p["counts"]["total"], p["name"].lower()))
+    return {
+        "from": from_,
+        "to": to,
+        "people": people,
+        "events_total": len(collected["events"]),
+        "unattributed": unattributed if is_admin else None,
     }

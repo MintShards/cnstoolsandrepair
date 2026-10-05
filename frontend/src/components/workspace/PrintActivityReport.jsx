@@ -187,7 +187,7 @@ function buildLog(events) {
   return `<div class="section"><div class="section-title">Daily log</div>${days}</div>`;
 }
 
-function buildBody({ data, includeLog, generatedBy }) {
+function buildBody({ data, includeLog, generatedBy, subject }) {
   const generated = new Date().toLocaleString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
@@ -200,6 +200,7 @@ function buildBody({ data, includeLog, generatedBy }) {
       </div>
       <div class="report-block">
         <div class="report-title">Activity Report</div>
+        ${subject ? `<div class="report-meta" style="font-weight:700">${escHtml(subject)}</div>` : ''}
         <div class="report-meta">${escHtml(rangeLabel(data.from, data.to))}</div>
         <div class="report-meta">${events.length} happening${events.length === 1 ? '' : 's'} across ${data.days_with_activity} day${data.days_with_activity === 1 ? '' : 's'}</div>
       </div>

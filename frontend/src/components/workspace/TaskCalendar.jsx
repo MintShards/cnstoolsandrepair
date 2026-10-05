@@ -63,6 +63,10 @@ function TaskChip({ task, onClick }) {
 function DayModal({ ymd, tasks, activity, onOpenTask, onAddTask, onClose }) {
   useEscapeClose(onClose);
   useBodyScrollLock(true);
+  // Filter the day's happenings to one person when more than one did something.
+  const [who, setWho] = useState('');
+  const names = [...new Set(activity.map((e) => e.actor?.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const shown = who ? activity.filter((e) => e.actor?.name === who) : activity;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto" onClick={onClose}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
@@ -117,12 +121,25 @@ function DayModal({ ymd, tasks, activity, onOpenTask, onAddTask, onClose }) {
             </button>
           </section>
           <section>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">What happened</h3>
-            {activity.length === 0 ? (
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">What happened</h3>
+              {names.length > 1 && (
+                <select
+                  value={who}
+                  onChange={(e) => setWho(e.target.value)}
+                  aria-label="Show one person's happenings"
+                  className="text-xs font-bold px-2 py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+                >
+                  <option value="">Everyone ({activity.length})</option>
+                  {names.map((n) => <option key={n} value={n}>{n} ({activity.filter((e) => e.actor?.name === n).length})</option>)}
+                </select>
+              )}
+            </div>
+            {shown.length === 0 ? (
               <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nothing recorded for this day.</p>
             ) : (
               <ol className="space-y-1.5">
-                {activity.map((e, i) => {
+                {shown.map((e, i) => {
                   const kind = activityKind(e.kind);
                   const group = ACTIVITY_GROUPS[kind.group];
                   return (
@@ -456,7 +473,7 @@ export default function TaskCalendar({ currentUser, staff, refreshCounts, focusT
         />
       )}
       {reportOpen && (
-        <ActivityReportModal currentUser={currentUser} onClose={() => setReportOpen(false)} />
+        <ActivityReportModal currentUser={currentUser} staff={staff} onClose={() => setReportOpen(false)} />
       )}
     </div>
   );

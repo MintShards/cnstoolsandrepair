@@ -18,6 +18,13 @@ from app.models.auth import User
 from app.dependencies.auth import require_staff_or_admin
 from app.services.file_service import save_upload_file, delete_file
 from app.utils.helpers import convert_objectid_to_str
+from app.services.activity_service import (
+    BRAND_FIELD_LABELS, MODEL_FIELD_LABELS, PART_FIELD_LABELS, actor_ref, diff_fields, record_activity,
+)
+
+
+def _part_label(doc: dict) -> str:
+    return f"{doc.get('part_number') or '—'} {doc.get('name') or ''}".strip()
 
 router = APIRouter(prefix="/api/parts-library", tags=["parts-library"])
 logger = logging.getLogger(__name__)
@@ -247,6 +254,8 @@ async def create_library_brand(
     doc = {**data.model_dump(), "logo_url": logo_url, "active": True, "created_at": now, "updated_at": now}
     result = await db.parts_library_brands.insert_one(doc)
     created = await db.parts_library_brands.find_one({"_id": result.inserted_id})
+    await record_activity(db, kind="brand_added", actor=actor_ref(current_user),
+                          summary=f"Brand {data.name} added to the parts library")
     return _doc_to_brand(created, model_count=0)
 
 
@@ -301,6 +310,12 @@ async def update_library_brand(
 
     updates["updated_at"] = datetime.utcnow()
     await db.parts_library_brands.update_one({"_id": _to_object_id(brand_id)}, {"$set": updates})
+    changes = diff_fields(doc, updates, BRAND_FIELD_LABELS)
+    if "logo_url" in updates:
+        changes.append("Logo replaced")
+    if changes:
+        await record_activity(db, kind="brand_edited", actor=actor_ref(current_user),
+                              summary=f"Brand {updates['name']} edited", details=changes)
     updated = await db.parts_library_brands.find_one({"_id": _to_object_id(brand_id)})
     count = await db.parts_library_models.count_documents({"brand_id": brand_id, "active": True})
     return _doc_to_brand(updated, model_count=count)
@@ -335,6 +350,8 @@ async def delete_library_brand(
         {"_id": _to_object_id(brand_id)},
         {"$set": {"active": False, "updated_at": datetime.utcnow()}}
     )
+    await record_activity(db, kind="brand_retired", actor=actor_ref(current_user),
+                          summary=f"Brand {doc.get('name')} removed from the parts library")
     return {"message": "Brand deactivated"}
 
 
@@ -390,6 +407,12 @@ async def create_library_model(
            "created_at": now, "updated_at": now}
     result = await db.parts_library_models.insert_one(doc)
     created = await db.parts_library_models.find_one({"_id": result.inserted_id})
+    await record_activity(
+        db, kind="model_added", actor=actor_ref(current_user),
+        summary=f"Model {brand.get('name', '')} {body.name} added to the parts library",
+        details=[f"Category: {body.category}" if body.category else None,
+                 f"Component: {body.component}" if body.component else None],
+    )
     return _doc_to_model(created, brand_name=brand.get("name", ""), part_count=0)
 
 
@@ -437,6 +460,12 @@ async def update_library_model(
 
     updated = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)})
     brand = await db.parts_library_brands.find_one({"_id": _to_object_id(updated["brand_id"])})
+    changes = diff_fields(doc, updates, MODEL_FIELD_LABELS)
+    if changes:
+        await record_activity(
+            db, kind="model_edited", actor=actor_ref(current_user),
+            summary=f"Model {(brand or {}).get('name', '')} {updated.get('name')} edited", details=changes,
+        )
     brand_name = brand.get("name", "") if brand else ""
     part_count = await db.parts_library_parts.count_documents({"model_ids": model_id, "active": True})
     return _doc_to_model(updated, brand_name=brand_name, part_count=part_count)
@@ -463,6 +492,11 @@ async def delete_library_model(
     await db.parts_library_models.update_one(
         {"_id": _to_object_id(model_id)},
         {"$set": {"active": False, "updated_at": datetime.utcnow()}}
+    )
+    brand = await db.parts_library_brands.find_one({"_id": _to_object_id(doc["brand_id"])}, {"name": 1})
+    await record_activity(
+        db, kind="model_retired", actor=actor_ref(current_user),
+        summary=f"Model {(brand or {}).get('name', '')} {doc.get('name')} removed from the parts library — its name is retired",
     )
     return {"message": "Model deactivated"}
 
@@ -729,7 +763,14 @@ async def create_library_part(
     doc = {**body.model_dump(), "diagram_urls": [], "active": True, "created_at": now, "updated_at": now}
     result = await db.parts_library_parts.insert_one(doc)
     created = await db.parts_library_parts.find_one({"_id": result.inserted_id})
-    return await _enrich_part(db, created)
+    response = await _enrich_part(db, created)
+    fits = ", ".join(f"{m.brand_name} {m.name}".strip() for m in response.models) or "no model yet"
+    await record_activity(
+        db, kind="part_added", actor=actor_ref(current_user),
+        summary=f"Part {_part_label(doc)} added — {brand.get('name', '')}",
+        details=[f"Fits: {fits}", f"Qty on hand: {doc.get('quantity_on_hand', 0)}"],
+    )
+    return response
 
 
 @router.get("/parts/{part_id}", response_model=LibraryPartResponse)
@@ -776,6 +817,15 @@ async def update_library_part(
     updates["updated_at"] = datetime.utcnow()
     await db.parts_library_parts.update_one({"_id": _to_object_id(part_id)}, {"$set": updates})
 
+    changes = diff_fields(doc, updates, PART_FIELD_LABELS)
+    if "model_ids" in updates and set(updates["model_ids"] or []) != set(doc.get("model_ids") or []):
+        changes.append(f"Fits models: {len(doc.get('model_ids') or [])} → {len(updates['model_ids'] or [])}")
+    if "compatibility_group_ids" in updates and set(updates["compatibility_group_ids"] or []) != set(doc.get("compatibility_group_ids") or []):
+        changes.append("Compatibility groups changed")
+    if changes:
+        await record_activity(db, kind="part_edited", actor=actor_ref(current_user),
+                              summary=f"Part {_part_label({**doc, **updates})} edited", details=changes)
+
     # Auto-update repair job parts to in_stock if quantity_on_hand increased to > 0
     if "quantity_on_hand" in updates:
         old_qty = doc.get("quantity_on_hand", 0) or 0
@@ -802,6 +852,9 @@ async def delete_library_part(
         {"_id": _to_object_id(part_id)},
         {"$set": {"active": False, "updated_at": datetime.utcnow()}}
     )
+    await record_activity(db, kind="part_retired", actor=actor_ref(current_user),
+                          summary=f"Part {_part_label(doc)} removed from the parts library",
+                          details=[f"Qty on hand was {doc.get('quantity_on_hand', 0)}"])
     return {"message": "Part deactivated"}
 
 
@@ -825,6 +878,12 @@ async def attach_part_to_model(
         {"_id": _to_object_id(part_id)},
         {"$addToSet": {"model_ids": model_id}, "$set": {"updated_at": datetime.utcnow()}}
     )
+    if model_id not in (doc.get("model_ids") or []):
+        brand = await db.parts_library_brands.find_one({"_id": _to_object_id(model["brand_id"])}, {"name": 1})
+        await record_activity(
+            db, kind="part_fits_changed", actor=actor_ref(current_user),
+            summary=f"Part {_part_label(doc)} listed under {(brand or {}).get('name', '')} {model.get('name')}",
+        )
     updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
     return await _enrich_part(db, updated)
 
@@ -843,6 +902,14 @@ async def detach_part_from_model(
         {"_id": _to_object_id(part_id)},
         {"$pull": {"model_ids": model_id}, "$set": {"updated_at": datetime.utcnow()}}
     )
+    if model_id in (doc.get("model_ids") or []):
+        model = await db.parts_library_models.find_one({"_id": _to_object_id(model_id)}, {"name": 1, "brand_id": 1})
+        brand = (await db.parts_library_brands.find_one({"_id": _to_object_id(model["brand_id"])}, {"name": 1})
+                 if model and model.get("brand_id") else None)
+        await record_activity(
+            db, kind="part_fits_changed", actor=actor_ref(current_user),
+            summary=f"Part {_part_label(doc)} removed from {(brand or {}).get('name', '')} {(model or {}).get('name', 'a model')}",
+        )
     updated = await db.parts_library_parts.find_one({"_id": _to_object_id(part_id)})
     return await _enrich_part(db, updated)
 
@@ -914,6 +981,11 @@ async def adjust_part_stock(
             "$set": {"quantity_on_hand": new_qty, "updated_at": now},
             "$push": {"stock_history": {"$each": [history_entry], "$slice": -200}}
         }
+    )
+    await record_activity(
+        db, kind="stock_adjusted", actor=actor_ref(current_user),
+        summary=f"Stock {_part_label(doc)}: {'+' if body.delta > 0 else ''}{body.delta} → {new_qty} on hand",
+        details=[body.reason],
     )
 
     # Auto-update repair job parts to in_stock if stock increased to > 0

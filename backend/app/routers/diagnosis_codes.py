@@ -26,7 +26,7 @@ from app.models.diagnosis_code import (
     format_code,
     suggest_prefix,
 )
-from app.services.activity_service import actor_ref
+from app.services.activity_service import CODE_FIELD_LABELS, actor_ref, diff_fields, record_activity
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/diagnosis-codes", tags=["diagnosis-codes"])
@@ -141,6 +141,9 @@ async def create_code(
     result = await db.diagnosis_codes.insert_one(doc)
     created = await db.diagnosis_codes.find_one({"_id": result.inserted_id})
     logger.info("Diagnosis code %s created by %s", code, current_user.email)
+    await record_activity(db, kind="code_added", actor=actor_ref(current_user),
+                          summary=f"Diagnosis code {code} added — {data.title}",
+                          details=[f"{data.category} · {data.tool_type}"])
     return _build(created, {})
 
 
@@ -173,6 +176,16 @@ async def update_code(
 
     await db.diagnosis_codes.update_one({"_id": oid}, {"$set": update_fields})
     updated = await db.diagnosis_codes.find_one({"_id": oid})
+    changes = diff_fields(existing, update_fields, CODE_FIELD_LABELS)
+    if "parts" in update_fields and update_fields["parts"] != existing.get("parts"):
+        changes.append("Parts list changed")
+    if changes:
+        restored = update_fields.get("active") is True and not existing.get("active", True)
+        await record_activity(
+            db, kind="code_restored" if restored else "code_edited", actor=actor_ref(current_user),
+            summary=f"Diagnosis code {updated['code']} {'restored' if restored else 'edited'} — {updated.get('title')}",
+            details=changes,
+        )
     usage = await _usage_counts(db)
     return _build(updated, usage)
 
@@ -193,3 +206,6 @@ async def retire_code(
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Diagnosis code not found.")
+    retired = await db.diagnosis_codes.find_one({"_id": ObjectId(code_id)}, {"code": 1, "title": 1})
+    await record_activity(db, kind="code_retired", actor=actor_ref(current_user),
+                          summary=f"Diagnosis code {(retired or {}).get('code', '')} retired — {(retired or {}).get('title', '')}")

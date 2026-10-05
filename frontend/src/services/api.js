@@ -794,8 +794,14 @@ export const pushAPI = {
 // Day-by-day happenings across the tracker + workspace (shop-local dates,
 // inclusive) — powers the calendar's activity layer and the printed report.
 export const activityAPI = {
-  list: async ({ from, to }) => {
-    const response = await api.get('/api/activity', { params: { from, to } });
+  // actor: one account's happenings only (admins any account, others themselves).
+  list: async ({ from, to, actor }) => {
+    const response = await api.get('/api/activity', { params: { from, to, ...(actor ? { actor } : {}) } });
+    return response.data;
+  },
+  // One card per shop account with counts and last action for the period.
+  people: async ({ from, to }) => {
+    const response = await api.get('/api/activity/people', { params: { from, to } });
     return response.data;
   },
 };

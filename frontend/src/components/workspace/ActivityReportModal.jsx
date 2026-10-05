@@ -53,13 +53,20 @@ const inputCls = 'w-full px-3 py-2 bg-white dark:bg-slate-900/80 border border-s
  * report for it. Loads the data on demand so the calendar never pays for a
  * year of events it isn't showing.
  */
-export default function ActivityReportModal({ currentUser, initialFrom, initialTo, onClose }) {
+export default function ActivityReportModal({ currentUser, staff = [], initialFrom, initialTo, onClose }) {
   const showToast = useToast();
   const today = getTodayPacific();
   const initial = initialFrom && initialTo ? [initialFrom, initialTo] : presetRange('today', today);
   const [preset, setPreset] = useState(initialFrom && initialTo ? 'custom' : 'today');
   const [from, setFrom] = useState(initial[0]);
   const [to, setTo] = useState(initial[1]);
+  // '' = everyone. Admins may pick any shop account; others only themselves.
+  const [actor, setActor] = useState('');
+  const isAdmin = currentUser?.role === 'admin';
+  const personOptions = isAdmin
+    ? (staff || []).filter((s) => ['admin', 'staff', 'technician'].includes(s.role)).map((s) => ({ id: s.id, name: s.name }))
+    : (currentUser?.id ? [{ id: currentUser.id, name: `${currentUser.name || 'Me'} (me)` }] : []);
+  const actorName = personOptions.find((p) => p.id === actor)?.name;
   const [includeLog, setIncludeLog] = useState(daysBetween(initial[0], initial[1]) <= LOG_DEFAULT_MAX_DAYS);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(null); // { from, to, data }
@@ -87,8 +94,8 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
   const days = rangeValid ? daysBetween(from, to) : 0;
 
   const load = async () => {
-    const data = await activityAPI.list({ from, to });
-    setLoaded({ from, to, data });
+    const data = await activityAPI.list({ from, to, actor: actor || undefined });
+    setLoaded({ from, to, actor, data });
     return data;
   };
 
@@ -110,10 +117,13 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
     }
     setBusy(true);
     try {
-      const data = loaded && loaded.from === from && loaded.to === to ? loaded.data : await load();
+      const data = loaded && loaded.from === from && loaded.to === to && loaded.actor === actor ? loaded.data : await load();
       // Resolves when the print dialog closes (printed or cancelled) — the
       // job is done either way, so the dialog gets out of the way itself.
-      await openPrintActivityReport({ data, includeLog, generatedBy: currentUser?.name, win });
+      await openPrintActivityReport({
+        data, includeLog, generatedBy: currentUser?.name, win,
+        subject: actor && actorName ? `Activity for ${actorName.replace(/ \(me\)$/, '')}` : undefined,
+      });
       onClose();
       return;
     } catch (err) {
@@ -151,6 +161,16 @@ export default function ActivityReportModal({ currentUser, initialFrom, initialT
               {PRESETS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
+
+          {personOptions.length > 0 && (
+            <div>
+              <label htmlFor="activity-report-person" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Person</label>
+              <select id="activity-report-person" value={actor} onChange={(e) => { setActor(e.target.value); setLoaded(null); }} className={inputCls}>
+                <option value="">Everyone</option>
+                {personOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
 
           {preset === 'custom' && (
             <div className="grid grid-cols-2 gap-3">

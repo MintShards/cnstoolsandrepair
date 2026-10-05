@@ -16,6 +16,17 @@ from app.database import get_database
 from app.dependencies.auth import get_current_user, require_admin, require_staff_or_admin, ACCESS_TOKEN_COOKIE
 from app.config import settings
 from app.utils import convert_objectid_to_str, user_display_name
+from app.services.activity_service import actor_ref, record_activity
+
+
+def _account_name(doc: dict) -> str:
+    return f"{doc.get('first_name') or ''} {doc.get('last_name') or ''}".strip() or doc.get("email") or "account"
+
+
+async def _log_account(db, current_user, kind: str, summary: str, details=None) -> None:
+    """Account changes are admin-only history (the activity API hides the
+    `account_` kinds from everyone else)."""
+    await record_activity(db, kind=kind, actor=actor_ref(current_user), summary=summary, details=details)
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +201,8 @@ async def create_sales_rep(data: SalesRepCreate, current_user: User = Depends(re
     created = convert_objectid_to_str(created)
     created["id"] = created.pop("_id")
     logger.info(f"Sales rep created: {created['email']} by admin {current_user.email}")
+    await _log_account(db, current_user, "account_created",
+                       f"Account created: {_account_name(created)} ({created['email']}) — sales rep")
     return _build_sales_rep_response(created)
 
 
@@ -222,6 +235,14 @@ async def update_sales_rep(rep_id: str, data: SalesRepUpdate, current_user: User
 
     await db.users.update_one({"_id": oid}, {"$set": updates})
     updated = await db.users.find_one({"_id": oid})
+    changes = [
+        f"Name: {_account_name(rep)} → {_account_name(updated)}" if _account_name(rep) != _account_name(updated) else None,
+        f"Email: {rep.get('email')} → {updated.get('email')}" if rep.get("email") != updated.get("email") else None,
+        "Password reset" if data.password is not None else None,
+    ]
+    if any(changes):
+        await _log_account(db, current_user, "account_edited",
+                           f"Account edited: {_account_name(updated)} (sales rep)", details=changes)
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
     total_visits = await db.visits.count_documents({"rep_id": rep_id})
@@ -243,6 +264,8 @@ async def deactivate_sales_rep(rep_id: str, current_user: User = Depends(require
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sales rep not found")
 
     await db.users.update_one({"_id": oid}, {"$set": {"is_active": False, "updated_at": datetime.utcnow()}})
+    await _log_account(db, current_user, "account_deactivated",
+                       f"Account deactivated: {_account_name(rep)} (sales rep)")
     updated = await db.users.find_one({"_id": oid})
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
@@ -265,6 +288,8 @@ async def activate_sales_rep(rep_id: str, current_user: User = Depends(require_a
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sales rep not found")
 
     await db.users.update_one({"_id": oid}, {"$set": {"is_active": True, "updated_at": datetime.utcnow()}})
+    await _log_account(db, current_user, "account_reactivated",
+                       f"Account re-activated: {_account_name(rep)} (sales rep)")
     updated = await db.users.find_one({"_id": oid})
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
@@ -339,6 +364,8 @@ async def create_staff(data: StaffCreate, current_user: User = Depends(require_a
     created = convert_objectid_to_str(created)
     created["id"] = created.pop("_id")
     logger.info(f"Staff account created: {created['email']} by admin {current_user.email}")
+    await _log_account(db, current_user, "account_created",
+                       f"Account created: {_account_name(created)} ({created['email']}) — {data.role}")
     return _build_staff_response(created, include_rate=True)
 
 
@@ -391,6 +418,18 @@ async def update_staff(user_id: str, data: StaffUpdate, current_user: User = Dep
 
     await db.users.update_one({"_id": oid}, {"$set": updates})
     updated = await db.users.find_one({"_id": oid})
+    changes = [
+        f"Name: {_account_name(member)} → {_account_name(updated)}" if _account_name(member) != _account_name(updated) else None,
+        f"Email: {member.get('email')} → {updated.get('email')}" if member.get("email") != updated.get("email") else None,
+        "Password reset" if data.password is not None else None,
+        f"Access: {member.get('role', 'admin')} → {updates['role']}" if "role" in updates else None,
+        "Labour terms changed" if ("labour_cost_rate" in updates or "labour_cost_basis" in updates)
+        and (member.get("labour_cost_rate") != updated.get("labour_cost_rate")
+             or member.get("labour_cost_basis") != updated.get("labour_cost_basis")) else None,
+    ]
+    if any(changes):
+        await _log_account(db, current_user, "account_edited",
+                           f"Account edited: {_account_name(updated)}", details=changes)
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
     return _build_staff_response(updated, include_rate=True)
@@ -428,6 +467,8 @@ async def deactivate_staff(user_id: str, current_user: User = Depends(require_ad
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
     logger.info(f"Staff account deactivated: {member['email']} by admin {current_user.email}")
+    await _log_account(db, current_user, "account_deactivated",
+                       f"Account deactivated: {_account_name(member)} ({member.get('role', 'admin')})")
     return _build_staff_response(updated)
 
 
@@ -449,6 +490,8 @@ async def activate_staff(user_id: str, current_user: User = Depends(require_admi
     updated = convert_objectid_to_str(updated)
     updated["id"] = updated.pop("_id")
     logger.info(f"Staff account re-activated: {member['email']} by admin {current_user.email}")
+    await _log_account(db, current_user, "account_reactivated",
+                       f"Account re-activated: {_account_name(member)} ({member.get('role', 'admin')})")
     return _build_staff_response(updated)
 
 
@@ -492,6 +535,8 @@ async def change_user_role(
         )
         logger.info(f"Role for {member['email']} changed {old_role} -> {data.role} "
                     f"by admin {current_user.email}")
+        await _log_account(db, current_user, "account_role_changed",
+                           f"Access changed: {_account_name(member)} — {old_role} → {data.role}")
 
     updated = await db.users.find_one({"_id": oid})
     updated = convert_objectid_to_str(updated)
@@ -518,4 +563,6 @@ async def change_password(
         {"$set": {"password_hash": hash_password(data.new_password), "updated_at": datetime.utcnow()}},
     )
     logger.info(f"Password changed by {current_user.email}")
+    await _log_account(db, current_user, "password_changed",
+                       f"Password changed: {_account_name(user_doc)} (own account)")
     return {"success": True}

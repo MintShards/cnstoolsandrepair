@@ -10,7 +10,7 @@ import { useWorkspacePwa } from '../../utils/push';
 
 // Sections load on first visit so opening the hub doesn't download everything
 const TasksSection = lazy(() => import('../../components/workspace/TasksSection'));
-const TaskCalendar = lazy(() => import('../../components/workspace/TaskCalendar'));
+const ActivitySection = lazy(() => import('../../components/workspace/ActivitySection'));
 const FeedSection = lazy(() => import('../../components/workspace/FeedSection'));
 const CashFlowSection = lazy(() => import('../../components/workspace/CashFlowSection'));
 const ChangePasswordModal = lazy(() => import('../../components/workspace/ChangePasswordModal'));
@@ -233,7 +233,7 @@ export default function Workspace() {
                   {activeSection === 'all-tasks' && (
                     <TasksSection key="all" scope="all" {...sectionProps} />
                   )}
-                  {activeSection === 'calendar' && <TaskCalendar {...sectionProps} />}
+                  {activeSection === 'calendar' && <ActivitySection {...sectionProps} />}
                   {activeSection === 'feed' && <FeedSection {...sectionProps} />}
                   {activeSection === 'cash-flow' && <CashFlowSection {...sectionProps} />}
                   {activeSection === null && <SectionLoading />}

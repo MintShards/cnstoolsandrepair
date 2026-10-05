@@ -29,6 +29,18 @@ export const ACTIVITY_GROUPS = {
     icon: 'account_balance_wallet',
     chip: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300',
   },
+  library: {
+    label: 'Parts Library',
+    icon: 'inventory',
+    chip: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
+  },
+  // Settings and account changes reach admins only (the API filters them);
+  // diagnosis-code changes are shop-wide.
+  admin: {
+    label: 'Settings, accounts & codes',
+    icon: 'admin_panel_settings',
+    chip: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
+  },
 };
 
 export const ACTIVITY_KINDS = {
@@ -56,9 +68,31 @@ export const ACTIVITY_KINDS = {
   payment_received:    { label: 'Payment received',     icon: 'payments',     group: 'money' },
   payment_edited:      { label: 'Payment edited',       icon: 'edit_note',    group: 'money' },
   payment_deleted:     { label: 'Payment deleted',      icon: 'delete',       group: 'money' },
+  brand_added:         { label: 'Brand added',          icon: 'add_box',      group: 'library' },
+  brand_edited:        { label: 'Brand edited',         icon: 'edit_note',    group: 'library' },
+  brand_retired:       { label: 'Brand removed',        icon: 'delete',       group: 'library' },
+  model_added:         { label: 'Model added',          icon: 'add_box',      group: 'library' },
+  model_edited:        { label: 'Model edited',         icon: 'edit_note',    group: 'library' },
+  model_retired:       { label: 'Model removed',        icon: 'delete',       group: 'library' },
+  part_added:          { label: 'Part added',           icon: 'add_box',      group: 'library' },
+  part_edited:         { label: 'Part edited',          icon: 'edit_note',    group: 'library' },
+  part_retired:        { label: 'Part removed',         icon: 'delete',       group: 'library' },
+  part_fits_changed:   { label: 'Part fit changed',     icon: 'link',         group: 'library' },
+  stock_adjusted:      { label: 'Stock adjusted',       icon: 'tune',         group: 'library' },
+  settings_changed:    { label: 'Settings saved',       icon: 'settings',     group: 'admin' },
+  account_created:     { label: 'Account created',      icon: 'person_add',   group: 'admin' },
+  account_edited:      { label: 'Account edited',       icon: 'manage_accounts', group: 'admin' },
+  account_deactivated: { label: 'Account deactivated',  icon: 'person_off',   group: 'admin' },
+  account_reactivated: { label: 'Account re-activated', icon: 'person_check', group: 'admin' },
+  account_role_changed: { label: 'Access changed',      icon: 'admin_panel_settings', group: 'admin' },
+  password_changed:    { label: 'Password changed',     icon: 'key',          group: 'admin' },
+  code_added:          { label: 'Diagnosis code added', icon: 'troubleshoot', group: 'admin' },
+  code_edited:         { label: 'Diagnosis code edited', icon: 'edit_note',   group: 'admin' },
+  code_retired:        { label: 'Diagnosis code retired', icon: 'delete',     group: 'admin' },
+  code_restored:       { label: 'Diagnosis code restored', icon: 'restore',   group: 'admin' },
 };
 
-export const ACTIVITY_GROUP_ORDER = ['received', 'status', 'tasks', 'edits', 'money'];
+export const ACTIVITY_GROUP_ORDER = ['received', 'status', 'tasks', 'edits', 'money', 'library', 'admin'];
 
 export function activityKind(kind) {
   return ACTIVITY_KINDS[kind] || { label: kind, icon: 'info', group: 'edits' };
