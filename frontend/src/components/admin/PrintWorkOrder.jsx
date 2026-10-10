@@ -170,10 +170,11 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
     ].filter(Boolean).join(' · ');
     const includedItems = (tool.included_items || []).filter(Boolean);
     const conditionItems = (tool.intake_condition || []).filter(Boolean);
-    // "Head D18 (S/N S123)" — each component names its own model, since
-    // any mix of components can arrive without the others
+    // "Head D18 (S/N: S123)" — each component names its own model, since
+    // any mix of components can arrive without the others; "S/N:" with the
+    // colon, as the tool title writes it.
     const comp = (label, model, serial) => (model || serial)
-      ? `${label}${model ? ` ${escHtml(model.toUpperCase())}` : ''}${serial ? ` (S/N ${escHtml(serial.toUpperCase())})` : ''}`
+      ? `${label}${model ? ` ${escHtml(model.toUpperCase())}` : ''}${serial ? ` (S/N: ${escHtml(serial.toUpperCase())})` : ''}`
       : '';
     const compBits = [
       comp('Controller', tool.controller_model, tool.controller_serial),
