@@ -246,6 +246,9 @@ async def send_work_order_email(
     template: dict,
     business_info: dict,
     service_agreement: dict,
+    # The print's own HTML for this work order (PrintWorkOrder.jsx, posted by
+    # the Send modal) — what the attached PDF is rendered from.
+    work_order_html: str = "",
     recipient_email: Optional[str] = None,
     subject_override: Optional[str] = None,
     custom_message: Optional[str] = None,
@@ -291,7 +294,7 @@ async def send_work_order_email(
 
     # Generate PDF
     try:
-        pdf_bytes = generate_work_order_pdf(job, business_info, service_agreement)
+        pdf_bytes = generate_work_order_pdf(work_order_html)
         pdf_encoded = base64.b64encode(pdf_bytes).decode()
         pdf_filename = f"{wo_number}.pdf"
     except Exception as e:

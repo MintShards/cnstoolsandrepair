@@ -651,6 +651,10 @@ class WorkOrderEmailSendRequest(BaseModel):
     recipient_email: Optional[EmailStr] = None
     subject: Optional[str] = Field(None, max_length=300)
     custom_message: Optional[str] = Field(None, max_length=2000)
+    # The work order as the browser prints it (PrintWorkOrder.jsx's full HTML
+    # document, with the unit history it fetched); the attached PDF is
+    # rendered from it so the email can never drift from Print / Save as PDF.
+    work_order_html: str = Field(..., min_length=1, max_length=3_000_000)
 
 
 class BatchStatusItem(BaseModel):

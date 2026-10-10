@@ -2750,6 +2750,10 @@ async def send_work_order_email_endpoint(
             status_code=422,
             detail="No recipient email address. Add an email to the customer record or provide one in the request."
         )
+    # The posted print must be this work order's — a stale modal must never
+    # mail another job's paper to this customer.
+    if (job.get("request_number") or "") not in request.work_order_html:
+        raise HTTPException(status_code=422, detail="The work order document does not match this work order. Close the dialog and try again.")
 
     biz_settings = await db.business_settings.find_one({"active": True}) or {}
     template = biz_settings.get("workOrderEmailTemplate") or {}
@@ -2769,6 +2773,7 @@ async def send_work_order_email_endpoint(
         template=template,
         business_info=business_info,
         service_agreement=service_agreement,
+        work_order_html=request.work_order_html,
         recipient_email=request.recipient_email,
         subject_override=request.subject,
         custom_message=request.custom_message,

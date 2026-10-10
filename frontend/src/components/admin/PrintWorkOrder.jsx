@@ -47,16 +47,20 @@ function getStyles(prefix) {
     ${p}.wo-meta { font-size: 11px; color: #333; margin-top: 2px; }
     ${p}.section { margin-bottom: 14px; }
     ${p}.section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #555; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px; }
-    ${p}.customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 16px; overflow: hidden; }
-    ${p}.customer-grid .field-group { overflow: hidden; }
-    ${p}.customer-grid .field-group > *:not(.field-label) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    ${p}.field-group { display: flex; flex-direction: column; margin-bottom: 4px; }
+    /* Long values wrap inside their own column and the row grows — nothing
+       on a signed work order is ever cut off. minmax(0, …) keeps a column
+       at its share however long its content; overflow-wrap lets an email
+       or a serial with no spaces break mid-string when it must. Company and
+       Email get a little more room than Contact and Phone. */
+    ${p}.customer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.9fr); gap: 4px 16px; }
+    ${p}.field-group { display: flex; flex-direction: column; margin-bottom: 4px; min-width: 0; }
+    ${p}.field-group > *:not(.field-label) { overflow-wrap: anywhere; word-break: break-word; }
     ${p}.field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #555; letter-spacing: 0.05em; }
     ${p}.muted { color: #333; font-style: normal; }
     ${p}.tool-card { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     ${p}.tool-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
     ${p}.tool-num { width: 24px; height: 24px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
-    ${p}.tool-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    ${p}.tool-title { flex: 1; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
     ${p}.tool-title strong { font-size: 12px; }
     ${p}.tool-title .muted { font-size: 12px; }
     ${p}.tool-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
@@ -64,7 +68,7 @@ function getStyles(prefix) {
     ${p}.badge.priority-rush { background: #fff; color: #000; border-color: #000; }
     ${p}.badge.priority-urgent { background: #000; color: #fff; border-color: #000; }
     ${p}.badge.warranty { background: #fff; color: #000; border-color: #000; }
-    ${p}.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 12px; margin-bottom: 8px; }
+    ${p}.tool-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 12px; margin-bottom: 8px; }
     ${p}.notes-block { margin-bottom: 8px; padding: 6px 10px; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 4px; }
     ${p}.notes-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 2px; }
     ${p}.notes-text { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
@@ -82,7 +86,7 @@ function getStyles(prefix) {
     ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: fixed; }
     /* Fixed proportions: Part 44 · Part # 22 · Qty 8 · Price 13 · Total 13.
        A long name or number wraps inside its own column. */
-    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: 44%; word-break: break-word; }
+    ${p}.parts-table th:nth-child(1), ${p}.parts-table td:nth-child(1) { width: 44%; overflow-wrap: anywhere; word-break: break-word; }
     ${p}.parts-table th:nth-child(2), ${p}.parts-table td:nth-child(2) { width: 22%; word-break: break-all; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10.5px; }
     ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { width: 8%; white-space: nowrap; }
     ${p}.parts-table th:nth-child(4), ${p}.parts-table td:nth-child(4) { width: 13%; white-space: nowrap; }
@@ -303,7 +307,7 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
         <div class="field-group"><div class="field-label">Contact</div><div>${escHtml(job.first_name.toUpperCase())} ${escHtml(job.last_name.toUpperCase())}</div></div>
         <div class="field-group"><div class="field-label">Email</div><div>${escHtml(job.email)}</div></div>
         <div class="field-group"><div class="field-label">Phone</div><div>${escHtml(job.phone)}</div></div>
-        ${job.address ? `<div class="field-group" style="grid-column:span 2"><div class="field-label">Address</div><div>${escHtml(job.address.toUpperCase())}</div></div>` : '<div class="field-group" style="grid-column:span 2"></div>'}
+        ${job.address ? `<div class="field-group" style="grid-column:span 4"><div class="field-label">Address</div><div>${escHtml(job.address.toUpperCase())}</div></div>` : ''}
       </div>
     </div>
 
@@ -328,7 +332,9 @@ function buildPrintContent(job, businessInfo, serviceAgreement, opts = {}) {
   return `<style>${getStyles('#print-work-order-root')}</style>${buildBody(job, businessInfo, serviceAgreement, opts)}`;
 }
 
-function buildFullHTML(job, businessInfo, serviceAgreement, opts = {}) {
+// The standalone document: what a phone prints in a new tab, and what the
+// Send Work Order modal posts so the emailed PDF is this very page.
+export function buildFullHTML(job, businessInfo, serviceAgreement, opts = {}) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

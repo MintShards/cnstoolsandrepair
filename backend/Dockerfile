@@ -5,9 +5,18 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies. The pango/harfbuzz libraries and the fonts are
+# for WeasyPrint, which renders the work order PDF the customer email
+# attaches from the print's HTML (Liberation Sans stands in for Arial).
 RUN apt-get update && apt-get install -y \
     gcc \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libharfbuzz-subset0 \
+    libfontconfig1 \
+    fonts-liberation \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements

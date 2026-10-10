@@ -2371,6 +2371,9 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
         <SendWorkOrderEmailModal
           job={job}
           template={settings?.workOrderEmailTemplate}
+          businessInfo={settings?.contact}
+          serviceAgreement={serviceAgreement}
+          history={returningMap}
           onClose={() => setEmailOpen(false)}
           onSuccess={(sentTo) => {
             setEmailOpen(false);

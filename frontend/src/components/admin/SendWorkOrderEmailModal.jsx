@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { repairsAPI } from '../../services/api';
+import { buildFullHTML } from './PrintWorkOrder';
 
 /**
  * Modal for sending a work order email to the customer.
  * Props:
  *   job            - RepairJobResponse object
  *   template       - workOrderEmailTemplate from business settings
+ *   businessInfo, serviceAgreement, history - what the Print button gets:
+ *                    the attached PDF is rendered from the same HTML the
+ *                    print uses, so the two can never drift
  *   onClose        - called when modal is dismissed
  *   onSuccess      - called with sentTo string when send succeeds
  */
-export default function SendWorkOrderEmailModal({ job, template, onClose, onSuccess }) {
+export default function SendWorkOrderEmailModal({ job, template, businessInfo, serviceAgreement, history, onClose, onSuccess }) {
   const t = template || {};
 
   // Resolve template variables in a string
@@ -51,6 +55,8 @@ export default function SendWorkOrderEmailModal({ job, template, onClose, onSucc
         recipient_email: recipientEmail.trim() || null,
         subject: subject.trim() || null,
         custom_message: customMessage.trim() || null,
+        // The print, as the browser would print it: the PDF is made from this.
+        work_order_html: buildFullHTML(job, businessInfo, serviceAgreement, { history }),
       });
       onSuccess && onSuccess(result.sent_to);
     } catch (err) {
