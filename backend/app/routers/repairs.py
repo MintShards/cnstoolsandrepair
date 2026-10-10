@@ -1380,6 +1380,8 @@ async def list_repair_jobs(
             {"tools.controller_serial": {"$regex": escaped, "$options": "i"}},
             {"tools.reel_model": {"$regex": escaped, "$options": "i"}},
             {"tools.reel_serial": {"$regex": escaped, "$options": "i"}},
+            # The shop's internal note on the work order.
+            {"internal_notes": {"$regex": escaped, "$options": "i"}},
         ]
 
     total = await db.repairs.count_documents(query)
