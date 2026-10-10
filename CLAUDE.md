@@ -103,6 +103,9 @@ Client → React SPA → Axios (`api.js`) → FastAPI routers → MongoDB Atlas 
 }
 
 // repairs - Full repair job lifecycle (source: online_request|drop_off|phone_in|email)
+//           internal_notes: the shop's own note on the work order (job-level, ≤5000 chars) — shown in the
+//           dialog's Internal Note card and as an amber sticky icon in the jobs list; NEVER on the work order
+//           print, the tool tag or the customer email. customer_notes is the customer PROFILE's note, copied on.
 //           Per-tool accounting fields: diagnostics[{id, diagnosis, solution, parts, code, customer_explanation}], extra_charges[{description, amount}],
 //           invoiced_amount (pre-tax Zoho figure), labour_cost_override (flat $ for the tool), tax_status (taxable|pst_exempt|tax_exempt)
 // technicians - Staff/technician directory

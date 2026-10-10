@@ -585,6 +585,10 @@ class RepairJobCreate(BaseModel):
     phone: Optional[str] = Field(None, min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
     customer_notes: Optional[str] = Field(None, max_length=2000)
+    # The shop's own note on this work order. Never printed on the work
+    # order or the tool tag, never emailed — the dialog and the jobs list
+    # are the only places it shows.
+    internal_notes: Optional[str] = Field(None, max_length=5000)
     source: RepairSource = RepairSource.DROP_OFF
     source_quote_id: Optional[str] = None
     tools: List[ToolItemCreate] = Field(..., min_length=1)
@@ -609,6 +613,7 @@ class RepairJobUpdate(BaseModel):
     phone: Optional[str] = Field(None, min_length=12, max_length=12)
     address: Optional[str] = Field(None, max_length=500)
     customer_notes: Optional[str] = Field(None, max_length=2000)
+    internal_notes: Optional[str] = Field(None, max_length=5000)
 
     @field_validator('phone', mode='before')
     @classmethod
@@ -632,6 +637,7 @@ class RepairJobResponse(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     customer_notes: Optional[str] = None
+    internal_notes: Optional[str] = None
     source: RepairSource
     source_quote_id: Optional[str] = None
     tools: List[ToolItemResponse]

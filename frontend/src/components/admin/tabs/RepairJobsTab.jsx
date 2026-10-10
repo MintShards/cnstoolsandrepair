@@ -58,7 +58,7 @@ const PriorityBadge = ({ priority }) => {
 
 const getEmptyJob = () => ({
   customer_id: null, company_name: '', first_name: '', last_name: '', email: '', phone: '',
-  address: '', customer_notes: '', source: 'drop_off', tools: [getEmptyTool()]
+  address: '', customer_notes: '', internal_notes: '', source: 'drop_off', tools: [getEmptyTool()]
 });
 
 export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustomerUsed, onCountUpdate, externalOpenNewJob, onExternalOpenNewJobHandled }) {
@@ -544,6 +544,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
         payload = {
           customer_id: newJobForm.customer_id,
           customer_notes: newJobForm.customer_notes || null,
+          internal_notes: newJobForm.internal_notes?.trim() || null,
           source: newJobForm.source,
           tools,
         };
@@ -556,6 +557,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
           phone: newJobForm.phone,
           address: newJobForm.address || null,
           customer_notes: newJobForm.customer_notes || null,
+          internal_notes: newJobForm.internal_notes?.trim() || null,
           source: newJobForm.source,
           tools,
         };
@@ -1165,6 +1167,9 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                         {alertLevel === 'stale' && (
                           <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{fontSize:'14px'}} title={`No update in ${staleDays}+ days`}>warning</span>
                         )}
+                        {job.internal_notes && (
+                          <span className="material-symbols-outlined text-amber-600 dark:text-amber-400" style={{fontSize:'14px'}} title={`Internal note: ${job.internal_notes}`} aria-label="Has an internal note">sticky_note_2</span>
+                        )}
                       </div>
                       {job.source === 'online_request' && (
                         <span className="inline-flex items-center gap-1 text-xs text-sky-400 mt-0.5">
@@ -1613,14 +1618,27 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                           </div>
-                          {/* Internal Notes */}
+                          {/* Customer notes live on the customer's profile (and
+                              show under Customer on the work order); the work
+                              order note below is this job's own and shop-only. */}
                           <div>
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Internal Notes</label>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Customer Notes</label>
                             <textarea
                               value={newJobForm.customer_notes || ''}
                               onChange={(e) => setNewJobForm({ ...newJobForm, customer_notes: e.target.value })}
                               rows={2}
-                              placeholder="Optional"
+                              placeholder="Optional — saved on the customer's profile"
+                              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Work Order Note</label>
+                            <textarea
+                              value={newJobForm.internal_notes || ''}
+                              onChange={(e) => setNewJobForm({ ...newJobForm, internal_notes: e.target.value })}
+                              rows={2}
+                              maxLength={5000}
+                              placeholder="Optional — anything the shop should know about this job"
                               className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                             />
                           </div>
@@ -1630,6 +1648,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                   </>
                 ) : (
                   /* Selected customer summary card */
+                  <>
                   <div className="bg-white dark:bg-slate-900 rounded-lg border border-primary/40 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -1647,6 +1666,20 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
                       </button>
                     </div>
                   </div>
+                  {/* The work order's own note, shop-only — a known customer's
+                      profile notes already live on their record. */}
+                  <div className="mt-3">
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Work Order Note</label>
+                    <textarea
+                      value={newJobForm.internal_notes || ''}
+                      onChange={(e) => setNewJobForm({ ...newJobForm, internal_notes: e.target.value })}
+                      rows={2}
+                      maxLength={5000}
+                      placeholder="Optional — anything the shop should know about this job"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    />
+                  </div>
+                  </>
                 )}
 
                 {/* Step 1 actions */}

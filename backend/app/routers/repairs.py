@@ -25,6 +25,7 @@ from app.services.file_service import save_upload_file, delete_file
 from app.services.work_order_email_service import send_work_order_email
 from app.services.activity_service import (
     actor_ref, record_activity, diff_tool, diff_customer, tool_label, customer_display,
+    describe_text_change,
 )
 from app.services.push_service import notification, send_push
 from app.utils.helpers import convert_objectid_to_str
@@ -1719,6 +1720,7 @@ async def create_repair_job(
         "request_number": request_number,
         "source": job_data.source.value,
         "source_quote_id": job_data.source_quote_id,
+        "internal_notes": (job_data.internal_notes or "").strip() or None,
         "tools": tools,
         "created_by": actor_ref(current_user),
         "created_at": datetime.utcnow(),
@@ -2163,6 +2165,12 @@ async def update_repair_job(
 
     update_data = job_update.model_dump(exclude_unset=True)
     changes = diff_customer(existing, update_data)
+    # The internal note is logged as a change, never as content.
+    if "internal_notes" in update_data:
+        update_data["internal_notes"] = (update_data["internal_notes"] or "").strip() or None
+        note_change = describe_text_change(existing.get("internal_notes"), update_data["internal_notes"], "Internal note")
+        if note_change:
+            changes.append(note_change)
     update_data["updated_at"] = datetime.utcnow()
 
     await db.repairs.update_one({"_id": object_id}, {"$set": update_data})

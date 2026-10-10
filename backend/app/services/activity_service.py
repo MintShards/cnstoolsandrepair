@@ -150,6 +150,21 @@ VALUE_LABELS = {
 FIELD_DEFAULTS = {"tax_status": "taxable"}
 
 
+def describe_text_change(before, after, label: str):
+    """'<label> added' / 'updated' / 'cleared' for a free-text field whose
+    content should stay out of the log (a work order's internal note), or
+    None when it did not change."""
+    b = before.strip() if isinstance(before, str) else (before or "")
+    a = after.strip() if isinstance(after, str) else (after or "")
+    if b == a:
+        return None
+    if not b:
+        return f"{label} added"
+    if not a:
+        return f"{label} cleared"
+    return f"{label} updated"
+
+
 def diff_fields(old: dict, new: dict, labels: dict) -> list:
     """Human lines for the labelled keys present in `new` whose value changed."""
     lines = []

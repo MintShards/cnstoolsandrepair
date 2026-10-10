@@ -179,6 +179,24 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
   };
   const [paymentSeed, setPaymentSeed] = useState(null);
   const [moneyTick, setMoneyTick] = useState(0);
+  // The work order's internal note: null = reading, a string = the draft
+  // being edited. Shop-only — never printed, tagged or emailed.
+  const [noteDraft, setNoteDraft] = useState(null);
+  const [savingNote, setSavingNote] = useState(false);
+  const saveNote = async () => {
+    if (noteDraft === null) return;
+    setSavingNote(true);
+    try {
+      const updated = await repairsAPI.update(job.id, { internal_notes: noteDraft.trim() || null });
+      onJobUpdated(updated);
+      setNoteDraft(null);
+      showToast('success', noteDraft.trim() ? 'Note saved' : 'Note cleared');
+    } catch (err) {
+      showToast('error', getErrorMessage(err, 'Failed to save the note'));
+    } finally {
+      setSavingNote(false);
+    }
+  };
   // One fetch of the job's bills and payments (admins only), feeding the
   // accounting block and each tool's subtotal.
   const money = useJobMoney(job.id, isAdmin, moneyTick);
@@ -1152,6 +1170,57 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                     ); })()}
                   </div>
                 )}
+              </div>
+
+              {/* Internal note — the shop's own note on this work order.
+                  Everyone in the shop sees it; it never reaches the work
+                  order print, the tool tag or the customer email. Amber when
+                  there is one, so it reads like the sticky note it is. */}
+              <div className={`rounded-xl border overflow-hidden shadow-sm ${
+                job.internal_notes
+                  ? 'bg-amber-50/70 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/60'
+              }`}>
+                <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-slate-200/60 dark:border-slate-700/40">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`material-symbols-outlined text-base ${job.internal_notes ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>sticky_note_2</span>
+                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Internal Note</h4>
+                  </div>
+                  {noteDraft === null && (
+                    <button
+                      onClick={() => setNoteDraft(job.internal_notes || '')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>{job.internal_notes ? 'edit' : 'add'}</span>
+                      {job.internal_notes ? 'Edit' : 'Add note'}
+                    </button>
+                  )}
+                </div>
+                <div className="px-4 py-3">
+                  {noteDraft !== null ? (
+                    <>
+                      <textarea
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        rows={3}
+                        maxLength={5000}
+                        autoFocus
+                        placeholder="Anything the shop should know about this work order…"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={() => setNoteDraft(null)} disabled={savingNote} className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] sm:min-h-0 bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600/50 text-slate-900 dark:text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">Cancel</button>
+                        <button onClick={saveNote} disabled={savingNote} className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] sm:min-h-0 bg-primary hover:bg-blue-500 shadow-md shadow-primary/20 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
+                          {savingNote ? 'Saving…' : 'Save Note'}
+                        </button>
+                      </div>
+                    </>
+                  ) : job.internal_notes ? (
+                    <p className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words">{job.internal_notes}</p>
+                  ) : (
+                    <p className="text-sm text-slate-400 dark:text-slate-500 italic">No note on this work order.</p>
+                  )}
+                </div>
               </div>
 
               {/* Job accounting — admin only: tool charges + Cash Flow */}
