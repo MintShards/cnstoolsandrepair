@@ -40,7 +40,11 @@ function getStyles(prefix) {
     ${p}* { box-sizing: border-box; margin: 0; padding: 0; }
     ${s} { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #000; background: #fff; padding: 24px; }
     ${p}.doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; }
-    ${p}.company-name { font-family: 'Russo One', sans-serif; font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; color: #000; }
+    ${p}.company-name { font-family: 'Russo One', sans-serif; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; color: #000; }
+    /* The one colour on the sheet: the brand's scarlet on "CNS" in the
+       company name, as the logo wears it. Text colour prints in Chrome's
+       Save as PDF and in the emailed PDF alike. */
+    ${p}.company-accent { color: #FF2400; }
     ${p}.company-sub { font-size: 11px; color: #333; margin-top: 2px; }
     ${p}.wo-block { text-align: right; }
     ${p}.wo-number { font-size: 22px; font-weight: 900; font-family: monospace; color: #000; }
@@ -59,30 +63,33 @@ function getStyles(prefix) {
     ${p}.muted { color: #333; font-style: normal; }
     ${p}.tool-card { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     ${p}.tool-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-    ${p}.tool-num { width: 24px; height: 24px; background: #f5f5f5; border: 1px solid #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
+    /* No background fills anywhere: Chrome's Save as PDF drops them unless
+       "Background graphics" is ticked, while the emailed PDF (WeasyPrint)
+       prints them — borders only keeps the two identical. */
+    ${p}.tool-num { width: 24px; height: 24px; border: 1px solid #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; flex-shrink: 0; }
     ${p}.tool-title { flex: 1; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
     ${p}.tool-title strong { font-size: 12px; }
     ${p}.tool-title .muted { font-size: 12px; }
     ${p}.tool-badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
-    ${p}.badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid #000; }
-    ${p}.badge.priority-rush { background: #fff; color: #000; border-color: #000; }
-    ${p}.badge.priority-urgent { background: #000; color: #fff; border-color: #000; }
-    ${p}.badge.warranty { background: #fff; color: #000; border-color: #000; }
+    ${p}.badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; color: #000; border: 1px solid #000; }
+    ${p}.badge.priority-urgent { border-width: 2px; }
     ${p}.tool-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 12px; margin-bottom: 8px; }
-    ${p}.notes-block { margin-bottom: 8px; padding: 6px 10px; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 4px; }
-    ${p}.notes-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 2px; }
+    /* Black and white only — the sheet is printed and emailed as a PDF, so
+       every tone here is a neutral grey; nothing carries a hue. */
+    ${p}.notes-block { margin-bottom: 8px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+    ${p}.notes-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin-bottom: 2px; }
     ${p}.notes-text { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
     ${p}.diag-list { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.5; }
     ${p}.diag-list li { margin-bottom: 2px; }
     ${p}.diag-parts { font-size: 10px; color: #555; }
-    ${p}.diag-solution { color: #374151; }
-    ${p}.history-block { margin-bottom: 8px; padding: 6px 10px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 4px; }
+    ${p}.diag-solution { color: #333; }
+    ${p}.history-block { margin-bottom: 8px; padding: 6px 10px; border: 1px solid #999; border-radius: 4px; }
     ${p}.history-visit { font-size: 11px; line-height: 1.5; margin-bottom: 3px; }
     ${p}.history-visit:last-child { margin-bottom: 0; }
     ${p}.history-detail { font-size: 10px; color: #555; }
-    ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
+    ${p}.camera-intake { margin-bottom: 8px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
     ${p}.camera-line { font-size: 11px; line-height: 1.5; }
-    ${p}.camera-label { display: inline-block; margin-right: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+    ${p}.camera-label { display: inline-block; margin-right: 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #555; }
     ${p}.parts-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; table-layout: fixed; }
     /* Fixed proportions: Part 44 · Part # 22 · Qty 8 · Price 13 · Total 13.
        A long name or number wraps inside its own column. */
@@ -91,7 +98,7 @@ function getStyles(prefix) {
     ${p}.parts-table th:nth-child(3), ${p}.parts-table td:nth-child(3) { width: 8%; white-space: nowrap; }
     ${p}.parts-table th:nth-child(4), ${p}.parts-table td:nth-child(4) { width: 13%; white-space: nowrap; }
     ${p}.parts-table th:nth-child(5), ${p}.parts-table td:nth-child(5) { width: 13%; white-space: nowrap; }
-    ${p}.parts-table th { background: #f5f5f5; border: 1px solid #ccc; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #333; text-align: left; }
+    ${p}.parts-table th { border: 1px solid #ccc; padding: 4px 8px; font-size: 10px; text-transform: uppercase; color: #333; text-align: left; }
     ${p}.parts-table td { border: 1px solid #ccc; padding: 4px 8px; }
     ${p}.center, ${p}.parts-table th.center { text-align: center; }
     ${p}.right, ${p}.parts-table th.right { text-align: right; }
@@ -153,7 +160,7 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
       // shop-side detail that stays on the tracker, not the customer's copy.
       return `
         <tr>
-          <td>${escHtml((p.name || '').toUpperCase())}${postOrderInfo ? `<br><span style="font-size:10px;color:#6b7280;">${escHtml(postOrderInfo)}</span>` : ''}</td>
+          <td>${escHtml((p.name || '').toUpperCase())}${postOrderInfo ? `<br><span style="font-size:10px;color:#555;">${escHtml(postOrderInfo)}</span>` : ''}</td>
           <td>${p.part_number ? escHtml(String(p.part_number).toUpperCase()) : '—'}</td>
           <td class="center">${p.quantity ?? 1}</td>
           <td class="right">${p.price != null && p.price !== '' ? '$' + parseFloat(p.price).toFixed(2) : '—'}</td>
@@ -228,7 +235,7 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
 
     const partsTotal = filteredParts.filter(p => p.price != null && p.price !== '').reduce((sum, p) => sum + parseFloat(p.price) * (p.quantity || 1), 0);
     const partsTotalRow = filteredParts.length > 0 && partsTotal > 0 ? `
-      <tr style="border-top:2px solid #e2e8f0;font-weight:700;">
+      <tr style="border-top:2px solid #ccc;font-weight:700;">
         <td colspan="4" class="right" style="padding-top:6px;">Parts Subtotal</td>
         <td class="right" style="padding-top:6px;">$${partsTotal.toFixed(2)}</td>
       </tr>
@@ -287,10 +294,17 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
     `;
   }).join('');
 
+  // "CNS Tool Repair" → CNS in the brand's scarlet, "Tool Repair" in black,
+  // as the logo wears it; a name that doesn't end that way prints plain.
+  const accent = /^(.*?)\s*(tool repair)$/i.exec((name || '').trim());
+  const nameHTML = accent && accent[1]
+    ? `<span class="company-accent">${escHtml(accent[1])}</span> ${escHtml(accent[2])}`
+    : escHtml(name);
+
   return `
     <div class="doc-header">
       <div>
-        <div class="company-name">${escHtml(name)}</div>
+        <div class="company-name">${nameHTML}</div>
         <div class="company-sub">${escHtml(addr)}</div>
         <div class="company-sub">${escHtml(phone)} · ${escHtml(email)}</div>
       </div>
