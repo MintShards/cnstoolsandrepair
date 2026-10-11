@@ -1442,6 +1442,16 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
             })}
           </div>
         )}
+        {/* The library count follows these rows: a received part is booked
+            into the parts library, an installed one is taken out, and a part
+            marked In Stock was already there. Said once, under the list. */}
+        {(data.parts || []).some((p) => p.library_part_id) && (
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+            Library stock: <span className="font-semibold text-slate-500 dark:text-slate-400">Received</span> books a part in,
+            {' '}<span className="font-semibold text-slate-500 dark:text-slate-400">Installed</span> takes it out,
+            {' '}<span className="font-semibold text-slate-500 dark:text-slate-400">In Stock</span> means it was already on the shelf.
+          </p>
+        )}
       </div>}
 
       {/* Sections 5–8 read the way the work order's accounting does: what the

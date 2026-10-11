@@ -1948,14 +1948,15 @@ function PartsView({ model, compatGroups, onBack }) {
                                       }`}>
                                         {entry.source === 'auto' ? 'Auto' : 'Manual'}
                                       </span>
-                                      {/* Job reference */}
-                                      {entry.reference_job_id && (
+                                      {/* Work order reference (older entries only carry the job id) */}
+                                      {(entry.reference_request_number || entry.reference_job_id) && (
                                         <span className="text-[9px] font-mono bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded">
-                                          Job: {entry.reference_job_id.slice(-6)}
+                                          {entry.reference_request_number || `Job: ${entry.reference_job_id.slice(-6)}`}
+                                          {entry.reference_tool_label ? ` · ${entry.reference_tool_label}` : ''}
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-slate-600 dark:text-slate-300 block truncate">{entry.reason}</span>
+                                    <span className="text-slate-600 dark:text-slate-300 block truncate">{entry.label || entry.reason}{entry.part_row_name ? ` — ${entry.part_row_name}` : ''}</span>
                                     {entry.adjusted_by && (
                                       <span className="text-[10px] text-slate-400 dark:text-slate-500">{entry.adjusted_by}</span>
                                     )}

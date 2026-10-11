@@ -150,6 +150,12 @@ class PartItem(BaseModel):
     component: Optional[str] = None
     needs_sourcing: bool = False
     sourcing_emailed: bool = False
+    # Stable row id and the library stock this row has moved (booked in on
+    # receipt, taken out on install) — all three are set by the server
+    # (services/stock_service.py); whatever a client sends is ignored.
+    id: Optional[str] = Field(None, max_length=50)
+    stock_booked_qty: int = Field(default=0, ge=0)
+    stock_deducted_qty: int = Field(default=0, ge=0)
 
     @field_validator('price', 'cost', mode='before')
     @classmethod

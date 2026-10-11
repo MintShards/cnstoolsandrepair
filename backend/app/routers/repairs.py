@@ -28,6 +28,7 @@ from app.services.activity_service import (
     describe_text_change,
 )
 from app.services.push_service import notification, send_push
+from app.services.stock_service import plan_part_stock, plan_parts_removed, apply_stock_moves
 from app.utils.helpers import convert_objectid_to_str
 
 router = APIRouter(prefix="/api/repairs", tags=["repairs"])
@@ -62,38 +63,6 @@ async def _configured_final_checklist(db) -> Optional[list]:
     return None
 
 
-async def _adjust_library_part_stock(db, library_part_id: str, delta: int, reason: str,
-                                      job_id: str = None, tool_id: str = None):
-    """Adjust stock for a library part. Floors at 0. Appends to stock_history."""
-    try:
-        oid = ObjectId(library_part_id)
-    except Exception:
-        return
-    part = await db.parts_library_parts.find_one({"_id": oid})
-    if not part:
-        return
-    old_qty = part.get("quantity_on_hand", 0) or 0
-    new_qty = max(0, old_qty + delta)
-    now = datetime.utcnow()
-    history_entry = {
-        "timestamp": now,
-        "delta": delta,
-        "reason": reason,
-        "resulting_quantity": new_qty,
-        "reference_job_id": job_id,
-        "reference_tool_id": tool_id,
-        "adjusted_by": "system",
-        "source": "auto",
-    }
-    await db.parts_library_parts.update_one(
-        {"_id": oid},
-        {
-            "$set": {"quantity_on_hand": new_qty, "updated_at": now},
-            "$push": {"stock_history": {"$each": [history_entry], "$slice": -200}}
-        }
-    )
-
-
 def _migrate_tool_parts(tool: dict) -> dict:
     """Migrate old parts_needed string to parts list for backward compat"""
     if "parts_needed" in tool and "parts" not in tool:
@@ -123,6 +92,8 @@ def _migrate_tool_parts(tool: dict) -> dict:
         part.setdefault("part_number", None)
         part.setdefault("library_part_id", None)
         part.setdefault("component", None)
+        part.setdefault("stock_booked_qty", 0)
+        part.setdefault("stock_deducted_qty", 0)
     # The per-tool labour cost override used to be an hourly rate; it is now a
     # flat amount for the tool. An old value carries over as that flat amount
     # (the few that existed were typed as "what this job's labour costs").
@@ -1553,18 +1524,16 @@ async def batch_update_tool_status(
             if item.new_status == RepairStatus.COMPLETED:
                 set_data[f"tools.{tool_index}.date_completed"] = now
 
-            # Auto-mark all parts as installed when tool moves to "ready"
-            # If a part wasn't used, it should be deleted from the job before reaching ready
-            ready_stock_adjustments = []
+            # Every part is installed once the tool is ready; the library
+            # sees it through the stock plan (stock_service).
+            stock_plan = None
+            new_rows = None
             if item.new_status == RepairStatus.READY:
-                tool_parts = tools[tool_index].get("parts", [])
-                for pi, part in enumerate(tool_parts):
-                    if part.get("status") != "installed":
-                        set_data[f"tools.{tool_index}.parts.{pi}.status"] = "installed"
-                        lib_id = part.get("library_part_id")
-                        if lib_id:
-                            qty = part.get("quantity", 1) or 1
-                            ready_stock_adjustments.append((lib_id, -qty))
+                old_rows = tools[tool_index].get("parts", [])
+                new_rows = [dict(p, status="installed") if p.get("status") != "installed" else dict(p) for p in old_rows]
+                stock_plan = await plan_part_stock(db, job_id=str(object_id), tool_id=item.tool_id,
+                                                   old_parts=old_rows, new_parts=new_rows)
+                set_data[f"tools.{tool_index}.parts"] = new_rows
 
             try:
                 await db.repairs.update_one(
@@ -1576,17 +1545,11 @@ async def batch_update_tool_status(
                 )
                 # Update local copy so subsequent items in same job see new status
                 tools[tool_index]["status"] = new_status
-                if item.new_status == RepairStatus.READY:
-                    for _part in tools[tool_index].get("parts", []):
-                        if _part.get("status") != "installed":
-                            _part["status"] = "installed"
-                # Apply stock decrements for auto-installed parts
+                if new_rows is not None:
+                    tools[tool_index]["parts"] = new_rows
                 job_id_str = str(object_id)
-                for lib_id, delta in ready_stock_adjustments:
-                    await _adjust_library_part_stock(
-                        db, lib_id, delta, "auto_installed_ready",
-                        job_id=job_id_str, tool_id=item.tool_id
-                    )
+                if stock_plan:
+                    await apply_stock_moves(db, stock_plan, job=job, tool=tools[tool_index], actor=actor_ref(current_user))
                 if item.new_status == RepairStatus.READY:
                     ready_pushes.append((job_id_str, f"{tool_label(tools[tool_index])} on {job.get('request_number')} — {customer_display(job)}"))
                 results.append(BatchStatusResult(
@@ -1702,6 +1665,7 @@ async def create_repair_job(
 
     # Build tool items with generated tool_ids and initial status_history
     tools = []
+    stock_plans = []   # (tool_dict, StockPlan) — applied once the job exists
     for tool_in in job_data.tools:
         tool = ToolItem(**tool_in.model_dump())
         tool_dict = tool.model_dump()
@@ -1717,6 +1681,8 @@ async def create_repair_job(
             "notes": "Job created",
             "by": actor_ref(current_user),
         }]
+        stock_plans.append((tool_dict, await plan_part_stock(
+            db, job_id=None, tool_id=tool_dict.get("tool_id"), old_parts=[], new_parts=tool_dict.get("parts"))))
         tools.append(tool_dict)
 
     job_dict = {
@@ -1732,6 +1698,13 @@ async def create_repair_job(
     job_dict.update(customer_fields)
 
     result = await db.repairs.insert_one(job_dict)
+
+    # Parts recorded as received or installed on the way in move the
+    # library count like any later save would (stock_service).
+    job_dict["_id"] = result.inserted_id
+    for tool_dict, stock_plan in stock_plans:
+        if stock_plan:
+            await apply_stock_moves(db, stock_plan, job=job_dict, tool=tool_dict, actor=actor_ref(current_user))
 
     created_job = await db.repairs.find_one({"_id": result.inserted_id})
     created_job = convert_objectid_to_str(created_job)
@@ -2227,9 +2200,19 @@ async def delete_repair_job(
             except Exception as e:
                 logger.warning(f"Failed to delete photo {photo}: {str(e)}")
 
+    # Whatever the job's parts took out of the library comes back.
+    stock_plans = []
+    for t in job.get("tools", []):
+        stock_plans.append((t, await plan_parts_removed(db, job_id=job_id, tool_id=t.get("tool_id"),
+                                                        parts=t.get("parts"), reason="job_deleted")))
+
     result = await db.repairs.delete_one({"_id": object_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=500, detail="Failed to delete repair job")
+
+    for t, stock_plan in stock_plans:
+        if stock_plan:
+            await apply_stock_moves(db, stock_plan, job=job, tool=t, actor=actor_ref(current_user))
 
     n_tools = len(job.get("tools", []))
     await record_activity(
@@ -2278,6 +2261,11 @@ async def add_tool(
         "by": actor_ref(current_user),
     }]
 
+    # Parts recorded as received or installed on the way in move the library
+    # count like any later save would (stock_service).
+    stock_plan = await plan_part_stock(db, job_id=job_id, tool_id=tool_dict.get("tool_id"),
+                                       old_parts=[], new_parts=tool_dict.get("parts"))
+
     await db.repairs.update_one(
         {"_id": object_id},
         {
@@ -2285,6 +2273,9 @@ async def add_tool(
             "$set": {"updated_at": datetime.utcnow()}
         }
     )
+
+    if stock_plan:
+        await apply_stock_moves(db, stock_plan, job=existing, tool=tool_dict, actor=actor_ref(current_user))
 
     updated_job = await db.repairs.find_one({"_id": object_id})
     updated_job = convert_objectid_to_str(updated_job)
@@ -2331,14 +2322,18 @@ async def update_tool(
     # the parts loop below decorates the incoming parts with dates.
     changes = diff_tool(tools[tool_index], update_fields)
 
-    # Auto-set order_date and date_received when part status changes
-    # Also track stock adjustments for inventory
-    stock_adjustments = []
+    # Auto-set order_date and date_received when part status changes, then
+    # plan the library stock moves this save implies (stock_service: booked
+    # in on receipt, taken out on install; rows matched by their id, the
+    # running counters kept on the row).
+    stock_plan = None
     if "parts" in update_fields:
         now = datetime.utcnow()
-        old_parts = {p.get("name", ""): p for p in tools[tool_index].get("parts", [])}
+        old_rows = tools[tool_index].get("parts", [])
+        old_by_id = {p.get("id"): p for p in old_rows if p.get("id")}
+        old_by_name = {(p.get("name") or "").strip().lower(): p for p in old_rows}
         for part in update_fields["parts"]:
-            old = old_parts.get(part.get("name", ""), {})
+            old = old_by_id.get(part.get("id")) or old_by_name.get((part.get("name") or "").strip().lower(), {})
             new_status = part.get("status")
             old_status = old.get("status")
             if new_status == "ordered" and not part.get("order_date") and old_status != "ordered":
@@ -2346,14 +2341,10 @@ async def update_tool(
             if new_status == "received" and not part.get("date_received") and old_status != "received":
                 part["date_received"] = now
             # in_stock: part available from inventory — no order/receive dates needed
-            # Stock: decrement when installed, increment back if reversed from installed
-            lib_id = part.get("library_part_id") or old.get("library_part_id")
-            if lib_id:
-                qty = part.get("quantity", 1) or 1
-                if new_status == "installed" and old_status not in ("installed",):
-                    stock_adjustments.append((lib_id, -qty, "installed_in_job"))
-                elif old_status == "installed" and new_status != "installed":
-                    stock_adjustments.append((lib_id, qty, "reversed_from_installed"))
+        stock_plan = await plan_part_stock(
+            db, job_id=str(object_id), tool_id=tool_id,
+            old_parts=old_rows, new_parts=update_fields["parts"],
+        )
 
     if "parts" in update_fields:
         await _fill_part_costs(db, update_fields["parts"])
@@ -2365,10 +2356,9 @@ async def update_tool(
 
     await db.repairs.update_one({"_id": object_id}, {"$set": set_data})
 
-    # Apply stock adjustments after successful DB update
-    job_id_str = str(object_id)
-    for lib_id, delta, reason in stock_adjustments:
-        await _adjust_library_part_stock(db, lib_id, delta, reason, job_id=job_id_str, tool_id=tool_id)
+    # The library moves this save implies, now that the rows are stored.
+    if stock_plan:
+        await apply_stock_moves(db, stock_plan, job=job, tool=tools[tool_index], actor=actor_ref(current_user))
 
     if changes:
         await record_activity(
@@ -2513,18 +2503,16 @@ async def update_tool_status(
     if status_update.status == RepairStatus.COMPLETED:
         set_data[f"tools.{tool_index}.date_completed"] = now
 
-    # Auto-mark all parts as installed when tool moves to "ready"
-    # If a part wasn't used, it should be deleted from the job before reaching ready
-    ready_stock_adjustments = []
+    # Every part is installed once the tool is ready — a part that wasn't
+    # used should have been removed from the job first. The library sees
+    # the change through the stock plan (stock_service).
+    stock_plan = None
     if status_update.status == RepairStatus.READY:
-        parts = tools[tool_index].get("parts", [])
-        for pi, part in enumerate(parts):
-            if part.get("status") != "installed":
-                set_data[f"tools.{tool_index}.parts.{pi}.status"] = "installed"
-                lib_id = part.get("library_part_id")
-                if lib_id:
-                    qty = part.get("quantity", 1) or 1
-                    ready_stock_adjustments.append((lib_id, -qty))
+        old_rows = tools[tool_index].get("parts", [])
+        new_rows = [dict(p, status="installed") if p.get("status") != "installed" else dict(p) for p in old_rows]
+        stock_plan = await plan_part_stock(db, job_id=str(object_id), tool_id=tool_id,
+                                           old_parts=old_rows, new_parts=new_rows)
+        set_data[f"tools.{tool_index}.parts"] = new_rows
 
     # Update estimated_completion if provided
     if status_update.estimated_completion:
@@ -2538,12 +2526,9 @@ async def update_tool_status(
         }
     )
 
-    # Apply stock decrements for parts auto-promoted to installed
     job_id_str = str(object_id)
-    for lib_id, delta in ready_stock_adjustments:
-        await _adjust_library_part_stock(
-            db, lib_id, delta, "auto_installed_ready", job_id=job_id_str, tool_id=tool_id
-        )
+    if stock_plan:
+        await apply_stock_moves(db, stock_plan, job=job, tool=tools[tool_index], actor=actor_ref(current_user))
 
     # Everyone else's phone hears about a tool reaching the pickup shelf.
     if status_update.status == RepairStatus.READY:
@@ -2707,6 +2692,11 @@ async def remove_tool(
         except Exception as e:
             logger.warning(f"Failed to delete tool photo {photo}: {str(e)}")
 
+    # What this tool's parts took out of the library comes back; what they
+    # booked in stays — those parts did arrive.
+    stock_plan = await plan_parts_removed(db, job_id=job_id, tool_id=tool_id,
+                                          parts=tool.get("parts"), reason="tool_removed")
+
     await db.repairs.update_one(
         {"_id": object_id},
         {
@@ -2714,6 +2704,9 @@ async def remove_tool(
             "$set": {"updated_at": datetime.utcnow()}
         }
     )
+
+    if stock_plan:
+        await apply_stock_moves(db, stock_plan, job=job, tool=tool, actor=actor_ref(current_user))
 
     await record_activity(
         db, kind="tool_removed", actor=actor_ref(current_user),

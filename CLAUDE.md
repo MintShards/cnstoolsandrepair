@@ -215,7 +215,8 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 # { name, part_number, quantity, price, supplier,
 #   order_link, order_date, eta, date_received,
 #   tracking, library_part_id, component (camera_head|controller|reel|null), needs_sourcing, sourcing_emailed,
-#   notes, status (PartStatus) }
+#   notes, status (PartStatus),
+#   id, stock_booked_qty, stock_deducted_qty (server-set: the row's stable id and the library stock it moved) }
 ```
 
 Repairs router (`routers/repairs.py`) supports server-side pagination with filters, batch status updates, and work order generation.
@@ -236,6 +237,7 @@ work_order_number = await get_next_work_order_number()  # Returns "WO-2026-0001"
 ```
 library_brands → library_models → library_parts
 ```
+- **Library stock is kept by the work orders** (`services/stock_service.py`; the shop's rule since 2026-10-11: a part that ARRIVES is booked into the library and the work order TAKES IT OUT when it is installed, so `quantity_on_hand` is the one count). A job part linked to a library part moves the count in two ways only — booked in (+qty) when its status reaches `received` from pending/ordered (or jumps straight to `installed`: booked and used in one go, two history lines), taken out (−qty) when it reaches `installed`; `in_stock` means it was already on the shelf, so it is only taken out. Every row carries a server-set `id` plus `stock_booked_qty` / `stock_deducted_qty` (client values ignored), so a save is idempotent, an undo returns exactly what was moved, a quantity edit moves only the difference, rows are matched by id (rows from before ids by name, their past deduction read from the part's history), a row removed from the job returns its deduction (the booking stays — the part did arrive), re-linking a row makes the old part whole, and tool removal / job deletion return deductions too. Every write path runs `plan_part_stock` (decide the moves, stamp the rows) BEFORE its DB write and `apply_stock_moves` after it: update-tool, create job, add tool, the single and batch status routes (Ready marks every part installed through the same plan), remove tool, delete job. Counts are NOT floored: a part installed that was never booked in leaves the library below zero, the honest signal that a receipt was skipped (fixed with a manual adjust). History entries carry the WO number, tool label, row name and the person; `GET …/stock-history` adds a plain-words `label` (`REASON_LABELS`). The library's own paths: Adjust Stock (manual, reason) and the part form's Qty on hand (also a history entry now). When a count rises above zero, `pending` job parts linked to it flip to `in_stock` — never `ordered` ones, which await their own delivery and would count twice. The tool form's Parts section shows a one-line legend under the rows.
 - `CompatGroup` links parts across brands (cross-brand interchangeable parts)
 - `/api/parts-library/compatible-parts/{model_id}` returns parts that fit a model, including cross-brand matches
 - Route order rule applies here too: specific paths before `/{id}` parameterized routes

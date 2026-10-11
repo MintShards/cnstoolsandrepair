@@ -18,6 +18,7 @@ from app.models.auth import User
 from app.dependencies.auth import require_staff_or_admin
 from app.services.file_service import save_upload_file, delete_file
 from app.utils.helpers import convert_objectid_to_str
+from app.services.stock_service import REASON_LABELS
 from app.services.activity_service import (
     BRAND_FIELD_LABELS, MODEL_FIELD_LABELS, PART_FIELD_LABELS, actor_ref, diff_fields, record_activity,
 )
@@ -42,7 +43,11 @@ def _to_object_id(id_str: str) -> ObjectId:
 async def _auto_update_repair_parts_to_in_stock(db, library_part_id: str) -> int:
     """
     When a library part comes into stock, find all active repair job parts
-    linked to it with status 'pending' or 'ordered' and flip them to 'in_stock'.
+    linked to it that are still 'pending' and flip them to 'in_stock': the
+    shelf now has what they were waiting for. An 'ordered' part is NOT
+    flipped — it is awaiting its own delivery, which gets booked into the
+    library when it is received on the work order (stock_service); flipping
+    it would make the same unit count twice.
     Returns the number of parts updated.
     """
     terminal_statuses = {"completed", "abandoned", "closed", "declined", "beyond_economical_repair"}
@@ -53,7 +58,7 @@ async def _auto_update_repair_parts_to_in_stock(db, library_part_id: str) -> int
         "tools.parts": {
             "$elemMatch": {
                 "library_part_id": library_part_id,
-                "status": {"$in": ["pending", "ordered"]}
+                "status": "pending"
             }
         }
     })
@@ -68,7 +73,7 @@ async def _auto_update_repair_parts_to_in_stock(db, library_part_id: str) -> int
                 continue
             for part in tool.get("parts", []):
                 if (part.get("library_part_id") == library_part_id
-                        and part.get("status") in ("pending", "ordered")):
+                        and part.get("status") == "pending"):
                     part["status"] = "in_stock"
                     modified = True
                     updated_count += 1
@@ -815,7 +820,21 @@ async def update_library_part(
             raise HTTPException(status_code=400, detail=f"Part number '{updates['part_number']}' already exists for this brand")
 
     updates["updated_at"] = datetime.utcnow()
-    await db.parts_library_parts.update_one({"_id": _to_object_id(part_id)}, {"$set": updates})
+    write = {"$set": updates}
+    # A count typed on the part form is a stock move like any other: it
+    # lands in the part's own history, not only in the activity log.
+    if "quantity_on_hand" in updates and (updates["quantity_on_hand"] or 0) != (doc.get("quantity_on_hand", 0) or 0):
+        old_qty = doc.get("quantity_on_hand", 0) or 0
+        new_qty = updates["quantity_on_hand"] or 0
+        write["$push"] = {"stock_history": {"$each": [{
+            "timestamp": updates["updated_at"],
+            "delta": new_qty - old_qty,
+            "reason": "Count edited on the part form",
+            "resulting_quantity": new_qty,
+            "adjusted_by": current_user.email,
+            "source": "manual",
+        }], "$slice": -200}}
+    await db.parts_library_parts.update_one({"_id": _to_object_id(part_id)}, write)
 
     changes = diff_fields(doc, updates, PART_FIELD_LABELS)
     if "model_ids" in updates and set(updates["model_ids"] or []) != set(doc.get("model_ids") or []):
@@ -1010,7 +1029,9 @@ async def get_stock_history(
 
     history = doc.get("stock_history", [])
     history.reverse()
-    return history
+    # A plain-words label for the automatic reasons; a manual entry's
+    # reason is already the words the person typed.
+    return [{**h, "label": REASON_LABELS.get(h.get("reason"), h.get("reason"))} for h in history]
 
 
 @router.post("/parts/{part_id}/diagrams", response_model=LibraryPartResponse)
