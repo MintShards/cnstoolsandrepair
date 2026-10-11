@@ -11,6 +11,7 @@ import { fetchJobHistory } from '../../../utils/toolHistory';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { useSettings } from '../../../contexts/SettingsContext';
 import WorkOrderDialog from '../shared/WorkOrderDialog';
+import CustomerAccounting from '../shared/CustomerAccounting';
 
 const EMPTY_CUSTOMER = {
   company_name: '',
@@ -441,6 +442,10 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
               </div>
             </div>
           </div>
+
+          {/* Accounting — what this customer has been worth to the shop.
+              Admin only; the card renders nothing for other roles. */}
+          <CustomerAccounting customerId={selectedCustomer.id} />
 
           {/* Repair Jobs */}
           <div>

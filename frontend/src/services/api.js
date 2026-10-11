@@ -925,6 +925,12 @@ export const accountingAPI = {
     const response = await api.get('/api/accounting/journal', { params: { from, to } });
     return response.data;
   },
+  // Every work order of one customer with their bills and payments, for the
+  // profile's accounting card (admin only).
+  customer: async (customerId) => {
+    const response = await api.get(`/api/accounting/customer/${customerId}`);
+    return response.data;
+  },
 };
 
 export const messagesAPI = {

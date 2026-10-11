@@ -12,9 +12,11 @@ work order dialog uses, so a repair's profit here is the figure on its
 card), so these routes only gather the records a period touches.
 """
 import logging
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.database import get_database
@@ -164,4 +166,50 @@ async def money_journal(
         "bills": [_build_bill_response(b) for b in bills],
         "payments": [_build_payment_response(p) for p in payments],
         "edits": edits,
+    }
+
+
+@router.get("/customer/{customer_id}")
+async def customer_accounting(
+    customer_id: str,
+    current_user: User = Depends(require_admin),
+):
+    """Every work order of one customer, with the bills and payments of those
+    jobs, for the profile's accounting card. Linked by customer id — and,
+    for work orders from before the link existed, by the same company name
+    or email with no link of their own, counted separately so the card can
+    say how many came in that way. The frontend adds them up with the job
+    accounting maths (utils/customerAccounting.js)."""
+    db = get_database()
+    try:
+        oid = ObjectId(customer_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid customer ID format")
+    customer = await db.customers.find_one({"_id": oid})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    ors = [{"customer_id": customer_id}]
+    unlinked = {"customer_id": {"$in": [None, ""]}}
+    company = (customer.get("company_name") or "").strip()
+    email = (customer.get("email") or "").strip()
+    if company:
+        ors.append({**unlinked, "company_name": {"$regex": f"^{re.escape(company)}$", "$options": "i"}})
+    if email:
+        ors.append({**unlinked, "email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}})
+    jobs = await db.repairs.find({"$or": ors}).sort("created_at", 1).to_list(length=_MAX_JOBS)
+    by_link = sum(1 for j in jobs if j.get("customer_id") == customer_id)
+    job_ids = [str(j["_id"]) for j in jobs]
+    bills, payments = [], []
+    if job_ids:
+        bills = await db.bills.find(
+            {"lines.repair_id": {"$in": job_ids}, "status": {"$ne": "void"}}
+        ).to_list(length=None)
+        payments = await db.payments.find({"repair_id": {"$in": job_ids}}).to_list(length=None)
+    return {
+        "customer_id": customer_id,
+        "matched": {"by_link": by_link, "by_name": len(jobs) - by_link},
+        "jobs": [_build_job_response(convert_objectid_to_str(j), current_user) for j in jobs],
+        "bills": [_build_bill_response(b) for b in bills],
+        "payments": [_build_payment_response(p) for p in payments],
     }
