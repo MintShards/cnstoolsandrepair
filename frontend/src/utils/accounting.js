@@ -35,8 +35,21 @@ export const PERIOD_PRESETS = [
   { id: 'custom', label: 'Custom' },
 ];
 
+// A customer's figures span years, so their picker starts wide. "All time"
+// is an open range the client-side maths accepts; the API's 400-day cap only
+// applies to the P&L and journal routes, never to a customer's own records.
+export const ALL_TIME = { from: '0000-01-01', to: '9999-12-31' };
+export const CUSTOMER_PERIOD_PRESETS = [
+  { id: 'all', label: 'All time' },
+  { id: 'year', label: 'This year' },
+  { id: 'month', label: 'This month' },
+  { id: 'custom', label: 'Custom' },
+];
+
 /** The shop-local date range a preset means today. Weeks run Monday to Sunday. */
 export function presetRange(id, today = getTodayPacific()) {
+  if (id === 'all') return { ...ALL_TIME };
+  if (id === 'year') return { from: `${today.slice(0, 4)}-01-01`, to: `${today.slice(0, 4)}-12-31` };
   if (id === 'week') {
     const [y, m, d] = today.split('-').map(Number);
     const back = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;

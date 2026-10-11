@@ -445,7 +445,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
 
           {/* Accounting — what this customer has been worth to the shop.
               Admin only; the card renders nothing for other roles. */}
-          <CustomerAccounting customerId={selectedCustomer.id} />
+          <CustomerAccounting customer={selectedCustomer} />
 
           {/* Repair Jobs */}
           <div>

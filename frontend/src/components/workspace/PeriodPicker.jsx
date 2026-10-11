@@ -5,9 +5,12 @@ import { PERIOD_PRESETS, presetRange } from '../../utils/accounting';
  * Today / This week / This month / Custom, plus the two dates. Picking a
  * preset sets the dates; touching a date makes the range custom. The parent
  * holds { preset, from, to } and gets the whole object back on every change.
+ * `presets` swaps the list (a customer's picker starts at All time, whose
+ * open range has no dates to show).
  */
-export default function PeriodPicker({ value, onChange, label = 'Period', className = '' }) {
+export default function PeriodPicker({ value, onChange, label = 'Period', className = '', presets = PERIOD_PRESETS }) {
   const { preset, from, to } = value;
+  const showDates = preset !== 'all';
   const pick = (id) => onChange(id === 'custom' ? { preset: 'custom', from, to } : { preset: id, ...presetRange(id) });
   const setDate = (key, v) => {
     if (!v) return;
@@ -27,7 +30,7 @@ export default function PeriodPicker({ value, onChange, label = 'Period', classN
           before a preset label would ("This / week"). Phones keep the four
           presets in equal cells, where a label may wrap whole. */}
       <div className="grid grid-cols-4 sm:inline-flex shrink-0 rounded-xl border border-slate-200 dark:border-slate-700/60 overflow-hidden">
-        {PERIOD_PRESETS.map((p) => (
+        {presets.map((p) => (
           <button
             key={p.id}
             type="button"
@@ -43,10 +46,12 @@ export default function PeriodPicker({ value, onChange, label = 'Period', classN
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 sm:flex shrink-0 gap-2 items-center">
-        <input type="date" value={from} max={to} onChange={(e) => setDate('from', e.target.value)} aria-label="From" className={FILTER_INPUT} />
-        <input type="date" value={to} min={from} onChange={(e) => setDate('to', e.target.value)} aria-label="To" className={FILTER_INPUT} />
-      </div>
+      {showDates && (
+        <div className="grid grid-cols-2 sm:flex shrink-0 gap-2 items-center">
+          <input type="date" value={from} max={to} onChange={(e) => setDate('from', e.target.value)} aria-label="From" className={FILTER_INPUT} />
+          <input type="date" value={to} min={from} onChange={(e) => setDate('to', e.target.value)} aria-label="To" className={FILTER_INPUT} />
+        </div>
+      )}
     </div>
   );
 }
