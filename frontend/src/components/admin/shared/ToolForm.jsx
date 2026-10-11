@@ -9,7 +9,7 @@ import { formatMoney } from '../../../utils/money';
 import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
 import DiagnosisEditor from './DiagnosisEditor';
 import { fetchSuggestedPartsForTool, componentOfLibraryPart } from '../../../utils/suggestedParts';
-import { HATHORN_COMPONENTS, COMPONENT_STYLES } from '../../../constants/cameraComponents';
+import { HATHORN_COMPONENTS, COMPONENT_LABELS, COMPONENT_STYLES, componentsOnTool } from '../../../constants/cameraComponents';
 import { fetchToolHistory, visitSummary, daysSince, WARRANTY_DAYS } from '../../../utils/toolHistory';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
@@ -1203,6 +1203,13 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                 handleChange('parts', updated);
               };
               const isPostOrder = ['ordered', 'received', 'installed'].includes(part.status); // in_stock skips ordering so no tracking fields
+              // Which component a NEW part is for. Only a part the library
+              // doesn't know yet, on a Hathorn job recording two or more
+              // components, needs asking: a suggested or library part brings
+              // its component with it, and one recorded component is implied.
+              // The pick goes the moment the row links to a library part.
+              const pickOptions = [...new Set([...componentsOnTool(data), ...(part.component ? [part.component] : [])])];
+              const needsPick = isHathorn && !part.library_part_id && componentsOnTool(data).length > 1;
               const partInputCls = "px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary";
               return (
                 <div key={pi} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden">
@@ -1350,6 +1357,26 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                       <span className="material-symbols-outlined" style={{fontSize:'18px'}}>close</span>
                     </button>
                   </div>
+
+                  {needsPick && (
+                    <div className="flex items-center gap-1.5 px-2.5 pb-2 flex-wrap" role="group" aria-label="Which component this part is for">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">For</span>
+                      {pickOptions.map((c) => (
+                        <button key={c} type="button" aria-pressed={part.component === c}
+                          onClick={() => updatePart({ component: part.component === c ? null : c })}
+                          className={`px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded text-xs font-bold transition-colors ${
+                            part.component === c
+                              ? COMPONENT_STYLES[c].pill
+                              : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-primary/20 hover:text-primary'
+                          }`}>
+                          {COMPONENT_LABELS[c]}
+                        </button>
+                      ))}
+                      {!part.component && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400">New part — pick one so the library files it under the right model</span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Row 2: Supplier + Order link */}
                   <div className="flex gap-2 px-2.5 pb-2 flex-wrap">

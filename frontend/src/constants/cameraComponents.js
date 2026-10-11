@@ -10,6 +10,10 @@ export const HATHORN_COMPONENTS = [
 
 export const COMPONENT_LABELS = Object.fromEntries(HATHORN_COMPONENTS.map((c) => [c.component, c.label]));
 
+/** The components whose model field is filled on a tool, in display order. */
+export const componentsOnTool = (tool) =>
+  HATHORN_COMPONENTS.filter((c) => (tool?.[c.modelField] || '').trim()).map((c) => c.component);
+
 // How a component group and chip look in the admin UI (never on a print):
 // the Suggested Parts group headings, the chips' left edge and the tool
 // card's chip. Deliberately neutral, told apart by lightness — three steps
