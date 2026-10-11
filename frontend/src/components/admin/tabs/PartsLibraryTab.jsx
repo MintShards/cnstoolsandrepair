@@ -4,6 +4,7 @@ import { partsLibraryAPI, repairsAPI, suppliersAPI } from '../../../services/api
 import { useToast } from '../../../pages/admin/RepairTracker';
 import { useSettings } from '../../../contexts/SettingsContext';
 import { addToSourcingList, sourcingListPartIds } from '../../../utils/sourcingList';
+import { COMPONENT_STYLES } from '../../../constants/cameraComponents';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -2267,6 +2268,9 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                     ? 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20'
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
               >
+                {COMPONENT_STYLES[chip.value] && (
+                  <span className={`inline-block w-2 h-2 rounded-full mr-1.5 align-middle ${COMPONENT_STYLES[chip.value].dot}`} aria-hidden="true" />
+                )}
                 {chip.label} · {count}
               </button>
             );
@@ -2314,7 +2318,9 @@ function ModelsView({ brand, compatGroups, onBack, onSelectModel }) {
                 {(model.category || model.discontinued || model.component || isHathornBrand(brand.name)) && (
                   <div className="flex items-center gap-2 flex-wrap mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {model.component ? (
-                      <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">{COMPONENT_LABELS[model.component] || model.component}</span>
+                      /* The component's own neutral tone — the same three
+                         steps the tracker's Suggested Parts groups wear. */
+                      <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${COMPONENT_STYLES[model.component]?.pill || 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{COMPONENT_LABELS[model.component] || model.component}</span>
                     ) : isHathornBrand(brand.name) ? (
                       <span className="px-1.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Edit this model and say whether it is a camera head, controller or reel">Component not set</span>
                     ) : null}

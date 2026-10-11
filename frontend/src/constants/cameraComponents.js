@@ -14,29 +14,32 @@ export const COMPONENT_LABELS = Object.fromEntries(HATHORN_COMPONENTS.map((c) =>
 export const componentsOnTool = (tool) =>
   HATHORN_COMPONENTS.filter((c) => (tool?.[c.modelField] || '').trim()).map((c) => c.component);
 
-// How a component group and chip look in the admin UI (never on a print):
-// the Suggested Parts group headings, the chips' left edge and the tool
-// card's chip. Deliberately neutral, told apart by lightness — three steps
-// of slate: controller dark, reel mid, camera head light (inverted in dark
-// mode so the dark one stays the strongest). Coloured hues were tried and
-// taken out; green stays reserved for "already on this tool".
+// The colour each component wears in the admin UI (never on a print): the
+// Suggested Parts group headings, the chips' left edge, the tool card's chip
+// and the Parts Library model badge. Dark jewel tones that sit with the
+// site's blue and slate — navy, plum, petrol — chosen to stay clear of the
+// colours the app already gives a meaning (green = already on this tool /
+// installed, amber = warnings, red = out of stock, blue = primary, orange =
+// ordered, cyan = received; petrol is darker and greener than that cyan).
+// The shop picked this set over neutral slate, navy/olive/brown and
+// gunmetal/bronze/petrol after seeing each on dev.
 export const COMPONENT_STYLES = {
-  controller: {
-    dot: 'bg-slate-800 dark:bg-slate-200',
-    edge: 'border-l-slate-800 dark:border-l-slate-200',
-    text: 'text-slate-800 dark:text-slate-200',
-    pill: 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900',
+  controller: { // navy
+    dot: 'bg-indigo-800 dark:bg-indigo-300',
+    edge: 'border-l-indigo-800 dark:border-l-indigo-300',
+    text: 'text-indigo-900 dark:text-indigo-200',
+    pill: 'bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-200',
   },
-  reel: {
-    dot: 'bg-slate-500 dark:bg-slate-400',
-    edge: 'border-l-slate-500 dark:border-l-slate-400',
-    text: 'text-slate-600 dark:text-slate-300',
-    pill: 'bg-slate-500 text-white dark:bg-slate-500 dark:text-white',
+  reel: { // plum
+    dot: 'bg-purple-800 dark:bg-purple-300',
+    edge: 'border-l-purple-800 dark:border-l-purple-300',
+    text: 'text-purple-900 dark:text-purple-200',
+    pill: 'bg-purple-100 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200',
   },
-  camera_head: {
-    dot: 'bg-slate-300 dark:bg-slate-600',
-    edge: 'border-l-slate-300 dark:border-l-slate-600',
-    text: 'text-slate-500 dark:text-slate-400',
-    pill: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+  camera_head: { // petrol
+    dot: 'bg-teal-800 dark:bg-teal-300',
+    edge: 'border-l-teal-800 dark:border-l-teal-300',
+    text: 'text-teal-900 dark:text-teal-200',
+    pill: 'bg-teal-100 text-teal-900 dark:bg-teal-900/60 dark:text-teal-200',
   },
 };
