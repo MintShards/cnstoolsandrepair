@@ -8,7 +8,8 @@ import { BILL_LINE_KINDS } from '../../../constants/bills';
 import { formatMoney } from '../../../utils/money';
 import { TAX_STATUS_LIST } from '../../../utils/jobAccounting';
 import DiagnosisEditor from './DiagnosisEditor';
-import { fetchSuggestedPartsForTool } from '../../../utils/suggestedParts';
+import { fetchSuggestedPartsForTool, componentOfLibraryPart } from '../../../utils/suggestedParts';
+import { HATHORN_COMPONENTS, COMPONENT_STYLES } from '../../../constants/cameraComponents';
 import { fetchToolHistory, visitSummary, daysSince, WARRANTY_DAYS } from '../../../utils/toolHistory';
 
 // Shared blank-tool factory used by the WO dialog's Add Tool and the New Job wizard
@@ -202,23 +203,37 @@ export const syncPartsToLibrary = async (tools) => {
       const markLinked = () => { if (!linkedTools.includes(toolIndex)) linkedTools.push(toolIndex); };
       // A Hathorn tool has no generic model_number — its component models
       // (head / controller / reel) each become a library model tagged with
-      // that component, and new parts link to every one that was recorded.
+      // that component.
       const modelEntries = [
         { name: tool.model_number, component: null },
-        { name: tool.camera_head_model, component: 'camera_head' },
-        { name: tool.controller_model, component: 'controller' },
-        { name: tool.reel_model, component: 'reel' },
+        ...HATHORN_COMPONENTS.map((c) => ({ name: tool[c.modelField], component: c.component })),
       ].map((e) => ({ ...e, name: e.name?.trim() })).filter((e) => e.name);
-      let modelIds = [];
+      const jobModels = []; // [{ id, component }]
       for (const entry of modelEntries) {
-        modelIds.push(...await getModelId(brandId, entry.name, tool.tool_type, entry.component));
+        for (const id of await getModelId(brandId, entry.name, tool.tool_type, entry.component)) {
+          if (!jobModels.some((m) => m.id === id)) jobModels.push({ id, component: entry.component });
+        }
       }
-      modelIds = [...new Set(modelIds)];
+      const componentsHere = [...new Set(jobModels.map((m) => m.component).filter(Boolean))];
+      // The job models a part may be listed under: a generic model always; a
+      // component model only when the part is for that component — picked on
+      // the row, else where the library already files the part, else implied
+      // when the job records a single component. Never every component on
+      // the unit (a reel's slip ring is not a camera-head part), and a part
+      // nobody can place gets no component model until someone files it.
+      const modelsFor = (part, libraryPart) => {
+        const filed = new Set((libraryPart?.models || []).map((m) => m.component).filter(Boolean));
+        const comps = part.component ? new Set([part.component])
+          : filed.size ? filed
+          : componentsHere.length === 1 ? new Set(componentsHere)
+          : new Set();
+        return jobModels.filter((m) => !m.component || comps.has(m.component)).map((m) => m.id);
+      };
       // A library part used on this job fits this job's models: list it
       // under any it isn't under yet, so the library learns from the bench.
-      const attachMissing = async (libraryPart) => {
+      const attachMissing = async (libraryPart, part) => {
         const have = new Set(libraryPart?.model_ids || []);
-        for (const mid of modelIds) {
+        for (const mid of modelsFor(part, libraryPart)) {
           if (have.has(mid)) continue;
           try { await partsLibraryAPI.attachPartToModel(libraryPart.id, mid); } catch { /* best effort */ }
         }
@@ -226,8 +241,8 @@ export const syncPartsToLibrary = async (tools) => {
       for (const part of (tool.parts || [])) {
         if (!part.name?.trim()) continue;
         if (part.library_part_id) {
-          if (modelIds.length > 0) {
-            try { await attachMissing(await partsLibraryAPI.getPart(part.library_part_id)); } catch { /* best effort */ }
+          if (jobModels.length > 0) {
+            try { await attachMissing(await partsLibraryAPI.getPart(part.library_part_id), part); } catch { /* best effort */ }
           }
           continue;
         }
@@ -236,7 +251,7 @@ export const syncPartsToLibrary = async (tools) => {
             name: part.name.trim(),
             part_number: part.part_number?.trim() || part.name.trim().toUpperCase().replace(/\s+/g, '-'),
             brand_id: brandId,
-            model_ids: modelIds,
+            model_ids: modelsFor(part, null),
             compatibility_group_ids: [],
             suggested_suppliers: part.supplier ? [part.supplier] : [],
             suggested_price: part.price ? Number(part.price) : null,
@@ -252,14 +267,14 @@ export const syncPartsToLibrary = async (tools) => {
           if (existing?.id) {
             part.library_part_id = existing.id;
             markLinked();
-            await attachMissing(existing);
+            await attachMissing(existing, part);
             continue;
           }
           try {
             const partNum = part.part_number?.trim() || part.name.trim().toUpperCase().replace(/\s+/g, '-');
             const found = await partsLibraryAPI.search(partNum, 5);
             const match = found.find(p => p.brand_id === brandId && p.part_number.toLowerCase() === partNum.toLowerCase());
-            if (match) { part.library_part_id = match.id; markLinked(); await attachMissing(match); }
+            if (match) { part.library_part_id = match.id; markLinked(); await attachMissing(match, part); }
           } catch { /* ignore */ }
         }
       }
@@ -350,6 +365,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       name: libPart.name || '',
       part_number: libPart.part_number || '',
       library_part_id: libPart.id,
+      component: componentOfLibraryPart(libPart),
       quantity: 1,
       price: libPart.suggested_price != null ? String(libPart.suggested_price) : '',
       cost: libPart.cost != null ? String(libPart.cost) : '',
@@ -406,6 +422,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
       name: part.name || '',
       part_number: part.part_number || '',
       library_part_id: part.id,
+      component: componentOfLibraryPart(part),
       supplier: part.suggested_suppliers?.[0] || '',
       _suggested_suppliers: part.suggested_suppliers || [],
       price: part.suggested_price != null ? String(part.suggested_price) : '',
@@ -677,6 +694,46 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
     ...libraryModels.filter((m) => m.component === c.component).map((m) => m.name.toUpperCase()),
   ])];
 
+  // Suggested Parts on a Hathorn unit, grouped by the component the library
+  // files each part under, for the components this job records; a part the
+  // library files under several shows in each, and parts under no component
+  // (an untagged model) make a last group. Empty for every other brand.
+  const suggestionGroups = !isHathorn ? [] : [
+    ...HATHORN_COMPONENTS
+      .filter((c) => (data[c.modelField] || '').trim())
+      .map((c) => ({
+        key: c.component, label: c.label, style: COMPONENT_STYLES[c.component],
+        parts: suggestedParts.filter((sp) => (sp.models || []).some((m) => m.component === c.component)),
+      })),
+    {
+      key: 'other', label: 'Not filed by component', style: null,
+      parts: suggestedParts.filter((sp) => !(sp.models || []).some((m) => m.component)),
+    },
+  ].filter((g) => g.parts.length > 0);
+
+  // One Suggested Parts chip; on a Hathorn unit its left edge wears the
+  // colour of the component group it sits in.
+  const renderSuggestion = (sp, style = null) => {
+    const alreadyAdded = (data.parts || []).some((p) => p.library_part_id === sp.id);
+    return (
+      <button key={sp.id} type="button" disabled={alreadyAdded}
+        onClick={() => addSuggestedPart(sp)}
+        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 ${style ? `border-l-[3px] ${style.edge}` : ''} ${
+          alreadyAdded
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 cursor-default'
+            : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 text-slate-700 dark:text-slate-200'
+        }`}>
+        {alreadyAdded ? (
+          <span className="material-symbols-outlined" style={{fontSize:'13px'}}>check</span>
+        ) : (
+          <span className="material-symbols-outlined" style={{fontSize:'13px'}}>add</span>
+        )}
+        <span className="font-medium">{`${sp.name}${sp.part_number ? ` - ${sp.part_number}` : ''}`.toUpperCase()}</span>
+        {sp.suggested_price != null && <span className="text-green-600 dark:text-green-400">${sp.suggested_price.toFixed(2)}</span>}
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-6 text-base">
       {/* Section 1 — Tool Identification */}
@@ -788,11 +845,7 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
                     fields are hidden. Fill only what arrived. */}
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[
-                      { label: 'Controller', modelField: 'controller_model', serialField: 'controller_serial', component: 'controller' },
-                      { label: 'Reel', modelField: 'reel_model', serialField: 'reel_serial', component: 'reel' },
-                      { label: 'Camera Head', modelField: 'camera_head_model', serialField: 'camera_head_serial', component: 'camera_head' },
-                    ].map((c) => (
+                    {HATHORN_COMPONENTS.map((c) => (
                       <div key={c.modelField} className="space-y-2">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{c.label}</p>
                         {/* Suggestions: what past jobs put in THIS field, plus
@@ -1121,29 +1174,23 @@ export default function ToolForm({ toolData, onChange, isNewJobForm, wizardStep,
               <p className="text-xs text-slate-500">Loading…</p>
             ) : suggestedParts.length === 0 ? (
               <p className="text-xs text-slate-500">No parts found in library for this model.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {suggestedParts.map(sp => {
-                  const alreadyAdded = (data.parts || []).some(p => p.library_part_id === sp.id);
-                  return (
-                    <button key={sp.id} type="button" disabled={alreadyAdded}
-                      onClick={() => addSuggestedPart(sp)}
-                      className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 ${
-                        alreadyAdded
-                          ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 cursor-default'
-                          : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 text-slate-700 dark:text-slate-200'
-                      }`}>
-                      {alreadyAdded ? (
-                        <span className="material-symbols-outlined" style={{fontSize:'13px'}}>check</span>
-                      ) : (
-                        <span className="material-symbols-outlined" style={{fontSize:'13px'}}>add</span>
-                      )}
-                      <span className="font-medium">{`${sp.name}${sp.part_number ? ` - ${sp.part_number}` : ''}`.toUpperCase()}</span>
-                      {sp.suggested_price != null && <span className="text-green-600 dark:text-green-400">${sp.suggested_price.toFixed(2)}</span>}
-                    </button>
-                  );
-                })}
+            ) : suggestionGroups.length > 0 ? (
+              /* A Hathorn unit: one group per component the job records, in
+                 that component's colour, so a reel part is never taken for a
+                 camera-head part before it is added. */
+              <div className="space-y-2.5">
+                {suggestionGroups.map((g) => (
+                  <div key={g.key}>
+                    <p className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-1.5 ${g.style ? g.style.text : 'text-slate-500 dark:text-slate-400'}`}>
+                      <span className={`inline-block w-2 h-2 rounded-full ${g.style ? g.style.dot : 'bg-slate-400'}`} aria-hidden="true" />
+                      {g.label} ({g.parts.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">{g.parts.map((sp) => renderSuggestion(sp, g.style))}</div>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">{suggestedParts.map((sp) => renderSuggestion(sp))}</div>
             )}
           </div>
         )}

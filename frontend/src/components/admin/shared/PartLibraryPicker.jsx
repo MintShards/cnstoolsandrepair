@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { partsLibraryAPI } from '../../../services/api';
+import { componentOfLibraryPart } from '../../../utils/suggestedParts';
 
 /**
  * PartLibraryPicker
@@ -78,6 +79,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
       name: part.name || '',
       part_number: part.part_number || '',
       library_part_id: part.id,
+      component: componentOfLibraryPart(part),
       supplier,
       _suggested_suppliers: part.suggested_suppliers || [],
       price,
@@ -163,7 +165,7 @@ export default function PartLibraryPicker({ onSelect, onClose }) {
           {query.trim() && !searching && results.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-5xl mb-2">search_off</span>
-              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No parts found for "{query}"</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No parts found for &ldquo;{query}&rdquo;</p>
               <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Try a different search term or part number</p>
             </div>
           )}

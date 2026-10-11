@@ -122,6 +122,7 @@ def _migrate_tool_parts(tool: dict) -> dict:
         part.setdefault("tracking", None)
         part.setdefault("part_number", None)
         part.setdefault("library_part_id", None)
+        part.setdefault("component", None)
     # The per-tool labour cost override used to be an hourly rate; it is now a
     # flat amount for the tool. An old value carries over as that flat amount
     # (the few that existed were typed as "what this job's labour costs").

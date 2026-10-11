@@ -31,6 +31,7 @@ import { fetchSuggestedPartsForTool } from '../../../utils/suggestedParts';
 import DiagnosisCodeFormModal from '../tabs/DiagnosisCodeFormModal';
 import { invalidateCodes } from '../../../utils/diagnosisCodesCache';
 import { CAMERA_INTAKE_DEFAULTS, getCameraIntakeConfig } from '../../../utils/cameraIntake';
+import { COMPONENT_LABELS, COMPONENT_STYLES } from '../../../constants/cameraComponents';
 import { customerPhotoUrl } from '../../../utils/photoUrl';
 import ToolHistoryDialog from './ToolHistoryDialog';
 import { fetchJobHistory } from '../../../utils/toolHistory';
@@ -1770,6 +1771,10 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                                         p.status === 'in_stock' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
                                         'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                                       }`} style={{fontSize:'11px'}}>{p.status.replace(/_/g, ' ')}</span>
+                                      {/* Which component of a camera unit the part is for */}
+                                      {COMPONENT_LABELS[p.component] && (
+                                        <span className={`px-1.5 py-px rounded-full font-bold ${COMPONENT_STYLES[p.component].pill}`} style={{fontSize:'11px'}} title="Component this part is for">{COMPONENT_LABELS[p.component]}</span>
+                                      )}
                                       {p.library_part_id && p._library_qty != null && (
                                         <span title={p._library_qty > 0 ? (p._library_low_stock ? `Low stock (${p._library_qty})` : `${p._library_qty} in stock`) : 'Out of stock'} className={`flex-shrink-0 ${
                                           p._library_qty > 0

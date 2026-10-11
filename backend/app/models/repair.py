@@ -7,6 +7,7 @@ import re
 import uuid
 
 from app.models.camera_intake import DEFAULT_FINAL_CHECKLIST
+from app.models.parts_library import validate_component
 
 
 class RepairStatus(str, Enum):
@@ -143,6 +144,10 @@ class PartItem(BaseModel):
     tracking: Optional[str] = Field(None, max_length=200)
     part_number: Optional[str] = Field(None, max_length=100)
     library_part_id: Optional[str] = Field(None, max_length=50)
+    # Which component of a multi-part unit the part is for (a Hathorn camera:
+    # camera_head, controller or reel), picked on the work order so the parts
+    # library files the part under that component's model and no other.
+    component: Optional[str] = None
     needs_sourcing: bool = False
     sourcing_emailed: bool = False
 
@@ -152,6 +157,11 @@ class PartItem(BaseModel):
         if v == '' or v is None:
             return None
         return v
+
+    @field_validator('component', mode='before')
+    @classmethod
+    def check_component(cls, v):
+        return validate_component(v)
 
     @field_validator('name', 'supplier', 'part_number', 'library_part_id',
                      'tracking', 'order_link', 'notes', mode='before')

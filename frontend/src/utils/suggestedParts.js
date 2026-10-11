@@ -49,6 +49,18 @@ export function matchCodeParts(codeParts, libraryParts) {
 }
 
 /**
+ * The one component a library part is filed under — its fits are all camera
+ * heads, all controllers or all reels — else null: not a component part, no
+ * fits yet, or filed under several components (a connector that sits on both
+ * the controller and the reel). A part row carries it so the work order's
+ * sync files the part under that component's model only.
+ */
+export function componentOfLibraryPart(libPart) {
+  const comps = new Set((libPart?.models || []).map((m) => m.component).filter(Boolean));
+  return comps.size === 1 ? [...comps][0] : null;
+}
+
+/**
  * A Parts-list row for one matched code part — the same shape the tool form's
  * Suggested Parts box adds for a library part (part number, price, the shop's
  * cost snapshot, suppliers, stock badge) — or a plain pending row by name
@@ -60,6 +72,7 @@ export function partRowFromMatch({ name, quantity, libPart }) {
       name: libPart.name || name,
       part_number: libPart.part_number || '',
       library_part_id: libPart.id,
+      component: componentOfLibraryPart(libPart),
       quantity,
       price: libPart.suggested_price != null ? String(libPart.suggested_price) : '',
       cost: libPart.cost != null ? String(libPart.cost) : '',
