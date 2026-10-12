@@ -172,59 +172,72 @@ export default function CustomerAccounting({ customer }) {
               </StatTile>
             </StatRow>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-              {p.averagePerJob != null && (
-                <p>Average revenue per completed work order{inPeriod}: <span className="font-bold text-slate-700 dark:text-slate-200">{money(p.averagePerJob)}</span></p>
-              )}
-              {!summary.allTime && n.received != null && (
-                <p>Paid all time: <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.received)}</span></p>
-              )}
-              {n.open.tools > 0 && (
-                <p>
-                  Open now: <span className="font-bold text-slate-700 dark:text-slate-200">{plural(n.open.tools, 'tool')}</span> on {plural(n.open.jobs, 'work order')}
-                  {n.open.revenue != null ? <> — expected revenue <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.open.revenue)}</span>, not counted above until completed</> : ' — nothing priced yet'}
-                </p>
-              )}
-              {summary.matched.by_name > 0 && (
-                <p className="text-amber-700 dark:text-amber-400">
-                  {plural(summary.matched.by_name, 'work order')} matched by company name or email only — from before the profile existed. Open and re-save the customer on those to link them.
-                </p>
+            {/* A data-hygiene flag stays in view; it asks for action. */}
+            {summary.matched.by_name > 0 && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                {plural(summary.matched.by_name, 'work order')} matched by company name or email only — from before the profile existed. Open and re-save the customer on those to link them.
+              </p>
+            )}
+
+            {/* The detail — averages, open work, year by year — comes out
+                only once a period is chosen; All time stays at the five
+                figures, so a profile open is not a wall of money. */}
+            <div>
+              {!summary.allTime && (
+                <div className="space-y-4">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                    {p.averagePerJob != null && (
+                      <p>Average revenue per completed work order{inPeriod}: <span className="font-bold text-slate-700 dark:text-slate-200">{money(p.averagePerJob)}</span></p>
+                    )}
+                    {!summary.allTime && n.received != null && (
+                      <p>Paid all time: <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.received)}</span></p>
+                    )}
+                    {n.open.tools > 0 ? (
+                      <p>
+                        Open now: <span className="font-bold text-slate-700 dark:text-slate-200">{plural(n.open.tools, 'tool')}</span> on {plural(n.open.jobs, 'work order')}
+                        {n.open.revenue != null ? <> — expected revenue <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.open.revenue)}</span>, not counted above until completed</> : ' — nothing priced yet'}
+                      </p>
+                    ) : (
+                      <p>Nothing open right now.</p>
+                    )}
+                  </div>
+
+                  {/* Year by year — a repair counts in the year its tool was completed. */}
+                  {summary.byYear.length > 0 && (
+                    <div className="overflow-x-auto -mx-4 px-4">
+                      <table className="w-full text-xs min-w-[560px]">
+                        <thead>
+                          <tr className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/60">
+                            <th className="text-left py-1.5 pr-2 font-bold">Year</th>
+                            <th className="text-right py-1.5 px-2 font-bold">Repairs</th>
+                            <th className="text-right py-1.5 px-2 font-bold">Work orders</th>
+                            <th className="text-right py-1.5 px-2 font-bold">Revenue</th>
+                            <th className="text-right py-1.5 px-2 font-bold">Cost</th>
+                            <th className="text-right py-1.5 px-2 font-bold">Profit</th>
+                            <th className="text-right py-1.5 px-2 font-bold">Margin</th>
+                            <th className="text-right py-1.5 pl-2 font-bold">Paid</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {summary.byYear.map((y) => (
+                            <tr key={y.year} className="border-b border-slate-100 dark:border-slate-700/40 last:border-0">
+                              <td className="py-1.5 pr-2 font-bold text-slate-800 dark:text-slate-100">{y.year}</td>
+                              <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{y.tools || '—'}</td>
+                              <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{y.jobs || '—'}</td>
+                              <td className="py-1.5 px-2 text-right font-semibold text-slate-800 dark:text-slate-100">{money(y.revenue)}</td>
+                              <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{money(y.cost)}</td>
+                              <td className={`py-1.5 px-2 text-right font-semibold ${profitTone(y.profit)}`}>{money(y.profit)}</td>
+                              <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{pctText(y.margin)}</td>
+                              <td className="py-1.5 pl-2 text-right text-slate-600 dark:text-slate-300">{money(y.paid)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-
-            {/* Year by year — a repair counts in the year its tool was completed. */}
-            {summary.byYear.length > 0 && (
-              <div className="overflow-x-auto -mx-4 px-4">
-                <table className="w-full text-xs min-w-[560px]">
-                  <thead>
-                    <tr className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/60">
-                      <th className="text-left py-1.5 pr-2 font-bold">Year</th>
-                      <th className="text-right py-1.5 px-2 font-bold">Repairs</th>
-                      <th className="text-right py-1.5 px-2 font-bold">Work orders</th>
-                      <th className="text-right py-1.5 px-2 font-bold">Revenue</th>
-                      <th className="text-right py-1.5 px-2 font-bold">Cost</th>
-                      <th className="text-right py-1.5 px-2 font-bold">Profit</th>
-                      <th className="text-right py-1.5 px-2 font-bold">Margin</th>
-                      <th className="text-right py-1.5 pl-2 font-bold">Paid</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.byYear.map((y) => (
-                      <tr key={y.year} className="border-b border-slate-100 dark:border-slate-700/40 last:border-0">
-                        <td className="py-1.5 pr-2 font-bold text-slate-800 dark:text-slate-100">{y.year}</td>
-                        <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{y.tools || '—'}</td>
-                        <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{y.jobs || '—'}</td>
-                        <td className="py-1.5 px-2 text-right font-semibold text-slate-800 dark:text-slate-100">{money(y.revenue)}</td>
-                        <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{money(y.cost)}</td>
-                        <td className={`py-1.5 px-2 text-right font-semibold ${profitTone(y.profit)}`}>{money(y.profit)}</td>
-                        <td className="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">{pctText(y.margin)}</td>
-                        <td className="py-1.5 pl-2 text-right text-slate-600 dark:text-slate-300">{money(y.paid)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </>
         )}
       </div>
