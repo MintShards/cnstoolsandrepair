@@ -20,6 +20,7 @@ import {
 import { StatusBadge, StepBadge, ProgressStepper } from './RepairStatusBadges';
 import { openPrintWorkOrder } from '../PrintWorkOrder';
 import { openPrintToolTag } from '../PrintToolTag';
+import { openPrintPickupForm } from '../PrintPickupForm';
 import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { formatDatePacific, formatDateShortPacific } from '../../../utils/dateFormat';
 import useBodyScrollLock from '../../../utils/useBodyScrollLock';
@@ -1087,6 +1088,16 @@ export default function WorkOrderDialog({ job, serviceAgreement, onClose, onJobU
                   title="Print / Save as PDF"
                 >
                   <span className="material-symbols-outlined" style={{fontSize:'18px'}}>print</span>
+                </button>
+                {/* The sheet whoever collects the tools signs — prefilled from
+                    the work order, lines for their own name and signature. */}
+                <button
+                  onClick={() => openPrintPickupForm(job, settings?.contact)}
+                  className="w-9 h-9 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
+                  title="Print pick-up form — signed by whoever collects the tools"
+                  aria-label="Print pick-up form"
+                >
+                  <span className="material-symbols-outlined" style={{fontSize:'18px'}}>handshake</span>
                 </button>
                 <button ref={detailCloseRef} onClick={onClose} aria-label="Close work order" className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-200/60 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
                   <span className="material-symbols-outlined text-xl">close</span>

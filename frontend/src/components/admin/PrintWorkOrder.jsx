@@ -138,7 +138,12 @@ function buildServiceAgreementHTML(serviceAgreement) {
   `;
 }
 
-function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
+// The company block at the top left of every printed sheet — the name with
+// "CNS" in the brand's scarlet as the logo wears it (a name that doesn't end
+// in "Tool Repair" prints plain), the address, phone and email — from
+// business settings, falling back to config/business.js. Shared with the
+// pick-up form so the two sheets carry the same letterhead.
+export function buildCompanyHeader(businessInfo) {
   const biz = businessInfo || {};
   const name = biz.name || BUSINESS_INFO.name;
   const phone = biz.phone || BUSINESS_INFO.phone;
@@ -146,6 +151,20 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
   const addr = biz.address
     ? (() => { const a = biz.address; return `${a.street}, ${a.city}, ${a.province}${a.postalCode ? ' ' + a.postalCode : ''}, ${a.country}`; })()
     : getFullAddress();
+  const accent = /^(.*?)\s*(tool repair)$/i.exec((name || '').trim());
+  const nameHTML = accent && accent[1]
+    ? `<span class="company-accent">${escHtml(accent[1])}</span> ${escHtml(accent[2])}`
+    : escHtml(name);
+  return {
+    name, phone, email, addr, nameHTML,
+    html: `<div class="company-name">${nameHTML}</div>
+        <div class="company-sub">${escHtml(addr)}</div>
+        <div class="company-sub">${escHtml(phone)} · ${escHtml(email)}</div>`,
+  };
+}
+
+function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
+  const header = buildCompanyHeader(businessInfo);
   const printDate = formatDatePacific(new Date().toISOString());
 
   const toolsHTML = job.tools.map((tool, idx) => {
@@ -294,19 +313,10 @@ function buildBody(job, businessInfo, serviceAgreement, opts = {}) {
     `;
   }).join('');
 
-  // "CNS Tool Repair" → CNS in the brand's scarlet, "Tool Repair" in black,
-  // as the logo wears it; a name that doesn't end that way prints plain.
-  const accent = /^(.*?)\s*(tool repair)$/i.exec((name || '').trim());
-  const nameHTML = accent && accent[1]
-    ? `<span class="company-accent">${escHtml(accent[1])}</span> ${escHtml(accent[2])}`
-    : escHtml(name);
-
   return `
     <div class="doc-header">
       <div>
-        <div class="company-name">${nameHTML}</div>
-        <div class="company-sub">${escHtml(addr)}</div>
-        <div class="company-sub">${escHtml(phone)} · ${escHtml(email)}</div>
+        ${header.html}
       </div>
       <div class="wo-block">
         <div class="wo-number">${escHtml(job.request_number)}</div>
