@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 _PACIFIC = ZoneInfo("America/Vancouver")
 
 # Terminal repair statuses — customers with only these are "inactive"
-_TERMINAL_STATUSES = ["completed", "closed", "declined", "beyond_economical_repair", "abandoned"]
+_TERMINAL_STATUSES = ["completed", "closed", "declined", "beyond_economical_repair", "abandoned",
+                      "no_fault_found", "returned_unrepaired"]
 
 
 def _build_customer_response(doc: dict) -> CustomerResponse:

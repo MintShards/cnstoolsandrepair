@@ -42,6 +42,7 @@ _STATUS_TIER = {
     "approved": 2, "parts_pending": 2, "in_repair": 2, "received": 2,
     "completed": 3, "closed": 3, "declined": 3,
     "beyond_economical_repair": 3, "abandoned": 3,
+    "no_fault_found": 3, "returned_unrepaired": 3,
 }
 
 
@@ -337,7 +338,8 @@ async def get_repair_summary(
     """
     db = get_database()
     now = datetime.utcnow()
-    terminal_statuses = {"completed", "abandoned", "closed", "declined", "beyond_economical_repair"}
+    terminal_statuses = {"completed", "abandoned", "closed", "declined", "beyond_economical_repair",
+                         "no_fault_found", "returned_unrepaired"}
 
     # Read configurable stale threshold from settings (default 3 days)
     settings_doc = await db.business_settings.find_one({"active": True})

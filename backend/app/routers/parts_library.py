@@ -50,7 +50,8 @@ async def _auto_update_repair_parts_to_in_stock(db, library_part_id: str) -> int
     it would make the same unit count twice.
     Returns the number of parts updated.
     """
-    terminal_statuses = {"completed", "abandoned", "closed", "declined", "beyond_economical_repair"}
+    terminal_statuses = {"completed", "abandoned", "closed", "declined", "beyond_economical_repair",
+                         "no_fault_found", "returned_unrepaired"}
     now = datetime.utcnow()
     updated_count = 0
 

@@ -31,7 +31,7 @@ const upper = (s) => escHtml(String(s || '').toUpperCase());
 // The tools that go out with the collector: repaired and waiting (paid or
 // not), or coming back unrepaired. Everything else is still on the bench,
 // or already left on an earlier visit, and stays off the sheet.
-const COLLECT_STATUSES = new Set(['ready', 'invoiced', 'declined', 'beyond_economical_repair']);
+const COLLECT_STATUSES = new Set(['ready', 'invoiced', 'declined', 'beyond_economical_repair', 'no_fault_found', 'returned_unrepaired']);
 const box = () => '<span class="cb"></span>';
 const field = (label, inner = '<div class="line"></div>') => `<div class="field-group"><div class="field-label">${label}</div>${inner}</div>`;
 const shown = (v) => `<div class="val">${v}</div>`;
@@ -49,6 +49,10 @@ function outcome(tool) {
       return 'Estimate declined — returned unrepaired';
     case 'beyond_economical_repair':
       return 'Beyond economical repair — returned unrepaired';
+    case 'no_fault_found':
+      return 'No fault found — returned as received';
+    case 'returned_unrepaired':
+      return 'Returned unrepaired';
     case 'abandoned':
       return 'Returned';
     default:
@@ -133,8 +137,9 @@ function buildBody(job, businessInfo) {
 
   // Who the signer says they are: at a company, anyone the company sent; for
   // an individual, the customer themselves or someone they sent. The
-  // disassembled-tool line prints only when an unrepaired tool is on the
-  // sheet, in the Service Agreement's own terms.
+  // disassembled-tool line prints only when a declined or BER tool is on the
+  // sheet — the Service Agreement's own term for a declined repair; a
+  // no-fault-found or returned-unrepaired tool was never taken apart.
   const authority = job.company_name
     ? `I am authorized by ${upper(job.company_name)}`
     : contactName
@@ -218,7 +223,7 @@ function buildBody(job, businessInfo) {
     </div>
 
     <div class="ack">
-      <p><strong>Pick-up acknowledgement.</strong> I confirm that ${authority} to collect the tools listed above, that I have received them${accessoriesListed ? ' together with the items ticked as returned' : ''}, and that I have looked them over at pick-up. Repaired tools are covered by the warranty in the CNS Tool Repair Service Agreement on the work order.${unrepairedListed ? ' A tool returned unrepaired is returned disassembled, as the Service Agreement provides, and must not be operated in that state.' : ''}</p>
+      <p><strong>Pick-up acknowledgement.</strong> I confirm that ${authority} to collect the tools listed above, that I have received them${accessoriesListed ? ' together with the items ticked as returned' : ''}, and that I have looked them over at pick-up. Repaired tools are covered by the warranty in the CNS Tool Repair Service Agreement on the work order.${unrepairedListed ? ' A tool whose repair was declined is returned disassembled, as the Service Agreement provides, and must not be operated in that state.' : ''}</p>
       <div class="sig">
         ${field('Signature')}
         ${field('Printed name')}

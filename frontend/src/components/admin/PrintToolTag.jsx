@@ -25,6 +25,7 @@ const STATUS_LABELS = {
   in_repair: 'In Repair', ready: 'Ready for Pickup', invoiced: 'Invoiced',
   completed: 'Completed', abandoned: 'Abandoned', closed: 'Closed',
   beyond_economical_repair: 'Beyond Economical Repair',
+  no_fault_found: 'No Fault Found', returned_unrepaired: 'Returned Unrepaired',
 };
 
 // opts.returning: this unit has been on the bench before (serial match).

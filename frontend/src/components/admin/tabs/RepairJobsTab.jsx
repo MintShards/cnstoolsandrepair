@@ -380,7 +380,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   const formatDateShort = formatDateShortPacific;
 
   // ── STALE / OVERDUE HELPERS ──────────────────────────
-  const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined', 'beyond_economical_repair']);
+  const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined', 'beyond_economical_repair', 'no_fault_found', 'returned_unrepaired']);
   const now = new Date();
 
   const getDaysSinceLastUpdate = (tool) => {
@@ -492,7 +492,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
   };
 
   // Priority order for dot sorting: most actionable first
-  const STATUS_PRIORITY = ['abandoned', 'declined', 'beyond_economical_repair', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
+  const STATUS_PRIORITY = ['abandoned', 'declined', 'beyond_economical_repair', 'no_fault_found', 'returned_unrepaired', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
   const byStatusPriority = (a, b) => {
     const ai = STATUS_PRIORITY.indexOf(a.status);
     const bi = STATUS_PRIORITY.indexOf(b.status);

@@ -38,7 +38,7 @@ const PRIORITIES = {
   urgent:   { label: 'Urgent',   color: 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700' },
 };
 
-const STATUS_PRIORITY = ['abandoned', 'declined', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
+const STATUS_PRIORITY = ['abandoned', 'declined', 'beyond_economical_repair', 'no_fault_found', 'returned_unrepaired', 'received', 'diagnosed', 'parts_pending', 'in_repair', 'quoted', 'approved', 'ready', 'invoiced', 'completed', 'closed'];
 const byStatusPriority = (a, b) => {
   const ai = STATUS_PRIORITY.indexOf(a.status);
   const bi = STATUS_PRIORITY.indexOf(b.status);

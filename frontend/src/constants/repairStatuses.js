@@ -13,6 +13,11 @@ export const REPAIR_STATUSES = {
   // Off-ramps (step: null = not part of linear flow)
   beyond_economical_repair: { label: 'Beyond Economical Repair', shortLabel: 'BER', color: 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700',                               dot: 'bg-red-600 dark:bg-red-500',               step: null },
   declined:      { label: 'Declined',          color: 'bg-red-100 text-red-800 border-red-400 dark:bg-red-900/40 dark:text-red-300 dark:border-red-600',                                 dot: 'bg-red-500 dark:bg-red-400',               step: null },
+  // Tested, nothing wrong (the trade's NFF): lime, an "all clear" apart
+  // from Approved's green and Ready's emerald. Returned untouched for any
+  // other reason: an outlined slate, so it is not mistaken for Received.
+  no_fault_found: { label: 'No Fault Found',   shortLabel: 'NFF', color: 'bg-lime-100 text-lime-800 border-lime-500 dark:bg-lime-900/40 dark:text-lime-300 dark:border-lime-600',           dot: 'bg-lime-500 dark:bg-lime-400',             step: null },
+  returned_unrepaired: { label: 'Returned Unrepaired', color: 'bg-white text-slate-700 border-slate-500 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-400',                      dot: 'bg-slate-600 dark:bg-slate-300',           step: null },
   completed:     { label: 'Completed',         color: 'bg-green-200 text-green-900 border-green-500 dark:bg-green-800/60 dark:text-green-200 dark:border-green-500',                     dot: 'bg-green-600 dark:bg-green-300',           step: null },
   abandoned:     { label: 'Abandoned',         color: 'bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-600',                           dot: 'bg-rose-500 dark:bg-rose-400',             step: null },
   closed:        { label: 'Closed',            color: 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-600',                     dot: 'bg-slate-400 dark:bg-slate-500',           step: null },
@@ -30,13 +35,17 @@ export const MAIN_STAGES = [
 
 // Valid next statuses for each status (enforced on backend too)
 export const ALLOWED_TRANSITIONS = {
-  received:      ['diagnosed', 'abandoned'],
-  diagnosed:     ['quoted', 'beyond_economical_repair', 'received', 'abandoned'],
+  received:      ['diagnosed', 'returned_unrepaired', 'abandoned'],
+  diagnosed:     ['quoted', 'beyond_economical_repair', 'no_fault_found', 'returned_unrepaired', 'received', 'abandoned'],
   quoted:        ['approved', 'declined', 'diagnosed', 'abandoned'],
-  approved:      ['parts_pending', 'in_repair', 'quoted', 'abandoned'],
+  approved:      ['parts_pending', 'in_repair', 'quoted', 'returned_unrepaired', 'abandoned'],
   beyond_economical_repair: ['closed', 'quoted', 'abandoned'],
   declined:      ['closed', 'abandoned'],
-  parts_pending: ['in_repair', 'quoted', 'approved', 'abandoned'],
+  // Both off-ramps can still carry an inspection fee: Invoiced (Zoho number
+  // required as always), then Completed — otherwise Closed at pick-up.
+  no_fault_found: ['closed', 'invoiced', 'diagnosed', 'abandoned'],
+  returned_unrepaired: ['closed', 'invoiced', 'diagnosed', 'abandoned'],
+  parts_pending: ['in_repair', 'quoted', 'approved', 'returned_unrepaired', 'abandoned'],
   in_repair:     ['ready', 'parts_pending', 'approved', 'abandoned'],
   ready:         ['invoiced', 'in_repair', 'abandoned'],
   invoiced:      ['completed', 'ready', 'abandoned'],

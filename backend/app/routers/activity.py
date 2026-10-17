@@ -37,6 +37,7 @@ STATUS_LABELS = {
     "approved": "Approved", "parts_pending": "Parts Pending", "in_repair": "In Repair",
     "ready": "Ready for Pickup", "invoiced": "Invoiced", "completed": "Completed",
     "declined": "Declined", "beyond_economical_repair": "Beyond Economical Repair",
+    "no_fault_found": "No Fault Found", "returned_unrepaired": "Returned Unrepaired",
     "abandoned": "Abandoned", "closed": "Closed",
 }
 

@@ -39,6 +39,10 @@ export const EXCLUDED_STATUSES = {
   declined: 'declined',
   beyond_economical_repair: 'beyond economical repair',
   abandoned: 'abandoned',
+  // An inspection fee on either goes through Invoiced → Completed, where
+  // effectiveStatus counts it; left at the off-ramp, nothing is owed.
+  no_fault_found: 'no fault found',
+  returned_unrepaired: 'returned unrepaired',
 };
 
 /**

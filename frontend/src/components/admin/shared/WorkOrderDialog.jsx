@@ -99,7 +99,7 @@ const PriorityBadge = ({ priority }) => {
   );
 };
 
-const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined', 'beyond_economical_repair']);
+const TERMINAL_STATUSES = new Set(['completed', 'abandoned', 'closed', 'declined', 'beyond_economical_repair', 'no_fault_found', 'returned_unrepaired']);
 
 // Module-level cache so retail price lookups stay instant across dialog opens
 let libraryBrandsCache = null;

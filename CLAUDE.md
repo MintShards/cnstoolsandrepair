@@ -187,19 +187,25 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 
 ### Repair Job Lifecycle
 ```python
-# RepairStatus enum (13 states):
+# RepairStatus enum (15 states):
 # received → diagnosed → quoted → approved → parts_pending →
 # in_repair → ready → invoiced → completed
-# (also: declined, beyond_economical_repair, abandoned, closed)
+# (also: declined, beyond_economical_repair, no_fault_found, returned_unrepaired, abandoned, closed)
+# no_fault_found = tested, nothing wrong (the trade's NFF); returned_unrepaired = goes back
+# untouched for any other reason (taken back before the bench, not a brand we service).
+# Both behave like declined everywhere (terminal for stale/overdue, out of the job's money
+# totals, "going out" on the pick-up form) and may be Invoiced for an inspection fee.
 
 # ALLOWED_TRANSITIONS (source: backend/app/models/repair.py):
-#   received      → diagnosed, abandoned
-#   diagnosed     → quoted, beyond_economical_repair, received, abandoned
+#   received      → diagnosed, returned_unrepaired, abandoned
+#   diagnosed     → quoted, beyond_economical_repair, no_fault_found, returned_unrepaired, received, abandoned
 #   quoted        → approved, declined, diagnosed, abandoned
-#   approved      → parts_pending, in_repair, quoted, abandoned
+#   approved      → parts_pending, in_repair, quoted, returned_unrepaired, abandoned
 #   declined      → closed, abandoned
 #   beyond_economical_repair → closed, quoted, abandoned
-#   parts_pending → in_repair, quoted, approved, abandoned
+#   no_fault_found       → closed, invoiced, diagnosed, abandoned
+#   returned_unrepaired  → closed, invoiced, diagnosed, abandoned
+#   parts_pending → in_repair, quoted, approved, returned_unrepaired, abandoned
 #   in_repair     → ready, parts_pending, approved, abandoned
 #   ready         → invoiced, in_repair, abandoned
 #   invoiced      → completed, ready, abandoned

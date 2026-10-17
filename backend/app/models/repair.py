@@ -24,16 +24,24 @@ class RepairStatus(str, Enum):
     ABANDONED = "abandoned"
     CLOSED = "closed"
     BEYOND_ECONOMICAL_REPAIR = "beyond_economical_repair"
+    # Two more off-ramps for tools that go back without a repair: tested and
+    # nothing wrong (the trade's NFF), or returned untouched for any other
+    # reason — taken back before the bench, not a brand the shop services.
+    # Both can still be Invoiced for an inspection fee, otherwise Closed.
+    NO_FAULT_FOUND = "no_fault_found"
+    RETURNED_UNREPAIRED = "returned_unrepaired"
 
 
 ALLOWED_TRANSITIONS = {
-    "received":                  {"diagnosed", "abandoned"},
-    "diagnosed":                 {"quoted", "beyond_economical_repair", "received", "abandoned"},
+    "received":                  {"diagnosed", "returned_unrepaired", "abandoned"},
+    "diagnosed":                 {"quoted", "beyond_economical_repair", "no_fault_found", "returned_unrepaired", "received", "abandoned"},
     "quoted":                    {"approved", "declined", "diagnosed", "abandoned"},
-    "approved":                  {"parts_pending", "in_repair", "quoted", "abandoned"},
+    "approved":                  {"parts_pending", "in_repair", "quoted", "returned_unrepaired", "abandoned"},
     "declined":                  {"closed", "abandoned"},
     "beyond_economical_repair":  {"closed", "quoted", "abandoned"},
-    "parts_pending": {"in_repair", "quoted", "approved", "abandoned"},
+    "no_fault_found":            {"closed", "invoiced", "diagnosed", "abandoned"},
+    "returned_unrepaired":       {"closed", "invoiced", "diagnosed", "abandoned"},
+    "parts_pending": {"in_repair", "quoted", "approved", "returned_unrepaired", "abandoned"},
     "in_repair":     {"ready", "parts_pending", "approved", "abandoned"},
     "ready":         {"invoiced", "in_repair", "abandoned"},
     "invoiced":      {"completed", "ready", "abandoned"},

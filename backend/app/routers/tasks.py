@@ -96,7 +96,8 @@ def _build_task_response(doc: dict) -> TaskResponse:
 _JOB_STATUS_ORDER = [
     "received", "diagnosed", "quoted", "approved", "parts_pending",
     "in_repair", "ready", "invoiced", "completed",
-    "declined", "beyond_economical_repair", "abandoned", "closed",
+    "declined", "beyond_economical_repair", "no_fault_found", "returned_unrepaired",
+    "abandoned", "closed",
 ]
 
 
