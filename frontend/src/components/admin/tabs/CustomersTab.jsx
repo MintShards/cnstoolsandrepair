@@ -54,6 +54,34 @@ const getHighestPriority = (tools) => {
   );
 };
 
+// Header-click sort for a customer's work orders. The profile already holds
+// the whole list (the API caps it at 200, newest first), so it sorts in the
+// browser. Status sorts in lifecycle order — Received first, Closed last,
+// a job placed by its earliest-stage tool — not the dots' most-actionable
+// order, which would put Abandoned and BER on top; ties fall back to
+// newest first.
+const STATUS_LIFECYCLE = Object.keys(REPAIR_STATUSES);
+const JOB_SORT_KEYS = {
+  request_number: (j) => j.request_number || '',
+  tools: (j) => (j.tools || []).length,
+  priority: (j) => PRIORITY_RANK[getHighestPriority(j.tools)] || 0,
+  status: (j) => Math.min(99, ...(j.tools || []).map((t) => {
+    const i = STATUS_LIFECYCLE.indexOf(t.status);
+    return i === -1 ? 99 : i;
+  })),
+  created_at: (j) => new Date(j.created_at || 0).getTime(),
+};
+function sortJobs(jobs, field, dir) {
+  const key = JOB_SORT_KEYS[field] || JOB_SORT_KEYS.created_at;
+  const sign = dir === 'asc' ? 1 : -1;
+  return [...jobs].sort((a, b) => {
+    const av = key(a);
+    const bv = key(b);
+    const cmp = typeof av === 'string' ? av.localeCompare(bv, undefined, { numeric: true }) : av - bv;
+    return cmp !== 0 ? cmp * sign : String(b.created_at || '').localeCompare(String(a.created_at || ''));
+  });
+}
+
 function PriorityBadge({ priority }) {
   const cfg = PRIORITIES[priority] || PRIORITIES.standard;
   return (
@@ -92,6 +120,18 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobsPage, setJobsPage] = useState(1);
   const [jobsPageSize, setJobsPageSize] = useState(10);
+  // The work-order table's sort: newest first until a header is clicked.
+  const [jobsSortField, setJobsSortField] = useState('created_at');
+  const [jobsSortDir, setJobsSortDir] = useState('desc');
+  const handleJobsSort = (field) => {
+    if (jobsSortField === field) {
+      setJobsSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setJobsSortField(field);
+      setJobsSortDir(field === 'created_at' ? 'desc' : 'asc');
+    }
+    setJobsPage(1);
+  };
 
   // Edit customer
   const [editing, setEditing] = useState(false);
@@ -327,9 +367,10 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
 
   const paginated = customers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Customer jobs pagination
+  // Customer jobs: sorted by the header the user picked, then paged
   const jobsStartIndex = (jobsPage - 1) * jobsPageSize;
-  const paginatedJobs = customerJobs.slice(jobsStartIndex, jobsStartIndex + jobsPageSize);
+  const sortedJobs = sortJobs(customerJobs, jobsSortField, jobsSortDir);
+  const paginatedJobs = sortedJobs.slice(jobsStartIndex, jobsStartIndex + jobsPageSize);
 
 
   // ── Profile view ──
@@ -488,11 +529,27 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                   <table className="w-full text-left text-base">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60">
-                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500">Work Order #</th>
-                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Tools</th>
-                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Priority</th>
-                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500">Status</th>
-                        <th className="py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 hidden md:table-cell">Created</th>
+                        {[
+                          { field: 'request_number', label: 'Work Order #', cls: '' },
+                          { field: 'tools', label: 'Tools', cls: 'hidden md:table-cell' },
+                          { field: 'priority', label: 'Priority', cls: 'hidden md:table-cell' },
+                          { field: 'status', label: 'Status', cls: '' },
+                          { field: 'created_at', label: 'Created', cls: 'hidden md:table-cell' },
+                        ].map(({ field, label, cls }) => (
+                          <th
+                            key={field}
+                            aria-sort={jobsSortField === field ? (jobsSortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                            className={`py-3 px-4 text-sm font-bold uppercase tracking-wide text-slate-500 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 transition-colors ${cls}`}
+                            onClick={() => handleJobsSort(field)}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {label}
+                              <span className="material-symbols-outlined opacity-50" style={{ fontSize: '14px' }}>
+                                {jobsSortField === field ? (jobsSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                              </span>
+                            </span>
+                          </th>
+                        ))}
                         <th className="py-3 px-4 text-right text-sm font-bold uppercase tracking-wide text-slate-500">Actions</th>
                       </tr>
                     </thead>
