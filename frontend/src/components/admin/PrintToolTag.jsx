@@ -264,6 +264,8 @@ function getTagStyles(prefix) {
       font-size: 8px;
       line-height: 1.3;
       color: #111;
+      /* Tailwind's base strips list markers inside the app's print root. */
+      list-style: decimal outside;
     }
 
     ${p}.parts-section { flex: 1; }

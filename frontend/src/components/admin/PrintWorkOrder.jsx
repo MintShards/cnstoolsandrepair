@@ -79,7 +79,11 @@ function getStyles(prefix) {
     ${p}.notes-block { margin-bottom: 8px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
     ${p}.notes-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #555; margin-bottom: 2px; }
     ${p}.notes-text { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
-    ${p}.diag-list { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.5; }
+    /* list-style set here because the app's Tailwind base strips list
+       markers; the standalone document (the phone tab and the emailed
+       PDF) never had that rule, so without this the findings printed
+       numbered from the email and unnumbered from the Print button. */
+    ${p}.diag-list { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.5; list-style: decimal outside; }
     ${p}.diag-list li { margin-bottom: 2px; }
     ${p}.diag-parts { font-size: 10px; color: #555; }
     ${p}.diag-solution { color: #333; }
