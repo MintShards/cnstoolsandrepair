@@ -743,7 +743,7 @@ export default function RepairJobsTab({ preselectedCustomer, onPreselectedCustom
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5">
         {[
           { icon: 'construction', label: 'Tools Repaired', value: lifetimeStats ? lifetimeStats.total_tools_repaired.toLocaleString() : '—', sub: 'All time', color: 'indigo' },
-          { icon: 'trending_up',  label: 'This Month',     value: lifetimeStats ? lifetimeStats.completed_this_month.toLocaleString() : '—', sub: 'Completed this month', color: 'violet' },
+          { icon: 'trending_up',  label: 'This Month',     value: lifetimeStats ? lifetimeStats.completed_this_month.toLocaleString() : '—', sub: 'Repaired this month', color: 'violet' },
           { icon: 'avg_pace',     label: 'Avg Turnaround', value: lifetimeStats ? (lifetimeStats.avg_turnaround_days != null ? `${lifetimeStats.avg_turnaround_days}d` : '—') : '—', sub: 'Last 90 days', color: 'teal' },
           { icon: 'handyman',     label: 'Total Jobs',     value: lifetimeStats ? lifetimeStats.total_jobs_created.toLocaleString() : '—', sub: 'All time', color: 'slate' },
         ].map(card => {

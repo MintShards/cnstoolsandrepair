@@ -159,6 +159,55 @@ def _build_job_response(job: dict, viewer: Optional[User] = None) -> RepairJobRe
 
 
 # ──────────────────────────────────────────────
+# WHAT COUNTS AS REPAIRED
+# ──────────────────────────────────────────────
+
+# Ready is where a repair is finished. Invoiced and Completed used to be
+# reachable only from Ready, so the status alone said "repaired"; No Fault
+# Found and Returned Unrepaired can now go on to Invoiced for an inspection
+# fee, and a Closed tool may have been declined, BER or abandoned first —
+# so the history decides which way a tool came.
+_PATH_MARKERS = ["ready", "no_fault_found", "returned_unrepaired"]
+# Repair work finished on these; the model cards count a tool from Ready on.
+_REPAIRED_STATUSES = ["ready", "invoiced", "completed"]
+
+
+def _repaired_stages(stages: list) -> list:
+    """Aggregation stages, placed after `{"$unwind": "$tools"}`, that keep
+    only the tools the shop actually repaired whose effective status is one
+    of `stages`.
+
+    Effective status: the status, or for a closed tool the last status
+    before it was closed — completed then closed is a finished repair;
+    declined, BER, abandoned, no fault found or returned unrepaired then
+    closed is not (mirrors utils/jobAccounting.js::effectiveStatus).
+    Repaired: the last of Ready / No Fault Found / Returned Unrepaired in
+    the tool's history is Ready — or none of them is there, a tool from
+    before the off-ramps existed, when Invoiced could only follow Ready.
+    """
+    history = {"$ifNull": ["$tools.status_history.status", []]}
+    return [
+        {"$addFields": {
+            "_effective": {"$cond": [
+                {"$ne": ["$tools.status", "closed"]},
+                "$tools.status",
+                {"$ifNull": [
+                    {"$arrayElemAt": [{"$filter": {
+                        "input": history, "as": "s", "cond": {"$ne": ["$$s", "closed"]},
+                    }}, -1]},
+                    "closed",
+                ]},
+            ]},
+            "_path": {"$arrayElemAt": [{"$filter": {
+                "input": history, "as": "s", "cond": {"$in": ["$$s", _PATH_MARKERS]},
+            }}, -1]},
+        }},
+        # `$in` with None also matches a missing _path (no marker at all).
+        {"$match": {"_effective": {"$in": stages}, "_path": {"$in": ["ready", None]}}},
+    ]
+
+
+# ──────────────────────────────────────────────
 # SUMMARY (before LIST and /{id} to avoid routing conflict)
 # ──────────────────────────────────────────────
 
@@ -167,10 +216,14 @@ async def get_lifetime_stats(
     current_user: User = Depends(require_staff_or_admin)
 ):
     """
-    Returns lifetime/historical stats for the dashboard:
-    - total_tools_repaired: all tools with completed or closed status
-    - completed_this_month: tools completed in the current calendar month
-    - avg_turnaround_days: average days from received → completed (last 90 days)
+    Returns lifetime/historical stats for the Repair Jobs cards. Only tools
+    the shop actually repaired count — through Ready to Completed, or closed
+    after completing (see _repaired_stages); never a tool closed after a
+    decline, BER, abandonment, no fault found or returned unrepaired, nor an
+    inspection fee taken to Completed on one of the last two:
+    - total_tools_repaired: all time
+    - completed_this_month: repaired tools completed in the current calendar month
+    - avg_turnaround_days: average days from received → completed for them (last 90 days)
     - total_jobs_created: total number of repair job documents
     """
     db = get_database()
@@ -178,22 +231,21 @@ async def get_lifetime_stats(
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     ninety_days_ago = datetime.utcfromtimestamp(now.timestamp() - 90 * 86400)
 
-    # Total tools repaired (completed or closed)
-    pipeline_total = [
-        {"$unwind": "$tools"},
+    repaired = [
         {"$match": {"tools.status": {"$in": ["completed", "closed"]}}},
-        {"$count": "total"},
+        {"$unwind": "$tools"},
+        *_repaired_stages(["completed"]),
     ]
+
+    # Total tools repaired
+    pipeline_total = [*repaired, {"$count": "total"}]
     result = await db.repairs.aggregate(pipeline_total).to_list(length=1)
     total_tools_repaired = result[0]["total"] if result else 0
 
-    # Tools completed this month
+    # Repaired tools completed this month
     pipeline_month = [
-        {"$unwind": "$tools"},
-        {"$match": {
-            "tools.status": {"$in": ["completed", "closed"]},
-            "tools.date_completed": {"$gte": month_start},
-        }},
+        *repaired,
+        {"$match": {"tools.date_completed": {"$gte": month_start}}},
         {"$count": "total"},
     ]
     result_month = await db.repairs.aggregate(pipeline_month).to_list(length=1)
@@ -201,9 +253,8 @@ async def get_lifetime_stats(
 
     # Average turnaround: date_completed - date_received in days (last 90 days)
     pipeline_avg = [
-        {"$unwind": "$tools"},
+        *repaired,
         {"$match": {
-            "tools.status": {"$in": ["completed", "closed"]},
             "tools.date_completed": {"$gte": ninety_days_ago},
             "tools.date_received": {"$exists": True, "$ne": None},
         }},
@@ -232,11 +283,6 @@ async def get_lifetime_stats(
     }
 
 
-# Repair work finished on these; "closed" needs history to tell a finished
-# repair apart from one closed after decline/BER/abandon.
-_REPAIRED_STATUSES = ["ready", "invoiced", "completed"]
-
-
 @router.get("/model-repair-counts")
 async def get_model_repair_counts(
     brand: Optional[str] = None,
@@ -248,10 +294,12 @@ async def get_model_repair_counts(
     How many times each (brand, model_number) has actually been repaired.
 
     Counts tool line quantities, so a line with quantity 3 counts as 3
-    repairs. Declined / beyond-economical-repair / abandoned tools never
-    count. Matching is case-insensitive on trimmed brand/model strings.
-    exclude_job_id leaves out one job (the work order currently open, so
-    a tool doesn't count itself).
+    repairs. A tool counts from Ready on, through the repair path only
+    (see _repaired_stages): declined / beyond-economical-repair / abandoned /
+    no-fault-found / returned-unrepaired tools never count, even closed or
+    taken on to Invoiced for an inspection fee. Matching is case-insensitive
+    on trimmed brand/model strings. exclude_job_id leaves out one job (the
+    work order currently open, so a tool doesn't count itself).
     """
     db = get_database()
 
@@ -260,14 +308,9 @@ async def get_model_repair_counts(
         pipeline.append({"$match": {"_id": {"$ne": ObjectId(exclude_job_id)}}})
 
     pipeline += [
+        {"$match": {"tools.status": {"$in": [*_REPAIRED_STATUSES, "closed"]}}},
         {"$unwind": "$tools"},
-        {"$match": {"$or": [
-            {"tools.status": {"$in": _REPAIRED_STATUSES}},
-            {"$and": [
-                {"tools.status": "closed"},
-                {"tools.status_history.status": {"$in": _REPAIRED_STATUSES}},
-            ]},
-        ]}},
+        *_repaired_stages(_REPAIRED_STATUSES),
         {"$project": {
             "brand": {"$toLower": {"$trim": {"input": {"$ifNull": ["$tools.brand", ""]}}}},
             # A tool can carry several model identities: the generic

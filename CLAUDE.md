@@ -195,6 +195,11 @@ request_number = await get_next_request_number()  # Returns "REQ-YYYY-XXXX"
 # untouched for any other reason (taken back before the bench, not a brand we service).
 # Both behave like declined everywhere (terminal for stale/overdue, out of the job's money
 # totals, "going out" on the pick-up form) and may be Invoiced for an inspection fee.
+# "Repaired" counts (Repair Jobs cards via /lifetime-stats, model cards via /model-repair-counts)
+# go through _repaired_stages in routers/repairs.py: the effective status (a closed tool's last
+# status before closing) AND the last of ready / no_fault_found / returned_unrepaired in its
+# history must be ready — so neither a tool closed after an off-ramp nor an inspection fee
+# invoiced on NFF/RU counts as a repair. Never count repairs from the status alone.
 
 # ALLOWED_TRANSITIONS (source: backend/app/models/repair.py):
 #   received      → diagnosed, returned_unrepaired, abandoned
