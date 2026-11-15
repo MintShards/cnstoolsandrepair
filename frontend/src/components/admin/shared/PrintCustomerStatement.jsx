@@ -5,7 +5,9 @@ import { paymentDay } from '../../../utils/customerAccounting';
 import { isMobile } from '../../workspace/PrintDayClose';
 
 // Printable customer accounting: the period's figures, the position as of
-// today, the year table, the repairs completed and the payments received.
+// today, the year table, the repairs invoiced and the payments received.
+// A repair counts from the day it is invoiced (utils/customerAccounting.js),
+// so a tool waiting at Invoiced is on the sheet beside the completed ones.
 // Same mechanism as the Day Close: desktop prints from the global
 // #print-work-order-root, phones open a new tab (pass a tab opened inside
 // the tap as `win` — see openStatementTab). Internal shop figures, never
@@ -135,7 +137,7 @@ function buildBody({ customer, summary }) {
       <div class="sub">${escHtml(visits)}</div>
     </div>
     <div class="section">
-      <div class="section-title">${summary.allTime ? 'All time' : 'This period'} — repairs completed</div>
+      <div class="section-title">${summary.allTime ? 'All time' : 'This period'} — repairs invoiced</div>
       <div class="cards">
         ${card(money(p.revenue), 'Revenue (pre-tax)')}
         ${card(money(p.cost), 'Cost to shop')}
@@ -143,22 +145,22 @@ function buildBody({ customer, summary }) {
         ${card(pctText(p.margin), 'Margin')}
         ${card(money(p.paid), summary.allTime ? 'Paid' : 'Paid in period')}
       </div>
-      <div class="note">${escHtml(plural(p.completedTools, 'repair'))} completed on ${escHtml(plural(p.completedJobs, 'work order'))}${p.averagePerJob != null ? ` · average ${escHtml(money(p.averagePerJob))} per completed work order` : ''}.${p.uncostedParts ? ` ${escHtml(plural(p.uncostedParts, 'part'))} carry no cost in the parts library, so parts cost trails parts charged.` : ''}</div>
+      <div class="note">${escHtml(plural(p.countedTools, 'repair'))} invoiced on ${escHtml(plural(p.countedJobs, 'work order'))}${p.averagePerJob != null ? ` · average ${escHtml(money(p.averagePerJob))} per invoiced work order` : ''}.${p.uncostedParts ? ` ${escHtml(plural(p.uncostedParts, 'part'))} carry no cost in the parts library, so parts cost trails parts charged.` : ''}</div>
     </div>
     <div class="section">
       <div class="section-title">As of today</div>
       <div class="cards cards-3">
         ${card(money(n.received), 'Paid, all time')}
         ${card(money(n.balance), n.balance == null ? 'Balance due' : n.balance > 0 ? `Balance due on ${plural(n.invoicedJobs, 'invoiced work order')}` : n.balance < 0 ? 'Overpaid' : 'Paid in full', n.balance > 0)}
-        ${card(n.open.tools ? money(n.open.revenue) : '—', n.open.tools ? `Open now — ${plural(n.open.tools, 'tool')} on ${plural(n.open.jobs, 'work order')}, expected` : 'Nothing open')}
+        ${card(n.open.tools ? money(n.open.revenue) : '—', n.open.tools ? `Not invoiced yet — ${plural(n.open.tools, 'tool')} on ${plural(n.open.jobs, 'work order')}, expected` : 'Nothing waiting to be invoiced')}
       </div>
     </div>
     ${yearTable}
     <div class="section">
-      <div class="section-title">Completed repairs (${p.rows.length})</div>
+      <div class="section-title">Invoiced repairs (${p.rows.length})</div>
       ${p.rows.length ? `
       <table>
-        <thead><tr><th>Day</th><th>Work order</th><th>Tool</th><th>Technician</th><th class="num">Revenue</th><th class="num">Parts</th><th class="num">Labour</th><th class="num">Other</th><th class="num">Profit</th><th class="num">Margin</th><th>Payment</th></tr></thead>
+        <thead><tr><th>Invoiced</th><th>Work order</th><th>Tool</th><th>Technician</th><th class="num">Revenue</th><th class="num">Parts</th><th class="num">Labour</th><th class="num">Other</th><th class="num">Profit</th><th class="num">Margin</th><th>Payment</th></tr></thead>
         <tbody>
           ${repairRows}
           <tr class="total">
@@ -167,7 +169,7 @@ function buildBody({ customer, summary }) {
             <td class="num${p.profit < 0 ? ' neg' : ''}">${money(p.profit)}</td><td class="num">${pctText(p.margin)}</td><td></td>
           </tr>
         </tbody>
-      </table>` : '<p class="empty">No repairs were completed in this period.</p>'}
+      </table>` : '<p class="empty">No repairs were invoiced in this period.</p>'}
     </div>
     <div class="section">
       <div class="section-title">Payments received (${p.payments.length})</div>
@@ -180,7 +182,7 @@ function buildBody({ customer, summary }) {
         </tbody>
       </table>` : '<p class="empty">No payments were received in this period.</p>'}
     </div>
-    <div class="footer"><span>A repair counts on the day its tool was marked Completed.</span><span>Printed ${escHtml(printed)}</span></div>`;
+    <div class="footer"><span>A repair counts on the day it was invoiced, completed since or not.</span><span>Printed ${escHtml(printed)}</span></div>`;
 }
 
 /**

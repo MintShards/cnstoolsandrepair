@@ -1,12 +1,21 @@
 // A customer's accounting, built on the client from every work order of
 // theirs (accountingAPI.customer) with the same maths the work order dialog
-// and the P&L use, so the profile never disagrees with either. Pre-tax, CAD.
+// and the P&L use, so a repair's figures here are the ones on its card.
+// Pre-tax, CAD.
+//
+// One thing differs from the P&L on purpose: WHEN a repair counts. The P&L
+// counts it the day its tool is marked Completed; a customer's figures
+// count it the day it is invoiced. A customer on account has tools sitting
+// at Invoiced for weeks, and a statement that left those out showed a
+// balance due larger than its own revenue (the shop read its All time as
+// broken: 15 invoices, $14,752.50, missing beside a $19,745.62 balance).
 import { jobAccounting, sumEntered } from './jobAccounting';
 import { pnlRows, shopDay, ALL_TIME } from './accounting';
 import { round2 } from './money';
 
-// A tool still on the bench, or waiting to be paid for.
-const OPEN_STATUSES = new Set(['received', 'diagnosed', 'quoted', 'approved', 'parts_pending', 'in_repair', 'ready', 'invoiced']);
+// A tool still in the shop and not invoiced yet. Invoiced tools are already
+// in the period's revenue, so they are not "expected" any more.
+const OPEN_STATUSES = new Set(['received', 'diagnosed', 'quoted', 'approved', 'parts_pending', 'in_repair', 'ready']);
 // A job has been invoiced once a tool reached the invoice stage, or a
 // figure was typed in from Zoho.
 const INVOICED_STATUSES = new Set(['invoiced', 'completed', 'closed']);
@@ -19,13 +28,14 @@ export const paymentDay = (p) => p.received_date || shopDay(p.created_at) || nul
  * Figures for one customer, scoped to a period (`from` / `to`, shop-local
  * inclusive dates; ALL_TIME when none is given).
  *
- * `period` follows the P&L rule — a repair counts on the day its tool was
- * marked Completed, declined / BER / abandoned tools stay out, a job's
- * shared costs are split across its counted tools — plus the payments
- * received in the period, with the rows behind both for the statement and
- * the CSV. `now` is as of today whatever the period: every payment ever
- * received, what is still owed on the invoiced work orders, and the open
- * work at its charges today. `byYear` breaks the period down.
+ * `period` uses the P&L maths with one change of rule — a repair counts on
+ * the day it was invoiced, completed since or not; declined / BER /
+ * abandoned tools stay out, a job's shared costs are split across its
+ * counted tools — plus the payments received in the period, with the rows
+ * behind both for the statement and the CSV. `now` is as of today whatever
+ * the period: every payment ever received, what is still owed on the
+ * invoiced work orders, and the work not invoiced yet at its charges
+ * today. `byYear` breaks the period down.
  */
 export function customerSummary(data, opts = {}) {
   const from = opts.from || ALL_TIME.from;
@@ -33,9 +43,9 @@ export function customerSummary(data, opts = {}) {
   const jobs = data?.jobs || [];
   const bills = data?.bills || [];
   const payments = data?.payments || [];
-  const pnl = pnlRows({ jobs, bills, payments }, { ...opts, from, to });
+  const pnl = pnlRows({ jobs, bills, payments }, { ...opts, from, to, basis: 'invoiced' });
 
-  // By year, from the P&L rows (one per completed tool in the period).
+  // By year, from the rows (one per tool invoiced in the period).
   const years = new Map();
   for (const r of pnl.rows) {
     const y = r.day.slice(0, 4);
@@ -108,7 +118,7 @@ export function customerSummary(data, opts = {}) {
 
   const revenue = pnl.totals.revenue;
   const profit = pnl.totals.profit;
-  const completedJobs = new Set(pnl.rows.map((r) => r.job_id)).size;
+  const countedJobs = new Set(pnl.rows.map((r) => r.job_id)).size;
   return {
     from,
     to,
@@ -121,9 +131,10 @@ export function customerSummary(data, opts = {}) {
       otherCost: pnl.totals.otherCost,
       profit,
       margin: pct(profit, revenue),
-      completedTools: pnl.rows.length,
-      completedJobs,
-      averagePerJob: completedJobs > 0 && revenue != null ? round2(revenue / completedJobs) : null,
+      // Repairs invoiced in the period, and the work orders they are on.
+      countedTools: pnl.rows.length,
+      countedJobs,
+      averagePerJob: countedJobs > 0 && revenue != null ? round2(revenue / countedJobs) : null,
       uncostedParts: pnl.totals.uncostedParts,
       paid: periodPayments.length ? round2(periodPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)) : null,
       rows: pnl.rows,

@@ -18,7 +18,7 @@ const pctText = (n) => (n == null ? '—' : `${n}%`);
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const CSV_COLUMNS = [
-  { label: 'Day', value: 'day' },
+  { label: 'Invoiced', value: 'day' },
   { label: 'Work order', value: 'request_number' },
   { label: 'Tool', value: 'label' },
   { label: 'Technician', value: (r) => r.technician || '' },
@@ -36,10 +36,12 @@ const CSV_COLUMNS = [
  * The customer's accounting on their profile, admin only: revenue, cost,
  * profit and payments for a period (all time by default, or this year,
  * this month, a custom range), the position as of today (paid all time,
- * balance due, open work), and a year-by-year table — with a printable
- * statement and a CSV of the completed repairs. Same maths as the work
- * order dialog and the P&L (utils/customerAccounting.js), derived each time
- * the profile opens, never stored. Renders nothing for other roles.
+ * balance due, work not invoiced yet), and a year-by-year table — with a
+ * printable statement and a CSV of the invoiced repairs. Same maths as the
+ * work order dialog and the P&L, except that a repair counts from the day
+ * it is invoiced, not the day it is marked Completed
+ * (utils/customerAccounting.js); derived each time the profile opens,
+ * never stored. Renders nothing for other roles.
  */
 export default function CustomerAccounting({ customer }) {
   const customerId = customer?.id;
@@ -140,7 +142,7 @@ export default function CustomerAccounting({ customer }) {
             <span className="material-symbols-outlined text-base">print</span>
             Print
           </button>
-          <button type="button" onClick={handleCsv} disabled={!summary} className={`${BTN_NEUTRAL} justify-center`} title="The completed repairs in this period as a spreadsheet">
+          <button type="button" onClick={handleCsv} disabled={!summary} className={`${BTN_NEUTRAL} justify-center`} title="The repairs invoiced in this period as a spreadsheet">
             <span className="material-symbols-outlined text-base">download</span>
             CSV
           </button>
@@ -156,10 +158,11 @@ export default function CustomerAccounting({ customer }) {
           <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Couldn’t load this customer’s accounting.</p>
         ) : (
           <>
-            {/* The period: completed repairs at the P&L's rules and the money
-                received. Balance due is always as of today. */}
+            {/* The period: the repairs invoiced in it — completed since or
+                still waiting — and the money received. Balance due is
+                always as of today. */}
             <StatRow>
-              <StatTile label="Revenue" sub={p.completedTools ? `${plural(p.completedTools, 'repair')} completed${inPeriod}` : `nothing completed${inPeriod}`}>{money(p.revenue)}</StatTile>
+              <StatTile label="Revenue" sub={p.countedTools ? `${plural(p.countedTools, 'repair')} invoiced${inPeriod}` : `nothing invoiced${inPeriod}`}>{money(p.revenue)}</StatTile>
               <StatTile label="Cost to shop" sub={p.uncostedParts ? `${plural(p.uncostedParts, 'part')} without a cost` : 'labour, parts, expenses'}>{money(p.cost)}</StatTile>
               <StatTile label="Profit" sub={p.margin == null ? 'pre-tax' : `${pctText(p.margin)} of revenue`} tone={profitTone(p.profit)}>{money(p.profit)}</StatTile>
               <StatTile label="Paid" sub={summary.allTime ? 'received, all time' : 'received in period'}>{money(p.paid)}</StatTile>
@@ -187,22 +190,22 @@ export default function CustomerAccounting({ customer }) {
                 <div className="space-y-4">
                   <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
                     {p.averagePerJob != null && (
-                      <p>Average revenue per completed work order{inPeriod}: <span className="font-bold text-slate-700 dark:text-slate-200">{money(p.averagePerJob)}</span></p>
+                      <p>Average revenue per invoiced work order{inPeriod}: <span className="font-bold text-slate-700 dark:text-slate-200">{money(p.averagePerJob)}</span></p>
                     )}
                     {!summary.allTime && n.received != null && (
                       <p>Paid all time: <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.received)}</span></p>
                     )}
                     {n.open.tools > 0 ? (
                       <p>
-                        Open now: <span className="font-bold text-slate-700 dark:text-slate-200">{plural(n.open.tools, 'tool')}</span> on {plural(n.open.jobs, 'work order')}
-                        {n.open.revenue != null ? <> — expected revenue <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.open.revenue)}</span>, not counted above until completed</> : ' — nothing priced yet'}
+                        Not invoiced yet: <span className="font-bold text-slate-700 dark:text-slate-200">{plural(n.open.tools, 'tool')}</span> on {plural(n.open.jobs, 'work order')}
+                        {n.open.revenue != null ? <> — expected revenue <span className="font-bold text-slate-700 dark:text-slate-200">{money(n.open.revenue)}</span>, not counted above until invoiced</> : ' — nothing priced yet'}
                       </p>
                     ) : (
-                      <p>Nothing open right now.</p>
+                      <p>Nothing waiting to be invoiced.</p>
                     )}
                   </div>
 
-                  {/* Year by year — a repair counts in the year its tool was completed. */}
+                  {/* Year by year — a repair counts in the year it was invoiced. */}
                   {summary.byYear.length > 0 && (
                     <div className="overflow-x-auto -mx-4 px-4">
                       <table className="w-full text-xs min-w-[560px]">

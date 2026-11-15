@@ -2,7 +2,7 @@
 // records a period touches (accountingAPI) with the same maths the work
 // order dialog uses (jobAccounting), so a repair's profit here is the figure
 // on its card. Everything is pre-tax and in CAD unless said otherwise.
-import { jobAccounting, sumEntered, toolCharges, toolLabel, taxOn, DEFAULT_GST_RATE, DEFAULT_PST_RATE } from './jobAccounting';
+import { jobAccounting, sumEntered, toolCharges, toolLabel, taxOn, effectiveStatus, DEFAULT_GST_RATE, DEFAULT_PST_RATE } from './jobAccounting';
 import { round2 } from './money';
 import { getTodayPacific } from './dateFormat';
 import * as billConst from '../constants/bills';
@@ -90,15 +90,41 @@ export function splitEvenly(total, n) {
 }
 
 /**
- * One row per tool completed in the period. The job's shared costs (bill
- * lines and dialog expenses with no tool — a delivery, a driver for the
- * day) are split evenly between the tools that count on that job, so a
- * two-tool job shows half on each row and the rows still add up to the
- * bill; a tool still in the shop takes its share when it completes. Tools
- * the customer will not pay for (declined, BER, abandoned) are left out, as
- * the dialog leaves them out, and take no share.
+ * The moment a tool starts to count, by the basis asked for, or null while
+ * it does not count yet.
+ *   completed — when it was marked Completed: the Profit & Loss rule.
+ *   invoiced  — when it was invoiced, whether or not it has been marked
+ *               Completed since: a customer's own figures, where an invoice
+ *               sent is money owed and a tool on account sits at Invoiced
+ *               until it is paid. The last `invoiced` entry in the history
+ *               is the invoice that stands; a tool completed with none
+ *               (older records) counts from its completion.
  */
-export function pnlRows(data, { from, to, labourCostRate, gstRate, pstRate, technicianRates }) {
+function countedAt(tool, basis) {
+  if (basis !== 'invoiced') return tool.date_completed || null;
+  const status = effectiveStatus(tool);
+  const history = tool.status_history || [];
+  // `closed` with a completion date and no history to read: a finished
+  // repair from before status history was kept.
+  const billed = status === 'invoiced' || status === 'completed' || (status === 'closed' && tool.date_completed);
+  if (!billed) return null;
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    if (history[i]?.status === 'invoiced' && history[i].timestamp) return history[i].timestamp;
+  }
+  return tool.date_completed || history[history.length - 1]?.timestamp || tool.date_received || null;
+}
+
+/**
+ * One row per tool that counts in the period — completed in it by default,
+ * or invoiced in it with `basis: 'invoiced'` (see countedAt). The job's
+ * shared costs (bill lines and dialog expenses with no tool — a delivery, a
+ * driver for the day) are split evenly between the tools that count on that
+ * job, so a two-tool job shows half on each row and the rows still add up
+ * to the bill; a tool still in the shop takes its share when it counts.
+ * Tools the customer will not pay for (declined, BER, abandoned) are left
+ * out, as the dialog leaves them out, and take no share.
+ */
+export function pnlRows(data, { from, to, labourCostRate, gstRate, pstRate, technicianRates, basis = 'completed' }) {
   const rows = [];
   for (const job of data?.jobs || []) {
     const bills = (data.bills || []).filter((b) => (b.lines || []).some((l) => l.repair_id === job.id));
@@ -106,9 +132,10 @@ export function pnlRows(data, { from, to, labourCostRate, gstRate, pstRate, tech
     const acct = jobAccounting(job, bills, payments, { labourCostRate, gstRate, pstRate, technicianRates });
     const sharing = acct.tools.filter((x) => !x.excluded).map((x) => x.tool_id);
     const shares = splitEvenly(acct.shared.other, sharing.length);
-    const completed = (job.tools || []).filter((t) => t.date_completed);
-    for (const t of completed) {
-      const day = shopDay(t.date_completed);
+    for (const t of job.tools || []) {
+      const countedOn = countedAt(t, basis);
+      if (!countedOn) continue;
+      const day = shopDay(countedOn);
       if (!inRange(day, from, to)) continue;
       const at = acct.tools.find((x) => x.tool_id === t.tool_id);
       if (!at || at.excluded) continue;
@@ -126,7 +153,7 @@ export function pnlRows(data, { from, to, labourCostRate, gstRate, pstRate, tech
         label: at.label,
         technician: t.assigned_technician || null,
         day,
-        completed_at: t.date_completed,
+        completed_at: t.date_completed || null,
         revenue,
         invoiced: at.charges.invoiced != null,
         zoho_invoice_number: t.zoho_invoice_number || null,
