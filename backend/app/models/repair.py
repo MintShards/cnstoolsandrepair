@@ -673,6 +673,10 @@ class RepairJobResponse(BaseModel):
 
 class WorkOrderEmailSendRequest(BaseModel):
     recipient_email: Optional[EmailStr] = None
+    # More addresses for the same email — the customer profile's other emails
+    # the sender left ticked in the Send window. They go in To after
+    # recipient_email, so everyone sees who else got the work order.
+    additional_recipients: List[EmailStr] = Field(default_factory=list, max_length=10)
     subject: Optional[str] = Field(None, max_length=300)
     custom_message: Optional[str] = Field(None, max_length=2000)
     # The work order as the browser prints it (PrintWorkOrder.jsx's full HTML

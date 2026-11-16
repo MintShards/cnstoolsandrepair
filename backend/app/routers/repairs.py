@@ -2816,6 +2816,7 @@ async def send_work_order_email_endpoint(
         service_agreement=service_agreement,
         work_order_html=request.work_order_html,
         recipient_email=request.recipient_email,
+        additional_recipients=[str(e) for e in request.additional_recipients],
         subject_override=request.subject,
         custom_message=request.custom_message,
         sent_by=current_user.email if hasattr(current_user, "email") else "admin",

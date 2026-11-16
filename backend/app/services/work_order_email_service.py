@@ -253,16 +253,30 @@ async def send_work_order_email(
     subject_override: Optional[str] = None,
     custom_message: Optional[str] = None,
     sent_by: Optional[str] = None,
+    # The customer's other addresses that get the same email (the Send
+    # window's ticked list). One message, everyone in To.
+    additional_recipients: Optional[list] = None,
 ) -> dict:
     """
     Generate and send the work order email for a repair job.
 
-    Returns {"success": bool, "sent_to": str, "error": str|None}
+    Returns {"success": bool, "sent_to": str, "error": str|None} — sent_to is
+    every address the email went to, comma-separated, the main one first.
     Also appends a record to the repair job's work_order_emails_sent array in MongoDB.
     """
-    to_email = (recipient_email or "").strip() or (job.get("email") or "").strip()
-    if not to_email:
+    main_email = (recipient_email or "").strip() or (job.get("email") or "").strip()
+    if not main_email:
         return {"success": False, "sent_to": None, "error": "No recipient email address available"}
+
+    also_to = []
+    seen = {main_email.lower()}
+    for addr in additional_recipients or []:
+        addr = str(addr).strip()
+        if addr and addr.lower() not in seen:
+            seen.add(addr.lower())
+            also_to.append(addr)
+    # What the log, the activity tracker and the toast call "sent to".
+    to_email = ", ".join([main_email] + also_to)
 
     wo_number = job.get("request_number") or "Work Order"
     t = template or {}
@@ -290,7 +304,7 @@ async def send_work_order_email(
     first = job.get("first_name") or ""
     last = job.get("last_name") or ""
     cust_name = f"{first} {last}".strip()
-    to_display = f"{cust_name} <{to_email}>" if cust_name else to_email
+    to_display = f"{cust_name} <{main_email}>" if cust_name else main_email
 
     # Generate PDF
     try:
@@ -319,7 +333,9 @@ async def send_work_order_email(
     # Build Resend payload
     payload = {
         "from": f"{from_name} <{from_email}>",
-        "to": [to_display],
+        # The contact's name goes with the main address only; the others are
+        # other people at the company.
+        "to": [to_display] + also_to,
         "reply_to": from_email,
         "subject": subject,
         "html": html_body,

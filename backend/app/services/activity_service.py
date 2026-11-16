@@ -249,7 +249,14 @@ def diff_tool(old: dict, new_fields: dict) -> list:
 
 
 def diff_customer(old: dict, new_fields: dict) -> list:
-    return diff_fields(old, new_fields, CUSTOMER_FIELD_LABELS)
+    lines = diff_fields(old, new_fields, CUSTOMER_FIELD_LABELS)
+    # The other emails print as addresses — diff_fields would say "2 items".
+    if "additional_emails" in new_fields:
+        before = old.get("additional_emails") or []
+        after = new_fields.get("additional_emails") or []
+        if not _same(before, after):
+            lines.append(f"Other emails: {', '.join(before) or '—'} → {', '.join(after) or '—'}")
+    return lines
 
 
 def diff_bill(old: dict, new_fields: dict) -> list:

@@ -12,12 +12,16 @@ import SendWorkOrderEmailModal from '../SendWorkOrderEmailModal';
 import { useSettings } from '../../../contexts/SettingsContext';
 import WorkOrderDialog from '../shared/WorkOrderDialog';
 import CustomerAccounting from '../shared/CustomerAccounting';
+import ExtraEmailsField from '../shared/ExtraEmailsField';
+import { cleanExtraEmails } from '../../../utils/customerEmails';
 
 const EMPTY_CUSTOMER = {
   company_name: '',
   first_name: '',
   last_name: '',
   email: '',
+  // The other people at the company who also get the work order by email.
+  additional_emails: [],
   phone: '',
   address: '',
   customer_notes: '',
@@ -265,6 +269,7 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
       first_name: selectedCustomer.first_name,
       last_name: selectedCustomer.last_name,
       email: selectedCustomer.email,
+      additional_emails: [...(selectedCustomer.additional_emails || [])],
       phone: selectedCustomer.phone,
       address: selectedCustomer.address || '',
       customer_notes: selectedCustomer.customer_notes || '',
@@ -273,10 +278,15 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
   };
 
   const handleSaveEdit = async () => {
+    const extra = cleanExtraEmails(editForm.additional_emails, editForm.email);
+    if (extra.invalid) {
+      showToast('error', `"${extra.invalid}" is not an email address`);
+      return;
+    }
     setSaving(true);
     let updated;
     try {
-      updated = await customersAPI.update(selectedCustomer.id, editForm);
+      updated = await customersAPI.update(selectedCustomer.id, { ...editForm, additional_emails: extra.emails });
     } catch (err) {
       console.error('handleSaveEdit failed:', err);
       showToast('error', getErrorMessage(err, 'Failed to update customer'));
@@ -292,10 +302,15 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
 
   const handleCreateCustomer = async (e) => {
     e.preventDefault();
+    const extra = cleanExtraEmails(newForm.additional_emails, newForm.email);
+    if (extra.invalid) {
+      showToast('error', `"${extra.invalid}" is not an email address`);
+      return;
+    }
     setCreating(true);
     let created;
     try {
-      created = await customersAPI.create(newForm);
+      created = await customersAPI.create({ ...newForm, additional_emails: extra.emails });
     } catch (err) {
       console.error('handleCreateCustomer failed:', err);
       showToast('error', getErrorMessage(err, 'Failed to create customer'));
@@ -465,6 +480,19 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     <span className="text-xs text-slate-500">Phone:</span>
                     <a href={`tel:${selectedCustomer.phone}`} className="text-sm text-primary hover:underline">{selectedCustomer.phone}</a>
                   </div>
+                  {/* The other people at the company who also get the work
+                      order — ticked in the Send Work Order window. */}
+                  {selectedCustomer.additional_emails?.length > 0 && (
+                    <div className="flex items-start gap-1.5 sm:col-span-2">
+                      <span className="material-symbols-outlined text-slate-500 mt-0.5" style={{ fontSize: '13px' }}>forward_to_inbox</span>
+                      <span className="text-xs text-slate-500 whitespace-nowrap mt-0.5">Other emails:</span>
+                      <span className="flex flex-wrap gap-x-3 gap-y-0.5 min-w-0">
+                        {selectedCustomer.additional_emails.map((email) => (
+                          <a key={email} href={`mailto:${email}`} className="text-sm text-primary hover:underline break-all">{email}</a>
+                        ))}
+                      </span>
+                    </div>
+                  )}
                   {selectedCustomer.address && (
                     <div className="flex items-center gap-1.5 sm:col-span-2">
                       <span className="material-symbols-outlined text-slate-500" style={{ fontSize: '13px' }}>location_on</span>
@@ -740,6 +768,13 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                     }} placeholder="###-###-####" className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
                   </div>
                 </div>
+                <ExtraEmailsField
+                  value={editForm.additional_emails}
+                  onChange={(list) => setEditForm({ ...editForm, additional_emails: list })}
+                  disabled={saving}
+                  labelClassName="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5"
+                  inputClassName="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
+                />
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">Address</label>
                   <input value={editForm.address} onChange={(e) => { const pos = e.target.selectionStart; setEditForm({ ...editForm, address: e.target.value.toUpperCase() }); requestAnimationFrame(() => e.target.setSelectionRange(pos, pos)); }} className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all" />
@@ -1089,6 +1124,13 @@ export default function CustomersTab({ onNewJob, onCountUpdate, externalOpenNewC
                   />
                 </div>
               </div>
+              <ExtraEmailsField
+                value={newForm.additional_emails}
+                onChange={(list) => setNewForm({ ...newForm, additional_emails: list })}
+                disabled={creating}
+                labelClassName="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1"
+                inputClassName="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              />
               <div>
                 <label className="block text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Address</label>
                 <input

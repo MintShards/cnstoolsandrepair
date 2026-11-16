@@ -7,7 +7,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.database import get_database
-from app.models.customer import CustomerCreate, CustomerUpdate, CustomerResponse
+from app.models.customer import CustomerCreate, CustomerUpdate, CustomerResponse, normalize_additional_emails
 from app.models.repair import RepairJobResponse
 from app.models.auth import User
 from app.dependencies.auth import require_staff_or_admin
@@ -75,6 +75,8 @@ async def list_customers(
             {"first_name": {"$regex": escaped, "$options": "i"}},
             {"last_name": {"$regex": escaped, "$options": "i"}},
             {"email": {"$regex": escaped, "$options": "i"}},
+            # Any of the profile's other emails finds the customer too.
+            {"additional_emails": {"$regex": escaped, "$options": "i"}},
         ]
 
     total = await db.customers.count_documents(query)
@@ -175,6 +177,7 @@ async def create_customer(
     now = datetime.utcnow()
     doc = customer_data.model_dump()
     doc["email"] = email
+    doc["additional_emails"] = normalize_additional_emails(doc.get("additional_emails"), email)
     doc["created_by"] = actor_ref(current_user)
     doc["created_at"] = now
     doc["updated_at"] = now
@@ -273,6 +276,16 @@ async def update_customer(
                 status_code=409,
                 detail="Another customer with this email address already exists"
             )
+
+    # The other emails are kept lower-cased and de-duplicated, and never hold
+    # the main email — also when it is the main email that moves onto one of
+    # them (the form did not send the list, so it is tidied here).
+    if "additional_emails" in update_data or "email" in update_data:
+        current = existing.get("additional_emails") or []
+        wanted = update_data.get("additional_emails") if "additional_emails" in update_data else current
+        cleaned = normalize_additional_emails(wanted, update_data.get("email") or existing.get("email"))
+        if "additional_emails" in update_data or cleaned != current:
+            update_data["additional_emails"] = cleaned
 
     changes = diff_customer(existing, update_data)
     update_data["updated_at"] = datetime.utcnow()

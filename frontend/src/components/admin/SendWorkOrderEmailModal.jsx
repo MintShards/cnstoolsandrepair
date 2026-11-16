@@ -1,9 +1,18 @@
-import { useState } from 'react';
-import { repairsAPI } from '../../services/api';
+import { useEffect, useState } from 'react';
+import { customersAPI, repairsAPI } from '../../services/api';
 import { buildFullHTML } from './PrintWorkOrder';
+import { otherRecipients, recipientsLabel } from '../../utils/customerEmails';
 
 /**
  * Modal for sending a work order email to the customer.
+ *
+ * One email, several addresses: the work order's own email is in To, and
+ * every other address on the customer's profile (its other emails) is
+ * listed under it, ticked — a company that wants the work order at accounts
+ * payable and the site office gets one message with everyone in To. The
+ * profile is read when the modal opens, so the list is always the profile's
+ * current one, whatever the work order was opened with.
+ *
  * Props:
  *   job            - RepairJobResponse object
  *   template       - workOrderEmailTemplate from business settings
@@ -11,7 +20,8 @@ import { buildFullHTML } from './PrintWorkOrder';
  *                    the attached PDF is rendered from the same HTML the
  *                    print uses, so the two can never drift
  *   onClose        - called when modal is dismissed
- *   onSuccess      - called with sentTo string when send succeeds
+ *   onSuccess      - called with who it went to ("a@x.com and 2 more")
+ *                    when the send succeeds
  */
 export default function SendWorkOrderEmailModal({ job, template, businessInfo, serviceAgreement, history, onClose, onSuccess }) {
   const t = template || {};
@@ -38,6 +48,36 @@ export default function SendWorkOrderEmailModal({ job, template, businessInfo, s
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
 
+  // The customer's profile, for its other emails. 'loading' holds the Send
+  // button back for the moment the lookup takes, so a quick tap can't send
+  // to one address when the company asked for several.
+  const [customer, setCustomer] = useState(null);
+  const [lookup, setLookup] = useState(job?.customer_id ? 'loading' : 'done');
+  // The addresses the sender unticked for this one email (all start ticked).
+  const [unticked, setUnticked] = useState(() => new Set());
+  useEffect(() => {
+    if (!job?.customer_id) return undefined;
+    let cancelled = false;
+    customersAPI.get(job.customer_id)
+      .then((profile) => {
+        if (cancelled) return;
+        setCustomer(profile);
+        // A work order with no email of its own starts from the profile's.
+        if (!job?.email && profile.email) setRecipientEmail((current) => current || profile.email);
+        setLookup('done');
+      })
+      .catch(() => { if (!cancelled) setLookup('failed'); });
+    return () => { cancelled = true; };
+  }, [job?.customer_id, job?.email]);
+
+  const others = otherRecipients(customer, recipientEmail);
+  const alsoTo = others.filter((email) => !unticked.has(email));
+  const toggleOther = (email) => setUnticked((prev) => {
+    const next = new Set(prev);
+    if (next.has(email)) next.delete(email); else next.add(email);
+    return next;
+  });
+
   // Count tool photos for attachment preview
   const photoCount = (job?.tools || []).reduce((sum, tool) => sum + (tool.photos?.length || 0), 0);
 
@@ -47,21 +87,27 @@ export default function SendWorkOrderEmailModal({ job, template, businessInfo, s
   const hasEmail = recipientEmail.trim().length > 0;
 
   async function handleSend() {
-    if (!hasEmail) return;
+    if (!hasEmail || lookup === 'loading') return;
     setSending(true);
     setError(null);
     try {
-      const result = await repairsAPI.sendWorkOrderEmail(job.id, {
+      await repairsAPI.sendWorkOrderEmail(job.id, {
         recipient_email: recipientEmail.trim() || null,
+        additional_recipients: alsoTo,
         subject: subject.trim() || null,
         custom_message: customMessage.trim() || null,
         // The print, as the browser would print it: the PDF is made from this.
         work_order_html: buildFullHTML(job, businessInfo, serviceAgreement, { history }),
       });
-      onSuccess && onSuccess(result.sent_to);
+      onSuccess && onSuccess(recipientsLabel([recipientEmail.trim(), ...alsoTo]));
     } catch (err) {
-      const detail = err?.response?.data?.detail || err?.message || 'Failed to send email';
-      setError(detail);
+      // A refused address comes back as a list of problems, not a sentence;
+      // only ever put text in the error box.
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail
+        : Array.isArray(detail) ? detail.map((d) => d?.msg).filter(Boolean).join('; ')
+        : err?.message;
+      setError(message || 'Failed to send email');
     } finally {
       setSending(false);
     }
@@ -118,6 +164,37 @@ export default function SendWorkOrderEmailModal({ job, template, businessInfo, s
               disabled={sending}
             />
           </div>
+
+          {/* The customer's other emails — one message, everyone in To */}
+          {others.length > 0 && (
+            <div>
+              <p className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+                Also send to
+              </p>
+              <div className="rounded-lg border border-slate-300 dark:border-slate-600 divide-y divide-slate-200 dark:divide-slate-600 bg-white dark:bg-slate-700">
+                {others.map((email) => (
+                  <label key={email} className="flex items-center gap-3 px-3 py-2 min-h-[44px] sm:min-h-0 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!unticked.has(email)}
+                      onChange={() => toggleOther(email)}
+                      disabled={sending}
+                      className="w-4 h-4 flex-shrink-0 rounded border-slate-300 dark:border-slate-500 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-900 dark:text-white break-all">{email}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                The other emails on this customer&rsquo;s profile. Untick any that should not get this one.
+              </p>
+            </div>
+          )}
+          {lookup === 'failed' && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Could not load this customer&rsquo;s other emails &mdash; this will go to the address above only.
+            </p>
+          )}
 
           {/* Subject */}
           <div>
@@ -194,8 +271,8 @@ export default function SendWorkOrderEmailModal({ job, template, businessInfo, s
           </button>
           <button
             onClick={handleSend}
-            disabled={sending || !hasEmail}
-            className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={sending || !hasEmail || lookup === 'loading'}
+            className="flex items-center gap-2 px-4 sm:px-5 py-2 text-sm font-bold whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {sending ? (
               <>
@@ -205,7 +282,7 @@ export default function SendWorkOrderEmailModal({ job, template, businessInfo, s
             ) : (
               <>
                 <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'wght' 600" }}>send</span>
-                Send Email
+                {alsoTo.length > 0 ? `Send to ${alsoTo.length + 1} addresses` : 'Send Email'}
               </>
             )}
           </button>
